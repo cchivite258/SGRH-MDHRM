@@ -1,0 +1,1 @@
+import{d as t,L as n,m as s,e1 as a,e2 as r}from"./index-96068b83.js";const p=t({__name:"Logout",setup(u){const e=n(),o=new a(r);return s(()=>{o.removeItem(),e.push({path:"/signin"})}),(_,c)=>null}});export{p as default};

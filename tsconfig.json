@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "target": "esnext",
+    "useDefineForClassFields": true,
+    "allowSyntheticDefaultImports": true,
+    // "composite": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": true,
+    "lib": ["esnext", "dom"],
+    "types": [
+      "node",
+      "vuetify",
+      "@intlify/unplugin-vue-i18n/messages",
+      "@intlify/core-base",
+    ],
+    "paths": {
+      "@/*": ["src/*"],
+      "~/*": ["src/*"]
+    },
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "vite.config.ts",
+    "node_modules/@intlify/vue-devtools/**/*.d.ts",
+    "node_modules/@intlify/devtools-if/**/*.d.ts",
+    "node_modules/@intlify/core-base/**/*.d.ts"
+  ],
+  "exclude": ["node_modules"]
+}
