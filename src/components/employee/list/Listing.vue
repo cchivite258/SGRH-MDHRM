@@ -14,12 +14,13 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import { employeeHeader } from "@/components/employee/list/utils"
 import Card from "@/app/common/components/Card.vue"
 import { EmployeeListingType } from "../types"
-import Status from "@/app/common/components/Status.vue";
+import Status from "@/app/common/components/Status.vue"; 
+import AdvancedFilter from "@/components/employee/list/AdvancedFilter.vue"; 
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
-const employeeStore = useEmployeeStore()
+const employeeStore = useEmployeeStore() 
 
 // Estado do componente
 const searchQuery = ref("")
@@ -52,9 +53,7 @@ const fetchEmployees = async ({ page, itemsPerPage, sortBy, search }: FetchParam
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc',
-    searchProps, // query_props
-    search // query_values
+    sortBy[0]?.order || 'asc'
   )
 }
 
@@ -100,18 +99,23 @@ const toggleSelection = (item: EmployeeListingType) => {
 
 <template>
   <Card :title="$t('t-employee-list')" class="mt-7">
-    <template #title-action>
-      <v-row justify="end" align="center" no-gutters>
-        <v-col cols="12" sm="6" md="4">
-          <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-employee')" />
+
+     <v-card-title class="mt-2">
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="12">
+          <AdvancedFilter />
         </v-col>
-        <v-col cols="12" sm="6" md="auto" class="ms-sm-3 mt-sm-0 mt-2">
+      </v-row>
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="8">
+        </v-col>
+        <v-col lg="auto">
           <v-btn color="secondary" to="/employee/create" block>
             <i class="ph-plus-circle" /> {{ $t('t-add-employee') }}
           </v-btn>
         </v-col>
       </v-row>
-    </template>
+    </v-card-title>
 
     <v-card-text>
       <DataTableServer v-model="selectedEmployees"

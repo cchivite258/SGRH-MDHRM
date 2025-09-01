@@ -62,7 +62,8 @@ const invoiceData = reactive<InvoiceInsertType>({
   dependent: undefined,
   company: '',
   authorizedBy: '',
-  invoiceReferenceNumber: ''
+  invoiceReferenceNumber: '',
+  coveragePeriod: undefined
 });
 
 // =============================================

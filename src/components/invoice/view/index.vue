@@ -58,7 +58,8 @@ const invoiceData = reactive<InvoiceInsertType>({
   dependent: undefined,
   company: '',
   authorizedBy: '',
-  invoiceReferenceNumber: ''
+  invoiceReferenceNumber: '',
+  coveragePeriod: undefined
 });
 
 /**
@@ -75,7 +76,8 @@ const loadInvoiceData = async (id: string) => {
       invoiceItemService.getInvoiceItemByInvoice(id)
     ]);
 
-    console.log("itemsResponse: ", itemsResponse)
+    console.log("invoiceResponse: ", invoiceResponse);
+    console.log("itemsResponse: ", itemsResponse);
 
     // Atualiza os dados da fatura se existirem
     if (invoiceResponse?.data) {
@@ -88,7 +90,7 @@ const loadInvoiceData = async (id: string) => {
       invoiceData.dependent = invoiceResponse.data.dependent?.id || undefined;
     }
 
-    // Processa os itens da fatura
+    // Processa os itens da factura
     if (itemsResponse?.content) {
       invoiceItems.value = itemsResponse.content.map(item => ({
         ...item,
@@ -97,6 +99,7 @@ const loadInvoiceData = async (id: string) => {
         invoice: item.invoice?.id || ''
       }));
     }
+
   } catch (error) {
     toast.error(t('t-error-loading-invoice'));
     console.error('Error loading invoice:', error);

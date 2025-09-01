@@ -15,6 +15,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import { clinicsHeader } from "@/components/clinics/list/utils"
 import Card from "@/app/common/components/Card.vue"
 import { ClinicListingType } from "../types"
+import AdvancedFilter from "@/components/clinics/list/AdvancedFilter.vue";
 
 const { t } = useI18n()
 const toast = useToast()
@@ -48,20 +49,11 @@ interface FetchParams {
 
 // Busca os funcionários com os parâmetros atuais
 const fetchClinics = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  console.log('Requisição de pesquisa:', {
-    page,
-    itemsPerPage,
-    sortBy,
-    searchProps,
-    search
-  })
   await clinicStore.fetchClinics(
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc',
-    searchProps, // query_props
-    search // query_values
+    sortBy[0]?.order || 'asc'
   )
 }
 
@@ -107,24 +99,27 @@ const truncate = (text: string, maxLength = 30) => {
   return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
 }
 
-
-
 </script>
 
 <template>
   <Card :title="$t('t-clinic-list')" class="mt-7">
-    <template #title-action>
-      <v-row justify="end" align="center" no-gutters>
-        <v-col cols="12" sm="6" md="4">
-          <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-clinic')" />
+
+    <v-card-title class="mt-2">
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="12">
+          <AdvancedFilter />
         </v-col>
-        <v-col cols="12" sm="6" md="auto" class="ms-sm-3 mt-sm-0 mt-2">
+      </v-row>
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="8">
+        </v-col>
+        <v-col lg="auto">
           <v-btn color="secondary" to="/clinics/create" block>
             <i class="ph-plus-circle" /> {{ $t('t-add-clinic') }}
           </v-btn>
         </v-col>
       </v-row>
-    </template>
+    </v-card-title>
 
     <v-card-text>
       <DataTableServer v-model="selectedClinics"
@@ -144,7 +139,9 @@ const truncate = (text: string, maxLength = 30) => {
             <td>{{ truncate(item.phone) }}</td>
             <td>{{ truncate(item.email) }}</td>
             <td>{{ truncate(item.website) }}</td>
-            <td><Status :status="item.enabled ? 'enabled' : 'disabled'" /></td>
+            <td>
+              <Status :status="item.enabled ? 'enabled' : 'disabled'" />
+            </td>
             <td>
               <TableAction @on-view="() => router.push(`/clinics/view/${item.id}`)"
                 @onEdit="() => router.push(`/clinics/edit/${item.id}`)" @onDelete="() => openDeleteDialog(item.id)" />

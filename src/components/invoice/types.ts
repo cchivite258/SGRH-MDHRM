@@ -110,6 +110,7 @@ export type InvoiceInsertType = {
     company?: string;
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    coveragePeriod: any;
 }
 
 

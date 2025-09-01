@@ -21,32 +21,54 @@ export default class ClinicService extends HttpService {
     size: number = 10,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
-    query_value?: string,
-    query_props?: string,
-    
+    globalSearch?: string,
+    advancedFilters: {
+      prop: string;
+      operator: string;
+      value: string | boolean | Date;
+    }[] = [],
+    logicalOperator: string = 'AND'
   ): Promise<{ content: ClinicListingType[], meta: any }> {
     try {
-      const queryParams = [
-        `page=${page}`,
-        `size=${size}`,
-        `sortColumn=${sortColumn}`,
-        `direction=${direction}`,
-      ];
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+        sortColumn,
+        direction
+      });
 
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+       //filtro geral
+      if (globalSearch) {
+        params.append('query_props', 'name,address,phone,email,description,website,incomeTaxNumber,personOfContactFullname1,personOfContactPhone1,personOfContactEmail1,personOfContactFullname2,personOfContactPhone2,personOfContactEmail2');
+        params.append('query_operator', 'OR');
+        params.append('query_value', globalSearch);
       }
 
-      const queryString = queryParams.join('&');
-      const url = `/administration/clinics?${queryString}`;
+      //filtros avançados
+      if (advancedFilters.length > 0) {
+        params.append('query_props', advancedFilters.map(f => f.prop).join(','));
+        params.append('query_comparision', advancedFilters.map(f => f.operator).join(','));
+        params.append('query_value', advancedFilters.map(f => f.value).join(','));
+        params.append('query_operator', logicalOperator);
+      }
+
+      const includesToUse = '';
+      params.append(`includes`, includesToUse);
+
+      const url = `/administration/clinics?${params.toString()}`;
       console.log("🔍 Obtendo clínicas com URL:", url);
-
+      
       const response = await this.get<ApiResponse<ClinicListingType[]>>(url);
+       console.log('Resposta da requisição:', response); // Para debug
 
-      return {
+       return {
         content: response.data || [],
-        meta: response.meta || []
+        meta: response.meta || {
+          totalElements: 0,
+          page: 0,
+          size: 10,
+          totalPages: 0
+        }
       };
     } catch (error) {
       console.error("❌ Erro ao buscar clínicas:", error);
