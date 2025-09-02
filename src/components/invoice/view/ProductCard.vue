@@ -53,6 +53,10 @@ const props = defineProps({
     type: Boolean, 
     default: false 
   },
+  healthplanId: { 
+    type: String,
+    default: '' 
+  },
   institutionId: { 
     type: String, 
     required: true 
@@ -179,28 +183,32 @@ const calculateLineTotal = (item: InvoiceItem) => {
 
 const loadProcedures = async () => {
   try {
-
     hospitalProcedureStore.hospital_procedure_of_plan = [];
     activeHealthPlanId.value = "";
 
-    if (!props.institutionId) {
-      console.warn('Institution ID not available');
+    // console.log('Loading procedures with:', {
+    //   healthplanId: props.healthplanId,
+    //   institutionId: props.institutionId
+    // });
+
+    if (!props.healthplanId || !props.institutionId) {
+      console.warn('Missing required IDs:', {
+        hasHealthplanId: !!props.healthplanId,
+        hasInstitutionId: !!props.institutionId
+      });
       return;
     }
-    
-    const healthPlan = await healthPlanStore.fetchActiveHealthPlan(props.institutionId);
-    
-    if (!healthPlan?.id) {
-      throw new Error('No active health plan found for this company');
-    }
-    
-    activeHealthPlanId.value = healthPlan.id;
+
+    activeHealthPlanId.value = props.healthplanId;
     console.log("Active Health Plan ID:", activeHealthPlanId.value);
 
     await Promise.all([
       taxRateStore.fetchTaxRatesForDropdown(),
       hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value)
     ]);
+    
+    console.log('Procedures loaded successfully');
+    
   } catch (error) {
     handleError('t-error-loading-procedures', error);
   }
@@ -303,6 +311,14 @@ watch(invoiceItems, (newItems) => {
     item.totalAmount = calculateLineTotal(item).total;
   });
 }, { deep: true });
+
+
+watch([() => props.healthplanId, () => props.institutionId], ([newHealthplanId, newInstitutionId]) => {
+  if (newHealthplanId && newInstitutionId) {
+   // console.log('Both IDs available, loading procedures...');
+    loadProcedures();
+  }
+}, { immediate: true });
 
 // =============================================
 // LIFECYCLE HOOKS

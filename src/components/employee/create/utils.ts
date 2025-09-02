@@ -1,5 +1,7 @@
 import { MenuSelectItemType } from "@/app/common/components/filters/types";
 import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
+import { DataTableHeaderType } from "@/app/common/types/table.types";
+
 export const breadcrumb: BreadcrumbType[] = [
   {
     title: "employee-list",
@@ -10,6 +12,7 @@ export const breadcrumb: BreadcrumbType[] = [
     disabled: true,
   },
 ];
+
 
 export const genderOptions: MenuSelectItemType[] = [
   { value: "", label: "Selecione o Sexo" },
@@ -24,7 +27,7 @@ export const genderOptions: MenuSelectItemType[] = [
 ];
 
 export const maritalStatusOptions: MenuSelectItemType[] = [
-  { value: undefined, label: "Selecione o Estado Cívil" },
+  { value: undefined, label: "Selecione o Estado Cívil" }, 
   {
     label: "Solteiro",
     value: "SINGLE"
@@ -42,7 +45,7 @@ export const maritalStatusOptions: MenuSelectItemType[] = [
     value: "WIDOWED"
   },
   {
-    label: "União de facto",
+    label: "Outro",
     value: "UNKNOWN"
   }
 ];
@@ -113,6 +116,19 @@ export const relationshipOptions: MenuSelectItemType[] = [
     label: "Outro",
     value: "OTHER"
   }
+];
+
+export const breadcrumbHealthPlan: BreadcrumbType[] = [
+  {
+    title: "view-health-plan",
+    disabled: false,
+  }
+];
+
+export const usagesHeader: DataTableHeaderType[] = [
+  { title: "billed-amount", key: "billedAmount", sortable: true },
+  { title: "covered-amount", key: "amountCovered", sortable: true },
+  { title: "member-paid-amount", key: "memberPaidAmount", sortable: true }
 ];
 
 

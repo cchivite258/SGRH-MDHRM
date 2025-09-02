@@ -41,18 +41,22 @@ export const useEmployeeStore = defineStore('employees', {
       }
     } as EmployeeStats,
     statsLoading: false,
-    statsError: null as string | null
-
+    statsError: null as string | null,
+    globalSearch: '',
+    advancedFilters: [] as {
+      prop: string;
+      operator: string;
+      value: string | boolean | Date;
+    }[],
+    logicalOperator: 'AND' as 'AND' | 'OR',
   }),
 
   actions: {
-    async fetchEmployees(
+    async fetchEmployees( 
       page?: number,
       size?: number,
       sortColumn: string = 'createdAt',
-      direction: string = 'asc',
-      query_value?: string,
-      query_props?: string
+      direction: string = 'asc'
     ) {
       this.loading = true;
       this.error = null;
@@ -66,8 +70,9 @@ export const useEmployeeStore = defineStore('employees', {
           actualSize,
           sortColumn,
           direction,
-          query_value,
-          query_props
+          this.globalSearch,
+          this.advancedFilters,
+          this.logicalOperator
         );
 
         this.employees = content;
@@ -77,7 +82,8 @@ export const useEmployeeStore = defineStore('employees', {
           itemsPerPage: meta.size,
           totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
         };
-        console.log('Colaboradores:', this.employees);
+        
+        console.log('Colaboradores:', this.employees); 
         console.log('Meta:', this.pagination);
 
       } catch (err: any) {
@@ -89,6 +95,30 @@ export const useEmployeeStore = defineStore('employees', {
         this.loading = false;
       }
     },
+
+    // Métodos para pesquisa avançada
+    setGlobalSearch(search: string) { 
+      this.globalSearch = search;
+    },
+
+      setAdvancedFilters(filters: {
+      prop: string ;
+      operator: string;
+      value: string | boolean | Date;
+    }[]) {
+      this.advancedFilters = filters;
+      console.log('Advanced filters set:', this.advancedFilters);
+    },
+
+    setLogicalOperator(operator: 'AND' | 'OR') {
+      this.logicalOperator = operator;
+    },
+
+    clearFilters() {
+      this.globalSearch = '';
+      this.advancedFilters = [];
+    },
+
     setDraftEmployee(data: EmployeeInsertType) {
       this.draftEmployee = data;
       localStorage.setItem('employeeDraft', JSON.stringify(data));

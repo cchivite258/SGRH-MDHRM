@@ -92,7 +92,7 @@ const deleteInstitution = async () => {
 };
 
 const toggleSelection = (item: InstitutionListingType) => {
-  const index = selectedInstitutions.value.findIndex(selected => selected.id === item.id);
+  const index = selectedInstitutions.value.findIndex(selected => selected.id === item.id); 
   if (index === -1) {
     selectedInstitutions.value = [...selectedInstitutions.value, item];
   } else {

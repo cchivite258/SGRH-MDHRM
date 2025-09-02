@@ -13,6 +13,7 @@ import CoveragePeriodsService from "@/app/http/services/institution/coveragePeri
 import HealthPlanService from "@/app/http/services/institution/healthPlanService";
 import InvoiceService from "@/app/http/services/invoice/invoiceService";
 import DependentEmployeeService from "@/app/http/services/employee/dependentService";
+import HealthPlanEmployeeService from "@/app/http/services/employee/healthPlanService";
 import InvoiceItemService from "@/app/http/services/invoice/invoiceItemService";
 
 //BASETABLES
@@ -42,6 +43,7 @@ const clinicInstitutionService = new ClinicInstitutionService();
 const invoiceService = new InvoiceService();
 const dependentEmployeeService = new DependentEmployeeService();
 const invoiceItemService = new InvoiceItemService();
+const healthPlanEmployeeService = new HealthPlanEmployeeService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -78,5 +80,6 @@ export {
     taxRateTypeService,
     invoiceItemService,
     coveragePeriodsService,
-    healthPlanService
+    healthPlanService,
+    healthPlanEmployeeService
 };

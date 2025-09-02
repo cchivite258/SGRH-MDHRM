@@ -32,5 +32,12 @@ export const dependentHeader: DataTableHeaderType[] = [
   { title: "action",  sortable: false,  align: "right"}
 ];
 
-
-
+export const healthPlanHeader: DataTableHeaderType[] = [
+  { title: "allocated-balance", key: "allocatedBalance", sortable: true },
+  { title: "used-balance", key: "usedBalance", sortable: true },
+  { title: "remaining-balance", key: "remainingBalance", sortable: true },
+  { title: "start-date", key: "startDate", sortable: true },
+  { title: "end-date", key: "endDate", sortable: true },
+  //{ title: "status", key: "status", sortable: true },
+  { title: "action", sortable: false, align: "right" }
+];

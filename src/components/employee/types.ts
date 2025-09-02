@@ -237,3 +237,37 @@ export type DependentListingType = {
   idCardIssuanceDate: Date | undefined;
   enabled: boolean;
 }
+
+export type HealthPlanListingType = {
+  id: string | undefined;
+  allocatedBalance: number | string;
+  usedBalance: number | string;
+  remainingBalance: number | string;
+  employeeId?: string | undefined;
+  employee?: any | undefined;
+  companyHealthPlanId?: string;
+  status?: string | undefined;
+  startDate?: Date | undefined;
+  endDate?: Date | undefined;
+  closingDate?: Date | undefined;
+  companyHealthPlan?: any | undefined;
+  createdAt?: Date | undefined;
+  updatedAt?: Date | undefined;
+  deletedAt?: Date | undefined;
+  createdBy?: string | undefined;
+  updatedBy?: string | undefined;
+  deletedBy?: string | undefined;
+  usages?: UsagesListingType[] | undefined;
+}
+
+export type UsagesListingType = {
+  id: string;
+  employeeId?: string;
+  employee: any;
+  companyHealthPlanId: string;
+  billedAmount: string;
+  memberPaidAmount: string;
+  amountCovered: string;
+}
+
+

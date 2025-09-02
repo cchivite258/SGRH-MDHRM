@@ -143,7 +143,7 @@ const onCreateEditClick = (data: CoveragePeriodInsertType | CoveragePeriodListin
       enabled: true
     };
 
-  dialog.value = true;
+  dialog.value = true; 
 };
 
 

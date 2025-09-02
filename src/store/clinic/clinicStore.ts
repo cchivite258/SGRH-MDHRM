@@ -5,7 +5,7 @@ import type { ClinicListingType, ClinicInsertType, ClinicListingForListType } fr
 export const useClinicStore = defineStore('clinics', {
   state: () => ({
     clinics: [] as ClinicListingType[],
-    clinics_list: [] as ClinicListingForListType[],
+    clinics_list: [] as ClinicListingForListType[], 
     pagination: {
       totalElements: 0,
       currentPage: 0,
@@ -15,7 +15,14 @@ export const useClinicStore = defineStore('clinics', {
     loading: false,
     error: null as string | null,
     draftClinic: null as ClinicInsertType | null,
-    currentClinicId: null as string | null
+    currentClinicId: null as string | null,
+    globalSearch: '',
+    advancedFilters: [] as {
+      prop: string;
+      operator: string;
+      value: string | boolean | Date;
+    }[],
+    logicalOperator: 'AND' as 'AND' | 'OR',
   }),
 
   actions: {
@@ -24,8 +31,6 @@ export const useClinicStore = defineStore('clinics', {
       size?: number,
       sortColumn: string = 'createdAt',
       direction: string = 'asc',
-      query_props?: string,
-      query_value?: string
       
     ) {
       this.loading = true;
@@ -34,23 +39,15 @@ export const useClinicStore = defineStore('clinics', {
       const actualPage = page ?? this.pagination.currentPage;
       const actualSize = size ?? this.pagination.itemsPerPage;
 
-      console.log('🔍 Parâmetros da requisição de clínicas:', {
-        page: actualPage,
-        size: actualSize,
-        sortColumn,
-        direction,
-        query_value,
-        query_props
-      })
-
       try {
         const { content, meta } = await clinicService.getClinics(
           actualPage,
           actualSize,
           sortColumn,
           direction,
-          query_value,
-          query_props
+          this.globalSearch,
+          this.advancedFilters,
+          this.logicalOperator
         );
 
         this.clinics = content;
@@ -60,6 +57,7 @@ export const useClinicStore = defineStore('clinics', {
           itemsPerPage: meta.size,
           totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
         };
+
         console.log('Clínicas:', this.clinics);
         console.log('Meta:', this.pagination);
 
@@ -124,6 +122,27 @@ export const useClinicStore = defineStore('clinics', {
       } finally {
         this.loading = false;
       }
+    },
+    // Métodos para pesquisa avançada
+    setGlobalSearch(search: string) { 
+      this.globalSearch = search;
+    },
+    setAdvancedFilters(filters: {
+      prop: string ;
+      operator: string;
+      value: string | boolean | Date;
+    }[]) {
+      this.advancedFilters = filters;
+      console.log('Advanced filters set:', this.advancedFilters);
+    },
+
+    setLogicalOperator(operator: 'AND' | 'OR') {
+      this.logicalOperator = operator;
+    },
+
+    clearFilters() {
+      this.globalSearch = '';
+      this.advancedFilters = [];
     },
 
     setDraftClinic(data: ClinicInsertType) {

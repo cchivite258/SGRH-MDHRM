@@ -18,7 +18,7 @@ import Status from "@/app/common/components/Status.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { InvoiceListingType } from "../types"
 import axios from "axios"
-
+import AdvancedFilter from "@/components/invoice/list/AdvancedFilter.vue"; 
 
 const { t } = useI18n()
 const toast = useToast()
@@ -60,8 +60,6 @@ const fetchInvoices = async ({ page, itemsPerPage, sortBy, search }: FetchParams
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
     sortBy[0]?.order || 'asc',
-    search, // query_values
-    searchProps // query_props
   )
 }
 
@@ -258,19 +256,24 @@ const formatAmount = (amount: number | string) => {
 };
 </script>
 <template>
-  <Card :title="$t('t-invoice-list')" class="mt-7"> 
-    <template #title-action>
-      <v-row justify="end" align="center" no-gutters>
-        <v-col cols="12" sm="6" md="4">
-          <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-invoice')" />
+  <Card :title="$t('t-invoice-list')" class="mt-7">
+    
+     <v-card-title class="mt-2">
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="12">
+          <AdvancedFilter />
         </v-col>
-        <v-col cols="12" sm="6" md="auto" class="ms-sm-3 mt-sm-0 mt-2">
+      </v-row>
+      <v-row justify="space-between" class="mt-n6">
+        <v-col lg="8">
+        </v-col>
+        <v-col lg="auto">
           <v-btn color="secondary" to="/invoices/create" block>
             <i class="ph-plus-circle" /> {{ $t('t-add-invoice') }}
           </v-btn>
         </v-col>
       </v-row>
-    </template>
+    </v-card-title>
 
     <v-card-text>
       <DataTableServer v-model="selectedInvoices"
