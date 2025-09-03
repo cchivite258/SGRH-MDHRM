@@ -7,7 +7,7 @@
  * 2. Instituição & Classificação
  */
 
-import { ref, reactive, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -17,6 +17,7 @@ import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/create/TabDependents.vue";
+import Step4 from "@/components/employee/create/TabHealthPlan.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -98,7 +99,7 @@ let employeeData = reactive<EmployeeInsertType>({
 
   // Dados da segunda tab
   salary: null,
-  company: undefined, 
+  company: undefined,
   department: undefined,
   position: undefined
 });
@@ -189,7 +190,7 @@ onMounted(async () => {
       loading.value = false;
     }
   }
-  else{
+  else {
     if (route.query.institutionId) {
       // Se estiver criando um novo funcionário, preenche o company com o institutionId da rota
       employeeData.company = Number(route.query.institutionId);
@@ -229,6 +230,16 @@ const onStepChange = (value: number) => {
   }
 };
 
+
+// E o watcher deve ficar assim:
+watch(() => route.query.tab, (newTab) => {
+  if (newTab) {
+    const tabNumber = Number(newTab);
+    if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
+      onStepChange(tabNumber);
+    }
+  }
+}, { immediate: true });
 
 
 /**
@@ -318,6 +329,8 @@ onBeforeUnmount(() => {
         @save="(payload) => saveEmployee(payload, true)" :loading="loading" />
 
       <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>

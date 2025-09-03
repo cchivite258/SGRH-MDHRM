@@ -26,6 +26,7 @@ import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import Card from "@/app/common/components/Card.vue";
 import Breadcrumb from "@/app/common/components/Breadcrumb.vue";
 import TextField from "@/app/common/validationComponents/TextField.vue";
+import CurrencyField from "@/app/common/components/CurrencyField.vue";
 import TextArea from "@/app/common/validationComponents/TextArea.vue";
 
 import Toast from 'vue-toastification';
@@ -53,6 +54,7 @@ app.component("VueDatePicker", VueDatePicker);
 app.component("ListMenuWithIcon", ListMenuWithIcon);
 app.component("Breadcrumb", Breadcrumb);
 app.component("TextField", TextField);
+app.component("CurrencyField", CurrencyField);
 app.component("TextArea", TextArea);
 app.directive("maska", vMaska);
 app.component("MazPhoneNumberInput", MazPhoneNumberInput);

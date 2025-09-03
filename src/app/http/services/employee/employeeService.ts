@@ -7,7 +7,7 @@ interface ApiResponse<T> {
   meta?: any;
 }
 
-interface ServiceResponse<T> { 
+interface ServiceResponse<T> {
   status: 'success' | 'error';
   data?: T;
   error?: ApiErrorResponse;
@@ -18,50 +18,65 @@ interface ServiceResponse<T> {
 export default class EmployeeService extends HttpService {
 
   //get de todos colaboradores
-  async getEmployees(
+  async getEmployees( 
     page: number = 0,
     size: number = 10,
     sortColumn: string = 'createdAt',
-    direction: string = 'asc', 
-    query_props?: string,
-    query_value?: string
+    direction: string = 'asc',
+    globalSearch?: string,
+    advancedFilters: {
+      prop: string;
+      operator: string;
+      value: string | boolean | Date;
+    }[] = [],
+    logicalOperator: string = 'AND'
   ): Promise<{ content: EmployeeListingType[], meta: any }> {
     try {
-      // Construção manual da query string para controle total
-      const queryParams = [
-        `page=${page}`,
-        `size=${size}`,
-        `sortColumn=${sortColumn}`, 
-        `direction=${direction}`,
-      ];
 
-      
-  
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+      // Construção manual da query string para controle total
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+        sortColumn,
+        direction
+      }); 
+
+      //filtro geral
+      if (globalSearch) {
+        params.append('query_props', 'employeeNumber,firstName,middleName,lastName,gender,maritalStatus,birthDate,bloodGroup,placeOfBirth,nationality,incomeTaxNumber,socialSecurityNumber,address,postalCode,email,phone,mobile,emergencyContactName,emergencyContactPhone,idCardNumber,idCardIssuer,idCardExpiryDate');
+        params.append('query_operator', 'OR');
+        params.append('query_value', globalSearch);
       }
 
-      const includesToUse = 'position,department,company,province,country';
-      queryParams.push(`includes=${includesToUse}`);
+      //filtros avançados
+      if (advancedFilters.length > 0) {
+        params.append('query_props', advancedFilters.map(f => f.prop).join(','));
+        params.append('query_comparision', advancedFilters.map(f => f.operator).join(','));
+        params.append('query_value', advancedFilters.map(f => f.value).join(','));
+        params.append('query_operator', logicalOperator);
+      }
 
-      const queryString = queryParams.join('&');
+      const includesToUse = 'position,department,company,province,country,dependents';
+      params.append(`includes`, includesToUse);
 
+      const url = `/human-resource/employees?${params.toString()}`;
 
-      const url = `/human-resource/employees?${queryString}`;
-  
-      console.log('URL da requisição:', url); // Para debug
-  
+      console.log('URL de busca de colaboradores:', url); // Log da URL para depuração
+
       const response = await this.get<ApiResponse<EmployeeListingType[]>>(url);
 
-
       console.log('Resposta da requisição:', response); // Para debug
-      
+
       return {
         content: response.data || [],
-        meta: response.meta || []
+        meta: response.meta || {
+          totalElements: 0,
+          page: 0,
+          size: 10,
+          totalPages: 0
+        }
       };
-      
+
     } catch (error) {
       console.error("❌ Erro ao buscar colaboradores:", error);
       throw error;
@@ -73,7 +88,7 @@ export default class EmployeeService extends HttpService {
     page: number = 0,
     size: number = 10000000,
     sortColumn: string = 'createdAt',
-    direction: string = 'asc', 
+    direction: string = 'asc',
     query_props?: string,
     query_value?: string
   ): Promise<{ content: EmployeeListingType[], meta: any }> {
@@ -83,12 +98,12 @@ export default class EmployeeService extends HttpService {
         `id=${id}`,
         `page=${page}`,
         `size=${size}`,
-        `sortColumn=${sortColumn}`, 
+        `sortColumn=${sortColumn}`,
         `direction=${direction}`,
       ];
 
-      
-  
+
+
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
@@ -101,19 +116,19 @@ export default class EmployeeService extends HttpService {
 
 
       const url = `/human-resource/employees/in-company?${queryString}`;
-  
+
       console.log('URL da requisição:', url); // Para debug
-  
+
       const response = await this.get<ApiResponse<EmployeeListingType[]>>(url);
 
 
       console.log('Resposta da requisição:', response); // Para debug
-      
+
       return {
         content: response.data || [],
         meta: response.meta || []
       };
-      
+
     } catch (error) {
       console.error("❌ Erro ao buscar colaboradores:", error);
       throw error;
@@ -125,7 +140,7 @@ export default class EmployeeService extends HttpService {
     page: number = 0,
     size: number = 10000000,
     sortColumn: string = 'createdAt',
-    direction: string = 'asc', 
+    direction: string = 'asc',
     query_props?: string,
     query_value?: string
   ): Promise<{ content: EmployeeListingType[], meta: any }> {
@@ -135,12 +150,12 @@ export default class EmployeeService extends HttpService {
         `id=${id}`,
         `page=${page}`,
         `size=${size}`,
-        `sortColumn=${sortColumn}`, 
+        `sortColumn=${sortColumn}`,
         `direction=${direction}`,
       ];
 
-      
-  
+
+
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
@@ -153,19 +168,19 @@ export default class EmployeeService extends HttpService {
 
 
       const url = `/human-resource/employees/in-company?${queryString}`;
-  
+
       console.log('URL da requisição:', url); // Para debug
-  
+
       const response = await this.get<ApiResponse<EmployeeListingType[]>>(url);
 
 
       console.log('Resposta da requisição:', response); // Para debug
-      
+
       return {
         content: response.data || [],
         meta: response.meta || []
       };
-      
+
     } catch (error) {
       console.error("❌ Erro ao buscar colaboradores:", error);
       throw error;
@@ -210,11 +225,11 @@ export default class EmployeeService extends HttpService {
     };
   }
 
-  async getEmployeeById(id: string ) : Promise<{ data: EmployeeResponseType }> {
+  async getEmployeeById(id: string): Promise<{ data: EmployeeResponseType }> {
     try {
       const response = await this.get<{ data: EmployeeResponseType; meta: any }>
-      (`/human-resource/employees/${id}?includes=position,department,company,province,country`);
-      console.log('Resposta da requisição:------------------------', response); 
+        (`/human-resource/employees/${id}?includes=position,department,company,province,country`);
+      console.log('Resposta da requisição:------------------------', response);
       return {
         data: response.data
       };
@@ -337,7 +352,7 @@ export default class EmployeeService extends HttpService {
   async getEmployeesByGender(): Promise<ServiceResponse<{ male: number; female: number; other: number }>> {
     try {
       const response = await this.get<GenderCountResponse>('/human-resource/employees/count-by-gender');
-      
+
       // Processa os dados de gênero para o formato esperado
       const genderData = {
         male: 0,
@@ -361,7 +376,7 @@ export default class EmployeeService extends HttpService {
   }
 
 
- 
+
 
 
 }

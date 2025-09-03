@@ -15,17 +15,22 @@ export const useInvoiceStore = defineStore('invoices', {
     loading: false,
     error: null as string | null,
     draftInvoice: null as InvoiceInsertType | null,
-    currentInvoiceId: undefined as string | undefined
+    currentInvoiceId: undefined as string | undefined,
+    globalSearch: '',
+    advancedFilters: [] as {
+      prop: string;
+      operator: string;
+      value: string | boolean | Date;
+    }[],
+    logicalOperator: 'AND' as 'AND' | 'OR',
   }),
 
   actions: {
     async fetchInvoices(
       page?: number,
       size?: number,
-      sortColumn: string = 'createdAt',
-      direction: string = 'asc',
-      query_value?: string,
-      query_props?: string
+      sortColumn: string = 'createdAt', 
+      direction: string = 'asc'
     ) {
       this.loading = true;
       this.error = null;
@@ -39,8 +44,9 @@ export const useInvoiceStore = defineStore('invoices', {
           actualSize,
           sortColumn,
           direction,
-          query_value,
-          query_props
+          this.globalSearch,
+          this.advancedFilters,
+          this.logicalOperator
         );
 
         this.invoices = content;
@@ -60,6 +66,28 @@ export const useInvoiceStore = defineStore('invoices', {
       } finally {
         this.loading = false;
       }
+    },
+    // Métodos para pesquisa avançada
+    setGlobalSearch(search: string) { 
+      this.globalSearch = search;
+    },
+
+      setAdvancedFilters(filters: {
+      prop: string ;
+      operator: string;
+      value: string | boolean | Date;
+    }[]) {
+      this.advancedFilters = filters;
+      console.log('Advanced filters set:', this.advancedFilters);
+    },
+
+    setLogicalOperator(operator: 'AND' | 'OR') {
+      this.logicalOperator = operator;
+    },
+
+    clearFilters() {
+      this.globalSearch = '';
+      this.advancedFilters = [];
     },
     async fetchInvoicesForListing(
       page?: number,

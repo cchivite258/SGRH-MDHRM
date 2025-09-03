@@ -110,6 +110,7 @@ export type InvoiceInsertType = {
     company?: string;
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    coveragePeriod: any;
 }
 
 
@@ -156,3 +157,11 @@ export type InvoiceItemListingType = {
     deletedBy: string;
 }
 
+export type InvoiceAdviceResponseType = {
+    employeeId: string;
+    billedAmount: number;
+    canBeCovered: boolean;
+    remainingBalance: number;
+    balanceAfterTransaction: number;
+    timestamp: Date;
+};

@@ -155,7 +155,7 @@ const submitInvoice = async () => {
     if (productCardRef.value) {
       const itemsValid = productCardRef.value.emitItemsReady();
       if (!itemsValid) return;
-    } 
+    }
     // Se não houver itens, emite os dados básicos
     else {
       emit('save', { ...invoiceData.value });
@@ -181,6 +181,15 @@ const onBack = () => {
 };
 
 // Watchers
+// Adicione este watcher para debug
+watch(() => invoiceData.value, (newValue) => {
+  // console.log('Invoice data structure:', {
+  //   coveragePeriod: newValue.coveragePeriod,
+  //   companyHealthPlanId: newValue.coveragePeriod?.companyHealthPlanId,
+  //   fullData: newValue
+  // });
+}, { deep: true, immediate: true });
+
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
   if (newInstitutionId) {
     try {
@@ -250,11 +259,11 @@ onMounted(async () => {
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
-              :rules="requiredRules.institution" :placeholder="$t('t-institution')" disabled/>
+              :rules="requiredRules.institution" :placeholder="$t('t-institution')" disabled />
 
             <div class="font-weight-bold mt-n1">{{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.clinic" :items="clinics" :loading="clinicStore.loading"
-              :rules="requiredRules.clinic" :placeholder="$t('t-clinic')" disabled/>
+              :rules="requiredRules.clinic" :placeholder="$t('t-clinic')" disabled />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
             <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary" disabled>
@@ -269,21 +278,19 @@ onMounted(async () => {
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-invoice-number') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.invoiceNumber" :placeholder="$t('t-enter-invoice-number')"
-              :rules="requiredRules.invoiceNumber" disabled/>
+              :rules="requiredRules.invoiceNumber" disabled />
           </v-col>
 
           <v-col cols="12" lg="">
             <div class="font-weight-bold">{{ $t('t-employee') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.employee" :items="employees" :loading="employeeStore.loading"
-              :rules="requiredRules.employee" :placeholder="$t('t-select-employee')"
-               disabled />
+              :rules="requiredRules.employee" :placeholder="$t('t-select-employee')" disabled />
           </v-col>
 
           <v-col cols="12" lg="4" v-if="!invoiceData.isEmployeeInvoice">
             <div class="font-weight-bold">{{ $t('t-dependent') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.dependent" :items="dependents" :loading="dependentStore.loading"
-              :rules="requiredRules.dependent" :placeholder="$t('t-select-dependent')"
-               disabled/>
+              :rules="requiredRules.dependent" :placeholder="$t('t-select-dependent')" disabled />
           </v-col>
         </v-row>
 
@@ -291,7 +298,7 @@ onMounted(async () => {
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-issue-date') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <ValidatedDatePicker v-model="invoiceData.issueDate" :teleport="true" :enable-time-picker="false"
-              :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" disabled/>
+              :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" disabled />
           </v-col>
 
           <v-col cols="12" lg="4">
@@ -303,27 +310,31 @@ onMounted(async () => {
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-due-date') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <ValidatedDatePicker v-model="invoiceData.dueDate" :teleport="true" :enable-time-picker="false"
-              :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" disabled/>
+              :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" disabled />
           </v-col>
         </v-row>
 
         <v-row class="mt-n6 mb-2">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold">{{ $t('t-invoice-reference') }}</div>
-            <TextField v-model="invoiceData.invoiceReferenceNumber" :placeholder="$t('t-enter-invoice-reference')" disabled />
+            <TextField v-model="invoiceData.invoiceReferenceNumber" :placeholder="$t('t-enter-invoice-reference')"
+              disabled />
           </v-col>
 
           <v-col cols="12" lg="6">
             <div class="font-weight-bold">{{ $t('t-authorized-by') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.authorizedBy" :placeholder="$t('t-enter-authorized-by')"
-              :rules="requiredRules.authorizedBy" disabled/>
+              :rules="requiredRules.authorizedBy" disabled />
           </v-col>
         </v-row>
 
         <div class="mb-12">
-          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''"
-            :initial-items="initialItems" :is-edit-mode="isEditMode" @items-ready="handleItemsReady" />
+          <ProductCard ref="productCardRef" v-model="invoiceItemData"
+            :healthplan-id="invoiceData.coveragePeriod?.companyHealthPlanId || ''"
+            :institution-id="invoiceData.company || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
+            @items-ready="handleItemsReady" />
         </div>
+
       </v-card-text>
 
       <v-card-actions class="d-flex justify-space-between mt-5">

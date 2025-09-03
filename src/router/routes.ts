@@ -65,7 +65,7 @@ const institutionRoutes = [
     component: () => import("@/views/institution/editDepartment/List.vue"),
     meta: { title: "EditDepartment", authRequired: true },
   },
-    {
+  {
     path: `${institutionPrefix}/healthPlan/:id`,
     name: "EditHealthPlan",
     component: () => import("@/views/institution/editHealthPlan/List.vue"),
@@ -108,7 +108,13 @@ const employeeRoutes = [
     name: 'ViewEmployee',
     component: () => import('@/views/employee/View.vue'),
     meta: { title: "View Employee", requiresAuth: true }
-  }
+  },
+  {
+    path: `${employeePrefix}/healthPlan/:id`,
+    name: "ViewHealthPlan",
+    component: () => import("@/views/employee/viewHealthPlan/List.vue"),
+    meta: { title: "ViewHealthPlan", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,
@@ -477,7 +483,7 @@ const invoicesRoutes = [
     component: () => import("@/views/invoices/Edit.vue"),
     meta: { title: "Edit Invoice", authRequired: true },
   },
-    {
+  {
     path: `${invoicePrefix}/view/:id`,
     name: "ViewInvoice",
     component: () => import("@/views/invoices/View.vue"),
