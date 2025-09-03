@@ -1,6 +1,7 @@
 import HttpService from "@/app/http/httpService";
-import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType } from "@/components/invoice/types";
+import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType, InvoiceAdviceResponseType } from "@/components/invoice/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { bi } from "@/assets/images/flags/utils";
 
 interface ApiResponse<T> {
   data: T;
@@ -291,6 +292,24 @@ export default class InvoiceService extends HttpService {
       }
     };
   }
+
+
+  async getAdviceInvoice(id: string, billedAmount: number): Promise<{ data: InvoiceAdviceResponseType }> {
+    try {
+
+      const response = await this.get<{ data: InvoiceAdviceResponseType; meta: any }>(
+        `/amm/invoices/advice?employeeId=${id}&billedAmount=${billedAmount}`
+      );
+      console.log('Resposta da requisição do advice:------------------------', response);
+
+      return {
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
 
 
 }

@@ -16,8 +16,11 @@ import { useTaxRateStore } from "@/store/baseTables/taxRateServiceStore";
 import { useHospitalProcedureStore } from "@/store/institution/hospitalProcedureStore";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 
+//services
+import { invoiceService } from "@/app/http/httpServiceProvider";
+
 // Types e Utils
-import { InvoiceItemInsertType } from "@/components/invoice/types";
+import { InvoiceItemInsertType, InvoiceAdviceResponseType } from "@/components/invoice/types";
 import { productHeader } from "@/components/invoice/createInvoice/utils";
 
 // =============================================
@@ -45,25 +48,29 @@ const toast = useToast();
 // PROPS & EMITS
 // =============================================
 const props = defineProps({
-  modelValue: { 
-    type: Object as () => InvoiceItemInsertType, 
-    required: true 
+  modelValue: {
+    type: Object as () => InvoiceItemInsertType,
+    required: true
   },
-  loading: { 
-    type: Boolean, 
-    default: false 
+  loading: {
+    type: Boolean,
+    default: false
   },
-  institutionId: { 
-    type: String, 
-    required: true 
+  institutionId: {
+    type: String,
+    required: true
   },
-  initialItems: { 
-    type: Array as () => InvoiceItemInsertType[], 
-    default: () => [] 
+  employeeId: {
+    type: String,
+    required: true
   },
-  isEditMode: { 
-    type: Boolean, 
-    default: false 
+  initialItems: {
+    type: Array as () => InvoiceItemInsertType[],
+    default: () => []
+  },
+  isEditMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -92,14 +99,14 @@ const activeHealthPlanId = ref("");
 // =============================================
 
 
-const companyAllowedHospitalProcedures = computed(() => 
+const companyAllowedHospitalProcedures = computed(() =>
   hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
     value: item.id,
     label: item.hospitalProcedureType.name
   }))
 );
 
-const taxRates = computed(() => 
+const taxRates = computed(() =>
   taxRateStore.tax_rates_for_dropdown.map(item => ({
     value: item.id,
     label: `${item.rate}%`,
@@ -107,23 +114,78 @@ const taxRates = computed(() =>
   }))
 );
 
-const lineTotals = computed(() => 
+const lineTotals = computed(() =>
   invoiceItems.value.map(calculateLineTotal)
 );
 
 const invoiceTotals = computed(() => {
+  // console.log("Invoice Line Totals:-------------------------------------------", lineTotals.value);
   const totals = lineTotals.value.reduce((acc, curr) => ({
     subTotal: acc.subTotal + curr.subtotal,
     taxAmount: acc.taxAmount + curr.taxAmount,
     total: acc.total + curr.total
   }), { subTotal: 0, taxAmount: 0, total: 0 });
 
+   //console.log("totals---------------------------------", totals);
+
+   fetchInvoiceAdvice(totals.total)
+
   return {
     subTotal: totals.subTotal.toFixed(2),
     taxAmount: totals.taxAmount.toFixed(2),
     finalTotal: totals.total.toFixed(2)
   };
+
+
 });
+
+//advice
+
+const adviceData = ref<InvoiceAdviceResponseType | null>(null);
+const showAdviceAlert = ref(false);
+let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const fetchInvoiceAdvice = async (total: number) => {
+  if (!props.employeeId || !total) return;
+
+  try {
+    const { data } = await invoiceService.getAdviceInvoice(
+      props.employeeId,
+      total
+    );
+
+    adviceData.value = data;
+
+    if (!data.canBeCovered) {
+      showAdviceAlert.value = true;
+
+      // limpa timeout anterior
+      if (alertTimeout) {
+        clearTimeout(alertTimeout);
+      }
+
+      // fecha sozinho depois de 10s
+      alertTimeout = setTimeout(() => {
+        showAdviceAlert.value = false;
+        alertTimeout = null;
+      }, 10000);
+    } else {
+      // se já pode ser coberta → fecha alerta imediatamente
+      showAdviceAlert.value = false;
+
+      if (alertTimeout) {
+        clearTimeout(alertTimeout);
+        alertTimeout = null;
+      }
+    }
+  } catch (error) {
+    console.error("Advice fetch error:", error);
+  }
+};
+
+ 
+
+
 
 // =============================================
 // VALIDATION RULES
@@ -139,26 +201,26 @@ const requiredRules = {
 // FLAG CONFIGURATION
 // =============================================
 const flagConfig: Record<string, FlagConfig> = {
-  EXCEEDS_LIMIT: { 
-    color: 'warning', 
-    icon: 'ph-warning', 
-    text: t('t-exceeds-limit') 
+  EXCEEDS_LIMIT: {
+    color: 'warning',
+    icon: 'ph-warning',
+    text: t('t-exceeds-limit')
   },
-  INSUFFICIENT_FUNDS: { 
-    color: 'error', 
-    icon: 'ph-money', 
-    text: t('t-insufficient-funds') 
+  INSUFFICIENT_FUNDS: {
+    color: 'error',
+    icon: 'ph-money',
+    text: t('t-insufficient-funds')
   },
-  default: { 
-    color: 'info', 
-    icon: '', 
-    text: '' 
+  default: {
+    color: 'info',
+    icon: '',
+    text: ''
   }
 };
 
-const getFlagConfig = (flag?: string): FlagConfig | null => 
-  flag && flag !== 'UNFLAGGED' 
-    ? flagConfig[flag as keyof typeof flagConfig] || flagConfig.default 
+const getFlagConfig = (flag?: string): FlagConfig | null =>
+  flag && flag !== 'UNFLAGGED'
+    ? flagConfig[flag as keyof typeof flagConfig] || flagConfig.default
     : null;
 
 // =============================================
@@ -169,7 +231,7 @@ const calculateLineTotal = (item: InvoiceItem) => {
   const rate = taxRate?.rate || 0;
   const subtotal = item.unitPrice * item.quantity;
   const taxAmount = subtotal * rate;
-  
+
   return {
     subtotal,
     taxAmount,
@@ -187,13 +249,13 @@ const loadProcedures = async () => {
       console.warn('Institution ID not available');
       return;
     }
-    
+
     const healthPlan = await healthPlanStore.fetchActiveHealthPlan(props.institutionId);
-    
+
     if (!healthPlan?.id) {
       throw new Error('No active health plan found for this company');
     }
-    
+
     activeHealthPlanId.value = healthPlan.id;
     console.log("Active Health Plan ID:", activeHealthPlanId.value);
 
@@ -322,31 +384,37 @@ onMounted(() => {
 </script>
 
 <template>
+
+<transition name="fade">
+  <v-alert
+    v-if="showAdviceAlert && adviceData && !adviceData.canBeCovered"
+    type="error"
+    class="mb-4 mx-5 mt-3"
+    variant="tonal"
+    color="danger"
+    density="compact"
+    @click="showAdviceAlert = false"
+    style="cursor: pointer;"
+  >
+    {{ $t('t-invoice-not-covered-message', {
+      remaining: adviceData.remainingBalance.toLocaleString()
+    }) }}
+  </v-alert>
+</transition>
+
+
+
   <v-form ref="form">
     <!-- Tabela de Itens -->
-    <Table 
-      :headerItems="productHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" 
-      class="fixed-columns"
-    >
+    <Table :headerItems="productHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" class="fixed-columns">
       <template #body>
-        <tr 
-          v-for="(item, index) in invoiceItems" 
-          :key="`product-item-${item.id}`"
-          :class="[`flag-border-${item.flag}`, { 'has-flag': item.flag && item.flag !== 'UNFLAGGED' }]"
-        >
+        <tr v-for="(item, index) in invoiceItems" :key="`product-item-${item.id}`"
+          :class="[`flag-border-${item.flag}`, { 'has-flag': item.flag && item.flag !== 'UNFLAGGED' }]">
           <!-- Número do Item -->
           <td class="font-weight-bold text-center" style="width: 3%">
-            <v-tooltip 
-              v-if="getFlagConfig(item.flag)" 
-              :text="getFlagConfig(item.flag)?.text" 
-              location="top"
-            >
+            <v-tooltip v-if="getFlagConfig(item.flag)" :text="getFlagConfig(item.flag)?.text" location="top">
               <template v-slot:activator="{ props: tooltipProps }">
-                <v-icon 
-                  v-bind="tooltipProps" 
-                  :color="getFlagConfig(item.flag)?.color" 
-                  size="small"
-                >
+                <v-icon v-bind="tooltipProps" :color="getFlagConfig(item.flag)?.color" size="small">
                   {{ getFlagConfig(item.flag)?.icon }}
                 </v-icon>
               </template>
@@ -356,83 +424,43 @@ onMounted(() => {
 
           <!-- Procedimento -->
           <td style="width: 30%" class="pt-4">
-            <MenuSelect 
-              v-model="item.companyAllowedHospitalProcedure" 
-              :items="companyAllowedHospitalProcedures"
-              :rules="requiredRules.companyAllowedHospitalProcedure" 
-              :placeholder="$t('t-select-procedure')"
-              item-value="value" 
-              class="w-100" 
-            />
+            <MenuSelect v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
+              :rules="requiredRules.companyAllowedHospitalProcedure" :placeholder="$t('t-select-procedure')"
+              item-value="value" class="w-100" />
           </td>
 
           <!-- Preço Unitário -->
           <td style="width: 10%" class="pt-4 px-1">
-            <TextField 
-              v-model.number="item.unitPrice" 
-              :rules="requiredRules.unitPrice"
-              :placeholder="$t('t-unit-price')" 
-              type="number" 
-              min="0" 
-              step="0.01" 
-              class="compact-input" 
-            />
+            <TextField v-model.number="item.unitPrice" :rules="requiredRules.unitPrice"
+              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" class="compact-input" />
           </td>
 
           <!-- Quantidade -->
           <td style="width: 5%" class="pt-4 px-1">
-            <TextField 
-              v-model.number="item.quantity" 
-              :placeholder="$t('t-quantity')" 
-              type="number" 
-              min="0"
-              :rules="requiredRules.quantity" 
-              class="compact-input" 
-            />
+            <TextField v-model.number="item.quantity" :placeholder="$t('t-quantity')" type="number" min="0"
+              :rules="requiredRules.quantity" class="compact-input" />
           </td>
 
           <!-- Taxa -->
           <td style="width: 12%" class="pt-4 px-1">
-            <MenuSelect 
-              v-model="item.taxRate" 
-              :items="taxRates" 
-              :rules="requiredRules.taxRate"
-              :placeholder="$t('t-select-tax-rate')" 
-              item-value="value" 
-              class="w-100" 
-            />
+            <MenuSelect v-model="item.taxRate" :items="taxRates" :rules="requiredRules.taxRate"
+              :placeholder="$t('t-select-tax-rate')" item-value="value" class="w-100" />
           </td>
 
           <!-- Total -->
           <td style="width: 20%" class="pt-4">
-            <TextField 
-              disabled 
-              :model-value="calculateLineTotal(item).total.toFixed(2)" 
-              class="total-input" 
-            />
+            <TextField disabled :model-value="calculateLineTotal(item).total.toFixed(2)" class="total-input" />
           </td>
 
           <!-- Descrição -->
           <td style="width: 25%" class="pt-4">
-            <TextArea 
-              v-model="item.description" 
-              :placeholder="$t('t-description')" 
-              class="description-field" 
-              rows="1"
-              auto-grow 
-            />
+            <TextArea v-model="item.description" :placeholder="$t('t-description')" class="description-field" rows="1"
+              auto-grow />
           </td>
 
           <!-- Ações -->
           <td style="width: 5%" class="pt-4 px-1 text-center">
-            <v-btn 
-              icon 
-              variant="text" 
-              color="error" 
-              size="small" 
-              @click="removeItem(item.id)" 
-              class="ml-auto"
-            >
+            <v-btn icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
               <i class="ph-trash"></i>
             </v-btn>
           </td>
@@ -536,4 +564,39 @@ onMounted(() => {
 .flag-border-INSUFFICIENT_FUNDS {
   border-left: 4px solid red;
 }
+
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.v-alert {
+  position: relative;
+  overflow: hidden;
+}
+
+.v-alert::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: progressBar 10s linear forwards;
+}
+
+@keyframes progressBar {
+  to {
+    transform: scaleX(1);
+  }
+}
+
 </style>

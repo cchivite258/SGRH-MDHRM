@@ -939,5 +939,6 @@
   "t-billed-amount": "Valor Cobrado",
   "t-covered-amount": "Valor Coberto pela Empresa",
   "t-member-paid-amount": "Valor Pago pelo Colaborador",
-  "t-back-to-dependents": "Voltar aos Dependentes"
+  "t-back-to-dependents": "Voltar aos Dependentes",
+  "t-invoice-not-covered-message": "O valor total da factura não tem cobertura. Saldo remanescente: {remaining}"
 }
