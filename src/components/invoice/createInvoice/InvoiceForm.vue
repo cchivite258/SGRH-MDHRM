@@ -378,7 +378,7 @@ onMounted(async () => {
 
         <!-- Componente de Itens da Fatura -->
         <div class="mb-12">
-          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''"
+          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''" :employee-id="invoiceData.employee || ''"
             :initial-items="initialItems" :is-edit-mode="isEditMode" @items-ready="handleItemsReady" />
         </div>
       </v-card-text>
