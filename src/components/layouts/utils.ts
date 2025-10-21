@@ -139,11 +139,11 @@ export const menuItems: MenuItemType[] = [
     id: "HeaderMenu",
   },
   {
-    label: "clinics",
+    label: "service-providers",
     icon: "ph ph-first-aid",
-    id: "sidebarClinics",
-    prefix: "/clinics",
-    link: "/clinics/list"
+    id: "sidebarServiceProvider",
+    prefix: "/service-provider", 
+    link: "/service-provider/list"
   },
   {
     label: "billing",
@@ -218,6 +218,7 @@ export const menuItems: MenuItemType[] = [
       { label: "leave-reason", link: "/baseTable/leavereason/list" },
       { label: "languages", link: "/baseTable/languages/list" },
       { label: "tax-rates", link: "/baseTable/tax-rates/list" },
+      { label: "provider-types", link: "/baseTable/provider-types/list" },
     ],
   },
   /*{

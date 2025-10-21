@@ -6,7 +6,7 @@ import InstitutionService from "@/app/http/services/institution/institutionServi
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
 import ClinicInstitutionService from "@/app/http/services/institution/clinicService";
-import ClinicService from "@/app/http/services/clinicService";
+import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
 import CoveragePeriodsService from "@/app/http/services/institution/coveragePeriodsService";
@@ -24,6 +24,7 @@ import InstitutionTypeService from "@/app/http/services/baseTables/institutionTy
 import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leaveReasonService";
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
+import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -36,7 +37,7 @@ const departmentService = new DepartmentService();
 const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
 const healthPlanService = new HealthPlanService();
-const clinicService = new ClinicService();
+const serviceProviderService = new ServiceProviderService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
 const clinicInstitutionService = new ClinicInstitutionService();
@@ -53,6 +54,7 @@ const institutionTypeService = new InstitutionTypeService();
 const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
+const providerTypeService = new ProviderTypeService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -71,7 +73,7 @@ export {
     institutionService, 
     departmentService, 
     positionService, 
-    clinicService,
+    serviceProviderService,
     contactPersonService,
     clinicInstitutionService,
     hospitalProcedureService,
@@ -81,5 +83,6 @@ export {
     invoiceItemService,
     coveragePeriodsService,
     healthPlanService,
-    healthPlanEmployeeService
+    healthPlanEmployeeService,
+    providerTypeService
 };

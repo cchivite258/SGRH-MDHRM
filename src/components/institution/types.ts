@@ -194,9 +194,9 @@ export type ContactPersonInsertType = {
     enabled: boolean;
 };
 
-export type ClinicListingType = {
+export type ServiceProviderListingType = {
     id: string;
-    clinic: {
+    serviceProvider: {
         id: string | number;
         name: string;
         description: string;
@@ -217,9 +217,9 @@ export type ClinicListingType = {
     enabled: boolean;
 };
 
-export type ClinicInsertType = {
+export type ServiceProviderInsertType = {
     id?: string | null; 
-    clinic: string; 
+    serviceProvider: string; 
     company: string; 
     enabled: boolean;
 };

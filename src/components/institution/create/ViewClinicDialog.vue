@@ -1,8 +1,8 @@
 <script lang="ts" setup>
 import { PropType, computed, watch, ref, onMounted } from "vue";
-import { ClinicInsertType, ClinicListingType } from "@/components/institution/types";
-import { ClinicListingForListType } from "@/components/clinics/types";
-import { useClinicStore } from "@/store/clinic/clinicStore";
+import { ServiceProviderInsertType, ServiceProviderListingType } from "@/components/institution/types";
+import { ServiceProviderListingForListType } from "@/components/serviceProvider/types";
+import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -14,11 +14,11 @@ const props = defineProps({
     default: false,
   },
   data: {
-    type: Object as PropType<ClinicInsertType | ClinicListingType | null>,
+    type: Object as PropType<ServiceProviderInsertType | ServiceProviderListingType | null>,
     required: false,
     default: () => ({
       id: undefined,
-      clinic: "",
+      serviceProvider: "",
       company: ""
     })
   },
@@ -33,30 +33,30 @@ const dialogValue = computed({
   },
 });
 
-const clinicStore = useClinicStore();
-const clinic = ref<string>("");
+const serviceProviderStore = useServiceProviderStore();
+const serviceProvider = ref<string>("");
 
 watch(
   () => props.data,
   (newData) => {
     if (!newData) return;
-    if (typeof newData.clinic === "object" && newData.clinic !== null) {
-      clinic.value = newData.clinic.id.toString();
+    if (typeof newData.serviceProvider === "object" && newData.serviceProvider !== null) {
+      serviceProvider.value = newData.serviceProvider.id.toString();
     } else {
-      clinic.value = newData.clinic?.toString() || "";
+      serviceProvider.value = newData.serviceProvider?.toString() || "";
     }
   },
   { immediate: true }
 );
 
-const clinicName = computed(() => {
-  const match = clinicStore.clinics_list.find((item: ClinicListingForListType) => item.id.toString() === clinic.value);
+const serviceProviderName = computed(() => {
+  const match = serviceProviderStore.service_provider_list.find((item: ServiceProviderListingForListType) => item.id.toString() === serviceProvider.value);
   return match?.name || "-";
 });
 
 onMounted(async () => {
   try {
-    await clinicStore.fetchClinicsForDropdown();
+    await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
     console.error("Erro ao carregar clínicas:", error);
   }
@@ -65,7 +65,7 @@ onMounted(async () => {
 
 <template>
   <v-dialog v-model="dialogValue" width="500" >
-    <Card :title="$t('t-view-contracted-clinic')" title-class="py-0" style="overflow: hidden">
+    <Card :title="$t('t-view-contracted-serviceProvider')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
       </template>
@@ -75,8 +75,8 @@ onMounted(async () => {
       <v-card-text >
         <v-row>
           <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-clinic') }}</div>
-            <div>{{ clinicName }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-serviceProvider') }}</div>
+            <div>{{ serviceProviderName }}</div>
           </v-col>
         </v-row>
 

@@ -1,17 +1,16 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, onMounted } from "vue";
-import { ClinicInsertType, ClinicListingType } from "@/components/institution/types";
-import { ClinicListingForListType } from "@/components/clinics/types";
+import { ServiceProviderInsertType, ServiceProviderListingType } from "@/components/institution/types";
+import { ServiceProviderListingForListType } from "@/components/serviceProvider/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
-import { clinicInstitutionService } from "@/app/http/httpServiceProvider";
-import { useClinicStore } from "@/store/clinic/clinicStore";
+import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 
 const { t } = useI18n();
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'onSubmit', data: ClinicInsertType, callbacks?: {  
+  (e: 'onSubmit', data: ServiceProviderInsertType, callbacks?: {  
     onSuccess?: () => void,
     onFinally?: () => void
   }): void
@@ -23,22 +22,22 @@ const props = defineProps({
     default: false,
   },
   data: {
-    type: Object as PropType<ClinicInsertType | ClinicListingType | null>,
+    type: Object as PropType<ServiceProviderInsertType | ServiceProviderListingType | null>,
     required: false,
     default: () => ({
       id: undefined,
-      clinic: "",
+      serviceProvider: "",
       company: ""
     })
   },
 });
 
 // Stores
-const clinicStore = useClinicStore();
+const serviceProviderStore = useServiceProviderStore();
 const localLoading = ref(false);
 const errorMsg = ref("");
 const id = ref("");
-const clinic = ref<string | number>(""); // Pode ser string ou number
+const serviceProvider = ref<string | number>(""); // Pode ser string ou number
 
 // Watch for data changes
 watch(() => props.data, (newData) => {
@@ -47,10 +46,10 @@ watch(() => props.data, (newData) => {
   id.value = newData.id || "";
   
   // Tratamento para ambos os tipos de dados
-  if (typeof newData.clinic === 'object' && newData.clinic !== null) {
-    clinic.value = newData.clinic.id; // Para ClinicListingType
+  if (typeof newData.serviceProvider === 'object' && newData.serviceProvider !== null) {
+    serviceProvider.value = newData.serviceProvider.id; // Para ServiceProviderListingType
   } else {
-    clinic.value = newData.clinic; // Para ClinicInsertType
+    serviceProvider.value = newData.serviceProvider; // Para ServiceProviderInsertType
   }
 }, { immediate: true });
 
@@ -66,14 +65,14 @@ const dialogValue = computed({
 });
 
 const requiredRules = {
-  clinic: [
-    (v: string) => !!v || t('t-please-enter-clinic'),
+  serviceProvider: [
+    (v: string) => !!v || t('t-please-enter-service-provider'),
   ]
 };
 
 
 const clinics = computed(() => {
-  return (clinicStore.enabledClinics as ClinicListingForListType[]).map((item) => ({
+  return (serviceProviderStore.enabledServiceProviders as ServiceProviderListingForListType[]).map((item) => ({
     value: item.id,
     label: item.name,
   }));
@@ -96,9 +95,9 @@ const onSubmit = async () => {
 
   localLoading.value = true;
 
-  const payload: ClinicInsertType = {
+  const payload: ServiceProviderInsertType = {
     id: id.value || undefined,
-    clinic: clinic.value.toString(), // Garante que seja string
+    serviceProvider: serviceProvider.value.toString(), // Garante que seja string
     company: props.data?.company ?? "",
     enabled: true
   };
@@ -111,7 +110,7 @@ const onSubmit = async () => {
 
 onMounted(async () => {
   try {
-    await clinicStore.fetchClinicsForDropdown();
+    await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
     console.error("Failed to load clínicas:", error);
     errorMsg.value = "Falha ao carregar clínicas";
@@ -136,8 +135,8 @@ onMounted(async () => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect v-model="clinic" :items="clinics"
-              :loading="clinicStore.loading" :rules="requiredRules.clinic" />
+            <MenuSelect v-model="serviceProvider" :items="clinics"
+              :loading="serviceProviderStore.loading" :rules="requiredRules.serviceProvider" />
           </v-col>
         </v-row>
       </v-card-text>

@@ -31,7 +31,7 @@ const institutionPrefix = "/institution";
 const employeePrefix = "/employee";
 const baseTablePrefix = "/baseTable";
 const usersPrefix = "/users";
-const clinicsPrefix = "/clinics";
+const serviceProviderPrefix = "/service-provider";
 
 
 const institutionRoutes = [
@@ -122,36 +122,36 @@ const employeeRoutes = [
   };
 });
 
-const clinicsRoutes = [
+const serviceProviderRoutes = [
   {
-    path: `${clinicsPrefix}/list`,
-    name: "ClinicsList",
-    component: () => import("@/views/clinics/List.vue"),
-    meta: { title: "Clinics List", authRequired: true },
+    path: `${serviceProviderPrefix}/list`,
+    name: "ServiceProviderList",
+    component: () => import("@/views/serviceProvider/List.vue"),
+    meta: { title: "Service Provider List", authRequired: true },
   },
   {
-    path: `${clinicsPrefix}/overview`,
-    name: "ClinicsOverview",
-    component: () => import("@/views/clinics/Overview.vue"),
-    meta: { title: "Clinics Overview", authRequired: true },
+    path: `${serviceProviderPrefix}/overview`,
+    name: "ServiceProviderOverview",
+    component: () => import("@/views/serviceProvider/Overview.vue"),
+    meta: { title: "Service Provider Overview", authRequired: true },
   },
   {
-    path: `${clinicsPrefix}/create`,
-    name: "CreateClinics",
-    component: () => import("@/views/clinics/Create.vue"),
-    meta: { title: "Create Clinics", authRequired: true },
+    path: `${serviceProviderPrefix}/create`,
+    name: "CreateServiceProvider",
+    component: () => import("@/views/serviceProvider/Create.vue"),
+    meta: { title: "Create Service Provider", authRequired: true },
   },
   {
-    path: '/clinics/edit/:id',
-    name: 'EditClinics',
-    component: () => import('@/views/clinics/Edit.vue'),
-    meta: { title: "Edit Clinics", requiresAuth: true }
+    path: `${serviceProviderPrefix}/edit/:id`,
+    name: 'EditServiceProvider',
+    component: () => import('@/views/serviceProvider/Edit.vue'),
+    meta: { title: "Edit Service Provider", requiresAuth: true }
   },
   {
-    path: '/clinics/view/:id',
-    name: 'ViewClinics',
-    component: () => import('@/views/clinics/View.vue'),
-    meta: { title: "View Clinics", requiresAuth: true }
+    path: `${serviceProviderPrefix}/view/:id`,
+    name: 'ViewServiceProvider',
+    component: () => import('@/views/serviceProvider/View.vue'),
+    meta: { title: "View Service Provider", requiresAuth: true }
   }
 ].map((data) => {
   return {
@@ -220,6 +220,12 @@ const baseTableRoutes = [
     name: "TaxRatesListView",
     component: () => import("@/views/baseTables/taxRate/ListView.vue"),
     meta: { title: "TaxRatesListView", authRequired: true },
+  },
+  {
+    path: `${baseTablePrefix}/provider-types/list`,
+    name: "ProviderTypeListView",
+    component: () => import("@/views/baseTables/providerType/List.vue"),
+    meta: { title: "ProviderTypeListView", authRequired: true },
   },
 ].map((data) => {
   return {
@@ -1235,7 +1241,7 @@ export const routes = [
   ...employeeRoutes,
   ...baseTableRoutes,
   ...usersRoutes,
-  ...clinicsRoutes,
+  ...serviceProviderRoutes,
   {
     path: "/widgets",
     name: "Widgets",
