@@ -1,0 +1,1 @@
+import{a7 as t,B as e,b as c,f as a,x as r,F as s}from"./index-96068b83.js";const _={};function m(i,l){const n=e("Breadcrumb"),o=e("OverView");return c(),a(s,null,[r(n,{title:"Overview"}),r(o)],64)}const p=t(_,[["render",m]]);export{p as default};
