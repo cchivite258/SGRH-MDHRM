@@ -131,9 +131,9 @@ export const healthPlanHeader: DataTableHeaderType[] = [
   { title: "action", sortable: false, align: "end" }
 ];
 
-export const clinicHeader: TableHeaderType[] = [
+export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
-  { title: "clinic", sortable: true },
+  { title: "service-provider", sortable: true },
   { title: "action", align: 'end' },
 ];
 

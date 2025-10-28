@@ -98,10 +98,14 @@ let employeeData = reactive<EmployeeInsertType>({
   enabled: true,
 
   // Dados da segunda tab
-  salary: null,
+  baseSalary: null,
   company: undefined,
   department: undefined,
-  position: undefined
+  position: undefined,
+  contractDurationType: undefined,
+  hireDate: '',
+  terminationDate: undefined,
+  rehireDate: undefined
 });
 
 /**

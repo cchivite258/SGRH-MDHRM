@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabClinics - Componente para  de clínicas que tem convenio com instituições
+ * TabServiceProviders - Componente para  de prestadores de serviço que tem convenio com instituições
  *
  * Funcionalidades:
  * - Listagem de clínicas
@@ -9,7 +9,7 @@
  * - Exclusão de clínicas
  */
 
-import { ref, watch, computed, onMounted, onBeforeUnmount, PropType } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount, PropType } from "vue"; 
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
@@ -20,30 +20,31 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
-import CreateEditClinicDialog from "@/components/institution/create/CreateEditClinicDialog.vue";
-import ViewClinicDialog from "@/components/institution/create/ViewClinicDialog.vue";
+import CreateEditServiceProviderDialog from "@/components/institution/create/CreateEditServiceProviderDialog.vue";
+import ViewServiceProviderDialog from "@/components/institution/create/ViewServiceProviderDialog.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import TableActionSimplified from "@/app/common/components/TableActionSimplified.vue";
 
 // Stores e Services
-import { useClinicInstitutionStore } from "@/store/institution/clinicInstitutionStore";
-import { clinicInstitutionService } from "@/app/http/httpServiceProvider";
+import { useServiceProviderInstitutionStore } from "@/store/institution/serviceProviderInstitutionStore";
+import { serviceProviderInstitutionService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
-  ClinicListingType,
-  ClinicInsertType
+  ServiceProviderListingType,
+  ServiceProviderInsertType
 } from "@/components/institution/types";
 
 // Utils
-import { clinicHeader } from "@/components/institution/create/utils";
+import { serviceProviderHeader } from "@/components/institution/create/utils";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const clinicInstitutionStore = useClinicInstitutionStore();
+const serviceProviderInstitutionStore = useServiceProviderInstitutionStore();
+
 
 
 // props
@@ -64,20 +65,20 @@ const dialog = ref(false);
 const viewDialog = ref(false);
 const deleteDialog = ref(false);
 const deleteLoading = ref(false);
-const clinicData = ref<ClinicInsertType | null>(null);
-const clinicViewData = ref<ClinicListingType | null>(null);
+const serviceProviderData = ref<ServiceProviderInsertType | null>(null);
+const serviceProviderViewData = ref<ServiceProviderListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
-const searchProps = "clinic,company"; // Propriedades de busca
+const searchProps = "serviceProvider,company"; // Propriedades de busca
 const itemsPerPage = ref(10);
-const selectedClinics = ref<ClinicListingType[]>([]);
+const selectedServiceProviders = ref<ServiceProviderListingType[]>([]);
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Computed properties
-const loadingList = computed(() => clinicInstitutionStore.loading);
-const totalItems = computed(() => clinicInstitutionStore.pagination.totalElements);
+const loadingList = computed(() => serviceProviderInstitutionStore.loading);
+const totalItems = computed(() => serviceProviderInstitutionStore.pagination.totalElements);
 
 interface FetchParams {
   page: number;
@@ -89,11 +90,11 @@ interface FetchParams {
 /**
  * Busca clínicas com paginação e filtros
  */
-const fetchInstitutionClinics = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
+const fetchInstitutionServiceProviders = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
   if (!institutionId.value) return;
   //console.log("Fetching clinics for institution:", institutionId.value, "Page:", page, "Items per page:", itemsPerPage, "Sort by:", sortBy, "Search props:", searchProps);
 
-  await clinicInstitutionStore.fetchInstitutionClinics(
+  await serviceProviderInstitutionStore.fetchInstitutionServiceProviders(
     institutionId.value,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
@@ -107,12 +108,12 @@ const fetchInstitutionClinics = async ({ page, itemsPerPage, sortBy, search }: F
 /**
  * Alterna seleção de pessoas de contato
  */
-const toggleSelection = (item: ClinicListingType) => {
-  const index = selectedClinics.value.findIndex(selected => selected.id === item.id);
+const toggleSelection = (item: ServiceProviderListingType) => {
+  const index = selectedServiceProviders.value.findIndex(selected => selected.id === item.id);
   if (index === -1) {
-    selectedClinics.value = [...selectedClinics.value, item];
+    selectedServiceProviders.value = [...selectedServiceProviders.value, item];
   } else {
-    selectedClinics.value = selectedClinics.value.filter(selected => selected.id !== item.id);
+    selectedServiceProviders.value = selectedServiceProviders.value.filter(selected => selected.id !== item.id);
   }
 };
 
@@ -121,20 +122,20 @@ const toggleSelection = (item: ClinicListingType) => {
  */
 watch(dialog, (newVal: boolean) => {
   if (!newVal) {
-    clinicData.value = null;
+    serviceProviderData.value = null;
   }
 });
-const onCreateEditClick = (data: ClinicInsertType | null) => {
+const onCreateEditClick = (data: ServiceProviderInsertType | null) => {
   const company = institutionId.value || "";
 
-  clinicData.value = data
+  serviceProviderData.value = data
     ? {
       ...data,
       company: company // sobrescreve com o institutionId atual
     }
     : {
       id: undefined,
-      clinic: "",
+      serviceProvider: "",
       company: company,
       enabled: true 
     };
@@ -156,19 +157,19 @@ interface ServiceResponse<T> {
  * Submete dados do formulário
  */
 const onSubmit = async (
-  data: ClinicInsertType,
+  data: ServiceProviderInsertType,
   callbacks?: {
     onSuccess?: () => void,
     onFinally?: () => void
   }
 ) => {
   try {
-    let response: ServiceResponse<ClinicListingType>;
+    let response: ServiceResponse<ServiceProviderListingType>;
 
     if (!data.id) {
-      response = await clinicInstitutionService.createClinic(data);
+      response = await serviceProviderInstitutionService.createServiceProvider(data);
     } else {
-      response = await clinicInstitutionService.updateClinic(data.id, data);
+      response = await serviceProviderInstitutionService.updateServiceProvider(data.id, data);
     }
 
 
@@ -182,7 +183,7 @@ const onSubmit = async (
     toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
 
 
-    await clinicInstitutionStore.fetchInstitutionClinics(
+    await serviceProviderInstitutionStore.fetchInstitutionServiceProviders(
       institutionId.value,
       0,
       itemsPerPage.value
@@ -190,7 +191,7 @@ const onSubmit = async (
     callbacks?.onSuccess?.();
 
   } catch (error) {
-    console.error("Erro ao gravar clínica:", error);
+    console.error("Erro ao gravar provedor de servico:", error);
     toast.error(t('t-message-save-error'));
   } finally {
     callbacks?.onFinally?.();
@@ -202,11 +203,11 @@ const onSubmit = async (
  */
 watch(viewDialog, (newVal: boolean) => {
   if (!newVal) {
-    clinicViewData.value = null;
+    serviceProviderViewData.value = null;
   }
 });
-const onViewClick = (data: ClinicListingType) => {
-  clinicViewData.value = { ...data };
+const onViewClick = (data: ServiceProviderListingType) => {
+  serviceProviderViewData.value = { ...data };
   viewDialog.value = true;
 };
 
@@ -226,11 +227,11 @@ const onConfirmDelete = async () => {
 
   deleteLoading.value = true;
   try {
-    await clinicInstitutionService.deleteClinic(deleteId.value);
-    selectedClinics.value = selectedClinics.value.filter(
+    await serviceProviderInstitutionService.deleteServiceProvider(deleteId.value);
+    selectedServiceProviders.value = selectedServiceProviders.value.filter(
       user => user.id !== deleteId.value
     );
-    await clinicInstitutionStore.fetchInstitutionClinics(
+    await serviceProviderInstitutionStore.fetchInstitutionServiceProviders(
       institutionId.value,
       0,
       itemsPerPage.value
@@ -255,11 +256,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card :title="$t('t-clinic-list')" title-class="py-5">
+  <Card :title="$t('t-service-provider-list')" title-class="py-5">
     <template #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
-          <i class="ph-plus-circle me-1" /> {{ $t('t-add-clinic') }}
+          <i class="ph-plus-circle me-1" /> {{ $t('t-add-service-provider') }} 
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">
           <i class="ph-download-simple me-1" /> {{ $t('t-import') }}
@@ -280,27 +281,27 @@ onBeforeUnmount(() => {
           </v-col>
         </v-row>
       </v-card-text>-->
-      <DataTableServer v-model="selectedClinics"
-        :headers="clinicHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-        :items="clinicInstitutionStore.clinics" :items-per-page="itemsPerPage" :total-items="totalItems"
+      <DataTableServer v-model="selectedServiceProviders"
+        :headers="serviceProviderHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
+        :items="serviceProviderInstitutionStore.service_providers" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-        @load-items="fetchInstitutionClinics" item-value="id" show-select>
+        @load-items="fetchInstitutionServiceProviders" item-value="id" show-select>
         <template #body="{ items }">
-          <tr v-for="item in items as ClinicListingType[]" :key="item.id" height="50">
+          <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id" height="50">
             <td>
-              <v-checkbox :model-value="selectedClinics.some(selected => selected.id === item.id)"
+              <v-checkbox :model-value="selectedServiceProviders.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
-            <td>{{ item.clinic.name }}</td>
+            <td>{{ item.serviceProvider.name }}</td>
             <td class="justify-end">
               <TableActionSimplified @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
             </td>
           </tr>
         </template>
 
-        <template v-if="clinicInstitutionStore.clinics.length === 0" #body>
+        <template v-if="serviceProviderInstitutionStore.service_providers.length === 0" #body>
           <tr>
-            <td :colspan="clinicHeader.length" class="text-center py-10">
+            <td :colspan="serviceProviderHeader.length" class="text-center py-10">
               <v-avatar size="80" color="primary" variant="tonal">
                 <i class="ph-magnifying-glass" style="font-size: 30px" />
               </v-avatar>
@@ -315,8 +316,8 @@ onBeforeUnmount(() => {
   </v-row>
 
   <!-- Dialogs -->
-  <CreateEditClinicDialog v-model="dialog" :data="clinicData" @onSubmit="onSubmit" />
-  <ViewClinicDialog v-model="viewDialog" :data="clinicViewData" />
+  <CreateEditServiceProviderDialog v-model="dialog" :data="serviceProviderData" @onSubmit="onSubmit" />
+  <ViewServiceProviderDialog v-model="viewDialog" :data="serviceProviderViewData" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
   <v-card-actions class="d-flex justify-space-between mt-5">

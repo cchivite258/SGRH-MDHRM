@@ -52,7 +52,7 @@ const invoiceId = ref<string | null>(
 // Dados principais da fatura
 const invoiceData = reactive<InvoiceInsertType>({
   invoiceNumber: '',
-  clinic: undefined,
+  serviceProvider: undefined,
   currency: undefined,
   employee: undefined,
   issueDate: new Date(),
@@ -100,7 +100,7 @@ const loadInvoiceData = async (id: string) => {
       Object.assign(invoiceData, {
         ...invoiceResponse.data,
         company: invoiceResponse.data.employee?.companyId,
-        clinic: invoiceResponse.data.clinic?.id,
+        serviceProvider: invoiceResponse.data.serviceProvider?.id,
         employee: invoiceResponse.data.employee?.id,
         currency: invoiceResponse.data.currency?.id,
         dependent: invoiceResponse.data.dependent?.id

@@ -133,3 +133,14 @@ export const usagesHeader: DataTableHeaderType[] = [
 
 
 
+export const contractDurationTypeOptions: MenuSelectItemType[] = [
+  { value: "", label: "Selecione o Tipo de Duração do Contrato" },
+  {
+    label: "Determinado",
+    value: "FIXED_TERM"
+  },
+  {
+    label: "Indeterminado",
+    value: "OPEN_ENDED"
+  },
+];

@@ -135,7 +135,7 @@ const truncate = (text: string, maxLength = 30) => {
             <td class="text-primary cursor-pointer" @click="onView(item.id)">
               {{ truncate(item.name) }}
             </td>
-            <td>{{ item.serviceProviderType?.name || 'N/A' }} </td>
+            <td>{{ item.providerTypes?.name || 'N/A' }} </td>
             <td>{{ truncate(item.address) }}</td>
             <td>{{ truncate(item.phone) }}</td>
             <td>{{ truncate(item.email) }}</td>

@@ -15,7 +15,7 @@ import ProductCard from "@/components/invoice/createInvoice/ProductCard.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 
 // Stores
-import { useClinicStore } from "@/store/clinic/clinicStore";
+import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useEmployeeStore } from "@/store/employee/employeeStore";
 import { useCurrencyStore } from "@/store/baseTables/currencyStore";
@@ -65,7 +65,7 @@ const emit = defineEmits<{
 // =============================================
 // STORES
 // =============================================
-const clinicStore = useClinicStore();
+const serviceProviderStore = useServiceProviderStore();
 const institutionStore = useInstitutionStore();
 const employeeStore = useEmployeeStore();
 const currencyStore = useCurrencyStore();
@@ -105,10 +105,10 @@ const institutions = computed(() =>
   }))
 );
 
-const clinics = computed(() =>
-  clinicStore.enabledClinics.map(clinic => ({
-    value: clinic.id,
-    label: clinic.name
+const service_providers = computed(() =>
+  serviceProviderStore.enabledServiceProviders.map(service_provider => ({
+    value: service_provider.id,
+    label: service_provider.name
   }))
 );
 
@@ -138,7 +138,7 @@ const dependents = computed(() =>
 // =============================================
 const requiredRules = {
   institution: [(v: string) => !!v || t('t-institution-required')],
-  clinic: [(v: string) => !!v || t('t-clinic-required')],
+  service_provider: [(v: string) => !!v || t('t-service-provider-required')],
   employee: [(v: string) => !!v || t('t-employee-required')],
   issueDate: [(v: Date) => !!v || t('t-issue-date-required')],
   dueDate: [(v: Date) => !!v || t('t-due-date-required')],
@@ -267,7 +267,7 @@ onMounted(async () => {
     await Promise.all([
       institutionStore.fetchInstitutionsforListing(0,100000000),
       currencyStore.fetchCurrenciesForDropdown(0,1000000000),
-      clinicStore.fetchClinicsForDropdown(0,1000000000)
+      serviceProviderStore.fetchServiceProvidersForDropdown(0,1000000000)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
@@ -290,9 +290,9 @@ onMounted(async () => {
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
               :rules="requiredRules.institution" :placeholder="$t('t-institution')" />
 
-            <div class="font-weight-bold mt-n1">{{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" /></div>
-            <MenuSelect v-model="invoiceData.clinic" :items="clinics" :loading="clinicStore.loading"
-              :rules="requiredRules.clinic" :placeholder="$t('t-clinic')" :disabled="!clinics.length" />
+            <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i class="ph-asterisk ph-xs text-danger" /></div>
+            <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers" :loading="serviceProviderStore.loading"
+              :rules="requiredRules.service_provider" :placeholder="$t('t-service-provider')" :disabled="!service_providers.length" />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
             <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary">

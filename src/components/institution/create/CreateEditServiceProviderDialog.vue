@@ -112,8 +112,8 @@ onMounted(async () => {
   try {
     await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
-    console.error("Failed to load clínicas:", error);
-    errorMsg.value = "Falha ao carregar clínicas";
+    console.error("Failed to load service providers:", error);
+    errorMsg.value = "Falha ao carregar prestadores de serviço";
     setTimeout(() => errorMsg.value = "", 5000);
   }
 });
@@ -121,7 +121,7 @@ onMounted(async () => {
 <template>
   <v-dialog v-model="dialogValue" width="500" >
     <v-form ref="formClinic" @submit.prevent="onSubmit"> 
-    <Card :title="isCreate ? $t('t-add-contracted-clinic') : $t('t-edit-contracted-clinic')" title-class="py-0"
+    <Card :title="isCreate ? $t('t-add-contracted-service-provider') : $t('t-edit-contracted-service-provider')" title-class="py-0"
       style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
@@ -133,7 +133,7 @@ onMounted(async () => {
         <v-row class="">
           <v-col cols="12" lg="12">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-service-provider') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="serviceProvider" :items="clinics"
               :loading="serviceProviderStore.loading" :rules="requiredRules.serviceProvider" />

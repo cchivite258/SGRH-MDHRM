@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.name,clinic.name,dependent.name,coveragePeriod.name,currency.anme');
+        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.name,serviceProvider.name,dependent.name,coveragePeriod.name,currency.anme');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -54,7 +54,7 @@ export default class InvoiceService extends HttpService {
         params.append('query_operator', logicalOperator);
       }
 
-      const includesToUse = 'employee,clinic,currency,invoiceAttachment,coveragePeriod';
+      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,coveragePeriod';
       params.append(`includes`, includesToUse);
 
       const url = `/amm/invoices?${params.toString()}`;
@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,clinic,currency,dependent,coveragePeriod`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,coveragePeriod`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 
@@ -246,7 +246,7 @@ export default class InvoiceService extends HttpService {
         dueDate: invoiceData.dueDate,
         totalAmount: invoiceData.totalAmount,
         employee: invoiceData.employee,
-        clinic: invoiceData.clinic,
+        serviceProvider: invoiceData.serviceProvider,
         currency: invoiceData.currency,
         isEmployeeInvoice: invoiceData.isEmployeeInvoice,
         dependent: invoiceData.dependent,

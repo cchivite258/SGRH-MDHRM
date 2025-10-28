@@ -58,14 +58,14 @@ onMounted(async () => {
   try {
     await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
-    console.error("Erro ao carregar clínicas:", error);
+    console.error("Erro ao carregar provedores de serviço:", error);
   }
 });
 </script>
 
 <template>
   <v-dialog v-model="dialogValue" width="500" >
-    <Card :title="$t('t-view-contracted-serviceProvider')" title-class="py-0" style="overflow: hidden">
+    <Card :title="$t('t-view-contracted-service-provider')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
       </template>
@@ -75,7 +75,7 @@ onMounted(async () => {
       <v-card-text >
         <v-row>
           <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-serviceProvider') }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-service-provider') }}</div>
             <div>{{ serviceProviderName }}</div>
           </v-col>
         </v-row>

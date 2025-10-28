@@ -110,7 +110,7 @@ const isTabDisabled = (tabNumber: number) => {
           @click="step = 6"
           :disabled="isTabDisabled(4)"
         >
-          {{ $t('t-clinics') }}
+          {{ $t('t-service-providers') }}
         </v-btn>
       </v-col>
       <v-col cols="4">

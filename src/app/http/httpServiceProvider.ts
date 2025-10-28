@@ -5,7 +5,7 @@ import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
-import ClinicInstitutionService from "@/app/http/services/institution/clinicService";
+import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
@@ -40,7 +40,7 @@ const healthPlanService = new HealthPlanService();
 const serviceProviderService = new ServiceProviderService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
-const clinicInstitutionService = new ClinicInstitutionService();
+const serviceProviderInstitutionService = new ServiceProviderInstitutionService();
 const invoiceService = new InvoiceService();
 const dependentEmployeeService = new DependentEmployeeService();
 const invoiceItemService = new InvoiceItemService();
@@ -75,7 +75,7 @@ export {
     positionService, 
     serviceProviderService,
     contactPersonService,
-    clinicInstitutionService,
+    serviceProviderInstitutionService,
     hospitalProcedureService,
     invoiceService,
     dependentEmployeeService,

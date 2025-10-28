@@ -110,10 +110,16 @@ const employeeRoutes = [
     meta: { title: "View Employee", requiresAuth: true }
   },
   {
-    path: `${employeePrefix}/healthPlan/:id`,
-    name: "ViewHealthPlan",
+    path: `${employeePrefix}/healthPlan/edit/:id`,
+    name: "EditEmployeeHealthPlan",
     component: () => import("@/views/employee/viewHealthPlan/List.vue"),
-    meta: { title: "ViewHealthPlan", authRequired: true },
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
+  },
+  {
+    path: `${employeePrefix}/healthPlan/view/:id`,
+    name: "ViewEmployeeHealthPlan",
+    component: () => import("@/views/employee/viewHealthPlan/View.vue"),
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
   },
 ].map((data) => {
   return {

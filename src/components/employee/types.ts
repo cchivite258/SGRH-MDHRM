@@ -69,7 +69,10 @@ export type EmployeeListingType = {
     name: string
   } | undefined,
   enabled: boolean;
-
+  contractDurationType?: string | undefined;
+  hireDate?: string | undefined;
+  terminationDate?: string | undefined;
+  rehireDate?: string | undefined;
 };
 
 export type EmployeeResponseType = { 
@@ -122,6 +125,10 @@ export type EmployeeResponseType = {
     name: string
   } | undefined,
   enabled: boolean;
+  contractDurationType?: string | undefined;
+  hireDate?: string | undefined;
+  terminationDate?: string | undefined;
+  rehireDate?: string | undefined;
 
 };
 
@@ -156,11 +163,15 @@ export type EmployeeInsertType = {
   passportIssuer: string;
   passportExpiryDate: string | undefined;
   passportIssuanceDate: string | undefined;
-  salary?: number | null;
+  baseSalary?: number | null;
   company?: string | number | undefined;
   department?: string | undefined;
   enabled?: boolean;
   position?: string | undefined;
+  contractDurationType?: string | undefined;
+  hireDate?: string; 
+  terminationDate?: string | undefined;
+  rehireDate?: string | undefined;
 };
 
 
@@ -194,11 +205,15 @@ export type EmployeeUpdateType = {
   passportIssuer: string;
   passportExpiryDate: string;
   passportIssuanceDate: string;
-  salary?: number | null;
+  baseSalary?: number | null;
   company?: string | null;
   department?: string | null;
   enabled?: boolean;
   position?: string | null;
+  contractDurationType?: string | undefined;
+  hireDate?: string | undefined;
+  terminationDate?: string | undefined;
+  rehireDate?: string | undefined;
 };
 
 export type DependentInsertType = {

@@ -51,7 +51,7 @@ export const invoiceOverview = [
 export const invoiceHeader: TableHeaderType[] = [
   { title: "invoice-number", key: "invoiceNumber", sortable: true },
   { title: "employee-name",key: "employee.firstName", sortable: true },
-  { title: "clinic-name",key: "clinic.name", sortable: true },
+  { title: "service-provider",key: "clinic.name", sortable: true },
   { title: "total-amount",key: "totalAmount", sortable: true },
   { title: "due-date",key: "dueDate", sortable: true },
   { title: "status" ,key: "invoiceStatus", sortable: true},

@@ -60,7 +60,8 @@ const fetchInstitutions = async ({ page, itemsPerPage, sortBy }: FetchParams) =>
 
 // Navega para a página de visualização
 const onView = (id: string) => {
-  router.push(`/institution/view/${id}`)
+  //router.push(`/institution/view/${id}`)
+  router.push(`/institution/list`)
 }
 
 // Abre o diálogo de confirmação para exclusão

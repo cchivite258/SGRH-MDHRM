@@ -18,7 +18,7 @@ import { useToast } from 'vue-toastification';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import Status from "@/app/common/components/Status.vue";
-
+import { formateDate } from "@/app/common/dateFormate";
 // Stores
 // import { useEmployeeStore } from '@/store/employeeStore';
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
@@ -162,11 +162,17 @@ const submitForm = async () => {
       </v-row>
         <!-- Nome da Clínica -->
         <v-row class="mt-n9">
-          <v-col cols="12">
+          <v-col cols="9">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t('t-service-provider-name') }} 
             </div>
             <div>{{ serviceProviderData.name || '-' }}</div>
+          </v-col>
+          <v-col cols="3">
+            <div class="font-weight-bold mb-2 mt-5">
+              {{ $t('t-provider-type') }} 
+            </div>
+            <div>{{ serviceProviderData.providerTypes?.name || '-' }}</div>
           </v-col>
         </v-row>
 
@@ -199,6 +205,22 @@ const submitForm = async () => {
               {{ $t('t-service-provider-website') }} 
             </div>
             <div>{{ serviceProviderData.website || '-' }}</div>
+          </v-col>
+        </v-row>
+
+        <!-- Datas de Contra -->
+        <v-row class="">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-start-date') }} 
+            </div>
+            <div>{{ formateDate(serviceProviderData.contractStartDate) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-end-date') }} 
+            </div>
+            <div>{{ formateDate(serviceProviderData.contractEndDate) || '-' }}</div>
           </v-col>
         </v-row>
 

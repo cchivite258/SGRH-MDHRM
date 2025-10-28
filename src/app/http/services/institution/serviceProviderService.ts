@@ -1,6 +1,6 @@
 // services/departmentService.ts
 import HttpService from "@/app/http/httpService";
-import type { ClinicListingType, ClinicInsertType } from "@/components/institution/types";
+import type { ServiceProviderInsertType, ServiceProviderListingType } from "@/components/institution/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -14,8 +14,8 @@ interface ServiceResponse<T> {
     error?: ApiErrorResponse;
 }
 
-export default class ClinicService extends HttpService { 
-    async getClinicByInstitution(
+export default class ServiceProviderService extends HttpService { 
+    async getServiceProviderByInstitution(
         id: string | null,
         page: number = 0,
         size: number = 10000000,
@@ -23,7 +23,7 @@ export default class ClinicService extends HttpService {
         direction: string = 'asc',
         query_value?: string,
         query_props?: string
-    ): Promise<{ content: ClinicListingType[], meta: any }> {
+    ): Promise<{ content: ServiceProviderListingType[], meta: any }> {
         try {
             const queryParams = [
                 `id=${id}`,
@@ -39,15 +39,15 @@ export default class ClinicService extends HttpService {
 
             }
 
-             const includesToUse = 'clinic';
+             const includesToUse = 'serviceProvider';
                 queryParams.push(`includes=${includesToUse}`);
 
                 const queryString = queryParams.join('&');
 
-            const url = `/administration/company/contracted-clinics/in-company?${queryString}`;
+            const url = `/administration/company/service-providers/in-company?${queryString}`;
 
             console.log('URL da requisição:', url);
-            const response = await this.get<ApiResponse<ClinicListingType[]>>(url);
+            const response = await this.get<ApiResponse<ServiceProviderListingType[]>>(url);
 
             return {
                 content: response.data || [],
@@ -55,12 +55,12 @@ export default class ClinicService extends HttpService {
             };
 
         } catch (error) {
-            console.error("❌ Erro ao buscar clinicas:", error);
+            console.error("❌ Erro ao buscar prestadores de serviço:", error);
             throw error;
         }
     }
 
-    async getClinicByInstitutionForDropdown(
+    async getServiceProviderByInstitutionForDropdown(
         id: string | null,
         page: number = 0,
         size: number = 10000000,
@@ -68,7 +68,7 @@ export default class ClinicService extends HttpService {
         direction: string = 'asc',
         query_value?: string,
         query_props?: string
-    ): Promise<{ content: ClinicListingType[], meta: any }> {
+    ): Promise<{ content: ServiceProviderListingType[], meta: any }> {
         try {
             const queryParams = [
                 `id=${id}`,
@@ -84,15 +84,15 @@ export default class ClinicService extends HttpService {
 
             }
 
-             const includesToUse = 'clinic';
+             const includesToUse = 'serviceProvider';
                 queryParams.push(`includes=${includesToUse}`);
 
                 const queryString = queryParams.join('&');
 
-            const url = `/administration/company/contracted-clinics/in-company?${queryString}`;
+            const url = `/administration/company/service-providers/in-company?${queryString}`;
 
             console.log('URL da requisição:', url);
-            const response = await this.get<ApiResponse<ClinicListingType[]>>(url);
+            const response = await this.get<ApiResponse<ServiceProviderListingType[]>>(url);
 
             return {
                 content: response.data || [],
@@ -100,14 +100,14 @@ export default class ClinicService extends HttpService {
             };
 
         } catch (error) {
-            console.error("❌ Erro ao buscar clinicas:", error);
+            console.error("❌ Erro ao buscar prestadores de serviço:", error);
             throw error;
         }
     }
 
-    async createClinic(clinicData: ClinicInsertType): Promise<ServiceResponse<ClinicListingType>> {
+    async createServiceProvider(serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderListingType>> {
         try {
-            const response = await this.post<ApiResponse<ClinicListingType>>('/administration/company/contracted-clinics', clinicData);
+            const response = await this.post<ApiResponse<ServiceProviderListingType>>('/administration/company/service-providers', serviceProviderData);
             return {
                 status: 'success',
                 data: response.data
@@ -143,12 +143,12 @@ export default class ClinicService extends HttpService {
         };
     }
 
-    async getClinicById(id: string): Promise<{ data: ClinicListingType }> {
+    async getServiceProviderById(id: string): Promise<{ data: ServiceProviderListingType }> {
         try {
-            const response = await this.get<{ data: ClinicListingType; meta: any }>(
-                `/administration/company/contracted-clinics/${id}?includes=company`
+            const response = await this.get<{ data: ServiceProviderListingType; meta: any }>(
+                `/administration/company/service-providers/${id}?includes=company`
             );
-            console.log('Resposta da requisição getClinicById:------------------------', response);
+            console.log('Resposta da requisição getServiceProviderById:------------------------', response);
 
             return {
                 data: response.data
@@ -173,27 +173,27 @@ export default class ClinicService extends HttpService {
         };
     }
 
-    async deleteClinic(id: string): Promise<void> {
+    async deleteServiceProvider(id: string): Promise<void> {
         try {
-            await this.delete(`/administration/company/contracted-clinics/${id}`);
+            await this.delete(`/administration/company/service-providers/${id}`);
         } catch (error) {
-            console.error("❌ Erro ao deletar clínica:", error);
+            console.error("❌ Erro ao deletar prestador de serviço:", error);
             throw error;
         }
     }
 
 
-    async updateClinic(id: string, clinicData: ClinicInsertType): Promise<ServiceResponse<ClinicListingType>> {
+    async updateServiceProvider(id: string, serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderListingType>> {
         try {
 
             // Corpo da requisição conforme especificado
             const payload = {
-                clinic: clinicData.clinic,
-                company: clinicData.company,
-                enabled: clinicData.enabled
+                serviceProvider: serviceProviderData.serviceProvider,
+                company: serviceProviderData.company,
+                enabled: serviceProviderData.enabled
             };
 
-            const response = await this.put<ServiceResponse<ClinicListingType>>(`/administration/company/contracted-clinics/${id}`, payload);
+            const response = await this.put<ServiceResponse<ServiceProviderListingType>>(`/administration/company/service-providers/${id}`, payload);
              return {
                 status: 'success',
                 data: response.data

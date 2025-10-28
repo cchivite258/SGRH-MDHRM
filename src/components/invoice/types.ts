@@ -15,7 +15,7 @@ export type InvoiceListingType = {
         phone: string;
         companyId?: string;
     };
-    clinic: {
+    serviceProvider: {
         id: string;
         name: string;
         address?: string;
@@ -65,7 +65,7 @@ export type InvoiceResponseType = {
         phone: string;
         companyId?: string;
     };
-    clinic: {
+    serviceProvider: {
         id: string;
         name: string;
         address?: string;
@@ -103,7 +103,7 @@ export type InvoiceInsertType = {
     dueDate: Date;
     totalAmount: number;
     employee: string | undefined;
-    clinic: string | undefined;
+    serviceProvider: string | undefined;
     currency?: number | undefined;
     isEmployeeInvoice: boolean;
     dependent?: string | undefined;

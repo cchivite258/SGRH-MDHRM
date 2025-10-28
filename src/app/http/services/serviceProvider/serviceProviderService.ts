@@ -143,7 +143,8 @@ export default class ServiceProviderService extends HttpService {
   async getServiceProviderById(id: string): Promise<{ data: ServiceProviderResponseType }> {
     try {
       //const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-providers/${id}`);
-      const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-provider/${id}`);
+      
+      const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-provider/${id}?includes=providerTypes`);
       return { data: response.data };
     } catch (error) {
       throw this.handleError(error);

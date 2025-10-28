@@ -253,7 +253,7 @@ const submitForm = async () => {
               {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idContractStartDatePicker" v-model="serviceProviderData.contractStartDate"
-              :placeholder="$t('t-enter-contract-start-date')" :rules="requiredRules.contractStartDate" />
+              :placeholder="$t('t-enter-contract-start-date')" :rules="requiredRules.contractStartDate" :teleport="true"/>
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">

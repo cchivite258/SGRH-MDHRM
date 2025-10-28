@@ -139,7 +139,7 @@ watch(dialog, (newVal: boolean) => {
  * Prepara dados para visualização
  */
 const onViewClick = (data: HealthPlanListingType) => {
- router.push(`/employee/healthPlan/edit/${data.id}`);
+ router.push(`/employee/healthPlan/view/${data.id}`);
 };
 
 // Limpeza ao desmontar
