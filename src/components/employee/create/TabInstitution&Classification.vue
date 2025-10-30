@@ -106,21 +106,29 @@ const requiredRules = {
   ],
   terminationDate: [
     (v: string) => {
-      // Só valida se o tipo for FIXED_TERM
       if (employeeData.value.contractDurationType === 'FIXED_TERM') {
+        // 1. Validar se terminationDate foi preenchido
         if (!v) return t('t-please-enter-termination-date');
 
         const terminationDate = new Date(v);
-        const hireDate = new Date(employeeData.value.hireDate);
-
         if (isNaN(terminationDate.getTime())) return t('t-invalid-date');
-        if (terminationDate <= hireDate)
+
+        // 2. Validar se hireDate existe e é válido
+        if (!employeeData.value.hireDate) {
+          return t('t-please-enter-hire-date-first');
+        }
+
+        const hireDate = new Date(employeeData.value.hireDate);
+        if (isNaN(hireDate.getTime())) return t('t-invalid-hire-date');
+
+        // 3. Validar se terminationDate é depois de hireDate
+        if (terminationDate <= hireDate) {
           return t('t-termination-date-after-hire-date');
+        }
 
         return true;
       }
 
-      // Se não for FIXED_TERM, o campo não é obrigatório
       return true;
     }
   ],

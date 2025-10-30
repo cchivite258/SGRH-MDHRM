@@ -71,11 +71,11 @@ const dialogValue = computed({
         </v-row>
 
         <v-row class="mt-3">
-          <v-col cols="12" lg="6">
+          <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'FIXED_AMOUNT'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-fixed-amount') }}</div>
             <div>{{ props.data?.fixedAmount || '0' }}</div>
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'PERCENTAGE'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-percentage') }}</div>
             <div>{{ props.data?.percentage || '0' }}</div>
           </v-col>

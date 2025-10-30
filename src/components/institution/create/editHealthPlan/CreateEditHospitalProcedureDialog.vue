@@ -263,15 +263,15 @@ onMounted(async () => {
             </v-col>
           </v-row>
           <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <v-col :cols="12" :lg="limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="limitTypeDefinition === 'FIXED_AMOUNT'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-fixed-amount') }} <i v-if="limitTypeDefinition === 'FIXED_AMOUNT'"
                   class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="fixedAmount" type="number" :placeholder="$t('t-enter-fixed-amount')"
                 :rules="requiredRules.fixedAmount" />
-            </v-col>
-            <v-col cols="12" lg="6">
+            </v-col>     
+            <v-col :cols="12" :lg="limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="limitTypeDefinition === 'PERCENTAGE'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-percentage') }} <i v-if="limitTypeDefinition === 'PERCENTAGE'"
                   class="ph-asterisk ph-xs text-danger" />
@@ -280,7 +280,7 @@ onMounted(async () => {
                 :rules="requiredRules.percentage" />
             </v-col>
           </v-row>
-          <v-row class="mt-n6">
+          <v-row :class="limitTypeDefinition === 'FIXED_AMOUNT' || limitTypeDefinition === 'PERCENTAGE' ? 'mt-n6' : 'mt-6'">
           <v-col cols="12" lg="12" class="">
             <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
             <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

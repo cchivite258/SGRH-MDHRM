@@ -13,6 +13,8 @@ import InvoiceSVG from "@/assets/images/invoice.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ProductCard from "@/components/invoice/createInvoice/ProductCard.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import CreateEditAttachmentDialog from "@/components/invoice/createInvoice/CreateEditAttachmentDialog.vue";
+import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 // Stores
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
@@ -24,7 +26,9 @@ import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 
 // Types
-import { InvoiceInsertType, InvoiceItemInsertType } from "@/components/invoice/types";
+import { InvoiceInsertType, InvoiceItemInsertType, InvoiceAttachmentType } from "@/components/invoice/types";
+import { invoiceService } from "@/app/http/httpServiceProvider";
+import { file } from "@babel/types";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -75,10 +79,12 @@ const dependentStore = useDependentEmployeeStore();
 // =============================================
 // REACTIVE STATE
 // =============================================
+const AttachmentDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const productCardRef = ref<{ emitItemsReady: () => boolean }>();
 const errorMsg = ref("");
 const alertTimeout = ref<number | null>(null);
+const attachmentData = ref<InvoiceAttachmentType | null>(null);
 
 const invoiceItemData = reactive<InvoiceItemInsertType>({
   unitPrice: 0,
@@ -166,6 +172,59 @@ const handleLoadError = (resource: string, error: unknown) => {
     errorMsg.value = "";
     alertTimeout.value = null;
   }, 5000);
+};
+
+interface ServiceResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: ApiErrorResponse;
+}
+
+const onCreateEditClick = (data: InvoiceAttachmentType | null) => { 
+  console.log("onCreateEditClick data: ", invoiceData.value);
+  attachmentData.value = {
+    ...(data || {}),
+    id: invoiceData.value.id || undefined,
+    file: data?.file || null
+  };
+  AttachmentDialog.value = true;
+};
+
+const onSubmitInvoiceAttachment = async (
+  data: InvoiceAttachmentType,
+  callbacks?: {
+    onSuccess?: () => void,
+    onFinally?: () => void
+  }
+) => {
+  try {
+
+    let response: ServiceResponse<InvoiceAttachmentType>;
+
+    if (!data.id) {
+      response = await invoiceService.uploadAttachment(data);
+    } 
+    
+    else {
+      response = await invoiceService.uploadAttachment(data);
+    }
+
+
+    // Verifica se a resposta contém erro
+    if (response.status === 'error') {
+      toast.error(response.error?.message || t('t-message-save-error'));
+      return;
+    }
+
+    // Só mostra sucesso se realmente foi bem-sucedido
+    toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
+
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t('t-message-save-error'));
+  } finally {
+    callbacks?.onFinally?.();
+  }
 };
 
 /**
@@ -265,9 +324,9 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutionsforListing(0,100000000),
-      currencyStore.fetchCurrenciesForDropdown(0,1000000000),
-      serviceProviderStore.fetchServiceProvidersForDropdown(0,1000000000)
+      institutionStore.fetchInstitutionsforListing(0, 100000000),
+      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
@@ -284,15 +343,32 @@ onMounted(async () => {
 
       <v-card-text>
         <!-- Seção de Informações Básicas -->
-        <v-row justify="end" class="mt-4 pt-16 pt-md-0">
-          <v-col cols="12" lg="4">
+        <v-row class="mt-4 pt-16 pt-md-0">
+          <v-col cols="12" lg="4" class="mt-12 ">
+            <div class="mt-12">
+              <p>&nbsp;</p>
+            </div>
+            
+            <div class="mt-6">
+              <v-btn color="black" variant="elevated" @click="onCreateEditClick(null)" block>
+                <i class="ph ph-upload-simple" /> {{ $t('t-upload-original-invoice') }}
+              </v-btn>
+            </div>
+
+          </v-col>
+          <v-col cols="12" lg="4" class="text-center">
+            <h2 class="font-weight-bold mb-0"></h2>
+          </v-col>
+          <v-col cols="12" lg="4" justify="end">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
               :rules="requiredRules.institution" :placeholder="$t('t-institution')" />
 
-            <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i class="ph-asterisk ph-xs text-danger" /></div>
-            <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers" :loading="serviceProviderStore.loading"
-              :rules="requiredRules.service_provider" :placeholder="$t('t-service-provider')" :disabled="!service_providers.length" />
+            <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i
+                class="ph-asterisk ph-xs text-danger" /></div>
+            <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers"
+              :loading="serviceProviderStore.loading" :rules="requiredRules.service_provider"
+              :placeholder="$t('t-service-provider')" :disabled="!service_providers.length" />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
             <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary">
@@ -378,8 +454,9 @@ onMounted(async () => {
 
         <!-- Componente de Itens da Fatura -->
         <div class="mb-12">
-          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''" :employee-id="invoiceData.employee || ''"
-            :initial-items="initialItems" :is-edit-mode="isEditMode" @items-ready="handleItemsReady" />
+          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''"
+            :employee-id="invoiceData.employee || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
+            @items-ready="handleItemsReady" />
         </div>
       </v-card-text>
 
@@ -395,4 +472,9 @@ onMounted(async () => {
       </v-card-actions>
     </v-card>
   </v-form>
+
+
+  <CreateEditAttachmentDialog v-if="attachmentData" v-model="AttachmentDialog" :data="attachmentData"
+    @onSubmit="onSubmitInvoiceAttachment" />
+
 </template>

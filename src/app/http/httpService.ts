@@ -41,4 +41,19 @@ export default class HttpService {
     }
   }
 
+  async putFile<T>(path: string, formData: FormData): Promise<T> {
+    try {
+      const response = await axios.put<T>(path, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("Erro no PUT de ficheiro:", error);
+      throw error;
+    }
+  }
+
+
 }

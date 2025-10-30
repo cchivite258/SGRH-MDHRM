@@ -282,7 +282,7 @@ const formatAmount = (amount: number | string) => {
         :loading="loading" :search-query="searchQuery" @load-items="fetchInvoices" item-value="id"
         show-select>
         <template #body="{ items }: { items: readonly unknown[] }">
-          <tr v-for="item in items as InvoiceListingType[]" :key="item.id">
+          <tr v-for="item in items as InvoiceListingType[]" :key="item.id" :class="[item.flag !== 'UNFLAGGED' ? 'bg-danger-subtle' : '']" >
             <td>
               <v-checkbox :model-value="selectedInvoices.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
@@ -291,7 +291,7 @@ const formatAmount = (amount: number | string) => {
               {{ item.invoiceNumber || 'N/A' }}
             </td>
             <td>{{ item.employee?.firstName || 'N/A' }} {{ item.employee?.lastName || 'N/A' }} </td>
-            <td>{{ item.clinic?.name || 'N/A' }}</td>
+            <td>{{ item.serviceProvider?.name || 'N/A' }}</td>
             <td>{{ formatAmount(item.totalAmount) || 'N/A' }} {{ item.currency?.symbol }}</td>
             <td>{{ formateDate(item.dueDate) || 'N/A' }}</td>
             <td><Status :status="item.invoiceStatus" /></td>

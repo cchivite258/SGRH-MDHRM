@@ -8,13 +8,7 @@
   >
     <title>&lt;Group&gt;</title>
     <g id="&lt;Group&gt;">
-      <g id="&lt;Group&gt;">
-        <path
-          id="&lt;Path&gt;"
-          style="fill: var(--tb-light)"
-          d="m-6.6 177.4c17.5 0.1 35.1 0 52.8-0.4 286.8-6.6 537.6-77.8 700.3-184.6h-753.1z"
-        />
-      </g>
+      
       <g id="&lt;Group&gt;">
         <path
           id="&lt;Path&gt;"

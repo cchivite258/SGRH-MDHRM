@@ -169,7 +169,7 @@ export type EmployeeInsertType = {
   enabled?: boolean;
   position?: string | undefined;
   contractDurationType?: string | undefined;
-  hireDate?: string; 
+  hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
 };

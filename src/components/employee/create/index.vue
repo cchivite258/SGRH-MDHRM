@@ -103,7 +103,7 @@ let employeeData = reactive<EmployeeInsertType>({
   department: undefined,
   position: undefined,
   contractDurationType: undefined,
-  hireDate: '',
+  hireDate: undefined,
   terminationDate: undefined,
   rehireDate: undefined
 });

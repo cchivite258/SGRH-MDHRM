@@ -1,7 +1,9 @@
-export type ImageUploaderType = {
+
+export interface ImageUploaderType {
+  id: string;
   src: string;
   name: string;
-  id: number;
-  path: string;
-  size: string;
-};
+  size: number;
+  path?: string;
+  file?: File; 
+}

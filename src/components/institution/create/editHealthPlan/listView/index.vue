@@ -219,7 +219,7 @@ const onCreateEditClick = (data: HospitalProcedureInsertType | HospitalProcedure
     limitTypeDefinition: data?.limitTypeDefinition || "",
     hospitalProcedureType: data?.hospitalProcedureType || undefined,
     companyHealthPlan: healthPlanId.value || undefined,
-    company: healthPlanFormData.value.company || undefined,
+    company: healthPlanFormData.value.company || undefined, 
     enabled: data?.enabled || true
   };
   dialog.value = true;
@@ -421,18 +421,18 @@ const getLimitTypeLabel = (value: string) => {
                 </div>
                 <TextField v-model.number="healthPlanFormData.childrenMaxAge"
                   :placeholder="t('t-enter-maximum-age-of-dependents')" type="number"
-                  :rules="requiredRules.childrenMaxAge" class="mb-2" />
+                  :rules="requiredRules.childrenMaxAge" class="mb-2" /> 
               </v-col>
             </v-row>
             <v-row class="mt-n6">
-              <v-col cols="12" lg="6">
+              <v-col :cols="12" :lg="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
                 <div class="font-weight-bold mb-2">
                   {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
                 </div>
                 <MenuSelect v-model="healthPlanFormData.healthPlanLimit" :items="healthPlanLimitOptions"
                   :rules="requiredRules.healthPlanLimit" />
               </v-col>
-              <v-col cols="12" lg="6">
+              <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
                 <div class="font-weight-bold mb-2">
                   {{ $t('t-fixed-amount') }} <i v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'"
                     class="ph-asterisk ph-xs text-danger" />
@@ -442,7 +442,7 @@ const getLimitTypeLabel = (value: string) => {
               </v-col>
             </v-row>
             <v-row class="mt-n5">
-              <v-col cols="12" lg="6">
+              <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'">
                 <div class="font-weight-bold mb-2">
                   {{ $t('t-salary-component') }} <i v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'"
                     class="ph-asterisk ph-xs text-danger" />
@@ -450,7 +450,7 @@ const getLimitTypeLabel = (value: string) => {
                 <MenuSelect v-model="healthPlanFormData.salaryComponent" :items="salaryComponentOptions"
                   :rules="requiredRules.salaryComponent" />
               </v-col>
-              <v-col cols="12" lg="6">
+              <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'">
                 <div class="font-weight-bold mb-2">
                   {{ $t('t-company-contribuition-percentage') }}
                 </div>
@@ -459,7 +459,7 @@ const getLimitTypeLabel = (value: string) => {
                   :rules="requiredRules.companyContributionPercentage" />
               </v-col>
             </v-row>
-            <v-row class="mt-n6">
+            <v-row :class="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT' ? '' : 'mt-n9'">
               <v-col cols="12" lg="12" class="">
                 <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
                 <v-checkbox v-model="healthPlanFormData.enabled" density="compact" color="primary"

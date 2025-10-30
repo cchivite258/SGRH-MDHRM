@@ -289,32 +289,37 @@ onMounted(async () => {
             </v-col>
           </v-row>
           <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
+            <v-col :cols="12" :lg="healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="healthPlanLimit" :items="healthPlanLimitOptions"
                 :rules="requiredRules.healthPlanLimit" />
             </v-col>
-            <v-col cols="12" lg="6">
+
+            <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'FIXED_AMOUNT'">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-fixed-amount') }} <i v-if="healthPlanLimit === 'FIXED_AMOUNT'"
-                  class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="fixedAmount" type="number" :placeholder="t('t-enter-fixed-amount')"
                 :rules="requiredRules.fixedAmount" class="mb-2" />
             </v-col>
           </v-row>
+
           <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <!-- Campo Salary Component - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'ANUAL_SALARY'">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-salary-component') }} <i v-if="healthPlanLimit === 'ANUAL_SALARY'"
-                  class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-salary-component') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="salaryComponent" :items="salaryComponentOptions"
                 :rules="requiredRules.salaryComponent" />
             </v-col>
-            <v-col cols="12" lg="6">
+
+            <!-- Campo Company Contribution - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'ANUAL_SALARY'">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-company-contribuition-percentage') }}
               </div>
@@ -323,7 +328,7 @@ onMounted(async () => {
                 :rules="requiredRules.companyContributionPercentage" />
             </v-col>
           </v-row>
-          <v-row class="mt-n9">
+          <v-row :class="healthPlanLimit === 'FIXED_AMOUNT' ? '' : 'mt-n9'">
             <v-col cols="12" lg="12" class="">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

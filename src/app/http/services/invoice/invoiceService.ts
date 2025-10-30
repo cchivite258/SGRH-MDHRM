@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType, InvoiceAdviceResponseType } from "@/components/invoice/types";
+import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType, InvoiceAdviceResponseType, InvoiceAttachmentType } from "@/components/invoice/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { bi } from "@/assets/images/flags/utils";
 
@@ -309,6 +309,44 @@ export default class InvoiceService extends HttpService {
       throw this.handleError(error);
     }
   }
+
+
+  //Attachment upload
+ async uploadAttachment(payload: InvoiceAttachmentType): Promise<ServiceResponse<InvoiceAttachmentType>> {
+  try {
+    const formData = new FormData();
+    formData.append('file', payload.file as File);
+
+    console.log("✅ FormData file appended:", formData.get('file'));
+
+    const response = await this.putFile<ApiResponse<InvoiceAttachmentType>>(
+      `/amm/invoices/${payload.id}/attach-file`,
+      formData
+    );
+
+    console.log('Resposta ao upload do anexo:------------------------', response);
+
+    return {
+      status: 'success',
+      data: response.data
+    };
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: 'error',
+        error: error.response.data as ApiErrorResponse
+      };
+    }
+    return {
+      status: 'error',
+      error: this.NetworkErrorResponse()
+    };
+  }
+}
+
+
+       
+    
 
 
 

@@ -39,6 +39,7 @@ export type InvoiceListingType = {
     };
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    flag?: string;
     enable: boolean;
     createdAt: Date ;
     updatedAt: Date | null;
@@ -160,8 +161,13 @@ export type InvoiceItemListingType = {
 export type InvoiceAdviceResponseType = {
     employeeId: string;
     billedAmount: number;
-    canBeCovered: boolean;
+    canBeCovered: boolean; 
     remainingBalance: number;
     balanceAfterTransaction: number;
     timestamp: Date;
 };
+
+export type InvoiceAttachmentType = {
+    id: string | undefined;
+    file: File | string | null;
+}

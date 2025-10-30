@@ -83,6 +83,7 @@ const requiredRules = {
   ],
   address: [
     (v: string) => !!v || t('t-please-enter-address'),
+    (v: string) => v.length <= 50 || t('t-max-length-50'),
   ],
   phone: [
     (v: string) => !!v || t('t-please-enter-phone-number'),

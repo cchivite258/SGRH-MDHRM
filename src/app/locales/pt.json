@@ -981,5 +981,13 @@
   "t-please-enter-rehire-date": "Por favor, insira a data de renovação",
   "t-termination-date-after-hire-date": "A data de rescisão deve ser após a data de contratação",
   "t-please-enter-start-date": "Por favor, insira a data de início",
-  "t-please-enter-end-date": "Por favor, insira a data de término"
+  "t-please-enter-end-date": "Por favor, insira a data de término",
+  "t-min-zero-amount": "O valor mínimo deve ser 0",
+  "t-please-enter-health-plan-limit": "Por favor, insira o limite do plano de saúde",
+  "t-max-length-50": "O comprimento máximo é de 50 caracteres",
+  "t-upload-original-invoice": "Carregar Factura Original",
+  "t-original-invoice": "Factura Original",
+  "t-attach-invoice": "Anexar Factura",
+  "t-upload-invoice": "Carregar Factura",
+  "t-upload-file-or-drag-here": "Carregue arquivo ou arraste aqui."
 }

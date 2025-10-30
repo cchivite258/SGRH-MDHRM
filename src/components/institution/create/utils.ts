@@ -252,6 +252,6 @@ export const hospitalProcedureHeader: TableHeaderType[] = [
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
   { title: "percentage", key: "percentage", sortable: true },
   { title: "enabled", key: "enabled", sortable: true },
-  { title: "action", sortable: false, align: "end" }
+  { title: "action", sortable: false, align: "center" }
 ];
 
