@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,coveragePeriod`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,coveragePeriod,invoiceAttachment`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 
@@ -344,10 +344,61 @@ export default class InvoiceService extends HttpService {
   }
 }
 
+async downloadAttachment(id: string, name: string, extension: string): Promise<ServiceResponse<void>> {
+  try {
+    const blob = await this.downloadFile(`/amm/invoices/${id}/download-file`);
+
+    // cria um link temporário para download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name; // ou outro nome dinâmico
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    return { status: "success", data: undefined };
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: "error",
+        error: error.response.data as ApiErrorResponse,
+      };
+    }
+    return {
+      status: "error",
+      error: this.NetworkErrorResponse(),
+    };
+  }
+}
+
+
+async deleteAttachment(id: string): Promise<ServiceResponse<void>> {
+  try {
+    await this.delete(`/amm/invoices/${id}/delete-file`);
+
+    return { status: "success", data: undefined };
+
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: "error",
+        error: error.response.data as ApiErrorResponse,
+      };
+    }
+    return {
+      status: "error",
+      error: this.NetworkErrorResponse(),
+    };
+  }
+
+}
+
 
        
     
 
-
-
 }
+
+

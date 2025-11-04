@@ -14,6 +14,7 @@ import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useRouter } from "vue-router";
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
+import { invoiceService } from "@/app/http/httpServiceProvider";
 
 // Composables
 const { t } = useI18n();
@@ -89,7 +90,7 @@ const institutions = computed(() => {
 });
 
 const service_providers = computed(() => {
-  return serviceProviderStore.service_providers.map((service_provider) => ({
+  return serviceProviderStore.service_provider_list.map((service_provider) => ({
     value: service_provider.id,
     label: service_provider.name
   }));
@@ -234,6 +235,31 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
   }
 });
 
+const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
+  if (!id) return;
+  onSubmitDownloadInvoice(id, name, extension);
+};
+
+const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extension: string, callbacks?: {
+  onSuccess?: () => void;
+  onFinally?: () => void;
+}) => {
+  try {
+    const response = await invoiceService.downloadAttachment(invoiceId, name, extension);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-download-error"));
+      return;
+    }
+
+    //toast.success(t("t-toast-message-downloaded"));
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t("t-message-download-error"));
+  } finally {
+    callbacks?.onFinally?.();
+  }
+};
 // Lifecycle
 onMounted(async () => {
   try {
@@ -251,12 +277,35 @@ onMounted(async () => {
 <template>
   <v-form ref="form">
     <v-card elevation="0" class="position-relative h-100 d-block">
-      <div class="invoice-detail-card-image">
-        <InvoiceSVG />
-      </div>
+
       <v-card-text>
-        <v-row justify="end" class="mt-4 pt-16 pt-md-0">
-          <v-col cols="12" lg="4">
+        <v-row class="mt-4 pt-16 pt-md-0">
+          <v-col cols="12" lg="4" class="mt-6">
+            <v-card class="bg-light" elevation="0" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-card-text class="py-3">
+                <div class="d-flex justify-space-between">
+                  <span class="font-weight-bold align-center d-flex">
+                    <i class="ph ph-file me-2" /> {{ invoiceData.invoiceAttachment.originalFilename }}</span>
+                  <span class="text-muted">{{ invoiceData.invoiceAttachment.fileSize }} KB</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated"
+                @click="onDownloadClick(invoiceData.id, invoiceData.invoiceAttachment.originalFilename, invoiceData.invoiceAttachment.extension)"
+                block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-download-simple me-2" /> {{ $t('t-download-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+          </v-col>
+          <v-col cols="12" lg="4" class="text-center">
+            <h2 class="font-weight-bold mb-0"></h2>
+          </v-col>
+          <v-col cols="12" lg="4" justify="end">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
               :rules="requiredRules.institution" :placeholder="$t('t-institution')" disabled />

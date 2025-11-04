@@ -228,6 +228,7 @@ const saveInvoice = async (
         }
 
         router.push(`/invoices/edit/${response.data.id}`);
+        await loadInvoiceData(response.data.id);
 
         const newInvoiceId = response.data?.id;
         if (!newInvoiceId) throw new Error('Invoice ID not available');
@@ -283,6 +284,7 @@ onMounted(() => {
   invoiceStore.loadFromStorage();
 
   if (invoiceStore.currentInvoiceId) {
+    loadInvoiceData(invoiceStore.currentInvoiceId);
     invoiceId.value = invoiceStore.currentInvoiceId;
     basicDataValidated.value = true;
   }
@@ -294,7 +296,7 @@ onMounted(() => {
     <v-row justify="center">
       <v-col cols="12" xl="9">
         <InvoiceForm v-model="invoiceData" :is-edit-mode="isEditMode" :loading="loading" :initial-items="invoiceItems"
-          @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)" />
+          @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)" @invoiceAttachmentUploaded="loadInvoiceData"/>
       </v-col>
     </v-row>
   </v-container>

@@ -55,5 +55,15 @@ export default class HttpService {
     }
   }
 
+  /**
+   * Download binário (PDF, imagem, ZIP, etc)
+   */
+  async downloadFile(path: string): Promise<Blob> {
+    const response = await axios.get(path, {
+      responseType: "blob", // ← ESSENCIAL
+    });
+    return response.data; // ← retorna Blob
+  }
+ 
 
 }

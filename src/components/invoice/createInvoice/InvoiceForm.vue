@@ -64,6 +64,7 @@ const emit = defineEmits<{
   (e: 'save', invoiceData: InvoiceInsertType): void;
   (e: 'update:modelValue', value: InvoiceInsertType): void;
   (e: 'items-ready', items: InvoiceItemInsertType[]): void;
+  (e: 'invoiceAttachmentUploaded', id: string): void;
 }>();
 
 // =============================================
@@ -180,8 +181,36 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
-const onCreateEditClick = (data: InvoiceAttachmentType | null) => { 
-  console.log("onCreateEditClick data: ", invoiceData.value);
+
+
+const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
+  if (!id) return;
+  onSubmitDownloadInvoice(id, name, extension);
+};
+
+const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extension: string, callbacks?: {
+  onSuccess?: () => void;
+  onFinally?: () => void;
+}) => {
+  try {
+    const response = await invoiceService.downloadAttachment(invoiceId, name, extension);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-download-error"));
+      return;
+    }
+
+    //toast.success(t("t-toast-message-downloaded"));
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t("t-message-download-error"));
+  } finally {
+    callbacks?.onFinally?.();
+  }
+};
+
+const onUploadClick = (data: InvoiceAttachmentType | undefined) => {
+  console.log("onUploadClick data: ", invoiceData.value);
   attachmentData.value = {
     ...(data || {}),
     id: invoiceData.value.id || undefined,
@@ -201,14 +230,7 @@ const onSubmitInvoiceAttachment = async (
 
     let response: ServiceResponse<InvoiceAttachmentType>;
 
-    if (!data.id) {
-      response = await invoiceService.uploadAttachment(data);
-    } 
-    
-    else {
-      response = await invoiceService.uploadAttachment(data);
-    }
-
+    response = await invoiceService.uploadAttachment(data);
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
@@ -218,12 +240,29 @@ const onSubmitInvoiceAttachment = async (
 
     // Só mostra sucesso se realmente foi bem-sucedido
     toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
+    emit('invoiceAttachmentUploaded', invoiceData.value.id!);
 
     callbacks?.onSuccess?.();
   } catch (error) {
     toast.error(t('t-message-save-error'));
   } finally {
     callbacks?.onFinally?.();
+  }
+};
+
+const onDeleteAttachmentClick = async (invoiceId: string) => {
+  try {
+    const response = await invoiceService.deleteAttachment(invoiceId);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-delete-error"));
+      return;
+    }
+
+    toast.success(t("t-toast-message-deleted"));
+    emit('invoiceAttachmentUploaded', invoiceId);
+  } catch (error) {
+    toast.error(t("t-message-delete-error"));
   }
 };
 
@@ -337,21 +376,45 @@ onMounted(async () => {
 <template>
   <v-form ref="form">
     <v-card elevation="0" class="position-relative h-100 d-block">
-      <div class="invoice-detail-card-image">
-        <InvoiceSVG />
-      </div>
+
 
       <v-card-text>
         <!-- Seção de Informações Básicas -->
         <v-row class="mt-4 pt-16 pt-md-0">
-          <v-col cols="12" lg="4" class="mt-12 ">
-            <div class="mt-12">
-              <p>&nbsp;</p>
+          <v-col cols="12" lg="4" class="mt-6">
+            <v-card class="bg-light" elevation="0" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-card-text class="py-3">
+                <div class="d-flex justify-space-between">
+                  <span class="font-weight-bold align-center d-flex">
+                    <i class="ph ph-file me-2" /> {{ invoiceData.invoiceAttachment.originalFilename }}</span>
+                  <span class="text-muted">{{ invoiceData.invoiceAttachment.fileSize }} KB</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated"
+                @click="onDownloadClick(invoiceData.id, invoiceData.invoiceAttachment.originalFilename, invoiceData.invoiceAttachment.extension)"
+                block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-download-simple me-2" /> {{ $t('t-download-original-invoice') }}
+                </span>
+              </v-btn>
             </div>
-            
-            <div class="mt-6">
-              <v-btn color="black" variant="elevated" @click="onCreateEditClick(null)" block>
-                <i class="ph ph-upload-simple" /> {{ $t('t-upload-original-invoice') }}
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated" @click="onDeleteAttachmentClick(invoiceData.id)" block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-trash me-2" /> {{ $t('t-delete-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+            <div class="mt-3" v-if="invoiceData.id">
+              <v-btn color="black" variant="elevated" @click="onUploadClick(undefined)" block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-upload-simple me-2" /> {{ $t('t-upload-original-invoice') }}
+                </span>
               </v-btn>
             </div>
 

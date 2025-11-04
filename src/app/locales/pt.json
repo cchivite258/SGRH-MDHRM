@@ -989,5 +989,7 @@
   "t-original-invoice": "Factura Original",
   "t-attach-invoice": "Anexar Factura",
   "t-upload-invoice": "Carregar Factura",
-  "t-upload-file-or-drag-here": "Carregue arquivo ou arraste aqui."
+  "t-upload-file-or-drag-here": "Carregue arquivo ou arraste aqui.",
+  "t-download-original-invoice": "Baixar Factura Original",
+  "t-delete-original-invoice": "Eliminar Factura Original"
 }

@@ -25,6 +25,8 @@ export default class InvoiceItemService extends HttpService {
     query_props?: string
   ): Promise<{ content: InvoiceItemListingType[], meta: any }> {
     try {
+      console.log("Estou a processar  o itens da factura com ID:", id);
+
       const queryParams = [
         `id=${id}`,
         `page=${page}`,
