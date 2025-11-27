@@ -25,6 +25,8 @@ import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leave
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
+import BudgetService from "@/app/http/services/institution/budgetService";
+
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -45,6 +47,7 @@ const invoiceService = new InvoiceService();
 const dependentEmployeeService = new DependentEmployeeService();
 const invoiceItemService = new InvoiceItemService();
 const healthPlanEmployeeService = new HealthPlanEmployeeService();
+const budgetService = new BudgetService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -84,5 +87,6 @@ export {
     coveragePeriodsService,
     healthPlanService,
     healthPlanEmployeeService,
-    providerTypeService
+    providerTypeService,
+    budgetService
 };

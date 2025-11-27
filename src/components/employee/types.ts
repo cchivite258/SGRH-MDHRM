@@ -73,6 +73,7 @@ export type EmployeeListingType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  alertFlag: string | undefined;
 };
 
 export type EmployeeResponseType = { 
@@ -129,6 +130,7 @@ export type EmployeeResponseType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  alertFlag: string | undefined;
 
 };
 

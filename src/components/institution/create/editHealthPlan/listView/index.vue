@@ -72,6 +72,7 @@ const totalItems = computed(() => hospitalProcedureStore.pagination.totalElement
 const healthPlanFormData = ref<HealthPlanInsertType>({
   id: healthPlanId.value || undefined,
   maxNumberOfDependents: 0,
+  childrenInUniversityMaxAge: 0,
   childrenMaxAge: 0,
   healthPlanLimit: "",
   fixedAmount: 0,
@@ -152,6 +153,7 @@ onMounted(async () => {
         healthPlanFormData.value = {
           id: healthPlan.id,
           maxNumberOfDependents: healthPlan.maxNumberOfDependents,
+          childrenInUniversityMaxAge: healthPlan.childrenInUniversityMaxAge,
           childrenMaxAge: healthPlan.childrenMaxAge,
           healthPlanLimit: healthPlan.healthPlanLimit,
           fixedAmount: healthPlan.fixedAmount,

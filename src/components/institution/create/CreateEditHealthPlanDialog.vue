@@ -34,6 +34,7 @@ const props = defineProps({
       id: undefined,
       maxNumberOfDependents: 0,
       childrenMaxAge: 0,
+      childrenInUniversityMaxAge: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
       salaryComponent: undefined,
@@ -51,6 +52,7 @@ const errorMsg = ref("");
 const id = ref("");
 const maxNumberOfDependents = ref(0);
 const childrenMaxAge = ref(0);
+const childrenInUniversityMaxAge = ref(0);
 const healthPlanLimit = ref("");
 const fixedAmount = ref(0);
 const salaryComponent = ref<string | undefined>(undefined);
@@ -69,6 +71,7 @@ watch(() => props.data, (newData) => {
   id.value = newData.id || "";
   maxNumberOfDependents.value = newData.maxNumberOfDependents || 0;
   childrenMaxAge.value = newData.childrenMaxAge || 0;
+  childrenInUniversityMaxAge.value = newData.childrenInUniversityMaxAge || 0;
   fixedAmount.value = newData.fixedAmount || 0;
   companyContributionPercentage.value = newData.companyContributionPercentage || 0;
   healthPlanLimit.value = newData.healthPlanLimit || "";
@@ -111,6 +114,10 @@ const requiredRules = {
     (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
   ],
   childrenMaxAge: [
+    (v: number) => !!v || t('t-please-enter-max-age'),
+    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+  ],
+  childrenInUniversityMaxAge: [
     (v: number) => !!v || t('t-please-enter-max-age'),
     (v: number) => (v && v >= 0) || t('t-min-zero-age')
   ],
@@ -177,6 +184,7 @@ const onSubmit = async () => {
     id: id.value || undefined,
     maxNumberOfDependents: maxNumberOfDependents.value,
     childrenMaxAge: childrenMaxAge.value,
+    childrenInUniversityMaxAge: childrenInUniversityMaxAge.value,
     fixedAmount: fixedAmount.value,
     companyContributionPercentage: companyContributionPercentage.value,
     healthPlanLimit: healthPlanLimit.value,
@@ -264,28 +272,36 @@ onMounted(async () => {
         </transition>
         <v-card-text>
           <v-row class="">
-            <v-col cols="12" lg="12">
-              <div class="font-weight-bold text-caption mb-1">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-2">
                 {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="coveragePeriod" :items="coveragePeriods" :loading="coveragePeriodStore.loading"
                 :rules="requiredRules.coveragePeriod" :disabled="!isCreate" />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-maximum-number-of-dependents') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="maxNumberOfDependents" :placeholder="t('t-enter-maximum-number-of-dependents')"
-                :rules="requiredRules.maxNumberOfDependents" type="number" class="mb-2" />
+                :rules="requiredRules.maxNumberOfDependents" type="number" />
             </v-col>
+          </v-row>
+          <v-row class="mt-n6">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-maximum-age-of-dependents') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="childrenMaxAge" :placeholder="t('t-enter-maximum-age-of-dependents')"
                 type="number" :rules="requiredRules.childrenMaxAge" class="mb-2" />
+            </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">
+                {{ $t('t-maximum-age-of-dependents-in-university') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model.number="childrenInUniversityMaxAge"
+                :placeholder="t('t-enter-maximum-age-of-dependents-in-university')" type="number"
+                :rules="requiredRules.childrenInUniversityMaxAge" class="mb-2" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -328,7 +344,7 @@ onMounted(async () => {
                 :rules="requiredRules.companyContributionPercentage" />
             </v-col>
           </v-row>
-          <v-row :class="healthPlanLimit === 'FIXED_AMOUNT' ? '' : 'mt-n9'">
+          <v-row :class="healthPlanLimit === 'ANUAL_SALARY' ? 'mt-n6' : ''">
             <v-col cols="12" lg="12" class="">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

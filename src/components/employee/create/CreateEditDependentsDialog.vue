@@ -175,7 +175,7 @@ const onSubmit = async () => {
 };
 </script>
 <template>
-  <v-dialog v-model="dialogValue" width="500" scrollable>
+  <v-dialog v-model="dialogValue" width="700">
     <v-form ref="form" @submit.prevent="onSubmit">
       <Card :title="isCreate ? $t('t-add-dependent') : $t('t-edit-dependent')" title-class="py-0"
         style="overflow: hidden">
@@ -189,46 +189,44 @@ const onSubmit = async () => {
           'max-height': isCreate ? '70vh' : '45vh'
         }">
           <v-row class="">
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-firstname') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="firstName" :placeholder="$t('t-enter-firstname')" :rules="requiredRules.firstName" />
             </v-col>
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-middle-name') }}
               </div>
               <TextField v-model="middleName" :placeholder="$t('t-enter-middle-name')" />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-lastname') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="lastName" :placeholder="$t('t-enter-lastname')" :rules="requiredRules.lastName" />
             </v-col>
-            <v-col cols="12" lg="6">
+          </v-row>
+          <v-row class="mt-n6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-relationship') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="relationship" :items="relationshipOptions" :rules="requiredRules.relationship" />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-gender') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="gender" :items="genderOptions" :rules="requiredRules.gender" />
             </v-col>
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-birth-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="birthDatePicker" v-model="birthDate" :teleport="true"
-                :placeholder="$t('t-enter-birth-date')" :rules="requiredRules.birthDate" format="dd/MM/yyyy" />
+              <ValidatedDatePicker ref="birthDatePicker" v-model="birthDate" :placeholder="$t('t-enter-birth-date')"
+                :rules="requiredRules.birthDate" format="dd/MM/yyyy" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -252,7 +250,7 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-id-card-expiry-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="idCardExpiryDate" :teleport="true"
+              <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="idCardExpiryDate"
                 :placeholder="$t('t-enter-id-card-expiry-date')" :rules="requiredRules.idCardExpiryDate"
                 format="dd/MM/yyyy" />
             </v-col>
@@ -260,7 +258,7 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="idCardIssuanceDate" :teleport="true"
+              <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="idCardIssuanceDate"
                 :placeholder="$t('t-enter-id-card-issuance-date')" :rules="requiredRules.idCardIssuanceDate"
                 format="dd/MM/yyyy" />
             </v-col>

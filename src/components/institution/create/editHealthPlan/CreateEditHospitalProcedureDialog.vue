@@ -231,7 +231,7 @@ onMounted(async () => {
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
         </template>
-        <v-divider />
+        <v-divider /> 
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
         <v-card-text >

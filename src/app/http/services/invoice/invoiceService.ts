@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.name,serviceProvider.name,dependent.name,coveragePeriod.name,currency.anme');
+        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -202,6 +202,21 @@ export default class InvoiceService extends HttpService {
         `/amm/invoices/${id}/post`
       );
       console.log('Resposta ao post da factura:------------------------', response);
+
+      return {
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async postFlaggedInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+    try {
+      const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
+        `/amm/invoices/${id}/post-flagged`
+      );
+      console.log('Resposta ao post flagged da factura:------------------------', response);
 
       return {
         data: response.data

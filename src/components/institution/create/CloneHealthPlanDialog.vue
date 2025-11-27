@@ -51,6 +51,7 @@ const errorMsg = ref("");
 const id = ref("");
 const maxNumberOfDependents = ref(0);
 const childrenMaxAge = ref(0);
+const childrenInUniversityMaxAge = ref(0);
 const healthPlanLimit = ref("");
 const fixedAmount = ref(0);
 const salaryComponent = ref<string | undefined>(undefined);
@@ -175,6 +176,7 @@ const onSubmitClonePlan = async () => {
   const payload: HealthPlanInsertType = {
     id: id.value || undefined,
     maxNumberOfDependents: maxNumberOfDependents.value,
+    childrenInUniversityMaxAge: childrenInUniversityMaxAge.value,
     childrenMaxAge: childrenMaxAge.value,
     fixedAmount: fixedAmount.value,
     companyContributionPercentage: companyContributionPercentage.value,

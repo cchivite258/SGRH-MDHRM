@@ -29,8 +29,11 @@ const invoiceStore = useInvoiceStore()
 const searchQuery = ref("")
 const searchProps = "invoiceNumber,issueDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus" // Campos de pesquisa,
 const postDialog = ref(false)
+const postFlaggedDialog = ref(false)
 const postId = ref<string | null>(null)
+const postFlaggedId = ref<string | null>(null)
 const postLoading = ref(false)
+const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
@@ -67,6 +70,47 @@ const fetchInvoices = async ({ page, itemsPerPage, sortBy, search }: FetchParams
 const onView = (id: string) => {
   router.push(`/invoices/view/${id}`)
 }
+
+// Abre o diálogo de confirmação para do lançamento
+const openPostFlaggedDialog = (id: string) => {
+  postFlaggedId.value = id
+  postFlaggedDialog.value = true
+}
+
+const postFlaggedInvoice = async () => {
+  if (!postFlaggedId.value) return;
+
+  postFlaggedLoading.value = true;
+  try {
+    await invoiceService.postFlaggedInvoice(postFlaggedId.value);
+    toast.success(t('t-toast-message-post'));
+    await invoiceStore.fetchInvoices(0, itemsPerPage.value);
+  } catch (error: unknown) {
+    console.log('Erro completo:', error); // Para debugging
+    
+    if (typeof error === 'object' && error !== null) {
+      const apiError = error as {
+        message?: string;
+        details?: any;
+        status?: number;
+      };
+      
+      if (apiError.message) {
+        // Mostra a mensagem direta do erro
+        toast.error(apiError.message);
+      } else {
+        // Fallback para mensagem genérica
+        toast.error(t('t-toast-message-error'));
+      }
+    } else {
+      // Caso o erro não seja um objeto
+      toast.error(t('t-toast-message-error'));
+    }
+  } finally {
+    postFlaggedLoading.value = false;
+    postFlaggedDialog.value = false;
+  }
+};
 
 // Abre o diálogo de confirmação para do lançamento
 const openPostDialog = (id: string) => {
@@ -201,10 +245,14 @@ const onDelete = (id: string) => {
 openDeleteDialog(id);
 }
 */
+
 const onPost = (id: string) => {
   openPostDialog(id);
 }
 
+const onPostFlagged = (id: string) => {
+  openPostFlaggedDialog(id);
+}
 const onCancel = (id: string) => {
   openCancelDialog(id);
 }
@@ -237,6 +285,9 @@ const onSelect = (option: string, data: InvoiceListingType) => {
       break;
     case "post":
       onPost(data.id); 
+      break;
+    case "force-post":
+      onPostFlagged(data.id); 
       break;
     case "cancel":
       onCancel(data.id); 
@@ -319,5 +370,6 @@ const formatAmount = (amount: number | string) => {
   </Card>
 
   <PostInvoiceConfirmationDialog v-model="postDialog" @onConfirm="postInvoice" :loading="postLoading" />
+  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" @onConfirm="postFlaggedInvoice" :loading="postFlaggedLoading" />
   <CancelInvoiceConfirmationDialog v-model="cancelDialog" @onConfirm="cancelInvoice" :loading="cancelLoading" />
 </template>

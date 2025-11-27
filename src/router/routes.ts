@@ -71,6 +71,13 @@ const institutionRoutes = [
     component: () => import("@/views/institution/editHealthPlan/List.vue"),
     meta: { title: "EditHealthPlan", authRequired: true },
   },
+  {
+    path: `${institutionPrefix}/coveragePeriod/:id`,
+    name: "EditCoveragePeriod",
+    component: () => import("@/views/institution/editCoveragePeriod/List.vue"),
+    meta: { title: "EditCoveragePeriod", authRequired: true },
+  }
+
 ].map((data) => {
   return {
     ...data,

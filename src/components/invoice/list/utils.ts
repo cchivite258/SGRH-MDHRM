@@ -76,6 +76,11 @@ export const Options: OptionType[] = [
     value: "post",
   },
   {
+    title: "force-post",
+    icon: "ph ph-check-square",
+    value: "force-post",
+  },
+  {
     title: "cancel",
     icon: "ph-prohibit",
     value: "cancel",

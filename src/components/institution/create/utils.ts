@@ -122,10 +122,9 @@ export const coveragePeriodHeader: DataTableHeaderType[] = [
 export const healthPlanHeader: DataTableHeaderType[] = [
   { title: "max-number-of-dependents", key: "maxNumberOfDependents", sortable: true },
   { title: "children-max-age", key: "childrenMaxAge", sortable: true },
+  { title: "children-in-university-max-age", key: "childrenInUniversityMaxAge", sortable: true },
   { title: "health-plan-limit", key: "healthPlanLimit", sortable: true },
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
-  { title: "salary-component", key: "salaryComponent", sortable: true },
-  { title: "company-contribution-percentage", key: "companyContributionPercentage", sortable: true },
   { title: "status", key: "status", sortable: true },
   { title: "is-enabled", key: "enabled", sortable: true },
   { title: "action", sortable: false, align: "end" }
@@ -135,6 +134,15 @@ export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
   { title: "service-provider", sortable: true },
   { title: "action", align: 'end' },
+];
+
+
+export const budgetHeader: DataTableHeaderType[] = [
+  { title: "name", key: "name", sortable: true },
+  { title: "coverage-period", key: "coveragePeriod", sortable: true },
+  { title: "budget-amount", key: "budgetAmount", sortable: true },
+  { title: "is-enabled", key: "enabled", sortable: true },
+  { title: "action", sortable: false, }
 ];
 
 export const contactOptions: OptionType[] = [

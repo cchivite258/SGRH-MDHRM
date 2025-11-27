@@ -15,6 +15,7 @@ import ProductCard from "@/components/invoice/createInvoice/ProductCard.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import CreateEditAttachmentDialog from "@/components/invoice/createInvoice/CreateEditAttachmentDialog.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 
 // Stores
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
@@ -86,6 +87,10 @@ const productCardRef = ref<{ emitItemsReady: () => boolean }>();
 const errorMsg = ref("");
 const alertTimeout = ref<number | null>(null);
 const attachmentData = ref<InvoiceAttachmentType | null>(null);
+
+const deleteDialog = ref(false);
+const deleteId = ref<string | null>(null);
+const deleteLoading = ref(false);
 
 const invoiceItemData = reactive<InvoiceItemInsertType>({
   unitPrice: 0,
@@ -250,9 +255,25 @@ const onSubmitInvoiceAttachment = async (
   }
 };
 
-const onDeleteAttachmentClick = async (invoiceId: string) => {
+
+
+watch(deleteDialog, (newVal: boolean) => {
+  if (!newVal) {
+    deleteId.value = null;
+  }
+});
+
+const onDeleteAttachmentClick = (id: string) => {
+  deleteId.value = id;
+  deleteDialog.value = true;
+};
+
+
+const onConfirmDelete = async () => {
+  deleteLoading.value = true;
+
   try {
-    const response = await invoiceService.deleteAttachment(invoiceId);
+    const response = await invoiceService.deleteAttachment(deleteId.value!);
 
     if (response.status === "error") {
       toast.error(response.error?.message || t("t-message-delete-error"));
@@ -260,9 +281,13 @@ const onDeleteAttachmentClick = async (invoiceId: string) => {
     }
 
     toast.success(t("t-toast-message-deleted"));
-    emit('invoiceAttachmentUploaded', invoiceId);
+    emit('invoiceAttachmentUploaded', deleteId.value!);
   } catch (error) {
     toast.error(t("t-message-delete-error"));
+  }
+  finally {
+    deleteLoading.value = false;
+    deleteDialog.value = false;
   }
 };
 
@@ -290,6 +315,7 @@ const submitInvoice = async () => {
     toast.error(t('t-message-save-error'));
   }
 };
+
 
 /**
  * Processa os itens prontos para envio
@@ -540,4 +566,6 @@ onMounted(async () => {
   <CreateEditAttachmentDialog v-if="attachmentData" v-model="AttachmentDialog" :data="attachmentData"
     @onSubmit="onSubmitInvoiceAttachment" />
 
+  <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
+    :loading="deleteLoading" />
 </template>

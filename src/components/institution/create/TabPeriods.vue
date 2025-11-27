@@ -235,7 +235,7 @@ const onSelect = (option: string, data: CoveragePeriodListingType) => {
       onViewClick(data);
       break;
     case "edit":
-      onCreateEditClick(data);
+      onEditClick(data.id);
       break;
     case "start":
       onStart(data.id);
@@ -337,6 +337,11 @@ const onConfirmStart = async () => {
   }
 };
 
+
+const onEditClick = async (coveragePeriodId: string) => {
+  console.log("Navigating to edit coverage period:------------------", coveragePeriodId);
+  await router.push(`/institution/coveragePeriod/${coveragePeriodId}`);
+}
 
 /**
  * Prepara dados para visualização
