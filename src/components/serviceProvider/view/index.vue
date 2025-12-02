@@ -68,7 +68,9 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   providerTypeId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
-  enabled: true
+  enabled: true,
+  countryId: undefined,
+  provinceId: undefined
 });
 
 /**

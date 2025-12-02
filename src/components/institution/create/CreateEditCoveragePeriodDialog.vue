@@ -151,13 +151,13 @@ const onSubmit = async () => {
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')" :rules="requiredRules.startDate" />
+            <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')" :rules="requiredRules.startDate" :teleport="true" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')" :rules="requiredRules.endDate" />
+            <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')" :rules="requiredRules.endDate" :teleport="true" />
           </v-col>
         </v-row>
         <v-row class="">

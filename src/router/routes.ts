@@ -71,11 +71,23 @@ const institutionRoutes = [
     component: () => import("@/views/institution/editHealthPlan/List.vue"),
     meta: { title: "EditHealthPlan", authRequired: true },
   },
+   {
+    path: `${institutionPrefix}/healthPlan/view/:id`,
+    name: "ViewHealthPlan",
+    component: () => import("@/views/institution/viewHealthPlan/List.vue"),
+    meta: { title: "ViewHealthPlan", authRequired: true },
+  },
   {
     path: `${institutionPrefix}/coveragePeriod/:id`,
     name: "EditCoveragePeriod",
     component: () => import("@/views/institution/editCoveragePeriod/List.vue"),
     meta: { title: "EditCoveragePeriod", authRequired: true },
+  },
+  {
+    path: `${institutionPrefix}/coveragePeriod/view/:id`,
+    name: "ViewCoveragePeriod",
+    component: () => import("@/views/institution/viewCoveragePeriod/List.vue"),
+    meta: { title: "ViewCoveragePeriod", authRequired: true },
   }
 
 ].map((data) => {

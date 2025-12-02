@@ -162,7 +162,7 @@ const onSubmit = async () => {
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-budget-amount') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <TextField v-model.number="budgetAmount" :placeholder="t('t-enter-budget-amount')"
+            <TextField v-model.number="budgetAmount" :placeholder="t('t-enter-budget-amount')" 
                 type="number" :rules="requiredRules.budgetAmount" class="mb-2" />
           </v-col>
         </v-row>

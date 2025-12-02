@@ -3,7 +3,7 @@ import { PropType, computed } from "vue";
 import { CoveragePeriodInsertType, CoveragePeriodListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { formateDate } from "@/app/common/dateFormate";
-import Status from "@/app/common/components/Status.vue";
+import Status from "@/app/common/components/Status.vue"; 
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue"]);

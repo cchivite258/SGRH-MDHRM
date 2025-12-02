@@ -19,17 +19,16 @@ import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 
 // Stores
-// import { useEmployeeStore } from '@/store/employeeStore';
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
 import { useProviderTypeStore } from "@/store/baseTables/providerTypeStore"
-// import { useCountryStore } from '@/store/baseTables/countryStore';
-// import { useProvinceStore } from '@/store/baseTables/countryStore';
+import { useCountryStore } from '@/store/baseTables/countryStore';
+import { useProvinceStore } from '@/store/baseTables/countryStore';
 
 // // Types
-// import { CountryListingType } from "@/components/baseTables/country/types"
-// import { ProvinceListingType } from "@/components/baseTables/province/types"
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import type { ProviderTypeListing } from '@/components/baseTables/providerType/types';
+import { CountryListingType } from "@/components/baseTables/country/types"
+import { ProvinceListingType } from "@/components/baseTables/province/types"
 
 // Utils
 import {
@@ -59,6 +58,8 @@ const props = defineProps<{
 
 // Stores
 const providerTypeStore = useProviderTypeStore();
+const countryStore = useCountryStore();
+const provinceStore = useProvinceStore();
 
 // Referências do formulário
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
@@ -84,6 +85,12 @@ const requiredRules = {
   name: [
     (v: string) => !!v || t('t-please-enter-service-provider-name'),
     (v: string) => v.length <= 100 || t('t-maximum-100-characters')
+  ],
+  provinceId: [
+    (v: string) => !!v || t('t-please-enter-province'),
+  ],
+  countryId: [
+    (v: string) => !!v || t('t-please-enter-country'),
   ],
   address: [
     (v: string) => !!v || t('t-please-enter-service-provider-address'),
@@ -113,12 +120,57 @@ const requiredRules = {
 
 };
 
+
+/**
+ * Observa mudanças no país para carregar as províncias correspondentes
+ */
+watch(() => serviceProviderData.value.countryId, async (newCountryId, oldCountryId) => {
+  // Só executa se o país realmente mudou
+  if (newCountryId !== oldCountryId) {
+    if (newCountryId) {
+      try { 
+        await provinceStore.fetchProvincesbyCountry(newCountryId);
+
+        // Mantém a província atual apenas se for do mesmo país
+        if (serviceProviderData.value.provinceId) {
+          const currentProvince = provinceStore.provincesbyCountry.find(
+            p => p.id === serviceProviderData.value.provinceId
+          );
+          if (!currentProvince) {
+            serviceProviderData.value.provinceId = undefined;
+          }
+        } else {
+          serviceProviderData.value.provinceId = undefined;
+        }
+      } catch (error) {
+        console.error("Failed to load provinces:", error);
+        provinceStore.provincesbyCountry = [];
+        serviceProviderData.value.provinceId = undefined;
+        errorMsg.value = "Falha ao carregar províncias";
+        alertTimeout = setTimeout(() => {
+          errorMsg.value = "";
+          alertTimeout = null;
+        }, 5000);
+      }
+    } else {
+      provinceStore.clearProvinces();
+      serviceProviderData.value.provinceId = undefined;
+    }
+  }
+});
+
 /**
  * Carrega dados iniciais quando o componente é montado
  */
 onMounted(async () => {
   try {
     await providerTypeStore.fetchProviderTypes();
+    await countryStore.fetchCountries();
+
+    // Carrega províncias se já houver país selecionado
+    if (serviceProviderData.value.countryId) {
+      await provinceStore.fetchProvincesbyCountry(serviceProviderData.value.countryId);
+    }
 
   } catch (error) {
     console.error("Failed to load tipos de provedores:", error);
@@ -128,6 +180,32 @@ onMounted(async () => {
       alertTimeout = null;
     }, 5000);
   }
+});
+
+
+/**
+ * Opções para selects (países e províncias)
+ */
+const countries = computed(() => {
+  return countryStore.countries.map((country: CountryListingType) => ({
+    value: country.id,
+    label: country.name,
+    meta: {
+      code: country.iso2Code,
+      phoneCode: country.phoneCode
+    }
+  }));
+});
+
+const provinces = computed(() => {
+  return (provinceStore.provincesbyCountry as ProvinceListingType[]).map((province) => ({
+    value: province.id,
+    label: province.name,
+    meta: {
+      code: province.code,
+      country: province.country
+    }
+  }));
 });
 
 /**
@@ -208,6 +286,23 @@ const submitForm = async () => {
             </div>
             <MenuSelect v-model="serviceProviderData.providerTypeId" :items="providerTypes"
               :loading="providerTypeStore.loading" :rules="requiredRules.providerType" />
+          </v-col>
+        </v-row>
+
+        <!-- País e Província -->
+        <v-row class="mt-n6">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-country') }}
+            </div>
+            <MenuSelect v-model="serviceProviderData.countryId" :items="countries" :loading="countryStore.loading" />
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-province') }}
+            </div>
+            <MenuSelect v-model="serviceProviderData.provinceId" :items="provinces" :loading="provinceStore.loading"
+              :disabled="!serviceProviderData.countryId || !Array.isArray(provinceStore.provincesbyCountry)" />
           </v-col>
         </v-row>
 

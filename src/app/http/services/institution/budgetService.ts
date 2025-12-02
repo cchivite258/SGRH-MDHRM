@@ -39,7 +39,7 @@ export default class BudgetService extends HttpService {
             }
 
             const queryString = queryParams.join('&');
-            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}/${queryString}`;
+            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}/${queryString}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<BudgetListingType[]>>(url);
@@ -79,7 +79,7 @@ export default class BudgetService extends HttpService {
             }
 
             const queryString = queryParams.join('&');
-            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}?includes=coveragePeriod`;
+            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<BudgetListingType[]>>(url);
@@ -136,7 +136,7 @@ export default class BudgetService extends HttpService {
     async getBudgetById(id: string): Promise<{ data: BudgetListingType }> {
         try {
             const response = await this.get<{ data: BudgetListingType; meta: any }>(
-                `/administration/company/coverage-period-budgets/${id}?includes=coveragePeriod`
+                `/administration/company/coverage-period-budgets/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction`
             );
             console.log('Resposta da requisição getBudgetById:------------------------', response);
 

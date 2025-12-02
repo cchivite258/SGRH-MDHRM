@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { budgetHeader } from "@/components/institution/create/utils";
 import { CoveragePeriodInsertType, BudgetInsertType, BudgetListingType, CoveragePeriodListingType } from "@/components/institution/types";
-import TableAction from "@/app/common/components/TableAction.vue";
+import TableActionView from "@/app/common/components/TableActionView.vue";
 import CreateEditBudgetDialog from "@/components/institution/create/editCoveragePeriod/CreateEditBudgetDialog.vue";
 import ViewBudgetModal from "@/components/institution/create/editCoveragePeriod/ViewBudgetModal.vue";
 import { useRouter } from "vue-router";
@@ -18,7 +18,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
-
+import { formateDate } from "@/app/common/dateFormate";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -47,14 +47,10 @@ const data = ref<CoveragePeriodInsertType>({
 // Estado para posições
 const dialog = ref(false);
 const viewDialog = ref(false);
-const deleteDialog = ref(false);
-const deleteLoading = ref(false);
 const budgetFormData = ref<BudgetInsertType | BudgetListingType | null>(null);
-const deleteId = ref<string | null>(null);
 const selectedBudgets = ref<BudgetListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchProps = "name,description";
-const loading = ref(false);
 const searchQuery = ref("");
 
 // Computed properties
@@ -125,84 +121,6 @@ const toggleSelection = (item: BudgetListingType) => {
   }
 };
 
-// Modal de criação/edição de posição
-const onCreateEditClick = (data: BudgetListingType | null) => {
-  budgetFormData.value = data
-    ? { ...data, coveragePeriod: coveragePeriodId.value || "" }
-    : {
-      id: undefined,
-      name: "",
-      budgetAmount: 0,
-      coveragePeriod: coveragePeriodId.value || "",
-      enabled: true
-    };
-  dialog.value = true;
-};
-
-const onSubmitBudget = async (
-  data: BudgetInsertType,
-  callbacks?: {
-    onSuccess?: () => void,
-    onFinally?: () => void
-  }
-) => {
-  try {
-    let response: ServiceResponse<BudgetListingType>;
-
-    if (!data.id) {
-      response = await budgetService.createBudget(data);
-    } else {
-      response = await budgetService.updateBudget(data.id, data);
-    }
-
-    if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
-      return;
-    }
-
-    toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
-
-
-    await fetchBudgetsForDropdown({
-      page: budgetStore.pagination.currentPage + 1,
-      itemsPerPage: itemsPerPage.value,
-      sortBy: [],
-      search: searchQuery.value
-    });
-
-
-  } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
-  } finally {
-    callbacks?.onFinally?.();
-  }
-};
 
 // Visualização de posição
 const onViewClick = (data: BudgetListingType) => {
@@ -210,34 +128,7 @@ const onViewClick = (data: BudgetListingType) => {
   viewDialog.value = true;
 };
 
-// Exclusão de posição
-const onDelete = (id: string) => {
-  deleteId.value = id;
-  deleteDialog.value = true;
-};
 
-const onConfirmDelete = async () => {
-  if (!deleteId.value) return;
-
-  deleteLoading.value = true;
-  try {
-    await budgetService.deleteBudget(deleteId.value);
-    selectedBudgets.value = selectedBudgets.value.filter(pos => pos.id !== deleteId.value);
-    await fetchBudgetsForDropdown({
-      page: budgetStore.pagination.currentPage + 1,
-      itemsPerPage: itemsPerPage.value,
-      sortBy: [],
-      search: searchQuery.value
-    });
-    toast.success(t('t-toast-message-deleted'));
-  } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
-  } finally {
-    deleteLoading.value = false;
-    deleteDialog.value = false;
-    deleteId.value = null;
-  }
-};
 
 // Voltar para lista de departamentos
 // Adicione no início do seu script setup (junto com os outros imports)
@@ -261,83 +152,6 @@ const onBack = () => {
   }
 };
 
-// Salvar periodo de cobertura
-interface ServiceResponse<T> {
-  status: 'success' | 'error';
-  data?: T;
-  error?: ApiErrorResponse;
-}
-
-const handleSubmit = async (
-  data: CoveragePeriodInsertType,
-  callbacks?: {
-    onSuccess?: () => void,
-    onFinally?: () => void
-  }
-) => {
-  try {
-    let response: ServiceResponse<CoveragePeriodListingType>;
-
-    if (!data.id) {
-      response = await coveragePeriodsService.createCoveragePeriod(data);
-    } else {
-      response = await coveragePeriodsService.updateCoveragePeriod(data.id, data);
-    }
-
-    // Verifica se a resposta contém erro
-    if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
-      return;
-    }
-
-
-    // Só mostra sucesso se realmente foi bem-sucedido
-    toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
-
-    fetchBudgetsForDropdown({
-      page: budgetStore.pagination.currentPage + 1,
-      itemsPerPage: itemsPerPage.value,
-      sortBy: [],
-      search: searchQuery.value
-    });
-    callbacks?.onSuccess?.();
-
-  } catch (error: any) {
-    console.error("Erro ao gravar periodo de cobertura:", error);
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
-  } finally {
-    callbacks?.onFinally?.();
-  }
-};
 
 const formatAmount = (amount: number | undefined) => {
   if (amount === null || amount === undefined) return 'N/A';
@@ -358,36 +172,28 @@ const formatAmount = (amount: number | undefined) => {
       <v-card>
         <v-card-text>
           <v-row class="">
-            <v-col cols="12" lg="12">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField v-model="data.name" :placeholder="$t('t-enter-name')" />
-
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <ValidatedDatePicker v-model="data.startDate" :placeholder="$t('t-enter-start-date')" :teleport="true" />
-            </v-col>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <ValidatedDatePicker v-model="data.endDate" :placeholder="$t('t-enter-end-date')" :teleport="true" />
+            <v-col cols="12" lg="12" class="text-right">
+              <Status :status="data?.enabled ? 'enabled' : 'disabled'" />
             </v-col>
           </v-row>
           <v-row class="">
-            <v-col cols="12" lg="12" class="">
-              <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-              <v-checkbox v-model="data.enabled" density="compact" color="primary" class="d-inline-flex">
-                <template #label>
-                  <span>{{ $t('t-is-enabled') }}</span>
-                </template>
-              </v-checkbox>
+            <v-col cols="12" lg="4">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <div>{{ data.name || '-' }}</div>
+            </v-col>
+            <v-col cols="12" lg="4">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <div>{{ data?.startDate ? formateDate(data.startDate) : '-' }}</div>
+            </v-col>
+            <v-col cols="12" lg="4">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <div>{{ data?.endDate ? formateDate(data.endDate) : '-' }}</div>
             </v-col>
           </v-row>
         </v-card-text>
@@ -398,9 +204,6 @@ const formatAmount = (amount: number | undefined) => {
       <Card :title="$t('t-budget-list')" title-class="pt-0">
         <template #title-action>
           <div>
-            <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
-              <i class="ph-plus-circle me-1" /> {{ $t('t-add-budget') }}
-            </v-btn>
           </div>
         </template>
       </Card>
@@ -410,7 +213,7 @@ const formatAmount = (amount: number | undefined) => {
           <v-card class="mt-5">
             <v-card-text>
               <v-card-text>
-                <v-row>
+                <v-row> 
                   <v-col cols="12" lg="12">
                     <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-budget')" />
                   </v-col>
@@ -434,8 +237,7 @@ const formatAmount = (amount: number | undefined) => {
                       <Status :status="item.enabled ? 'enabled' : 'disabled'" />
                     </td>
                     <td style="padding-right: 0px;">
-                      <TableAction @onView="onViewClick(item)" @onEdit="onCreateEditClick(item)"
-                        @onDelete="onDelete(item.id)" />
+                      <TableActionView @onView="onViewClick(item)" />
                     </td>
                   </tr>
                 </template>
@@ -462,18 +264,11 @@ const formatAmount = (amount: number | undefined) => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn color="success" variant="elevated" :loading="loading"
-          :disabled="!data.name || !data.startDate || !data.endDate || loading" @click="handleSubmit(data)">
-          {{ $t('t-save') }}
-        </v-btn>
       </v-card-actions>
     </v-card-text>
   </Card>
 
-  <CreateEditBudgetDialog v-if="budgetFormData" v-model="dialog" :data="budgetFormData" @onSubmit="onSubmitBudget" />
 
   <ViewBudgetModal v-if="budgetFormData" v-model="viewDialog" :data="budgetFormData" />
 
-  <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" :loading="deleteLoading"
-    @onConfirm="onConfirmDelete" />
 </template>

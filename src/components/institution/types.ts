@@ -327,6 +327,9 @@ export type BudgetInsertType = {
     name: string;
     budgetAmount: number | undefined;
     coveragePeriod: string | undefined;
+    budgetSpended?: number | undefined;
+    totalAmountByCompanyEmployees?: number | undefined;
+    coveragePeriodBudgetTransaction?: any[];
     enabled: boolean;
 }
 
@@ -338,6 +341,7 @@ export type BudgetListingType = {
     coveragePeriodId: string;
     budgetSpended: number | undefined;
     totalAmountByCompanyEmployees: number | undefined;
+    coveragePeriodBudgetTransaction: any[];
     removable: boolean;
     createdAt: Date | null;
     updatedAt: Date | null;
@@ -346,4 +350,18 @@ export type BudgetListingType = {
     updatedBy: string;
     deletedBy: string;
     enabled: boolean;
+}
+
+export type TransactionType = {
+  id: string
+  invoiceId: string | null
+  coveragePeriodBudgetId: string
+  totalAmount: number
+  postingOperation: string
+  removable: boolean
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  updatedBy: string
 }

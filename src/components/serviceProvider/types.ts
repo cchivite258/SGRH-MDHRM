@@ -71,6 +71,8 @@ export type ServiceProviderInsertType = {
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };
 
 export type ServiceProviderListingType = {
@@ -96,6 +98,8 @@ export type ServiceProviderListingType = {
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };
 
 export type ServiceProviderListingForListType = {
@@ -121,4 +125,6 @@ export type ServiceProviderListingForListType = {
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };

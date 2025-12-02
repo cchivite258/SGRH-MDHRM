@@ -1008,5 +1008,10 @@
   "t-children-in-university-max-age": "Idade Máxima dos Dependentes na Universidade",
   "t-please-enter-hire-date-first": "Por favor, insira a data de contratação primeiro",
   "t-contract-duration-type": "Tipo de Duração do Contrato",
-  "t-exceeds-number-of-dependents": "Excede o número de dependentes"
+  "t-exceeds-number-of-dependents": "Excede o número de dependentes",
+  "t-budget-spended": "Orçamento Gasto",
+  "t-total-amount-by-company-employees": "Valor Total pelos Funcionários da Empresa",
+  "t-please-enter-max-university-age": "Por favor, insira a idade máxima na universidade",
+  "t-transactions-list": "Lista de Transações",
+  "t-search-for-transaction": "Pesquisar por Transação"
 }

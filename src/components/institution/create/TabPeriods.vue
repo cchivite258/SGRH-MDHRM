@@ -232,7 +232,7 @@ const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
 const onSelect = (option: string, data: CoveragePeriodListingType) => {
   switch (option) {
     case "view":
-      onViewClick(data);
+      onViewClick(data.id);
       break;
     case "edit":
       onEditClick(data.id);
@@ -351,9 +351,11 @@ watch(viewDialog, (newVal: boolean) => {
     coveragePeriodData.value = null;
   }
 });
-const onViewClick = (data: CoveragePeriodInsertType | CoveragePeriodListingType) => {
-  coveragePeriodData.value = { ...data };
-  viewDialog.value = true;
+const onViewClick = async (coveragePeriodId: string) => {
+  //coveragePeriodData.value = { ...data };
+  //viewDialog.value = true;
+  console.log("Navigating to view coverage period:------------------", coveragePeriodId);
+  await router.push(`/institution/coveragePeriod/view/${coveragePeriodId}`);
 };
 
 /**

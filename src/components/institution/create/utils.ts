@@ -4,6 +4,7 @@ import { TableHeaderType } from "@/app/common/types/table.types";
 import { OptionType } from "@/app/common/types/option.type";
 import { DataTableHeaderType } from "@/app/common/types/table.types";
 
+
 export const breadcrumb: BreadcrumbType[] = [
   {
     title: "institution-list",
@@ -26,6 +27,29 @@ export const breadcrumbDepartmet: BreadcrumbType[] = [
   },
 ];
 
+
+export const breadcrumbCoveragePeriod: BreadcrumbType[] = [
+  {
+    title: "coverage-period-list",
+    disabled: false,
+  },
+  {
+    title: "edit-coverage-period",
+    disabled: true,
+  },
+];
+
+export const breadcrumbCoveragePeriodView: BreadcrumbType[] = [
+  {
+    title: "coverage-period-list",
+    disabled: false,
+  },
+  {
+    title: "view-coverage-period",
+    disabled: true,
+  },
+];
+
 export const breadcrumbHealthPlan: BreadcrumbType[] = [
   {
     title: "health-plan-list",
@@ -33,6 +57,17 @@ export const breadcrumbHealthPlan: BreadcrumbType[] = [
   },
   {
     title: "edit-health-plan",
+    disabled: true,
+  },
+];
+
+export const breadcrumbHealthPlanView: BreadcrumbType[] = [
+  {
+    title: "health-plan-list",
+    disabled: false,
+  },
+  {
+    title: "view-health-plan",
     disabled: true,
   },
 ];
@@ -114,9 +149,46 @@ export const coveragePeriodHeader: DataTableHeaderType[] = [
   { title: "start-date", key: "startDate", sortable: true },
   { title: "end-date", key: "endDate", sortable: true },
   { title: "status", key: "status", sortable: true },
-  { title: "is-enabled", key: "enabled", sortable: true },
+  { title: "is-enabled", key: "enabled", sortable: true }, 
   { title: "action", sortable: false, align: "end" }
 ];
+
+// utils/table-headers.ts (ou onde você tiver os headers)xport const transactionHeaders = [
+ export const transactionHeaders = [
+  { 
+    title: '', 
+    isCheck: true,  // Para mostrar checkbox
+    align: 'start'
+  },
+  { 
+    title: 'transaction-id', 
+    align: 'start'
+  },
+  { 
+    title: 'date', 
+    align: 'start'
+  },
+  { 
+    title: 'invoice', 
+    align: 'start'
+  },
+  { 
+    title: 'amount', 
+    align: 'start'
+  },
+  { 
+    title: 'status', 
+    align: 'start'
+  },
+  { 
+    title: 'enabled', 
+    align: 'start'
+  },
+  { 
+    title: 'action', 
+    align: 'start'
+  }
+]
 
 
 export const healthPlanHeader: DataTableHeaderType[] = [
@@ -129,6 +201,8 @@ export const healthPlanHeader: DataTableHeaderType[] = [
   { title: "is-enabled", key: "enabled", sortable: true },
   { title: "action", sortable: false, align: "end" }
 ];
+
+
 
 export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
@@ -263,3 +337,39 @@ export const hospitalProcedureHeader: TableHeaderType[] = [
   { title: "action", sortable: false, align: "center" }
 ];
 
+export const tableHeader: TableHeaderType[] =[
+  { title: "ID" },
+  { title: "Customer" },
+  { title: "Date" },
+  { title: "Invoice" }, 
+  { title: "Action" },
+];
+
+export const tableData = [
+  {
+    id: "10",
+    name: "Bobby Davis",
+    date: "October 15, 2021",
+    price: "$2,300",
+  },
+  {
+    id: "09",
+    name: "Christopher Neal",
+    date: "October 7, 2021",
+    price: "$5,500",
+    isCheck: true,
+  },
+  {
+    id: "08",
+    name: "Monkey Karry",
+    date: "October 5, 2021",
+    price: "$2,420",
+  },
+  {
+    id: "07",
+    name: "James White",
+    date: "October 2, 2021",
+    price: "$7,452",
+    isCheck: true,
+  }
+];

@@ -345,8 +345,9 @@ watch(viewDialog, (newVal: boolean) => {
   }
 });
 const onViewClick = (data: HealthPlanListingType) => {
-  healthPlanDataView.value = { ...data };
-  viewDialog.value = true;
+  //healthPlanDataView.value = { ...data };
+  //viewDialog.value = true;
+   router.push(`/institution/healthPlan/view/${data.id}`);
 };
 
 /**
