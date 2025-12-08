@@ -4,7 +4,7 @@
  * @returns Valor formatado como string
  */
 export const amountFormate = (amount: number | undefined) => {
-  if (amount === null || amount === undefined ) return 'N/A';
+  if (amount === null || amount === undefined ) return '0.00';
   
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   

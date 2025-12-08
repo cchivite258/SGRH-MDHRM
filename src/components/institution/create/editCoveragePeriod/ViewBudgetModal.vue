@@ -8,9 +8,12 @@ import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { amountFormate } from "@/app/common/amountFormate";
 import { transactionHeaders } from "@/components/institution/create/utils";
+import TableActionView from "@/app/common/components/TableActionView.vue";
+import { useRouter } from "vue-router";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue"]);
+const router = useRouter();
 
 const props = defineProps({
   modelValue: {
@@ -71,9 +74,10 @@ const toggleSelection = (item: TransactionType) => {
   }
 };
 
-const onViewClick = (transaction: TransactionType) => {
+const onViewClick = (transactionId: string) => {
+  
   // Implemente a lógica para visualizar a transação
-  console.log('View transaction:', transaction)
+  router.push(`/invoices/view/`+transactionId);
 }
 
 </script>
@@ -125,7 +129,7 @@ const onViewClick = (transaction: TransactionType) => {
                   </v-col>
                 </v-row>
               </v-card-text>
-              <Table :header-items="transactionHeaders">
+              <Table :header-items="transactionHeaders.map(item => ({ ...item, title: $t(`t-${item.title}`) }))">
                 <template #body>
                   <!-- Quando há transações -->
                   <tr v-for="item in filteredTransactions" :key="'transaction-' + item.id">
@@ -133,18 +137,15 @@ const onViewClick = (transaction: TransactionType) => {
                       <v-checkbox :model-value="selectedTransactions.some(selected => selected.id === item.id)"
                         @update:model-value="toggleSelection(item)" hide-details density="compact" color="primary" />
                     </td>
-                    <td class="text-primary font-weight-bold">{{ item.id }}</td>
-                    <td>{{ formateDate(item.createdAt) }}</td>
-                    <td>{{ item.invoiceId || '-' }}</td>
-                    <td>{{ amountFormate(item.totalAmount) }}</td>
+                    <td class="text-primary font-weight-bold">{{ item?.invoice?.invoiceNumber }}</td>
+                    <td>{{ formateDate(item?.invoice?.issueDate) }}</td>
+                    <td>{{ amountFormate(item?.invoice?.totalAmount) }}</td>
+                    <td>{{ item?.invoice?.authorizedBy || '-' }}</td>
                     <td>
-                      <Status :status="item.postingOperation === 'POST' ? 'posted' : 'pending'" />
-                    </td>
-                    <td>
-                      <Status :status="item.enabled ? 'enabled' : 'disabled'" />
+                      <Status :status="item.invoice?.invoiceStatus" />
                     </td>
                     <td style="padding-right: 0px;">
-                      <TableActionView @onView="onViewClick(item)" />
+                      <TableActionView @onView="onViewClick(item?.invoice.id)" />
                     </td>
                   </tr>
 

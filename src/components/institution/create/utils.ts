@@ -161,27 +161,23 @@ export const coveragePeriodHeader: DataTableHeaderType[] = [
     align: 'start'
   },
   { 
-    title: 'transaction-id', 
+    title: 'invoice-number', 
     align: 'start'
   },
   { 
-    title: 'date', 
+    title: 'issue-date', 
     align: 'start'
   },
   { 
-    title: 'invoice', 
+    title: 'invoice-amount', 
     align: 'start'
   },
   { 
-    title: 'amount', 
+    title: 'autorized-by', 
     align: 'start'
   },
   { 
-    title: 'status', 
-    align: 'start'
-  },
-  { 
-    title: 'enabled', 
+    title: 'invoice-status', 
     align: 'start'
   },
   { 

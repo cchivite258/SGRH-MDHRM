@@ -32,6 +32,7 @@ const employeePrefix = "/employee";
 const baseTablePrefix = "/baseTable";
 const usersPrefix = "/users";
 const serviceProviderPrefix = "/service-provider";
+const reportsPrefix = "/reports";
 
 
 const institutionRoutes = [
@@ -178,6 +179,28 @@ const serviceProviderRoutes = [
     component: () => import('@/views/serviceProvider/View.vue'),
     meta: { title: "View Service Provider", requiresAuth: true }
   }
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+
+const ammReportRoutes = [
+  {
+    path: `${reportsPrefix}/list`,
+    name: "ReportsList",
+    component: () => import("@/views/ammReports/List.vue"),
+    meta: { title: "Reports List", authRequired: true },
+  },
+  {
+  path: `${reportsPrefix}/preview`,
+  name: "ReportPreview",
+  component: () => import("@/views/ammReports/CompanyHospitalProceduresBalances/ReportPreview.vue"),
+  meta: { title: "Report Preview", authRequired: true },
+}
+
+
 ].map((data) => {
   return {
     ...data,
@@ -1267,6 +1290,7 @@ export const routes = [
   ...baseTableRoutes,
   ...usersRoutes,
   ...serviceProviderRoutes,
+  ...ammReportRoutes,
   {
     path: "/widgets",
     name: "Widgets",

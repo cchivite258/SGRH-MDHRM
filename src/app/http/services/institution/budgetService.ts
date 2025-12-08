@@ -136,7 +136,7 @@ export default class BudgetService extends HttpService {
     async getBudgetById(id: string): Promise<{ data: BudgetListingType }> {
         try {
             const response = await this.get<{ data: BudgetListingType; meta: any }>(
-                `/administration/company/coverage-period-budgets/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction`
+                `/administration/company/coverage-period-budgets/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`
             );
             console.log('Resposta da requisição getBudgetById:------------------------', response);
 
