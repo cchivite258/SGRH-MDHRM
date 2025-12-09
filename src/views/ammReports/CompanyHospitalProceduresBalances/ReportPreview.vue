@@ -11,6 +11,6 @@ const store = useHospitalProceduresReportStore();
   </div>
 
   <div v-else class="pa-10 text-center">
-    <h3>Sem dados para pré-visualização</h3>
+    <h3>{{$t('t-noDataForPreview')}}</h3>
   </div>
 </template>

@@ -10,9 +10,12 @@ import Table from "@/app/common/components/Table.vue";
 import { ReportType } from "@/components/ammReports/types";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import Card from "@/app/common/components/Card.vue";
+
 import PreviewDialog from "@/components/ammReports/list/HospitalProceduresReport/PreviewDialog.vue";
+import GenerateDialog from "@/components/ammReports/list/HospitalProceduresReport/GenerateDialog.vue";
 
 const previewDialog = ref(false);
+const generateDialog = ref(false);
 
 const prop = defineProps({
   filters: {
@@ -20,12 +23,6 @@ const prop = defineProps({
     default: () => { },
   },
 });
-
-const createEditDialog = ref(false);
-const reportDetail = ref<ReportType | null>(null);
-
-const confirmationDialog = ref(false);
-const confirmationProduct = ref<ReportType | null>(null);
 
 const isAllChecked = ref(false);
 const mappedReports = reports.map((data) => {
@@ -113,14 +110,40 @@ const onSelectAll = () => {
 };
 
 
-const onSelect = (option: string, data: ReportType) => {
-  if (option === "preview") {
-    previewDialog.value = true;
-  } else if (option === "print") {
-    confirmationDialog.value = true;
-    confirmationProduct.value = data;
-  }
+const reportHandlers: Record<string, {
+  preview?: () => void;
+  generate?: () => void;
+}> = {
+  "100001": {
+    preview: () => previewDialog.value = true,
+    generate: () => generateDialog.value = true,
+  },
+  "100002": {
+    // preview: () => previewDialogCostPerEmployee.value = true,
+    // generate: () => generateDialogCostPerEmployee.value = true
+  },
 };
+
+
+
+const onSelect = (action: string, data: ReportType) => {
+  const handler = reportHandlers[data.id];
+
+  if (!handler) {
+    console.warn("Nenhum handler definido para relatório ID:", data.id);
+    return;
+  }
+
+  if (action === "preview" && handler.preview) {
+  handler.preview();
+}
+
+if (action === "generate" && handler.generate) {
+  handler.generate();
+}
+
+};
+
 
 const updateTableData = (newVal: ReportType[]) => {
   loading.value = true;
@@ -206,4 +229,8 @@ watch(searchQuery, (value) => {
 
 
   <PreviewDialog v-model="previewDialog"  />
+  <GenerateDialog v-model="generateDialog"  />
+
+
+
 </template>

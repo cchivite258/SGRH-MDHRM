@@ -32,6 +32,12 @@ import TextArea from "@/app/common/validationComponents/TextArea.vue";
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 
+import { createPinia } from 'pinia'
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+
+const pinia = createPinia();
+pinia.use(piniaPluginPersistedstate);
+
 const app: App = createApp(AppMain);
 registerPlugins(app);
 
@@ -58,5 +64,5 @@ app.component("CurrencyField", CurrencyField);
 app.component("TextArea", TextArea);
 app.directive("maska", vMaska);
 app.component("MazPhoneNumberInput", MazPhoneNumberInput);
-
+app.use(pinia);
 app.mount("#app");
