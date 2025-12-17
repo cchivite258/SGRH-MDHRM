@@ -1060,5 +1060,13 @@
   "t-error-generating-report": "Erro ao gerar o relatório",
   "t-pdf-generated-successfully": "PDF gerado com sucesso",
   "t-error-generating-pdf": "Erro ao gerar o PDF",
-  "t-generating-pdf": "Gerando PDF..."
+  "t-generating-pdf": "Gerando PDF...",
+  "t-expenses-per-procedure": "Despesas por Procedimento",
+  "t-hospital-procedure-type-name": "Procedimento Hospitalar",
+  "t-procedures-expenses-list": "Lista de Despesas por Procedimento",
+  "t-search-for-hospital-procedures": "Pesquisar por Procedimentos Hospitalares",
+  "t-service-provider-add-success": "Provedor de serviços adicionado com sucesso!",
+  "t-please-enter-budget-amount": "Por favor, insira o valor orçamentado!",
+  "t-no-procedures-found": "Nenhum procedimento encontrado",
+  "t-no-procedures-for-active-plan": "Nenhum procedimento encontrado para o plano de saúde activo"
 }

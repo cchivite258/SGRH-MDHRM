@@ -152,14 +152,25 @@ export default class ServiceProviderService extends HttpService {
   }
 
   // Atualizar prestador de serviços
-  async updateServiceProvider(id: string, serviceProviderData: ServiceProviderInsertType): Promise<ServiceProviderResponseType> {
+  async updateServiceProvider(id: string, serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderResponseType>> { 
     try {
       //const response = await this.put<ServiceProviderResponseType>(`/administration/service-providers/${id}`, serviceProviderData);
-      const response = await this.put<ServiceProviderResponseType>(`/administration/service-provider/${id}`, serviceProviderData);
-      return response;
-    } catch (error) {
-      console.error("❌ Erro ao atualizar prestador de serviços:", error);
-      throw error;
+      const response = await this.put<ServiceResponse<ServiceProviderResponseType>>(`/administration/service-provider/${id}`, serviceProviderData);
+      return {
+        status: 'success',
+        data: response.data
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: 'error',
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+      return {
+        status: 'error',
+        error: this.createNetworkErrorResponse()
+      };
     }
   }
 

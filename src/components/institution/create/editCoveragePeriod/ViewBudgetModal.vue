@@ -80,6 +80,13 @@ const onViewClick = (transactionId: string) => {
   router.push(`/invoices/view/`+transactionId);
 }
 
+const remainingBalance = computed(() => {
+  if (!props.data) return 0;
+  const spent = props.data.budgetSpended || 0;
+  const total = props.data.budgetAmount || 0;
+  return total - spent;
+});
+
 </script>
 
 <template>
@@ -113,9 +120,13 @@ const onViewClick = (transactionId: string) => {
             <div>{{ amountFormate(props.data?.budgetSpended) || '-' }}</div>
           </v-col>
           <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-remaining-balance') }}</div>
+            <div>{{ amountFormate(remainingBalance) || '-' }}</div>
+          </v-col>
+          <!--<v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-total-amount-by-company-employees') }}</div>
             <div>{{ amountFormate(props.data?.totalAmountByCompanyEmployees) || '-' }}</div>
-          </v-col>
+          </v-col>-->
         </v-row>
         <v-row class="mt-5">
 

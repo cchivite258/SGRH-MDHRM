@@ -66,6 +66,28 @@ const invoiceData = reactive<InvoiceInsertType>({
   coveragePeriod: undefined
 });
 
+const resetInvoiceData = () => {
+  Object.assign(invoiceData, {
+    invoiceNumber: '',
+    serviceProvider: undefined,
+    currency: undefined,
+    employee: undefined,
+    issueDate: new Date(),
+    dueDate: new Date(),
+    totalAmount: 0,
+    isEmployeeInvoice: false,
+    dependent: undefined,
+    company: '',
+    authorizedBy: '',
+    invoiceReferenceNumber: '',
+    coveragePeriod: undefined
+  });
+
+  invoiceItems.value = [];
+  basicDataValidated.value = false;
+};
+
+
 // =============================================
 // COMPUTED PROPERTIES
 // =============================================
@@ -95,6 +117,9 @@ const loadInvoiceData = async (id: string) => {
       invoiceService.getInvoiceById(id),
       invoiceItemService.getInvoiceItemByInvoice(id)
     ]);
+    console.log('no index loadInvoiceData Carregando fatura com ID: xxx ', id);
+    console.log('no index loadInvoiceData invoiceResponse: xxx ', invoiceResponse);
+
 
     if (invoiceResponse?.data) {
       Object.assign(invoiceData, {
@@ -326,22 +351,43 @@ watch(() => route.params.id, async (newId) => {
   if (parsedId) {
     await loadInvoiceData(parsedId);
     invoiceStore.setCurrentInvoiceId(parsedId);
+    console.log('no index Rota mudou, carregando fatura com ID: xxx ', parsedId);
   }
 }, { immediate: true });
 
-onMounted(() => {
-  if (!route.params.id) {
-    invoiceStore.setCurrentInvoiceId('');
-  }
+watch(
+  () => route.params.id,
+  (id) => {
+    if (!id) {
+      console.log('Modo criação → limpar estado');
 
+      invoiceStore.clearDraft();
+      resetInvoiceData();
+      invoiceId.value = null;
+    }
+  },
+  { immediate: true }
+);
+
+
+
+onMounted(() => {
   invoiceStore.loadFromStorage();
 
-  if (invoiceStore.currentInvoiceId) {
-    loadInvoiceData(invoiceStore.currentInvoiceId);
+  if (!route.params.id && invoiceStore.currentInvoiceId) {
+    // Apenas em modo criação
+    console.log(
+      'Carregando rascunho do armazenamento local:',
+      invoiceStore.currentInvoiceId
+    );
+
     invoiceId.value = invoiceStore.currentInvoiceId;
+    loadInvoiceData(invoiceStore.currentInvoiceId);
     basicDataValidated.value = true;
   }
+  
 });
+
 </script>
 
 <template>

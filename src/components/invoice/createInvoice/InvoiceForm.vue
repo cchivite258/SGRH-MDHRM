@@ -338,48 +338,47 @@ const onBack = () => {
 // WATCHERS
 // =============================================
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
-  if (!newInstitutionId) {
+  if (newInstitutionId) {
+    try {
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
+
+      if (invoiceData.value.employee) {
+        const currentEmployee = employeeStore.employeesForDropdown.find(
+          c => c.id === invoiceData.value.employee
+        );
+        if (!currentEmployee) {
+          invoiceData.value.employee = undefined;
+        }
+      }
+    } catch (error) {
+      handleLoadError("employees", error);
+    }
+  } else {
     employeeStore.clearEmployeesForDropdown();
     invoiceData.value.employee = undefined;
-    return;
-  }
-
-  try {
-    await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
-
-    if (invoiceData.value.employee) {
-      const employeeExists = employeeStore.employeesForDropdown.some(
-        e => e.id === invoiceData.value.employee
-      );
-      if (!employeeExists) {
-        invoiceData.value.employee = undefined;
-      }
-    }
-  } catch (error) {
-    handleLoadError("employees", error);
   }
 });
 
+
 watch(() => invoiceData.value.employee, async (newEmployeeId) => {
-  if (!newEmployeeId) {
+  if (newEmployeeId) {
+    try {
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
+
+      if (invoiceData.value.dependent) {
+        const currentDependent = dependentStore.dependentsForDropdown.find(
+          c => c.id === invoiceData.value.dependent
+        );
+        if (!currentDependent) {
+          invoiceData.value.dependent = undefined;
+        }
+      }
+    } catch (error) {
+      handleLoadError("dependents", error);
+    }
+  } else {
     dependentStore.clearDependentForDropdown();
     invoiceData.value.dependent = undefined;
-    return;
-  }
-
-  try {
-    await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
-
-    if (invoiceData.value.dependent) {
-      const dependentExists = dependentStore.dependentsForDropdown.some(
-        d => d.id === invoiceData.value.dependent
-      );
-      if (!dependentExists) {
-        invoiceData.value.dependent = undefined;
-      }
-    }
-  } catch (error) {
-    handleLoadError("dependents", error);
   }
 });
 

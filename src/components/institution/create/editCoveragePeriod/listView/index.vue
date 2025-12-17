@@ -292,7 +292,7 @@ const handleSubmit = async (
       if (apiError?.error?.errors) {
         const validationErrors = apiError.error.errors;
 
-        Object.values(validationErrors).forEach(errList => {
+        Object.values(validationErrors).forEach(errList => { 
           errList.forEach(err => toast.error(err));
         });
 

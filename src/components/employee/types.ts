@@ -287,4 +287,24 @@ export type UsagesListingType = {
   amountCovered: string;
 }
 
+export type ExpensePerProcedureType = {
+ id: string;
+ allocatedBalance: number;
+ usedBalance: number;
+ remainingBalance: number;
+ employeeHealthPlanId: string;
+ companyHealthPlanHospitalProceduresId: string;
+ hospitalProcedureTypeId: string;
+ employeeHealthPlan: any;
+ companyHealthPlanHospitalProcedures: any;
+ hospitalProcedureType: any;
+ removable: boolean;
+ enabled: boolean;
+ createdAt: string;
+ updatedAt: string;
+ deletedAt: string | null;
+ createdBy: string;
+ updatedBy: string | null;
+ deletedBy: string | null;
 
+}
