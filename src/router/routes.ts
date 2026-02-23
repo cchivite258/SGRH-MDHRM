@@ -198,6 +198,12 @@ const ammReportRoutes = [
   name: "ReportPreview",
   component: () => import("@/views/ammReports/CompanyHospitalProceduresBalances/ReportPreview.vue"),
   meta: { title: "Report Preview", authRequired: true },
+},
+ {
+  path: `${reportsPrefix}100002/preview`,
+  name: "ReportPreview100002",
+  component: () => import("@/views/ammReports/CostPerEmployeeReport/ReportPreview.vue"),
+  meta: { title: "Report Preview", authRequired: true },
 }
 
 

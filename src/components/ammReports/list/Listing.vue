@@ -11,11 +11,17 @@ import { ReportType } from "@/components/ammReports/types";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import Card from "@/app/common/components/Card.vue";
 
-import PreviewDialog from "@/components/ammReports/list/HospitalProceduresReport/PreviewDialog.vue";
-import GenerateDialog from "@/components/ammReports/list/HospitalProceduresReport/GenerateDialog.vue";
+import PreviewDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/PreviewDialog.vue";
+import GenerateDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/GenerateDialog.vue";
 
-const previewDialog = ref(false);
-const generateDialog = ref(false);
+import PreviewDialog100002 from "@/components/ammReports/list/CostPerEmployeeReport/PreviewDialog.vue";
+import GenerateDialog100002 from "@/components/ammReports/list/CostPerEmployeeReport/GenerateDialog.vue";
+
+const previewDialog100001 = ref(false);
+const generateDialog100001 = ref(false);
+
+const previewDialog100002 = ref(false);
+const generateDialog100002 = ref(false);
 
 const prop = defineProps({
   filters: {
@@ -115,12 +121,12 @@ const reportHandlers: Record<string, {
   generate?: () => void;
 }> = {
   "100001": {
-    preview: () => previewDialog.value = true,
-    generate: () => generateDialog.value = true,
+    preview: () => previewDialog100001.value = true,
+    generate: () => generateDialog100001.value = true,
   },
   "100002": {
-    // preview: () => previewDialogCostPerEmployee.value = true,
-    // generate: () => generateDialogCostPerEmployee.value = true
+     preview: () => previewDialog100002.value = true,
+     generate: () => generateDialog100002.value = true
   },
 };
 
@@ -228,8 +234,12 @@ watch(searchQuery, (value) => {
   </Card>
 
 
-  <PreviewDialog v-model="previewDialog"  />
-  <GenerateDialog v-model="generateDialog"  />
+  <PreviewDialog100001 v-model="previewDialog100001"  />
+  <GenerateDialog100001 v-model="generateDialog100001"  />
+
+
+  <PreviewDialog100002 v-model="previewDialog100002"  />
+  <GenerateDialog100002 v-model="generateDialog100002"  />
 
 
 

@@ -1068,5 +1068,12 @@
   "t-service-provider-add-success": "Provedor de serviços adicionado com sucesso!",
   "t-please-enter-budget-amount": "Por favor, insira o valor orçamentado!",
   "t-no-procedures-found": "Nenhum procedimento encontrado",
-  "t-no-procedures-for-active-plan": "Nenhum procedimento encontrado para o plano de saúde activo"
+  "t-no-procedures-for-active-plan": "Nenhum procedimento encontrado para o plano de saúde activo",
+  "t-cost-per-employee": "Custo por Colaborador",
+  "t-statistics": "Estatísticas",
+  "t-total-invoices": "Total de Faturas",
+  "t-expenses-by-employee": "Gastos por Colaborador",
+  "t-average-per-invoice": "Média por Fatura",
+  "t-financial-summary": "Resumo Financeiro",
+  "t-average-per-employee": "Média por Colaborador"
 }

@@ -26,8 +26,10 @@ import LanguageService from "@/app/http/services/baseTables/languages/languageSe
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
 import BudgetService from "@/app/http/services/institution/budgetService";
-import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
 
+//Reports
+import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
+import CostPerEmployeeService from "@/app/http/services/ammReports/CostPerEmployeeService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -49,7 +51,10 @@ const dependentEmployeeService = new DependentEmployeeService();
 const invoiceItemService = new InvoiceItemService();
 const healthPlanEmployeeService = new HealthPlanEmployeeService();
 const budgetService = new BudgetService();
+
+//Reports
 const companyHospitalProceduresBalancesService = new CompanyHospitalProceduresBalancesService();
+const costPerEmployeeService = new CostPerEmployeeService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -91,5 +96,6 @@ export {
     healthPlanEmployeeService,
     providerTypeService,
     budgetService,
-    companyHospitalProceduresBalancesService
+    companyHospitalProceduresBalancesService,
+    costPerEmployeeService
 };
