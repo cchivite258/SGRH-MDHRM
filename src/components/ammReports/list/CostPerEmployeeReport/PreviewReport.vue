@@ -42,16 +42,16 @@
                 </v-btn>
               </template>
               
-              <v-list density="compact">
+              <v-list density="compact" class="export-menu-list">
                 <v-list-item
                   v-for="(option, index) in exportOptions"
                   :key="index"
                   @click="option.action(); exportMenu = false"
                 >
                   <template v-slot:prepend>
-                    <v-icon :color="option.color">{{ option.icon }}</v-icon>
+                    <v-icon :color="option.color" size="18">{{ option.icon }}</v-icon>
                   </template>
-                  <v-list-item-title>{{ option.title }}</v-list-item-title>
+                  <v-list-item-title class="export-menu-title">{{ option.title }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -155,10 +155,6 @@
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t('t-total-invoices') }}:</span>
               <span class="font-weight-medium">{{ totals.totalInvoices }}</span>
-            </div>
-            <div class="d-flex justify-space-between my-1">
-              <span>{{ $t('t-generated-by') }}:</span>
-              <span class="font-weight-medium">{{ userName }}</span>
             </div>
           </div>
         </v-card>
@@ -560,5 +556,17 @@ const exportOptions = [
 
 .bg-cyan-lighten-5 {
   background-color: #e0f7fa;
+}
+
+.export-menu-list :deep(.v-list-item) {
+  min-height: 34px;
+  padding-inline: 10px;
+}
+
+.export-menu-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-family: inherit;
 }
 </style>

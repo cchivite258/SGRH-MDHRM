@@ -143,16 +143,16 @@ const exportOptions = [
                 </v-btn>
               </template>
 
-              <v-list density="compact">
+              <v-list density="compact" class="export-menu-list">
                 <v-list-item
                   v-for="(option, index) in exportOptions"
                   :key="index"
                   @click="option.action(); exportMenu = false"
                 >
                   <template v-slot:prepend>
-                    <v-icon :color="option.color">{{ option.icon }}</v-icon>
+                    <v-icon :color="option.color" size="18">{{ option.icon }}</v-icon>
                   </template>
-                  <v-list-item-title>{{ option.title }}</v-list-item-title>
+                  <v-list-item-title class="export-menu-title">{{ option.title }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-menu>
@@ -339,4 +339,6 @@ const exportOptions = [
 .bg-blue-lighten-5 { background-color: #e3f2fd; }
 .bg-green-lighten-5 { background-color: #e8f5e9; }
 .bg-red-lighten-5 { background-color: #ffebee; }
+.export-menu-list :deep(.v-list-item) { min-height: 34px; padding-inline: 10px; }
+.export-menu-title { font-size: 14px; font-weight: 500; line-height: 1.2; font-family: inherit; }
 </style>

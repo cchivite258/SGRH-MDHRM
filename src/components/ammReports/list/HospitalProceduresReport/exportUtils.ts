@@ -69,7 +69,7 @@ export class ReportExporter {
 
         let currentY = margin;
 
-        this.addPDFHeader(pdf, report, userName, margin, currentY, pageWidth);
+        this.addPDFHeader(pdf, report, margin, currentY, pageWidth);
         currentY = 45;
 
         currentY = this.addPDFSummaryCards(pdf, report, userName, margin, contentWidth, currentY);
@@ -78,7 +78,7 @@ export class ReportExporter {
         const tableResult = this.addPDFTable(pdf, report, margin, currentY);
         currentY = tableResult.finalY;
 
-        this.addPDFFooterAllPages(pdf, userName, margin, pageWidth, pageHeight);
+        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight);
 
         const fileName = options?.fileName
           ? `${options.fileName}.pdf`
@@ -96,7 +96,6 @@ export class ReportExporter {
   private static addPDFHeader(
     pdf: jsPDF,
     report: CompanyHospitalProceduresBalanceType,
-    userName: string,
     margin: number,
     currentY: number,
     pageWidth: number
@@ -119,11 +118,9 @@ export class ReportExporter {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     const dateText = `${this.tr('t-hpr-generated-at')}: ${currentDate}`;
-    const userText = `${this.tr('t-hpr-by')}: ${userName || this.tr('t-hpr-system-user')}`;
 
     const dateWidth = pdf.getTextWidth(dateText);
     pdf.text(dateText, pageWidth - margin - dateWidth, currentY + 6);
-    pdf.text(userText, pageWidth - margin - pdf.getTextWidth(userText), currentY + 14);
 
     pdf.setDrawColor(180, 180, 180);
     pdf.setLineWidth(0.3);
@@ -302,7 +299,6 @@ export class ReportExporter {
 
   private static addPDFFooterAllPages(
     pdf: jsPDF,
-    userName: string,
     margin: number,
     pageWidth: number,
     pageHeight: number
@@ -325,7 +321,6 @@ export class ReportExporter {
 
       const footerText = this.tr('t-hpr-system-footer');
       const dateText = `${this.tr('t-hpr-date')}: ${currentDate}`;
-      const userText = `${this.tr('t-hpr-user')}: ${userName || this.tr('t-hpr-system-user')}`;
       const pageText = this.tr('t-hpr-page-of', { current: i, total: totalPages });
 
       pdf.text(footerText, margin, footerY - 5);
@@ -335,9 +330,6 @@ export class ReportExporter {
 
       const dateTextWidth = pdf.getTextWidth(dateText);
       pdf.text(dateText, pageWidth - margin - dateTextWidth, footerY - 12);
-
-      const userTextWidth = pdf.getTextWidth(userText);
-      pdf.text(userText, pageWidth - margin - userTextWidth, footerY - 19);
     }
   }
 

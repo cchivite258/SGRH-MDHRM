@@ -37,6 +37,8 @@ const endDate = ref<Date | undefined>(new Date());
 const localLoading = ref(false);
 const errorMsg = ref("");
 let processingTimeout: ReturnType<typeof setTimeout> | null = null;
+const exportMenu = ref(false);
+type ExportType = 'pdf' | 'excel' | 'csv';
 
 const providers = computed(() => {
   const list = serviceProviderStore.enabledServiceProviders?.length
@@ -139,7 +141,7 @@ const resetForm = () => {
   errorMsg.value = "";
 };
 
-const onSubmit = async () => {
+const onSubmit = async (exportType: ExportType = 'pdf') => {
   if (!form.value) return;
 
   const { valid } = await form.value.validate();
@@ -180,12 +182,18 @@ const onSubmit = async () => {
     const providerName = selectedProvider?.label || (locale.value === 'en' ? 'provider' : 'provedor');
     const fileName = `${locale.value === 'en' ? 'service-provider-report' : 'relatorio-por-provedor-de-servico'}-${providerName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
 
-    await ServiceProviderReportExporter.exportToPDF(response.data, userName.value, { fileName });
+    if (exportType === 'pdf') {
+      await ServiceProviderReportExporter.exportToPDF(response.data, userName.value, { fileName });
+    } else if (exportType === 'excel') {
+      await ServiceProviderReportExporter.exportToExcel(response.data, userName.value, { fileName });
+    } else {
+      await ServiceProviderReportExporter.exportToCSV(response.data, userName.value, { fileName });
+    }
 
     clearTimeoutFunc();
     emit("update:modelValue", false);
     resetForm();
-    toast.success(t('t-pdf-generated-successfully'));
+    toast.success(t('t-file-generated-successfully', { format: exportType.toUpperCase() }));
 
   } catch (error: any) {
     clearTimeoutFunc();
@@ -204,6 +212,12 @@ const onSubmit = async () => {
     localLoading.value = false;
   }
 };
+
+const exportOptions = [
+  { title: 'PDF', icon: 'mdi-file-pdf-box', color: 'red', value: 'pdf' as ExportType },
+  { title: 'Excel', icon: 'mdi-file-excel', color: 'green', value: 'excel' as ExportType },
+  { title: 'CSV', icon: 'mdi-file-delimited', color: 'blue', value: 'csv' as ExportType },
+];
 
 onMounted(async () => {
   await serviceProviderStore.fetchServiceProvidersForDropdown(0, 10000000);
@@ -318,23 +332,54 @@ onUnmounted(() => {
             <i class="ph-x me-1" /> {{ $t('t-close') }}
           </v-btn>
 
-          <v-btn
-            color="primary"
-            variant="elevated"
-            @click="onSubmit"
-            :loading="localLoading"
-            :disabled="localLoading"
-          >
-            <template v-if="localLoading">
-              <v-progress-circular indeterminate size="20" width="2" class="mr-2" />
-              {{ $t('t-generating-pdf') }}
+          <v-menu v-model="exportMenu">
+            <template #activator="{ props }">
+              <v-btn
+                color="primary"
+                variant="elevated"
+                v-bind="props"
+                :loading="localLoading"
+                :disabled="localLoading"
+              >
+                <template v-if="localLoading">
+                  <v-progress-circular indeterminate size="20" width="2" class="mr-2" />
+                  {{ $t('t-preparing') }}
+                </template>
+                <template v-else>
+                  <i class="ph-download-simple me-1" /> {{ $t('t-generate') }}
+                </template>
+              </v-btn>
             </template>
-            <template v-else>
-              <i class="ph-file-pdf me-1" /> {{ $t('t-generate-pdf') }}
-            </template>
-          </v-btn>
+            <v-list density="compact" class="export-menu-list">
+              <v-list-item
+                v-for="option in exportOptions"
+                :key="option.value"
+                class="export-menu-item"
+                @click="onSubmit(option.value); exportMenu = false"
+              >
+                <template #prepend>
+                  <v-icon :color="option.color" size="18">{{ option.icon }}</v-icon>
+                </template>
+                <v-list-item-title class="export-menu-title">{{ option.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-card-actions>
       </Card>
     </v-form>
   </v-dialog>
 </template>
+
+<style scoped>
+.export-menu-list :deep(.v-list-item) {
+  min-height: 34px;
+  padding-inline: 10px;
+}
+
+.export-menu-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-family: inherit;
+}
+</style>

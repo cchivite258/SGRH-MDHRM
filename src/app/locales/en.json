@@ -571,5 +571,6 @@
   "t-spc-provider-2": "Service Provider 2",
   "t-spc-providers-must-differ": "Please select different service providers",
   "t-spc-difference": "Difference",
+  "t-file-generated-successfully": "{format} generated successfully",
   "t-clinic": "Clinic"
 }

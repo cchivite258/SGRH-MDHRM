@@ -1064,6 +1064,7 @@
   "t-no-report-data": "Sem dados para o relatório",
   "t-error-generating-report": "Erro ao gerar o relatório",
   "t-pdf-generated-successfully": "PDF gerado com sucesso",
+  "t-file-generated-successfully": "{format} gerado com sucesso",
   "t-error-generating-pdf": "Erro ao gerar o PDF",
   "t-generating-pdf": "Gerando PDF...",
   "t-expenses-per-procedure": "Despesas por Procedimento",
