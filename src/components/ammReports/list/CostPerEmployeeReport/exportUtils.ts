@@ -50,7 +50,7 @@ export class CostPerEmployeeReportExporter {
 
   static async exportToPDF(
     report: CompanyCostPerEmployeeReportType,
-    userName: string,
+    _userName: string,
     options?: ExportOptions
   ): Promise<void> {
     return new Promise(async (resolve, reject) => {
@@ -69,10 +69,10 @@ export class CostPerEmployeeReportExporter {
 
         let currentY = margin;
 
-        this.addPDFHeader(pdf, report, userName, margin, currentY, pageWidth);
+        this.addPDFHeader(pdf, report, margin, currentY, pageWidth);
         currentY = 40;
 
-        currentY = this.addPDFSummaryCards(pdf, report, userName, margin, contentWidth, currentY);
+        currentY = this.addPDFSummaryCards(pdf, report, margin, contentWidth, currentY);
         currentY += 5;
 
         const totals = this.calculateTotals(report);
@@ -83,7 +83,7 @@ export class CostPerEmployeeReportExporter {
           currentY = this.addFinancialSummary(pdf, totals, margin, contentWidth, currentY);
         }
 
-        this.addPDFFooterAllPages(pdf, userName, margin, pageWidth, pageHeight);
+        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight);
 
         const fileName = options?.fileName
           ? `${options.fileName}.pdf`
@@ -115,7 +115,6 @@ export class CostPerEmployeeReportExporter {
   private static addPDFHeader(
     pdf: jsPDF,
     report: CompanyCostPerEmployeeReportType,
-    userName: string,
     margin: number,
     currentY: number,
     pageWidth: number
@@ -138,11 +137,9 @@ export class CostPerEmployeeReportExporter {
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     const dateText = `${this.tr('t-cpe-generated-at')}: ${currentDate}`;
-    const userText = `${this.tr('t-cpe-by')}: ${userName || this.tr('t-cpe-system-user')}`;
 
     const dateWidth = pdf.getTextWidth(dateText);
     pdf.text(dateText, pageWidth - margin - dateWidth, currentY + 6);
-    pdf.text(userText, pageWidth - margin - pdf.getTextWidth(userText), currentY + 14);
 
     pdf.setDrawColor(180, 180, 180);
     pdf.setLineWidth(0.3);
@@ -152,7 +149,6 @@ export class CostPerEmployeeReportExporter {
   private static addPDFSummaryCards(
     pdf: jsPDF,
     report: CompanyCostPerEmployeeReportType,
-    userName: string,
     margin: number,
     contentWidth: number,
     currentY: number
@@ -246,7 +242,6 @@ export class CostPerEmployeeReportExporter {
 
     pdf.setFontSize(7);
     pdf.setTextColor(100, 100, 100);
-    pdf.text(`${this.tr('t-cpe-by')}: ${userName || this.tr('t-cpe-system-user')}`, card3X + 8, currentY + 30);
 
     return currentY + cardHeight + 5;
   }
@@ -387,7 +382,6 @@ export class CostPerEmployeeReportExporter {
 
   private static addPDFFooterAllPages(
     pdf: jsPDF,
-    userName: string,
     margin: number,
     pageWidth: number,
     pageHeight: number
@@ -410,7 +404,6 @@ export class CostPerEmployeeReportExporter {
 
       const footerText = this.tr('t-cpe-system-footer');
       const dateText = `${this.tr('t-cpe-date')}: ${currentDate}`;
-      const userText = `${this.tr('t-cpe-user')}: ${userName || this.tr('t-cpe-system-user')}`;
       const pageText = this.tr('t-cpe-page-of', { current: i, total: totalPages });
 
       pdf.text(footerText, margin, footerY - 5);
@@ -420,9 +413,6 @@ export class CostPerEmployeeReportExporter {
 
       const dateTextWidth = pdf.getTextWidth(dateText);
       pdf.text(dateText, pageWidth - margin - dateTextWidth, footerY - 12);
-
-      const userTextWidth = pdf.getTextWidth(userText);
-      pdf.text(userText, pageWidth - margin - userTextWidth, footerY - 19);
     }
   }
 
