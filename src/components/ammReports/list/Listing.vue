@@ -213,8 +213,18 @@ watch(searchQuery, (value) => {
 
 </script>
 <template>
-  <Card :title="$t('t-reports')" class="mt-7">
+  <Card :title="$t('t-reports')" class="mt-7 reports-card">
     <v-card-text>
+      <div class="reports-header mb-4">
+        <div class="reports-header-left">
+          <div class="reports-header-subtitle">{{ filteredReports.length }} {{ $t('t-results') }}</div>
+        </div>
+        <div class="reports-header-right">
+          <v-chip size="x-small" variant="outlined" color="grey-darken-1">
+            {{ $t('t-search-for-report') }}
+          </v-chip>
+        </div>
+      </div>
       <v-row>
         <v-col cols="12" lg="12">
           <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-report')" />
@@ -226,22 +236,24 @@ watch(searchQuery, (value) => {
         :headerItems="reportHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" is-pagination
         :loading="loading" @onSelectAll="onSelectAll">
         <template #body>
-          <tr v-for="item in tableData" :key="item.id">
+          <tr v-for="item in tableData" :key="item.id" class="report-row">
             <td>
               <v-checkbox v-model="item.isChecked" color="primary" hide-details />
             </td>
             <td class="text-primary cursor-pointer">
-              #{{ item.id || 'N/A' }}
+              <span class="report-code-badge">
+                #{{ item.id || 'N/A' }}
+              </span>
             </td>
             <td>
-              <div class="d-flex align-center">
-                <v-avatar color="light" class="pa-2 mx-1" rounded>
+              <div class="d-flex align-center report-title-cell">
+                <v-avatar color="light" class="pa-2 mx-1 report-avatar" rounded>
                   <i :class="item.img"></i>
                 </v-avatar>
-                <span class="font-weight-bold">{{ $t(`t-${item.title}`) }}</span>
+                <span class="font-weight-bold report-title-text">{{ $t(`t-${item.title}`) }}</span>
               </div>
             </td>
-            <td>
+            <td class="text-end">
               <ListMenuWithIcon :menuItems="reportAction.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" @onSelect="onSelect($event, item)" />
             </td>
           </tr>
@@ -278,3 +290,72 @@ watch(searchQuery, (value) => {
 
 
 </template>
+
+<style scoped>
+.reports-card {
+  border: 1px solid #e5e7eb;
+}
+
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eceff5;
+}
+
+.reports-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.reports-header-subtitle {
+  font-size: 12px;
+  color: #9aa3b2;
+  margin-top: 2px;
+}
+
+.report-row {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.report-row:hover {
+  background-color: #fbfcff;
+}
+
+.report-code-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d7deef;
+  background: #f7f9fe;
+  color: #2e4fb0;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.15px;
+}
+
+.report-title-cell {
+  gap: 8px;
+}
+
+.report-avatar {
+  border: 1px solid #e8ebf3;
+  background: #f7f8fc;
+}
+
+.report-title-text {
+  color: #111827;
+}
+
+@media (max-width: 960px) {
+  .reports-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
