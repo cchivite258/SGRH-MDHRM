@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { useHospitalProceduresReportStore } from "@/store/reports/companyHospitalProceduresBalancesStore";
-import ReportPreview from "@/components/ammReports/list/HospitalProceduresReport/PreviewReport.vue";
+import { useServiceProviderReportStore } from "@/store/reports/serviceProviderReportStore";
+import ReportPreview from "@/components/ammReports/list/ServiceProviderReport/PreviewReport.vue";
 import { useRouter } from "vue-router";
 
-const store = useHospitalProceduresReportStore();
+const store = useServiceProviderReportStore();
 const router = useRouter();
 
 const onBackToReports = () => {
@@ -17,7 +17,7 @@ const onBackToReports = () => {
   </div>
 
   <div v-else class="pa-10 text-center">
-    <h3>{{ $t("t-noDataForPreview") }}</h3>
+    <h3>{{ $t('t-noDataForPreview') }}</h3>
     <v-btn color="secondary" variant="outlined" class="mt-4" @click="onBackToReports">
       {{ $t("t-back") }} <i class="ph-arrow-left ms-2" />
     </v-btn>

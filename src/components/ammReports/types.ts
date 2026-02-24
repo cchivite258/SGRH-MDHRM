@@ -62,3 +62,28 @@ export type CompanyCostPerEmployeeReportType = {
   toDate?: Date | string;
   invoiceEmployeeSummaries?: InvoiceEmployeeSummaryType[];
 }
+
+export type ServiceProviderReportType = {
+  serviceProviderId?: string | number;
+  coveragePeriodId?: string | number;
+  serviceProviderName?: string;
+  serviceProviderTypeName?: string;
+  totalEmployees?: number;
+  totalAmount?: number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+  details?: {
+    hospitalProcedureTypeId?: string | number;
+    hospitalProcedureTypeName?: string;
+    totalInvoiceItems?: number;
+    totalEmployees?: number;
+    totalBilled?: number;
+  }[];
+};
+
+export type TopServiceTypesByClinicFilterType = {
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
+export type TopServiceTypesByClinicReportType = ServiceProviderReportType[];

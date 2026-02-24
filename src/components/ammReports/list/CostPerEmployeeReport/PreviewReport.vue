@@ -318,7 +318,7 @@
               {{ $t('t-report-generated-automatically') }}
             </div>
             <div class="mt-1">
-              SGRH - Sistema de Gestão de Recursos Humanos • {{ currentDate }}
+              {{ $t('t-cpe-system-footer') }} • {{ currentDate }}
             </div>
           </div>
           
@@ -347,11 +347,13 @@ import { amountFormate } from '@/app/common/amountFormate';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/authStore';
 import { CostPerEmployeeReportExporter } from '@/components/ammReports/list/CostPerEmployeeReport/exportUtils';
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
   report: CompanyCostPerEmployeeReportType
 }>();
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const company = computed(() => props.report?.company);
 const coverage = computed(() => props.report?.coveragePeriod);
@@ -372,7 +374,8 @@ const userName = computed(() => {
 
 // Data atual formatada
 const currentDate = computed(() => {
-  return new Date().toLocaleDateString('pt-PT', {
+  const uiLocale = locale.value === 'en' ? 'en-US' : 'pt-PT';
+  return new Date().toLocaleDateString(uiLocale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -401,8 +404,8 @@ const onBack = () => {
 };
 
 // Funções de exportação
-const handlePrint = () => {
-  window.print();
+const handlePrint = async () => {
+  await handleExport('pdf');
 };
 
 const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
@@ -410,7 +413,11 @@ const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
     exporting.value = true;
     exportType.value = type;
     
-    const fileName = `relatorio-custo-colaborador-${company.value?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}`;
+    const fileNamePrefix = locale.value === 'en'
+      ? 'cost-per-employee-report'
+      : 'relatorio-custo-por-colaborador';
+    const companyName = company.value?.name || (locale.value === 'en' ? 'company' : 'empresa');
+    const fileName = `${fileNamePrefix}-${companyName}-${new Date().toISOString().split('T')[0]}`;
     
     switch (type) {
       case 'pdf':
@@ -428,7 +435,7 @@ const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
     
   } catch (error) {
     console.error('Erro ao exportar relatório:', error);
-    alert('Ocorreu um erro ao exportar o relatório. Por favor, tente novamente.');
+    alert(t('t-error-exporting-report'));
   } finally {
     exporting.value = false;
     exportType.value = null;

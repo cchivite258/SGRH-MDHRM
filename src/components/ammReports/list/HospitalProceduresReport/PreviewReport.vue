@@ -6,11 +6,13 @@ import { amountFormate } from '@/app/common/amountFormate';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/authStore';
 import { ReportExporter } from '@/components/ammReports/list/HospitalProceduresReport/exportUtils'; 
+import { useI18n } from "vue-i18n";
 
 const props = defineProps<{
   report: CompanyHospitalProceduresBalanceType
 }>();
 
+const { t, locale } = useI18n();
 const authStore = useAuthStore();
 const company = computed(() => props.report?.company);
 const coverage = computed(() => props.report?.coveragePeriod);
@@ -35,7 +37,8 @@ const onBack = () => {
 
 // Data atual formatada
 const currentDate = computed(() => {
-  return new Date().toLocaleDateString('pt-PT', {
+  const uiLocale = locale.value === 'en' ? 'en-US' : 'pt-PT';
+  return new Date().toLocaleDateString(uiLocale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -49,7 +52,11 @@ const handlePrint = async () => {
   try {
     exporting.value = true;
     
-    const fileName = `relatorio-gastos-${company.value?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}`;
+    const fileNamePrefix = locale.value === 'en'
+      ? 'hospital-expenses-report'
+      : 'relatorio-gastos-hospitalares';
+    const companyName = company.value?.name || (locale.value === 'en' ? 'company' : 'empresa');
+    const fileName = `${fileNamePrefix}-${companyName}-${new Date().toISOString().split('T')[0]}`;
     
     // Exporta para PDF em vez de abrir a caixa de diálogo de impressão
     await ReportExporter.exportToPDF(props.report, userName.value, {
@@ -71,7 +78,11 @@ const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
     exporting.value = true;
     exportType.value = type;
     
-    const fileName = `relatorio-gastos-${company.value?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}`;
+    const fileNamePrefix = locale.value === 'en'
+      ? 'hospital-expenses-report'
+      : 'relatorio-gastos-hospitalares';
+    const companyName = company.value?.name || (locale.value === 'en' ? 'company' : 'empresa');
+    const fileName = `${fileNamePrefix}-${companyName}-${new Date().toISOString().split('T')[0]}`;
     
     switch (type) {
       case 'pdf':
@@ -95,7 +106,7 @@ const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
     
   } catch (error) {
     console.error('Erro ao exportar relatório:', error);
-    alert('Ocorreu um erro ao exportar o relatório. Por favor, tente novamente.');
+    alert(t('t-error-exporting-report'));
   } finally {
     exporting.value = false;
     exportType.value = null;
@@ -358,7 +369,7 @@ const exportOptions = [
               {{ $t('t-report-generated-automatically') }}
             </div>
             <div class="mt-1">
-              SGRH - Sistema de Gestão de Recursos Humanos • {{ currentDate }}
+              {{ $t('t-hpr-system-footer') }} • {{ currentDate }}
             </div>
           </div>
           

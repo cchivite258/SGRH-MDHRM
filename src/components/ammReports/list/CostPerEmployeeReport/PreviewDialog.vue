@@ -120,7 +120,7 @@ const onSubmit = async () => {
   localLoading.value = false;
 
   if (response.status === 'error') {
-    toast.error(response.error?.message || 'Erro ao gerar relatório');
+    toast.error(response.error?.message || t('t-error-generating-report'));
     return;
   }
 

@@ -1,16 +1,15 @@
-import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
-import { DataTableHeaderType } from "@/app/common/types/table.types";
-import { ke } from "@/assets/images/flags/utils";
+﻿import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import { TableHeaderType } from "@/app/common/types/table.types";
 import { ReportType } from "@/components/ammReports/types";
 import { OptionType } from "@/app/common/types/option.type";
+
 export const breadcrumb: BreadcrumbType[] = [
   {
-    title: "service-providers",
+    title: "reports",
     disabled: false,
   },
   {
-    title: "service-provider-list",
+    title: "reports-list",
     disabled: true,
   },
 ];
@@ -22,19 +21,27 @@ export const reportHeader: TableHeaderType[] = [
   { title: "action", align: "end" },
 ];
 
-
 export const reports: ReportType[] = [
   {
     id: "100001",
     img: "ph-file-text ph-lg",
-    title: "Total gasto com assistência médica",
+    title: "report-100001-title",
   },
   {
     id: "100002",
     img: "ph-file-text ph-lg",
-    title: "Custo por colaborador",
+    title: "report-100002-title",
   },
-  
+  {
+    id: "100003",
+    img: "ph-file-text ph-lg",
+    title: "report-100003-title",
+  },
+  {
+    id: "100004",
+    img: "ph-file-text ph-lg",
+    title: "report-100004-title",
+  },
 ];
 
 export const reportAction: OptionType[] = [
@@ -42,7 +49,6 @@ export const reportAction: OptionType[] = [
     title: "preview",
     icon: "ph-eye",
     value: "preview",
-    //to: "/ecommerce/product-details",
   },
   {
     title: "generate",

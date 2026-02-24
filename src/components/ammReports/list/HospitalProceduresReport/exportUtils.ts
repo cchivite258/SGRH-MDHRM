@@ -4,14 +4,50 @@ import autoTable from 'jspdf-autotable';
 import type { CompanyHospitalProceduresBalanceType } from "@/components/ammReports/types";
 import { amountFormate } from '@/app/common/amountFormate';
 import { formateDate } from "@/app/common/dateFormate";
+import i18n from '@/plugins/i18n';
 
 export interface ExportOptions {
   fileName?: string;
 }
 
 export class ReportExporter {
+  private static tr(key: string, params?: Record<string, unknown>): string {
+    const translated = (i18n as any).global.t(key, params);
+    return typeof translated === 'string' ? translated : String(translated);
+  }
 
-  // ========== EXPORT PARA PDF ==========
+  private static localeCode(): string {
+    const rawLocale = (i18n as any).global.locale;
+    const locale = typeof rawLocale === 'string' ? rawLocale : rawLocale?.value;
+    return locale === 'en' ? 'en-US' : 'pt-PT';
+  }
+
+  private static getCurrentDateTime(): string {
+    return new Date().toLocaleDateString(this.localeCode(), {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  private static getCurrentDate(): string {
+    return new Date().toLocaleDateString(this.localeCode());
+  }
+
+  private static buildDefaultFileName(
+    report: CompanyHospitalProceduresBalanceType,
+    extension: 'pdf' | 'xlsx' | 'csv'
+  ): string {
+    const companyName = (report.company?.name || this.tr('t-hpr-company-fallback'))
+      .replace(/\s+/g, '-')
+      .toLowerCase();
+    const date = new Date().toISOString().split('T')[0];
+    const prefix = this.tr('t-hpr-file-prefix');
+    return `${prefix}-${companyName}-${date}.${extension}`;
+  }
+
   static async exportToPDF(
     report: CompanyHospitalProceduresBalanceType,
     userName: string,
@@ -33,28 +69,25 @@ export class ReportExporter {
 
         let currentY = margin;
 
-        // ========== CABEÇALHO ==========
-        this.addPDFHeader(pdf, report, userName, margin, contentWidth, currentY, pageWidth);
-        currentY = 45; // Reduzido de 40 para 30
+        this.addPDFHeader(pdf, report, userName, margin, currentY, pageWidth);
+        currentY = 45;
 
-        // ========== RESUMO EM CARDS (MENORES E SEM BORDAS EXTERNAS) ==========
-        currentY = this.addPDFSummaryCards(pdf, report, userName, margin, contentWidth, currentY, pageWidth);
-        currentY += 5; // Reduzido espaço
+        currentY = this.addPDFSummaryCards(pdf, report, userName, margin, contentWidth, currentY);
+        currentY += 5;
 
-        // ========== TABELA DE PROCEDIMENTOS (MENOR) ==========
-        const tableResult = this.addPDFTable(pdf, report, margin, contentWidth, currentY);
+        const tableResult = this.addPDFTable(pdf, report, margin, currentY);
         currentY = tableResult.finalY;
 
-        // Adicionar rodapé em todas as páginas
-        this.addPDFFooterAllPages(pdf, report, userName, margin, pageWidth, pageHeight);
+        this.addPDFFooterAllPages(pdf, userName, margin, pageWidth, pageHeight);
 
-        // ========== SALVAR ARQUIVO ==========
-        const fileName = options?.fileName || `relatorio-gastos-${report.company?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}.pdf`;
+        const fileName = options?.fileName
+          ? `${options.fileName}.pdf`
+          : this.buildDefaultFileName(report, 'pdf');
         pdf.save(fileName);
 
         resolve();
       } catch (error) {
-        console.error('Erro ao gerar PDF:', error);
+        console.error('Error generating PDF:', error);
         reject(error);
       }
     });
@@ -65,47 +98,35 @@ export class ReportExporter {
     report: CompanyHospitalProceduresBalanceType,
     userName: string,
     margin: number,
-    contentWidth: number,
     currentY: number,
     pageWidth: number
   ): void {
-    const currentDate = new Date().toLocaleDateString('pt-PT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const currentDate = this.getCurrentDateTime();
 
-    // Título principal
-    pdf.setFontSize(16); // Reduzido de 18
+    pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Relatório de Gastos Hospitalares', margin, currentY);
+    pdf.text(this.tr('t-hpr-report-title'), margin, currentY);
 
-    // Subtítulo
-    pdf.setFontSize(9); // Reduzido de 10
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('Relatório #100001 • Total de Gastos em Assistência Médica', margin, currentY + 6);
+    pdf.text(this.tr('t-hpr-report-subtitle'), margin, currentY + 6);
 
-    // Informações da empresa (menor)
-    pdf.setFontSize(11); // Reduzido de 12
+    pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    const companyName = report.company?.name || 'Empresa';
+    const companyName = report.company?.name || this.tr('t-hpr-company-fallback');
     pdf.text(companyName, margin, currentY + 14);
 
-    // Data e usuário (menor)
-    pdf.setFontSize(9); // Reduzido de 10
+    pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    const dateText = `Gerado em: ${currentDate}`;
-    const userText = `Por: ${userName}`;
+    const dateText = `${this.tr('t-hpr-generated-at')}: ${currentDate}`;
+    const userText = `${this.tr('t-hpr-by')}: ${userName || this.tr('t-hpr-system-user')}`;
 
     const dateWidth = pdf.getTextWidth(dateText);
     pdf.text(dateText, pageWidth - margin - dateWidth, currentY + 6);
     pdf.text(userText, pageWidth - margin - pdf.getTextWidth(userText), currentY + 14);
 
-    // Linha divisória mais fina
-    pdf.setDrawColor(180, 180, 180); // Cor mais clara
-    pdf.setLineWidth(0.3); // Mais fina
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.3);
     pdf.line(margin, currentY + 20, pageWidth - margin, currentY + 20);
   }
 
@@ -115,60 +136,57 @@ export class ReportExporter {
     userName: string,
     margin: number,
     contentWidth: number,
-    currentY: number,
-    pageWidth: number
+    currentY: number
   ): number {
-    const cardWidth = (contentWidth - 15) / 3; // Ajustado para 15px de gap
-    const cardHeight = 35; // Reduzido de 45 para 35
+    const cardWidth = (contentWidth - 15) / 3;
+    const cardHeight = 35;
 
-    // Card 1: Instituição - REMOVIDA BORDA EXTERNA
     pdf.setFillColor(248, 249, 250);
-    pdf.rect(margin, currentY, cardWidth, cardHeight, 'F'); // Apenas fill, sem borda
-
-    pdf.setFontSize(10); // Reduzido de 11
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(66, 66, 66); // Cinza escuro
-    pdf.text('Instituição', margin + 8, currentY + 8);
-
-    pdf.setFontSize(8); // Reduzido de 9
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    const companyName = report.company?.name || 'N/A';
-    if (companyName.length > 35) {
-      pdf.text(companyName.substring(0, 35) + '...', margin + 8, currentY + 14);
-    } else {
-      pdf.text(companyName, margin + 8, currentY + 14);
-    }
-
-    pdf.setFontSize(7); // Reduzido de 7 para 6
-    pdf.setTextColor(100, 100, 100);
-    const email = report.company?.email || 'N/A';
-    if (email.length > 35) {
-      pdf.text(email.substring(0, 35) + '...', margin + 8, currentY + 20);
-    } else {
-      pdf.text(email, margin + 8, currentY + 24);
-    }
-    pdf.text(`Tel: ${report.company?.phone || 'N/A'}`, margin + 8, currentY + 30);
-
-    // Card 2: Período - REMOVIDA BORDA EXTERNA
-    const hasCoveragePeriod = report.coveragePeriod !== null && report.coveragePeriod !== undefined;
-    const card2X = margin + cardWidth + 7.5; // Ajustado gap
-
-    pdf.setFillColor(232, 245, 233);
-    pdf.rect(card2X, currentY, cardWidth, cardHeight, 'F'); // Apenas fill, sem borda
+    pdf.rect(margin, currentY, cardWidth, cardHeight, 'F');
 
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(66, 66, 66);
-    const periodTitle = hasCoveragePeriod ? 'Período' : 'Emissão';
+    pdf.text(this.tr('t-institution'), margin + 8, currentY + 8);
+
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(0, 0, 0);
+    const companyName = report.company?.name || this.tr('t-hpr-na');
+    if (companyName.length > 35) {
+      pdf.text(`${companyName.substring(0, 35)}...`, margin + 8, currentY + 14);
+    } else {
+      pdf.text(companyName, margin + 8, currentY + 14);
+    }
+
+    pdf.setFontSize(7);
+    pdf.setTextColor(100, 100, 100);
+    const email = report.company?.email || this.tr('t-hpr-na');
+    if (email.length > 35) {
+      pdf.text(`${email.substring(0, 35)}...`, margin + 8, currentY + 20);
+    } else {
+      pdf.text(email, margin + 8, currentY + 24);
+    }
+    pdf.text(`${this.tr('t-hpr-phone-short')}: ${report.company?.phone || this.tr('t-hpr-na')}`, margin + 8, currentY + 30);
+
+    const hasCoveragePeriod = report.coveragePeriod !== null && report.coveragePeriod !== undefined;
+    const card2X = margin + cardWidth + 7.5;
+
+    pdf.setFillColor(232, 245, 233);
+    pdf.rect(card2X, currentY, cardWidth, cardHeight, 'F');
+
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(66, 66, 66);
+    const periodTitle = hasCoveragePeriod ? this.tr('t-period') : this.tr('t-issue-period');
     pdf.text(periodTitle, card2X + 8, currentY + 8);
 
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(0, 0, 0);
-    const periodName = hasCoveragePeriod ? report.coveragePeriod?.name || 'N/A' : 'Personalizado';
+    const periodName = hasCoveragePeriod ? report.coveragePeriod?.name || this.tr('t-hpr-na') : this.tr('t-custom-period');
     if (periodName.length > 20) {
-      pdf.text(periodName.substring(0, 20) + '...', card2X + 8, currentY + 14);
+      pdf.text(`${periodName.substring(0, 20)}...`, card2X + 8, currentY + 14);
     } else {
       pdf.text(periodName, card2X + 8, currentY + 14);
     }
@@ -177,30 +195,29 @@ export class ReportExporter {
     pdf.setTextColor(100, 100, 100);
     const startDate = hasCoveragePeriod && report.coveragePeriod?.startDate
       ? formateDate(report.coveragePeriod.startDate)
-      : (report.issueDateFrom ? formateDate(report.issueDateFrom) : 'N/A');
+      : (report.issueDateFrom ? formateDate(report.issueDateFrom) : this.tr('t-hpr-na'));
     const endDate = hasCoveragePeriod && report.coveragePeriod?.endDate
       ? formateDate(report.coveragePeriod.endDate)
-      : (report.issueDateTo ? formateDate(report.issueDateTo) : 'N/A');
+      : (report.issueDateTo ? formateDate(report.issueDateTo) : this.tr('t-hpr-na'));
 
-    pdf.text(`Início: ${startDate}`, card2X + 8, currentY + 24);
-    pdf.text(`Fim: ${endDate}`, card2X + 8, currentY + 30);
+    pdf.text(`${this.tr('t-start-period')}: ${startDate}`, card2X + 8, currentY + 24);
+    pdf.text(`${this.tr('t-end-period')}: ${endDate}`, card2X + 8, currentY + 30);
 
-    // Card 3: Total Gastos 
-    const card3X = card2X + cardWidth + 7.5; 
+    const card3X = card2X + cardWidth + 7.5;
 
     pdf.setFillColor(255, 235, 238);
-    pdf.rect(card3X, currentY, cardWidth, cardHeight, 'F'); 
+    pdf.rect(card3X, currentY, cardWidth, cardHeight, 'F');
 
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(66, 66, 66);
-    pdf.text('Total Gastos', card3X + 8, currentY + 8);
+    pdf.text(this.tr('t-total-spent'), card3X + 8, currentY + 8);
 
-    pdf.setFontSize(12); 
+    pdf.setFontSize(12);
     pdf.setTextColor(183, 28, 28);
     const totalAmount = amountFormate(report.totalAmount);
     if (totalAmount.length > 15) {
-      pdf.text(totalAmount.substring(0, 15) + '... MT', card3X + 8, currentY + 15);
+      pdf.text(`${totalAmount.substring(0, 15)}... MT`, card3X + 8, currentY + 15);
     } else {
       pdf.text(`${totalAmount} MT`, card3X + 8, currentY + 15);
     }
@@ -208,8 +225,7 @@ export class ReportExporter {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7);
     pdf.setTextColor(100, 100, 100);
-    pdf.text(`Procedimentos: ${report.procedureExpenses?.length || 0}`, card3X + 8, currentY + 30);
-    //pdf.text(`Por: ${userName}`, card3X + 8, currentY + 32);
+    pdf.text(`${this.tr('t-procedures')}: ${report.procedureExpenses?.length || 0}`, card3X + 8, currentY + 30);
 
     return currentY + cardHeight + 5;
   }
@@ -218,35 +234,34 @@ export class ReportExporter {
     pdf: jsPDF,
     report: CompanyHospitalProceduresBalanceType,
     margin: number,
-    contentWidth: number,
     currentY: number
   ): { finalY: number } {
-    // Título da tabela (menor)
-    pdf.setFontSize(12); // Reduzido de 14
+    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(0, 0, 0);
-    pdf.text('Gastos por Procedimento', margin, currentY);
+    pdf.text(this.tr('t-expenses-by-procedure'), margin, currentY);
 
-    // Preparar dados da tabela
     const tableData = report.procedureExpenses?.map((p: any) => [
       p.procedure.name,
       `${amountFormate(p.amountSpent)} MT`,
-      p.amountCovered ? `${amountFormate(p.amountCovered)} MT` : '—'
+      p.amountCovered ? `${amountFormate(p.amountCovered)} MT` : '-'
     ]) || [];
 
-    // Adicionar linha de total 
-    const totalRow = ['TOTAIS', `${amountFormate(report.totalAmount)} MT`, '—'];
+    const totalRow = [this.tr('t-totals').toUpperCase(), `${amountFormate(report.totalAmount)} MT`, '-'];
 
-    // Criar tabela com autoTable )
     autoTable(pdf, {
       startY: currentY + 5,
       margin: { left: margin, right: margin },
-      head: [['Procedimento', 'Valor Gasto', 'Valor Coberto']],
+      head: [[
+        this.tr('t-procedure'),
+        this.tr('t-amount-spent'),
+        this.tr('t-amount-covered')
+      ]],
       body: [...tableData, totalRow],
       theme: 'grid',
       styles: {
-        fontSize: 8, // Reduzido de 9
-        cellPadding: 2, // Reduzido de 3
+        fontSize: 8,
+        cellPadding: 2,
         overflow: 'linebreak',
         lineWidth: 0.1,
         lineColor: [200, 200, 200]
@@ -255,80 +270,66 @@ export class ReportExporter {
         fillColor: [66, 66, 66],
         textColor: [255, 255, 255],
         fontStyle: 'bold',
-        fontSize: 9 // Reduzido
+        fontSize: 9
       },
       bodyStyles: {
         fontSize: 8
       },
       columnStyles: {
         0: { cellWidth: 'auto', fontSize: 8 },
-        1: { cellWidth: 35, halign: 'right', fontSize: 8 }, 
-        2: { cellWidth: 35, halign: 'right', fontSize: 8 } 
+        1: { cellWidth: 35, halign: 'right', fontSize: 8 },
+        2: { cellWidth: 35, halign: 'right', fontSize: 8 }
       },
-      // Estilizar linha de totais com bordas
       didParseCell: (data: any) => {
-        if (data.row.index === tableData.length) { // Última linha (totais)
-          data.cell.styles.fillColor = [248, 249, 250]; // Fundo cinza claro
+        if (data.row.index === tableData.length) {
+          data.cell.styles.fillColor = [248, 249, 250];
           data.cell.styles.fontStyle = 'bold';
-          data.cell.styles.lineWidth = 0.1; // Borda mais forte
-          data.cell.styles.lineColor = [100, 100, 100]; // Cor da borda
+          data.cell.styles.lineWidth = 0.1;
+          data.cell.styles.lineColor = [100, 100, 100];
         }
       },
       willDrawCell: (data: any) => {
-        if (data.row.index === tableData.length) { // Última linha (totais)
-          // Garantir que todas as bordas sejam desenhadas
+        if (data.row.index === tableData.length) {
           data.doc.setLineWidth(0.3);
           data.doc.setDrawColor(100, 100, 100);
         }
       }
     });
 
-    // Retornar nova posição Y após a tabela
     const finalY = (pdf as any).lastAutoTable?.finalY || currentY + 100;
     return { finalY: finalY + 5 };
   }
 
   private static addPDFFooterAllPages(
     pdf: jsPDF,
-    report: CompanyHospitalProceduresBalanceType,
     userName: string,
     margin: number,
     pageWidth: number,
     pageHeight: number
   ): void {
-    const currentDate = new Date().toLocaleDateString('pt-PT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-
+    const currentDate = this.getCurrentDate();
     const totalPages = pdf.getNumberOfPages();
 
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
 
-      // Posição fixa no rodapé da página
       const footerY = pageHeight - 15;
 
-      // Linha divisória do rodapé
       pdf.setDrawColor(180, 180, 180);
       pdf.setLineWidth(0.3);
       pdf.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
 
-      // Texto do rodapé
       pdf.setFontSize(7);
       pdf.setFont('helvetica', 'normal');
       pdf.setTextColor(100, 100, 100);
 
-      const footerText = 'SGRH - Sistema de Gestão de Recursos Humanos';
-      const dateText = `Data: ${currentDate}`;
-      const userText = `Usuário: ${userName}`;
-      const pageText = `Página ${i} de ${totalPages}`;
+      const footerText = this.tr('t-hpr-system-footer');
+      const dateText = `${this.tr('t-hpr-date')}: ${currentDate}`;
+      const userText = `${this.tr('t-hpr-user')}: ${userName || this.tr('t-hpr-system-user')}`;
+      const pageText = this.tr('t-hpr-page-of', { current: i, total: totalPages });
 
-      // Texto à esquerda
       pdf.text(footerText, margin, footerY - 5);
 
-      // Informações à direita
       const pageTextWidth = pdf.getTextWidth(pageText);
       pdf.text(pageText, pageWidth - margin - pageTextWidth, footerY - 5);
 
@@ -340,7 +341,6 @@ export class ReportExporter {
     }
   }
 
-  // ========== EXPORT PARA EXCEL ==========
   static async exportToExcel(
     report: CompanyHospitalProceduresBalanceType,
     userName: string,
@@ -348,81 +348,84 @@ export class ReportExporter {
   ): Promise<void> {
     try {
       const workbook = XLSX.utils.book_new();
-      const currentDate = new Date().toLocaleDateString('pt-PT');
+      const currentDate = this.getCurrentDate();
 
-      // ========== ABA DE RESUMO ==========
       const summaryData = [
-        ['RELATÓRIO DE GASTOS HOSPITALARES'],
+        [this.tr('t-hpr-report-title').toUpperCase()],
         [''],
-        ['Empresa:', report.company?.name || 'N/A'],
-        ['Email:', report.company?.email || 'N/A'],
-        ['Telefone:', report.company?.phone || 'N/A'],
+        [`${this.tr('t-hpr-company')}:`, report.company?.name || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-email')}:`, report.company?.email || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-phone')}:`, report.company?.phone || this.tr('t-hpr-na')],
         [''],
-        ['PERÍODO'],
-        ['Tipo:', report.coveragePeriod ? 'Período de Cobertura' : 'Período Personalizado'],
-        ['Nome:', report.coveragePeriod?.name || 'N/A'],
-        ['Data Início:', report.coveragePeriod && report.coveragePeriod.startDate ? formateDate(report.coveragePeriod.startDate) : (report.issueDateFrom ? formateDate(report.issueDateFrom) : 'N/A')],
-        ['Data Fim:', report.coveragePeriod && report.coveragePeriod.endDate ? formateDate(report.coveragePeriod.endDate) : (report.issueDateTo ? formateDate(report.issueDateTo) : 'N/A')],
+        [this.tr('t-hpr-period-section')],
+        [`${this.tr('t-hpr-type')}:`, report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')],
+        [`${this.tr('t-hpr-name')}:`, report.coveragePeriod?.name || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-start-date')}:`, report.coveragePeriod && report.coveragePeriod.startDate ? formateDate(report.coveragePeriod.startDate) : (report.issueDateFrom ? formateDate(report.issueDateFrom) : this.tr('t-hpr-na'))],
+        [`${this.tr('t-hpr-end-date')}:`, report.coveragePeriod && report.coveragePeriod.endDate ? formateDate(report.coveragePeriod.endDate) : (report.issueDateTo ? formateDate(report.issueDateTo) : this.tr('t-hpr-na'))],
         [''],
-        ['RESUMO FINANCEIRO'],
-        ['Total Gastos:', `${amountFormate(report.totalAmount)} MT`],
-        ['Número de Procedimentos:', report.procedureExpenses?.length || 0],
+        [this.tr('t-hpr-financial-summary')],
+        [`${this.tr('t-total-spent')}:`, `${amountFormate(report.totalAmount)} MT`],
+        [`${this.tr('t-hpr-procedures-count')}:`, String(report.procedureExpenses?.length || 0)],
         [''],
-        ['INFORMAÇÕES DO RELATÓRIO'],
-        ['Gerado por:', userName],
-        ['Data de geração:', currentDate],
-        ['ID do Relatório:', '100001']
+        [this.tr('t-hpr-report-information')],
+        [`${this.tr('t-generated-by')}:`, userName || this.tr('t-hpr-system-user')],
+        [`${this.tr('t-hpr-generated-at')}:`, currentDate],
+        [`${this.tr('t-hpr-report-id')}:`, '100001']
       ];
 
       const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
-      this.applyExcelStyles(summaryWS, summaryData.length);
-      XLSX.utils.book_append_sheet(workbook, summaryWS, 'Resumo');
+      this.applyExcelStyles(summaryWS);
+      XLSX.utils.book_append_sheet(workbook, summaryWS, this.tr('t-hpr-sheet-summary'));
 
-      // ========== ABA DE PROCEDIMENTOS ==========
-      const proceduresData = [
-        ['PROCEDIMENTOS DETALHADOS'],
+      const proceduresData: string[][] = [
+        [this.tr('t-hpr-detailed-procedures').toUpperCase()],
         [''],
-        ['Procedimento', 'Valor Gasto (MT)', 'Valor Coberto (MT)']
+        [
+          this.tr('t-procedure'),
+          `${this.tr('t-amount-spent')} (MT)`,
+          `${this.tr('t-amount-covered')} (MT)`
+        ]
       ];
 
       report.procedureExpenses?.forEach((p: any) => {
         proceduresData.push([
           p.procedure.name,
-          p.amountSpent,
-          p.amountCovered || 0
+          String(p.amountSpent),
+          String(p.amountCovered || 0)
         ]);
       });
 
       proceduresData.push(['']);
-      proceduresData.push(['TOTAIS', String(report.totalAmount), '—']);
+      proceduresData.push([this.tr('t-totals').toUpperCase(), String(report.totalAmount), '-']);
 
       const proceduresWS = XLSX.utils.aoa_to_sheet(proceduresData);
       this.applyProceduresExcelStyles(proceduresWS, proceduresData.length);
-      XLSX.utils.book_append_sheet(workbook, proceduresWS, 'Procedimentos');
+      XLSX.utils.book_append_sheet(workbook, proceduresWS, this.tr('t-hpr-sheet-procedures'));
 
-      // ========== SALVAR ARQUIVO ==========
       const excelBuffer = XLSX.write(workbook, {
         bookType: 'xlsx',
         type: 'array'
       });
 
-      const fileName = options?.fileName || `relatorio-gastos-${report.company?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      const fileName = options?.fileName
+        ? `${options.fileName}.xlsx`
+        : this.buildDefaultFileName(report, 'xlsx');
       this.saveFile(excelBuffer, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
     } catch (error) {
-      console.error('Erro ao gerar Excel:', error);
+      console.error('Error generating Excel:', error);
       throw error;
     }
   }
 
-  private static applyExcelStyles(ws: XLSX.WorkSheet, dataLength: number): void {
+  private static applyExcelStyles(ws: XLSX.WorkSheet): void {
     const colWidths = [{ wch: 25 }, { wch: 30 }];
     ws['!cols'] = colWidths;
 
     if (ws['A1']) {
       ws['A1'].s = {
-        font: { sz: 14, bold: true, color: { rgb: "1F3A93" } },
-        alignment: { horizontal: "center" }
+        font: { sz: 14, bold: true, color: { rgb: '1F3A93' } },
+        alignment: { horizontal: 'center' }
       };
     }
 
@@ -430,15 +433,15 @@ export class ReportExporter {
       const cell = `A${row}`;
       if (ws[cell]) {
         ws[cell].s = {
-          font: { sz: 11, bold: true, color: { rgb: "333333" } },
-          fill: { fgColor: { rgb: "E8E8E8" } }
+          font: { sz: 11, bold: true, color: { rgb: '333333' } },
+          fill: { fgColor: { rgb: 'E8E8E8' } }
         };
       }
     });
 
     if (ws['B14']) {
       ws['B14'].s = {
-        font: { sz: 11, bold: true, color: { rgb: "B71C1C" } }
+        font: { sz: 11, bold: true, color: { rgb: 'B71C1C' } }
       };
     }
   }
@@ -449,7 +452,7 @@ export class ReportExporter {
 
     if (ws['A1']) {
       ws['A1'].s = {
-        font: { sz: 12, bold: true, color: { rgb: "1F3A93" } }
+        font: { sz: 12, bold: true, color: { rgb: '1F3A93' } }
       };
     }
 
@@ -458,9 +461,9 @@ export class ReportExporter {
       const cell = `${col}${headerRow}`;
       if (ws[cell]) {
         ws[cell].s = {
-          font: { sz: 10, bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "424242" } },
-          alignment: { horizontal: col === 'A' ? "left" : "right" }
+          font: { sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '424242' } },
+          alignment: { horizontal: col === 'A' ? 'left' : 'right' }
         };
       }
     });
@@ -469,26 +472,26 @@ export class ReportExporter {
     if (ws[`A${totalRow}`]) {
       ws[`A${totalRow}`].s = {
         font: { sz: 10, bold: true },
-        fill: { fgColor: { rgb: "F8F9FA" } },
+        fill: { fgColor: { rgb: 'F8F9FA' } },
         border: {
-          top: { style: "thin", color: { rgb: "646464" } },
-          bottom: { style: "thin", color: { rgb: "646464" } },
-          left: { style: "thin", color: { rgb: "646464" } },
-          right: { style: "thin", color: { rgb: "646464" } }
+          top: { style: 'thin', color: { rgb: '646464' } },
+          bottom: { style: 'thin', color: { rgb: '646464' } },
+          left: { style: 'thin', color: { rgb: '646464' } },
+          right: { style: 'thin', color: { rgb: '646464' } }
         }
       };
     }
 
     if (ws[`B${totalRow}`]) {
       ws[`B${totalRow}`].s = {
-        font: { sz: 10, bold: true, color: { rgb: "B71C1C" } },
-        fill: { fgColor: { rgb: "F8F9FA" } },
-        alignment: { horizontal: "right" },
+        font: { sz: 10, bold: true, color: { rgb: 'B71C1C' } },
+        fill: { fgColor: { rgb: 'F8F9FA' } },
+        alignment: { horizontal: 'right' },
         border: {
-          top: { style: "thin", color: { rgb: "646464" } },
-          bottom: { style: "thin", color: { rgb: "646464" } },
-          left: { style: "thin", color: { rgb: "646464" } },
-          right: { style: "thin", color: { rgb: "646464" } }
+          top: { style: 'thin', color: { rgb: '646464' } },
+          bottom: { style: 'thin', color: { rgb: '646464' } },
+          left: { style: 'thin', color: { rgb: '646464' } },
+          right: { style: 'thin', color: { rgb: '646464' } }
         }
       };
     }
@@ -496,13 +499,13 @@ export class ReportExporter {
     if (ws[`C${totalRow}`]) {
       ws[`C${totalRow}`].s = {
         font: { sz: 10, bold: true },
-        fill: { fgColor: { rgb: "F8F9FA" } },
-        alignment: { horizontal: "right" },
+        fill: { fgColor: { rgb: 'F8F9FA' } },
+        alignment: { horizontal: 'right' },
         border: {
-          top: { style: "thin", color: { rgb: "646464" } },
-          bottom: { style: "thin", color: { rgb: "646464" } },
-          left: { style: "thin", color: { rgb: "646464" } },
-          right: { style: "thin", color: { rgb: "646464" } }
+          top: { style: 'thin', color: { rgb: '646464' } },
+          bottom: { style: 'thin', color: { rgb: '646464' } },
+          left: { style: 'thin', color: { rgb: '646464' } },
+          right: { style: 'thin', color: { rgb: '646464' } }
         }
       };
     }
@@ -510,55 +513,56 @@ export class ReportExporter {
     const dataStart = 4;
     const dataEnd = totalRow - 2;
 
-    for (let R = dataStart; R <= dataEnd; ++R) {
-      if (ws[`B${R}`]) ws[`B${R}`].z = '#,##0.00" MT"';
-      if (ws[`C${R}`]) ws[`C${R}`].z = '#,##0.00" MT"';
+    for (let row = dataStart; row <= dataEnd; ++row) {
+      if (ws[`B${row}`]) ws[`B${row}`].z = '#,##0.00" MT"';
+      if (ws[`C${row}`]) ws[`C${row}`].z = '#,##0.00" MT"';
     }
 
     if (ws[`B${totalRow}`]) ws[`B${totalRow}`].z = '#,##0.00" MT"';
   }
 
-  // ========== EXPORT PARA CSV ==========
   static async exportToCSV(
     report: CompanyHospitalProceduresBalanceType,
     userName: string,
     options?: ExportOptions
   ): Promise<void> {
     try {
-      const currentDate = new Date().toLocaleDateString('pt-PT');
+      const currentDate = this.getCurrentDate();
 
-      let csvContent = 'RELATÓRIO DE GASTOS HOSPITALARES\n\n';
-      csvContent += 'INFORMAÇÕES DA EMPRESA\n';
-      csvContent += `Empresa,${report.company?.name || 'N/A'}\n`;
-      csvContent += `Email,${report.company?.email || 'N/A'}\n`;
-      csvContent += `Telefone,${report.company?.phone || 'N/A'}\n\n`;
-      csvContent += 'PERÍODO\n';
-      csvContent += `Tipo,${report.coveragePeriod ? 'Período de Cobertura' : 'Período Personalizado'}\n`;
-      csvContent += `Nome,${report.coveragePeriod?.name || 'N/A'}\n`;
-      csvContent += `Data Início,${report.coveragePeriod && report.coveragePeriod.startDate ? formateDate(report.coveragePeriod.startDate) : (report.issueDateFrom ? formateDate(report.issueDateFrom) : 'N/A')}\n`;
-      csvContent += `Data Fim,${report.coveragePeriod && report.coveragePeriod.endDate ? formateDate(report.coveragePeriod.endDate) : (report.issueDateTo ? formateDate(report.issueDateTo) : 'N/A')}\n\n`;
-      csvContent += 'RESUMO FINANCEIRO\n';
-      csvContent += `Total Gastos,${amountFormate(report.totalAmount)} MT\n`;
-      csvContent += `Número de Procedimentos,${report.procedureExpenses?.length || 0}\n\n`;
-      csvContent += 'PROCEDIMENTOS\n';
-      csvContent += 'Procedimento,Valor Gasto (MT),Valor Coberto (MT)\n';
+      let csvContent = `${this.tr('t-hpr-report-title').toUpperCase()}\n\n`;
+      csvContent += `${this.tr('t-hpr-company-information').toUpperCase()}\n`;
+      csvContent += `${this.tr('t-hpr-company')},${report.company?.name || this.tr('t-hpr-na')}\n`;
+      csvContent += `${this.tr('t-hpr-email')},${report.company?.email || this.tr('t-hpr-na')}\n`;
+      csvContent += `${this.tr('t-hpr-phone')},${report.company?.phone || this.tr('t-hpr-na')}\n\n`;
+      csvContent += `${this.tr('t-hpr-period-section')}\n`;
+      csvContent += `${this.tr('t-hpr-type')},${report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')}\n`;
+      csvContent += `${this.tr('t-hpr-name')},${report.coveragePeriod?.name || this.tr('t-hpr-na')}\n`;
+      csvContent += `${this.tr('t-hpr-start-date')},${report.coveragePeriod && report.coveragePeriod.startDate ? formateDate(report.coveragePeriod.startDate) : (report.issueDateFrom ? formateDate(report.issueDateFrom) : this.tr('t-hpr-na'))}\n`;
+      csvContent += `${this.tr('t-hpr-end-date')},${report.coveragePeriod && report.coveragePeriod.endDate ? formateDate(report.coveragePeriod.endDate) : (report.issueDateTo ? formateDate(report.issueDateTo) : this.tr('t-hpr-na'))}\n\n`;
+      csvContent += `${this.tr('t-hpr-financial-summary')}\n`;
+      csvContent += `${this.tr('t-total-spent')},${amountFormate(report.totalAmount)} MT\n`;
+      csvContent += `${this.tr('t-hpr-procedures-count')},${report.procedureExpenses?.length || 0}\n\n`;
+      csvContent += `${this.tr('t-hpr-detailed-procedures').toUpperCase()}\n`;
+      csvContent += `${this.tr('t-procedure')},${this.tr('t-amount-spent')} (MT),${this.tr('t-amount-covered')} (MT)\n`;
 
       report.procedureExpenses?.forEach((p: any) => {
         csvContent += `${p.procedure.name},${p.amountSpent},${p.amountCovered || 0}\n`;
       });
 
-      csvContent += `TOTAIS,${report.totalAmount},-\n\n`;
-      csvContent += 'INFORMAÇÕES DO RELATÓRIO\n';
-      csvContent += `Gerado por,${userName}\n`;
-      csvContent += `Data de geração,${currentDate}\n`;
-      csvContent += `ID do Relatório,100001\n`;
+      csvContent += `${this.tr('t-totals').toUpperCase()},${report.totalAmount},-\n\n`;
+      csvContent += `${this.tr('t-hpr-report-information')}\n`;
+      csvContent += `${this.tr('t-generated-by')},${userName || this.tr('t-hpr-system-user')}\n`;
+      csvContent += `${this.tr('t-hpr-generated-at')},${currentDate}\n`;
+      csvContent += `${this.tr('t-hpr-report-id')},100001\n`;
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const fileName = options?.fileName || `relatorio-gastos-${report.company?.name || 'empresa'}-${new Date().toISOString().split('T')[0]}.csv`;
+      const fileName = options?.fileName
+        ? `${options.fileName}.csv`
+        : this.buildDefaultFileName(report, 'csv');
       this.saveFile(blob, fileName, 'text/csv');
 
     } catch (error) {
-      console.error('Erro ao gerar CSV:', error);
+      console.error('Error generating CSV:', error);
       throw error;
     }
   }

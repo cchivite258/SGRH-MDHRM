@@ -16,12 +16,23 @@ import GenerateDialog100001 from "@/components/ammReports/list/HospitalProcedure
 
 import PreviewDialog100002 from "@/components/ammReports/list/CostPerEmployeeReport/PreviewDialog.vue";
 import GenerateDialog100002 from "@/components/ammReports/list/CostPerEmployeeReport/GenerateDialog.vue";
+import PreviewDialog100003 from "@/components/ammReports/list/ServiceProviderReport/PreviewDialog.vue";
+import GenerateDialog100003 from "@/components/ammReports/list/ServiceProviderReport/GenerateDialog.vue";
+import PreviewDialog100004 from "@/components/ammReports/list/TopServiceTypesByClinicReport/PreviewDialog.vue";
+import GenerateDialog100004 from "@/components/ammReports/list/TopServiceTypesByClinicReport/GenerateDialog.vue";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const previewDialog100001 = ref(false);
 const generateDialog100001 = ref(false);
 
 const previewDialog100002 = ref(false);
 const generateDialog100002 = ref(false);
+const previewDialog100003 = ref(false);
+const generateDialog100003 = ref(false);
+const previewDialog100004 = ref(false);
+const generateDialog100004 = ref(false);
 
 const prop = defineProps({
   filters: {
@@ -128,6 +139,14 @@ const reportHandlers: Record<string, {
      preview: () => previewDialog100002.value = true,
      generate: () => generateDialog100002.value = true
   },
+  "100003": {
+     preview: () => previewDialog100003.value = true,
+     generate: () => generateDialog100003.value = true
+  },
+  "100004": {
+     preview: () => previewDialog100004.value = true,
+     generate: () => generateDialog100004.value = true
+  },
 };
 
 
@@ -178,7 +197,7 @@ watch(searchQuery, (value) => {
   const val = value.toLowerCase();
 
   filteredReports.value = finalData.value.filter((report) =>
-    report.title.toLowerCase().includes(val)
+    t(`t-${report.title}`).toLowerCase().includes(val)
   );
 
   updateTableData(filteredReports.value);
@@ -211,7 +230,7 @@ watch(searchQuery, (value) => {
                 <v-avatar color="light" class="pa-2 mx-1" rounded>
                   <i :class="item.img"></i>
                 </v-avatar>
-                <span class="font-weight-bold">{{ item.title }}</span>
+                <span class="font-weight-bold">{{ $t(`t-${item.title}`) }}</span>
               </div>
             </td>
             <td>
@@ -240,6 +259,11 @@ watch(searchQuery, (value) => {
 
   <PreviewDialog100002 v-model="previewDialog100002"  />
   <GenerateDialog100002 v-model="generateDialog100002"  />
+
+  <PreviewDialog100003 v-model="previewDialog100003"  />
+  <GenerateDialog100003 v-model="generateDialog100003"  />
+  <PreviewDialog100004 v-model="previewDialog100004"  />
+  <GenerateDialog100004 v-model="generateDialog100004"  />
 
 
 

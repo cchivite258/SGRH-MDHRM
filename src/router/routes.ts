@@ -191,19 +191,31 @@ const ammReportRoutes = [
     path: `${reportsPrefix}/list`,
     name: "ReportsList",
     component: () => import("@/views/ammReports/List.vue"),
-    meta: { title: "Reports List", authRequired: true },
+    meta: { title: "t-reports-list", authRequired: true },
   },
   {
   path: `${reportsPrefix}/preview`,
   name: "ReportPreview",
   component: () => import("@/views/ammReports/CompanyHospitalProceduresBalances/ReportPreview.vue"),
-  meta: { title: "Report Preview", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true },
 },
  {
   path: `${reportsPrefix}100002/preview`,
   name: "ReportPreview100002",
   component: () => import("@/views/ammReports/CostPerEmployeeReport/ReportPreview.vue"),
-  meta: { title: "Report Preview", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100003/preview`,
+  name: "ReportPreview100003",
+  component: () => import("@/views/ammReports/ServiceProviderReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100004/preview`,
+  name: "ReportPreview100004",
+  component: () => import("@/views/ammReports/TopServiceTypesByClinicReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
 }
 
 

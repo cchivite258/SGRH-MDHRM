@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { useHospitalProceduresReportStore } from "@/store/reports/companyHospitalProceduresBalancesStore";
-import ReportPreview from "@/components/ammReports/list/HospitalProceduresReport/PreviewReport.vue";
+import { useTopServiceTypesByClinicReportStore } from "@/store/reports/topServiceTypesByClinicReportStore";
+import ReportPreview from "@/components/ammReports/list/TopServiceTypesByClinicReport/PreviewReport.vue";
 import { useRouter } from "vue-router";
 
-const store = useHospitalProceduresReportStore();
+const store = useTopServiceTypesByClinicReportStore();
 const router = useRouter();
 
 const onBackToReports = () => {
@@ -12,7 +12,7 @@ const onBackToReports = () => {
 </script>
 
 <template>
-  <div v-if="store.report">
+  <div v-if="store.report && store.report.length">
     <ReportPreview :report="store.report" />
   </div>
 
