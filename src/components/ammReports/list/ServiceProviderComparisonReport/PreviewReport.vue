@@ -171,6 +171,27 @@ const exportOptions = [
   { title: "Excel", icon: "mdi-file-excel", color: "green", action: () => handleExport("excel") },
   { title: "CSV", icon: "mdi-file-delimited", color: "blue", action: () => handleExport("csv") },
 ];
+
+const getComparisonClass = (row: ComparisonRow, provider: "A" | "B") => {
+  const a = row.providerAAmount;
+  const b = row.providerBAmount;
+  const current = provider === "A" ? a : b;
+  const other = provider === "A" ? b : a;
+
+  if (current === undefined) return "text-grey";
+  if (other === undefined) return "text-red-darken-2";
+  if (current > other) return "text-red-darken-2";
+  return "text-black";
+};
+
+const getTotalComparisonClass = (provider: "A" | "B") => {
+  const a = providerATotal.value;
+  const b = providerBTotal.value;
+  const current = provider === "A" ? a : b;
+  const other = provider === "A" ? b : a;
+  if (current > other) return "text-red-darken-2";
+  return "text-black";
+};
 </script>
 
 <template>
@@ -317,10 +338,10 @@ const exportOptions = [
           <tbody>
             <tr v-for="(row, i) in comparisonRows" :key="i" class="table-row">
               <td class="pa-4">{{ row.procedureName }}</td>
-              <td class="text-right pa-4 text-red-darken-2 font-weight-medium">
+              <td class="text-right pa-4 font-weight-medium" :class="getComparisonClass(row, 'A')">
                 {{ row.providerAAmount !== undefined ? `${amountFormate(row.providerAAmount)} MT` : "-" }}
               </td>
-              <td class="text-right pa-4 text-red-darken-2 font-weight-medium">
+              <td class="text-right pa-4 font-weight-medium" :class="getComparisonClass(row, 'B')">
                 {{ row.providerBAmount !== undefined ? `${amountFormate(row.providerBAmount)} MT` : "-" }}
               </td>
             </tr>
@@ -328,8 +349,8 @@ const exportOptions = [
           <tfoot>
             <tr class="total-row">
               <td class="pa-4 font-weight-bold text-grey-darken-3">{{ $t("t-totals") }}</td>
-              <td class="text-right pa-4 font-weight-bold text-red-darken-2">{{ amountFormate(providerATotal) }} MT</td>
-              <td class="text-right pa-4 font-weight-bold text-red-darken-2">{{ amountFormate(providerBTotal) }} MT</td>
+              <td class="text-right pa-4 font-weight-bold" :class="getTotalComparisonClass('A')">{{ amountFormate(providerATotal) }} MT</td>
+              <td class="text-right pa-4 font-weight-bold" :class="getTotalComparisonClass('B')">{{ amountFormate(providerBTotal) }} MT</td>
             </tr>
           </tfoot>
         </v-table>

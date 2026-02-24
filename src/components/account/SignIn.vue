@@ -3,11 +3,12 @@ import { socialMedias } from "@/components/auth/utils";
 import { ref, computed } from "vue";
 import appConfigs from "@/app/appConfigurations";
 import { authService } from "@/app/http/httpServiceProvider";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { UserType } from "@/app/http/types";
 
 
 const router = useRouter();
+const route = useRoute();
 
 const loading = ref(false);
 const isSubmitted = ref(false);
@@ -21,6 +22,21 @@ const formData = ref({
 const isValidFormData = computed(() => {
   return formData.value.email.isValid && formData.value.password.isValid;
 });
+
+const getRedirectPath = () => {
+  const redirect = route.query.redirect;
+
+  if (typeof redirect !== "string") {
+    return "/";
+  }
+
+  // Aceita apenas rotas internas e evita voltar para páginas de login.
+  if (!redirect.startsWith("/") || redirect.startsWith("/signin") || redirect.startsWith("/auth/signin")) {
+    return "/";
+  }
+
+  return redirect;
+};
 
 const onSignIn = async () => {
   try {
@@ -41,7 +57,7 @@ const onSignIn = async () => {
     if (auth === "authService") {
       const data = await authService.login(payload.email, payload.password);
       if (data) {
-        router.push({ path: "/" });
+        await router.push({ path: getRedirectPath() });
       }
     }
     

@@ -27,6 +27,12 @@ type GroupedRow =
       procedureName: string;
       totalInvoiceItems: number;
       totalBilled: number;
+    }
+  | {
+      type: "providerTotal";
+      providerName: string;
+      totalInvoiceItems: number;
+      totalBilled: number;
     };
 
 const groupedRows = computed<GroupedRow[]>(() => {
@@ -40,13 +46,23 @@ const groupedRows = computed<GroupedRow[]>(() => {
   providersSorted.forEach((provider) => {
     rows.push({ type: "provider", providerName: provider.serviceProviderName || "-" });
     const sorted = [...(provider.details || [])].sort((a, b) => (b.totalBilled || 0) - (a.totalBilled || 0));
+    let providerInvoiceTotal = 0;
+    let providerBilledTotal = 0;
     sorted.forEach((detail) => {
+      providerInvoiceTotal += detail.totalInvoiceItems || 0;
+      providerBilledTotal += detail.totalBilled || 0;
       rows.push({
         type: "detail",
         procedureName: detail.hospitalProcedureTypeName || "-",
         totalInvoiceItems: detail.totalInvoiceItems || 0,
         totalBilled: detail.totalBilled || 0,
       });
+    });
+    rows.push({
+      type: "providerTotal",
+      providerName: provider.serviceProviderName || "-",
+      totalInvoiceItems: providerInvoiceTotal,
+      totalBilled: providerBilledTotal,
     });
   });
   return rows;
@@ -271,9 +287,16 @@ const exportOptions = [
                 </td>
               </template>
               <template v-else>
-                <td class="pa-4">{{ row.procedureName }}</td>
-                <td class="text-right pa-4">{{ row.totalInvoiceItems }}</td>
-                <td class="text-right pa-4 text-red-darken-2 font-weight-medium">{{ amountFormate(row.totalBilled) }} MT</td>
+                <template v-if="row.type === 'providerTotal'">
+                  <td class="pa-4 provider-total-label font-weight-bold">{{ $t("t-totals") }} - {{ row.providerName }}</td>
+                  <td class="text-right pa-4 provider-total-value font-weight-bold">{{ row.totalInvoiceItems }}</td>
+                  <td class="text-right pa-4 provider-total-value font-weight-bold text-red-darken-2">{{ amountFormate(row.totalBilled) }} MT</td>
+                </template>
+                <template v-else>
+                  <td class="pa-4">{{ row.procedureName }}</td>
+                  <td class="text-right pa-4">{{ row.totalInvoiceItems }}</td>
+                  <td class="text-right pa-4 font-weight-medium">{{ amountFormate(row.totalBilled) }} MT</td>
+                </template>
               </template>
             </tr>
           </tbody>
@@ -328,6 +351,8 @@ const exportOptions = [
 .table-row:hover { background-color: #f8f9fa; }
 .total-row { background-color: #f8f9fa; border-top: 2px solid #e0e0e0; }
 .provider-separator { background-color: #eef5ff; color: #1f3a93; }
+.provider-total-label { background-color: #f5f8ff; color: #1f3a93; }
+.provider-total-value { background-color: #f5f8ff; color: #374151; }
 @media print {
   .header-container { border: none; background: none; padding: 0; }
   .v-btn { display: none !important; }

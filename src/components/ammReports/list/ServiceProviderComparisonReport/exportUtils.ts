@@ -129,6 +129,36 @@ export class ServiceProviderComparisonReportExporter {
     return type ? `${name} - ${type}` : name;
   }
 
+  private static getComparisonColor(
+    row: ComparisonRow,
+    provider: "A" | "B"
+  ): [number, number, number] {
+    const red: [number, number, number] = [183, 28, 28];
+    const black: [number, number, number] = [33, 33, 33];
+    const a = row.providerAAmount;
+    const b = row.providerBAmount;
+    const current = provider === "A" ? a : b;
+    const other = provider === "A" ? b : a;
+
+    if (current === undefined) return black;
+    if (other === undefined) return red;
+    if (current > other) return red;
+    return black;
+  }
+
+  private static getTotalsComparisonColor(
+    providerATotal: number,
+    providerBTotal: number,
+    provider: "A" | "B"
+  ): [number, number, number] {
+    const red: [number, number, number] = [183, 28, 28];
+    const black: [number, number, number] = [33, 33, 33];
+    const current = provider === "A" ? providerATotal : providerBTotal;
+    const other = provider === "A" ? providerBTotal : providerATotal;
+    if (current > other) return red;
+    return black;
+  }
+
   static async exportToPDF(
     report: ServiceProviderComparisonReportType,
     userName: string,
@@ -268,6 +298,23 @@ export class ServiceProviderComparisonReportExporter {
         if (data.row.index === tableBody.length - 1) {
           data.cell.styles.fillColor = [248, 249, 250];
           data.cell.styles.fontStyle = "bold";
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = this.getTotalsComparisonColor(providerATotal, providerBTotal, "A");
+          }
+          if (data.column.index === 2) {
+            data.cell.styles.textColor = this.getTotalsComparisonColor(providerATotal, providerBTotal, "B");
+          }
+          return;
+        }
+
+        if (data.row.index >= 0 && data.row.index < rows.length) {
+          const row = rows[data.row.index];
+          if (data.column.index === 1) {
+            data.cell.styles.textColor = this.getComparisonColor(row, "A");
+          }
+          if (data.column.index === 2) {
+            data.cell.styles.textColor = this.getComparisonColor(row, "B");
+          }
         }
       }
     });
@@ -383,6 +430,45 @@ export class ServiceProviderComparisonReportExporter {
 
       if (ws[`B${row}`] && ws[`B${row}`].v !== "-") ws[`B${row}`].z = '#,##0.00" MT"';
       if (ws[`C${row}`] && ws[`C${row}`].v !== "-") ws[`C${row}`].z = '#,##0.00" MT"';
+
+      if (!isTotals) {
+        const rowData = rows[row - tableStartRow];
+        const colorA = this.getComparisonColor(rowData, "A");
+        const colorB = this.getComparisonColor(rowData, "B");
+        const toRgbHex = (color: [number, number, number]) =>
+          color.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+
+        if (ws[`B${row}`]) {
+          ws[`B${row}`].s = {
+            ...(ws[`B${row}`].s || {}),
+            font: { bold: false, color: { rgb: toRgbHex(colorA) } }
+          };
+        }
+        if (ws[`C${row}`]) {
+          ws[`C${row}`].s = {
+            ...(ws[`C${row}`].s || {}),
+            font: { bold: false, color: { rgb: toRgbHex(colorB) } }
+          };
+        }
+      } else {
+        const toRgbHex = (color: [number, number, number]) =>
+          color.map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+        const totalsColorA = this.getTotalsComparisonColor(providerATotal, providerBTotal, "A");
+        const totalsColorB = this.getTotalsComparisonColor(providerATotal, providerBTotal, "B");
+
+        if (ws[`B${row}`]) {
+          ws[`B${row}`].s = {
+            ...(ws[`B${row}`].s || {}),
+            font: { bold: true, color: { rgb: toRgbHex(totalsColorA) } }
+          };
+        }
+        if (ws[`C${row}`]) {
+          ws[`C${row}`].s = {
+            ...(ws[`C${row}`].s || {}),
+            font: { bold: true, color: { rgb: toRgbHex(totalsColorB) } }
+          };
+        }
+      }
     }
 
     ws["!autofilter"] = { ref: `A4:C${totalsRow}` };

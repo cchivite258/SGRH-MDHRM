@@ -239,29 +239,35 @@ export class TopServiceTypesByClinicReportExporter {
     pdf.setTextColor(0, 0, 0);
     pdf.text(this.tr("t-tsbc-detailed-section"), margin, currentY);
 
-    const tableBody = rows.flatMap((row, index, allRows) => {
-      const output: any[] = [];
-      if (index === 0 || allRows[index - 1].providerName !== row.providerName) {
-        output.push([
-          {
-            content: `${this.tr("t-service-provider")}: ${row.providerName}`,
-            colSpan: 4,
-            styles: {
-              fillColor: [238, 245, 255],
-              textColor: [31, 58, 147],
-              fontStyle: "bold"
-            }
+    const tableBody: any[] = [];
+    sortedReport.forEach((provider) => {
+      tableBody.push([
+        {
+          content: `${this.tr("t-service-provider")}: ${provider.serviceProviderName || this.tr("t-spr-na")}`,
+          colSpan: 3,
+          styles: {
+            fillColor: [238, 245, 255],
+            textColor: [31, 58, 147],
+            fontStyle: "bold"
           }
-        ]);
-      }
+        }
+      ]);
 
-        output.push([
-          row.procedureName,
-          String(row.totalInvoiceItems),
-          `${amountFormate(row.totalBilled)} MT`
+      (provider.details || []).forEach((detail) => {
+        tableBody.push([
+          detail.hospitalProcedureTypeName || this.tr("t-spr-na"),
+          String(detail.totalInvoiceItems || 0),
+          `${amountFormate(detail.totalBilled || 0)} MT`
         ]);
+      });
 
-      return output;
+      const providerInvoiceTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalInvoiceItems || 0), 0);
+      const providerBilledTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalBilled || 0), 0);
+      tableBody.push([
+        `${this.tr("t-totals").toUpperCase()} - ${provider.serviceProviderName || this.tr("t-spr-na")}`,
+        String(providerInvoiceTotal),
+        `${amountFormate(providerBilledTotal)} MT`
+      ]);
     });
 
     tableBody.push([
@@ -299,9 +305,20 @@ export class TopServiceTypesByClinicReportExporter {
         2: { cellWidth: 35, halign: "right" }
       },
       didParseCell: (data: any) => {
+        const rowLabel = data.row?.raw?.[0]?.content || data.row?.raw?.[0] || "";
+        const isProviderSubtotal = typeof rowLabel === "string" && rowLabel.startsWith(`${this.tr("t-totals").toUpperCase()} - `);
         if (data.row.index === tableBody.length - 1) {
           data.cell.styles.fillColor = [248, 249, 250];
           data.cell.styles.fontStyle = "bold";
+          if (data.column.index === 2) {
+            data.cell.styles.textColor = [183, 28, 28];
+          }
+        } else if (isProviderSubtotal) {
+          data.cell.styles.fillColor = [245, 248, 255];
+          data.cell.styles.fontStyle = "bold";
+          if (data.column.index === 2) {
+            data.cell.styles.textColor = [183, 28, 28];
+          }
         }
       }
     });
@@ -353,15 +370,25 @@ export class TopServiceTypesByClinicReportExporter {
       ["", "", "", "", ""],
       [this.tr("t-tsbc-detailed-section").toUpperCase(), "", "", "", ""],
       [this.tr("t-procedure"), this.tr("t-total-invoices"), `${this.tr("t-billed-amount")} (MT)`, "", ""],
-      ...rows.flatMap((r, index, arr) => {
+      ...sortedReport.flatMap((provider) => {
         const out: string[][] = [];
-        if (index === 0 || arr[index - 1].providerName !== r.providerName) {
-          out.push([`${this.tr("t-service-provider")}: ${r.providerName}`, "", "", "", ""]);
-        }
+        const providerName = provider.serviceProviderName || this.tr("t-spr-na");
+        out.push([`${this.tr("t-service-provider")}: ${providerName}`, "", "", "", ""]);
+        (provider.details || []).forEach((detail) => {
+          out.push([
+            detail.hospitalProcedureTypeName || this.tr("t-spr-na"),
+            String(detail.totalInvoiceItems || 0),
+            String(detail.totalBilled || 0),
+            "",
+            ""
+          ]);
+        });
+        const providerInvoiceTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalInvoiceItems || 0), 0);
+        const providerBilledTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalBilled || 0), 0);
         out.push([
-          r.procedureName,
-          String(r.totalInvoiceItems),
-          String(r.totalBilled),
+          `${this.tr("t-totals").toUpperCase()} - ${providerName}`,
+          String(providerInvoiceTotal),
+          String(providerBilledTotal),
           "",
           ""
         ]);
@@ -420,8 +447,9 @@ export class TopServiceTypesByClinicReportExporter {
       const e = `E${row}`;
       const rowLabel = ws[a]?.v ? String(ws[a].v) : "";
       const isProviderSeparator = rowLabel.startsWith(`${this.tr("t-service-provider")}:`);
+      const isProviderTotal = rowLabel.startsWith(`${this.tr("t-totals").toUpperCase()} - `);
       const isTotals = rowLabel === this.tr("t-totals").toUpperCase();
-      const isAlt = !isProviderSeparator && !isTotals && row % 2 === 0;
+      const isAlt = !isProviderSeparator && !isProviderTotal && !isTotals && row % 2 === 0;
 
       if (isProviderSeparator) {
         if (ws[a]) {
@@ -436,6 +464,23 @@ export class TopServiceTypesByClinicReportExporter {
         if (ws[c]) ws[c].s = { fill: { fgColor: { rgb: "EAF3FF" } }, border: borderStyle };
         if (ws[d]) ws[d].s = { fill: { fgColor: { rgb: "EAF3FF" } }, border: borderStyle };
         if (ws[e]) ws[e].s = { fill: { fgColor: { rgb: "EAF3FF" } }, border: borderStyle };
+        continue;
+      }
+
+      if (isProviderTotal) {
+        const providerTotalStyle = {
+          fill: { fgColor: { rgb: "F5F8FF" } },
+          border: borderStyle,
+          alignment: { horizontal: "left", vertical: "center" },
+          font: { bold: true, color: { rgb: "1F3A93" } }
+        };
+        if (ws[a]) ws[a].s = providerTotalStyle;
+        if (ws[b]) ws[b].s = { ...providerTotalStyle, alignment: { horizontal: "right", vertical: "center" } };
+        if (ws[c]) ws[c].s = { ...providerTotalStyle, alignment: { horizontal: "right", vertical: "center" }, font: { bold: true, color: { rgb: "B71C1C" } } };
+        if (ws[d]) ws[d].s = { ...providerTotalStyle };
+        if (ws[e]) ws[e].s = { ...providerTotalStyle };
+        if (ws[b]) ws[b].z = "0";
+        if (ws[c]) ws[c].z = '#,##0.00" MT"';
         continue;
       }
 
@@ -489,11 +534,15 @@ export class TopServiceTypesByClinicReportExporter {
     csvContent += `${this.tr("t-tsbc-detailed-section").toUpperCase()}\n${line}\n`;
     csvContent += `${this.tr("t-procedure")},${this.tr("t-total-invoices")},${this.tr("t-billed-amount")} (MT)\n`;
 
-    rows.forEach((r, index, arr) => {
-      if (index === 0 || arr[index - 1].providerName !== r.providerName) {
-        csvContent += `\n${this.tr("t-service-provider")}: ${r.providerName}\n`;
-      }
-      csvContent += `${r.procedureName},${r.totalInvoiceItems},${r.totalBilled}\n`;
+    sortedReport.forEach((provider) => {
+      const providerName = provider.serviceProviderName || this.tr("t-spr-na");
+      csvContent += `\n${this.tr("t-service-provider")}: ${providerName}\n`;
+      (provider.details || []).forEach((detail) => {
+        csvContent += `${detail.hospitalProcedureTypeName || this.tr("t-spr-na")},${detail.totalInvoiceItems || 0},${detail.totalBilled || 0}\n`;
+      });
+      const providerInvoiceTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalInvoiceItems || 0), 0);
+      const providerBilledTotal = (provider.details || []).reduce((sum, x) => sum + (x.totalBilled || 0), 0);
+      csvContent += `${this.tr("t-totals").toUpperCase()} - ${providerName},${providerInvoiceTotal},${providerBilledTotal}\n`;
     });
 
     csvContent += `${this.tr("t-totals").toUpperCase()},-,${totalAmount}\n\n`;

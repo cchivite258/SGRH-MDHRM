@@ -29,7 +29,11 @@ router.beforeEach((to, from, next) => {
 
   const hasToken = !!getAccessToken();
   if (!hasToken) {
-    return next("/signin");
+    // Guarda a rota protegida pedida para voltar após login.
+    return next({
+      path: "/signin",
+      query: { redirect: to.fullPath },
+    });
   }
 
   next();
