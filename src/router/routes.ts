@@ -216,6 +216,12 @@ const ammReportRoutes = [
   name: "ReportPreview100004",
   component: () => import("@/views/ammReports/TopServiceTypesByClinicReport/ReportPreview.vue"),
   meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100005/preview`,
+  name: "ReportPreview100005",
+  component: () => import("@/views/ammReports/ServiceProviderComparisonReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
 }
 
 

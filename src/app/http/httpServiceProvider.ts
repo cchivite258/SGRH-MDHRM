@@ -32,6 +32,7 @@ import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammRep
 import CostPerEmployeeService from "@/app/http/services/ammReports/CostPerEmployeeService";
 import ServiceProviderReportService from "@/app/http/services/ammReports/serviceProviderReportService";
 import TopServiceTypesByClinicReportService from "@/app/http/services/ammReports/topServiceTypesByClinicReportService";
+import ServiceProviderComparisonReportService from "@/app/http/services/ammReports/serviceProviderComparisonReportService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -59,6 +60,7 @@ const companyHospitalProceduresBalancesService = new CompanyHospitalProceduresBa
 const costPerEmployeeService = new CostPerEmployeeService();
 const serviceProviderReportService = new ServiceProviderReportService();
 const topServiceTypesByClinicReportService = new TopServiceTypesByClinicReportService();
+const serviceProviderComparisonReportService = new ServiceProviderComparisonReportService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -103,5 +105,6 @@ export {
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,
     serviceProviderReportService,
-    topServiceTypesByClinicReportService
+    topServiceTypesByClinicReportService,
+    serviceProviderComparisonReportService
 };

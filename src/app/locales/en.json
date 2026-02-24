@@ -483,6 +483,7 @@
   "t-report-100002-title": "Cost per Employee",
   "t-report-100003-title": "Report by Service Provider",
   "t-report-100004-title": "Most Performed Service Types by Service Provider",
+  "t-report-100005-title": "Service Provider Comparison",
   "t-print": "Print",
   "t-preparing": "Preparing...",
   "t-coverage-period": "Coverage Period",
@@ -563,5 +564,12 @@
   "t-tsbc-summary": "SUMMARY",
   "t-tsbc-detailed-section": "DETAILED PROCEDURES",
   "t-tsbc-sheet": "Service Types by Service Provider",
+  "t-spc-report-title": "Service Provider Comparison",
+  "t-spc-detailed-section": "COMPARISON DETAILS",
+  "t-spc-sheet": "Provider Comparison",
+  "t-spc-provider-1": "Service Provider 1",
+  "t-spc-provider-2": "Service Provider 2",
+  "t-spc-providers-must-differ": "Please select different service providers",
+  "t-spc-difference": "Difference",
   "t-clinic": "Clinic"
 }

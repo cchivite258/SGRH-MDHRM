@@ -87,3 +87,13 @@ export type TopServiceTypesByClinicFilterType = {
 };
 
 export type TopServiceTypesByClinicReportType = ServiceProviderReportType[];
+
+export type ServiceProviderComparisonFilterType = {
+  serviceProvider1Id?: string | number;
+  serviceProvider2Id?: string | number;
+  coveragePeriodId?: string | number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
+export type ServiceProviderComparisonReportType = ServiceProviderReportType[];

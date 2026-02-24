@@ -1025,6 +1025,7 @@
   "t-report-100002-title": "Custo por colaborador",
   "t-report-100003-title": "Relatório por provedor de serviço",
   "t-report-100004-title": "Tipos de serviço mais realizados por provedor de serviço",
+  "t-report-100005-title": "Comparação entre provedores de serviço",
   "t-preview": "Pré-visualizar",
   "t-generate": "Gerar",
   "t-filters": "Filtros",
@@ -1178,6 +1179,13 @@
   "t-tsbc-summary": "RESUMO",
   "t-tsbc-detailed-section": "PROCEDIMENTOS DETALHADOS",
   "t-tsbc-sheet": "Tipos Serviço por Provedor de Serviço",
+  "t-spc-report-title": "Comparação entre Provedores de Serviço",
+  "t-spc-detailed-section": "DETALHE DA COMPARAÇÃO",
+  "t-spc-sheet": "Comparacao de Provedores",
+  "t-spc-provider-1": "Provedor de Serviço 1",
+  "t-spc-provider-2": "Provedor de Serviço 2",
+  "t-spc-providers-must-differ": "Selecione provedores de serviço diferentes",
+  "t-spc-difference": "Diferença",
   "t-clinic": "Clínica",
   "t-clinics": "Clínicas"
 }
