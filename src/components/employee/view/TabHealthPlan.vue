@@ -139,7 +139,10 @@ watch(dialog, (newVal: boolean) => {
  * Prepara dados para visualização
  */
 const onViewClick = (data: HealthPlanListingType) => {
- router.push(`/employee/healthPlan/view/${data.id}`);
+ router.push({
+  path: `/employee/healthPlan/view/${data.id}`,
+  query: { employeeId: employeeId.value || undefined, tab: "4" }
+ });
 };
 
 // Limpeza ao desmontar

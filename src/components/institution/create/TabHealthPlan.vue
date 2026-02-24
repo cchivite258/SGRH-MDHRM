@@ -333,7 +333,10 @@ const onSubmitClone = async (
  * Prepara exclusão de contato
  */
 const onEdit = (id: string) => {
-  router.push(`/institution/healthPlan/${id}`);
+  router.push({
+    path: `/institution/healthPlan/${id}`,
+    query: { institutionId: institutionId.value || undefined, tab: "3" }
+  });
 };
 
 /**
@@ -347,7 +350,10 @@ watch(viewDialog, (newVal: boolean) => {
 const onViewClick = (data: HealthPlanListingType) => {
   //healthPlanDataView.value = { ...data };
   //viewDialog.value = true;
-   router.push(`/institution/healthPlan/view/${data.id}`);
+   router.push({
+    path: `/institution/healthPlan/view/${data.id}`,
+    query: { institutionId: institutionId.value || undefined, tab: "3" }
+  });
 };
 
 /**

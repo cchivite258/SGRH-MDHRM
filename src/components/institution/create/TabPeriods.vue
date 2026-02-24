@@ -340,7 +340,10 @@ const onConfirmStart = async () => {
 
 const onEditClick = async (coveragePeriodId: string) => {
   console.log("Navigating to edit coverage period:------------------", coveragePeriodId);
-  await router.push(`/institution/coveragePeriod/${coveragePeriodId}`);
+  await router.push({
+    path: `/institution/coveragePeriod/${coveragePeriodId}`,
+    query: { institutionId: institutionId.value || undefined, tab: "2" }
+  });
 }
 
 /**
@@ -355,7 +358,10 @@ const onViewClick = async (coveragePeriodId: string) => {
   //coveragePeriodData.value = { ...data };
   //viewDialog.value = true;
   console.log("Navigating to view coverage period:------------------", coveragePeriodId);
-  await router.push(`/institution/coveragePeriod/view/${coveragePeriodId}`);
+  await router.push({
+    path: `/institution/coveragePeriod/view/${coveragePeriodId}`,
+    query: { institutionId: institutionId.value || undefined, tab: "2" }
+  });
 };
 
 /**
