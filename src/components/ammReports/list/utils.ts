@@ -47,6 +47,26 @@ export const reports: ReportType[] = [
     img: "ph-file-text ph-lg",
     title: "report-100005-title",
   },
+  {
+    id: "100006",
+    img: "ph-file-text ph-lg",
+    title: "report-100006-title",
+  },
+  {
+    id: "100007",
+    img: "ph-file-text ph-lg",
+    title: "report-100007-title",
+  },
+  {
+    id: "100008",
+    img: "ph-file-text ph-lg",
+    title: "report-100008-title",
+  },
+  {
+    id: "100009",
+    img: "ph-file-text ph-lg",
+    title: "report-100009-title",
+  },
 ];
 
 export const reportAction: OptionType[] = [

@@ -30,6 +30,8 @@ const logAuthFlow = (step: string, payload?: unknown) => {
   console.log(`[AUTH_FLOW][${timestamp}] ${step}`);
 };
 
+logAuthFlow("axios.ts loaded (interceptors active)");
+
 const maskToken = (token: string | null | undefined) => {
   if (!token) {
     return null;
@@ -91,7 +93,7 @@ const refreshAccessToken = async () => {
   }
 
   logAuthFlow("Calling /auth/refresh-token");
-  const { data } = await axios.post(`${appConfigs.baseUrl}/auth/refresh-token`, { refreshToken });
+  const { data } = await axios.post(`${appConfigs.baseUrl}auth/refresh-token`, { refreshToken });
   const newAccessToken = data?.data?.token as string | undefined;
   const newRefreshToken = data?.data?.refreshToken as string | undefined;
 
@@ -114,6 +116,12 @@ const refreshAccessToken = async () => {
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
+    logAuthFlow("Request interceptor", {
+      method: config.method,
+      url: config.url,
+      hasAccessToken: !!token,
+      accessToken: maskToken(token),
+    });
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

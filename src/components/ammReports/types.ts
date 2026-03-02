@@ -64,6 +64,7 @@ export type CompanyCostPerEmployeeReportType = {
 }
 
 export type ServiceProviderReportType = {
+  companyId?: string | number;
   serviceProviderId?: string | number;
   coveragePeriodId?: string | number;
   serviceProviderName?: string;
@@ -81,14 +82,56 @@ export type ServiceProviderReportType = {
   }[];
 };
 
+export type TotalBilledByProviderFilterType = {
+  companyId?: string | number;
+  serviceProviderId?: string | number;
+  coveragePeriodId?: string | number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
+export type TotalBilledByProviderReportType = {
+  serviceProviderId?: string | number;
+  serviceProviderName?: string;
+  serviceProviderTypeName?: string;
+  companyId?: string | number;
+  companyName?: string;
+  totalBilled?: number;
+  totalEmployees?: number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
 export type TopServiceTypesByClinicFilterType = {
+  companyId?: string | number;
   startDate?: Date | string;
   endDate?: Date | string;
 };
 
 export type TopServiceTypesByClinicReportType = ServiceProviderReportType[];
 
+export type TotalBilledMedicalAssistanceFilterType = {
+  companyId?: string | number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
+export type TotalBilledMedicalAssistanceItemType = {
+  serviceProviderId?: string | number;
+  serviceProviderName?: string;
+  serviceProviderTypeName?: string;
+  companyId?: string | number;
+  companyName?: string;
+  totalBilled?: number;
+  totalEmployees?: number;
+  startDate?: Date | string;
+  endDate?: Date | string;
+};
+
+export type TotalBilledMedicalAssistanceReportType = TotalBilledMedicalAssistanceItemType[];
+
 export type ServiceProviderComparisonFilterType = {
+  companyId?: string | number;
   serviceProvider1Id?: string | number;
   serviceProvider2Id?: string | number;
   coveragePeriodId?: string | number;
@@ -97,3 +140,77 @@ export type ServiceProviderComparisonFilterType = {
 };
 
 export type ServiceProviderComparisonReportType = ServiceProviderReportType[];
+
+export type CompanyEmployeeLimitsFilterType = {
+  companyId?: string | number;
+  coveragePeriodId?: string | number;
+};
+
+export type CompanyEmployeeLimitMonthlyDetailType = {
+  year?: number;
+  month?: number;
+  totalAmount?: number;
+};
+
+export type CompanyEmployeeLimitEmployeeType = {
+  employeeId?: string;
+  employeeFirstName?: string;
+  employeeLastName?: string;
+  departmentName?: string;
+  positionName?: string;
+  employeeBaseSalary?: number;
+  employeeGrossSalary?: number;
+  companyHealthPlanId?: string;
+  healthPlanLimit?: string;
+  fixedAmount?: number;
+  salaryComponent?: string;
+  companyContributionPercentage?: number;
+  employeeHireDate?: string;
+  employeeContractDurationType?: string;
+  employeeTerminateDate?: string;
+  monthlyDetails?: CompanyEmployeeLimitMonthlyDetailType[];
+};
+
+export type CompanyEmployeeLimitsReportType = {
+  companyId?: number | string;
+  companyName?: string;
+  coveragePeriodId?: number | string;
+  coveragePeriodName?: string;
+  coveragePeriodStartDate?: string;
+  coveragePeriodEndDate?: string;
+  employees?: CompanyEmployeeLimitEmployeeType[];
+};
+
+export type EmployeeExpenseStatementFilterType = {
+  companyId?: string | number;
+  coveragePeriodId?: string | number;
+  employeeId?: string;
+};
+
+export type EmployeeExpenseStatementDetailType = {
+  invoiceId?: string;
+  serviceProviderId?: string | number;
+  serviceProviderName?: string;
+  authorizedBy?: string;
+  invoiceTotalAmount?: number;
+  hospitalProcedureTypeName?: string[];
+};
+
+export type EmployeeExpenseStatementReportType = {
+  employeeId?: string;
+  employeeFirstName?: string;
+  employeeLastName?: string;
+  employeePositionId?: string | number;
+  employeePositionName?: string;
+  employeeDepartmentId?: string | number;
+  employeeDepartmentName?: string;
+  companyId?: string | number;
+  companyName?: string;
+  coveragePeriodId?: string | number;
+  coveragePeriodName?: string;
+  details?: EmployeeExpenseStatementDetailType[];
+  totalAmount?: number;
+  totalByCompany?: number;
+  totalByEmployee?: number;
+  totalToBeDesconted?: number;
+};

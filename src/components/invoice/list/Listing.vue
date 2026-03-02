@@ -305,6 +305,11 @@ const formatAmount = (amount: number | string) => {
     maximumFractionDigits: 2
   }).format(num);
 };
+
+const hasFlaggedItems = (invoice: InvoiceListingType) => invoice.areItemsFlagged === true;
+
+const shouldHighlight = (invoice: InvoiceListingType) =>
+  invoice.flag !== 'UNFLAGGED' || hasFlaggedItems(invoice);
 </script>
 <template>
   <Card :title="$t('t-invoice-list')" class="mt-7">
@@ -333,13 +338,21 @@ const formatAmount = (amount: number | string) => {
         :loading="loading" :search-query="searchQuery" @load-items="fetchInvoices" item-value="id"
         show-select>
         <template #body="{ items }: { items: readonly unknown[] }">
-          <tr v-for="item in items as InvoiceListingType[]" :key="item.id" :class="[item.flag !== 'UNFLAGGED' ? 'bg-danger-subtle' : '']" >
+          <tr v-for="item in items as InvoiceListingType[]" :key="item.id" :class="[shouldHighlight(item) ? 'bg-danger-subtle' : '']" >
             <td>
               <v-checkbox :model-value="selectedInvoices.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
             <td class="text-primary cursor-pointer" @click="onView(item.id)">
-              {{ item.invoiceNumber || 'N/A' }}
+              <div class="d-flex align-center ga-2">
+                <span>{{ item.invoiceNumber || 'N/A' }}</span>
+                <v-tooltip v-if="hasFlaggedItems(item)" location="top">
+                  <template #activator="{ props }">
+                    <i v-bind="props" class="ph ph-warning-circle text-danger" />
+                  </template>
+                  <span>{{ $t('t-items-flagged') }}</span>
+                </v-tooltip>
+              </div>
             </td>
             <td>{{ item.employee?.firstName || 'N/A' }} {{ item.employee?.lastName || 'N/A' }} </td>
             <td>{{ item.serviceProvider?.name || 'N/A' }}</td>

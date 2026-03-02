@@ -131,6 +131,7 @@ const onSubmit = async () => {
   }
 
   const payload: ServiceProviderComparisonFilterType = {
+    companyId: companyId.value,
     serviceProvider1Id: serviceProvider1Id.value,
     serviceProvider2Id: serviceProvider2Id.value,
     coveragePeriodId: filterType.value === "1" ? coveragePeriodId.value : undefined,

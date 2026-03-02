@@ -222,6 +222,30 @@ const ammReportRoutes = [
   name: "ReportPreview100005",
   component: () => import("@/views/ammReports/ServiceProviderComparisonReport/ReportPreview.vue"),
   meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100006/preview`,
+  name: "ReportPreview100006",
+  component: () => import("@/views/ammReports/CompanyEmployeeLimitsReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100007/preview`,
+  name: "ReportPreview100007",
+  component: () => import("@/views/ammReports/TotalBilledMedicalAssistanceReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100008/preview`,
+  name: "ReportPreview100008",
+  component: () => import("@/views/ammReports/TotalBilledByProviderReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100009/preview`,
+  name: "ReportPreview100009",
+  component: () => import("@/views/ammReports/EmployeeExpenseStatementReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
 }
 
 

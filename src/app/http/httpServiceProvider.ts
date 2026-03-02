@@ -33,6 +33,10 @@ import CostPerEmployeeService from "@/app/http/services/ammReports/CostPerEmploy
 import ServiceProviderReportService from "@/app/http/services/ammReports/serviceProviderReportService";
 import TopServiceTypesByClinicReportService from "@/app/http/services/ammReports/topServiceTypesByClinicReportService";
 import ServiceProviderComparisonReportService from "@/app/http/services/ammReports/serviceProviderComparisonReportService";
+import CompanyEmployeeLimitsReportService from "@/app/http/services/ammReports/companyEmployeeLimitsReportService";
+import TotalBilledMedicalAssistanceReportService from "@/app/http/services/ammReports/totalBilledMedicalAssistanceReportService";
+import TotalBilledByProviderReportService from "@/app/http/services/ammReports/totalBilledByProviderReportService";
+import EmployeeExpenseStatementReportService from "@/app/http/services/ammReports/employeeExpenseStatementReportService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -61,6 +65,10 @@ const costPerEmployeeService = new CostPerEmployeeService();
 const serviceProviderReportService = new ServiceProviderReportService();
 const topServiceTypesByClinicReportService = new TopServiceTypesByClinicReportService();
 const serviceProviderComparisonReportService = new ServiceProviderComparisonReportService();
+const companyEmployeeLimitsReportService = new CompanyEmployeeLimitsReportService();
+const totalBilledMedicalAssistanceReportService = new TotalBilledMedicalAssistanceReportService();
+const totalBilledByProviderReportService = new TotalBilledByProviderReportService();
+const employeeExpenseStatementReportService = new EmployeeExpenseStatementReportService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -106,5 +114,9 @@ export {
     costPerEmployeeService,
     serviceProviderReportService,
     topServiceTypesByClinicReportService,
-    serviceProviderComparisonReportService
+    serviceProviderComparisonReportService,
+    companyEmployeeLimitsReportService,
+    totalBilledMedicalAssistanceReportService,
+    totalBilledByProviderReportService,
+    employeeExpenseStatementReportService
 };

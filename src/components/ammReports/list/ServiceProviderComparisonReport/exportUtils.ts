@@ -1,4 +1,4 @@
-﻿import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { ServiceProviderComparisonReportType, ServiceProviderReportType } from "@/components/ammReports/types";
@@ -176,6 +176,7 @@ export class ServiceProviderComparisonReportExporter {
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 15;
+    const generatedAt = this.getCurrentDateTime();
 
     let currentY = margin;
 
@@ -187,9 +188,7 @@ export class ServiceProviderComparisonReportExporter {
     pdf.setFont("helvetica", "normal");
     pdf.text(`${this.tr("t-report")} #100005 - ${this.tr("t-report-100005-title")}`, margin, currentY + 6);
 
-    const dateText = `${this.tr("t-spr-generated-at")}: ${this.getCurrentDateTime()}`;
     const userText = `${this.tr("t-spr-by")}: ${userName || this.tr("t-spr-system-user")}`;
-    pdf.text(dateText, pageWidth - margin - pdf.getTextWidth(dateText), currentY + 6);
     pdf.text(userText, pageWidth - margin - pdf.getTextWidth(userText), currentY + 12);
 
     pdf.setDrawColor(180, 180, 180);
@@ -198,54 +197,114 @@ export class ServiceProviderComparisonReportExporter {
 
     currentY = 40;
 
-    const cardWidth = (pageWidth - margin * 2 - 15) / 3;
-    const cardHeight = 34;
+    const gap = 5;
+    const cardWidth = (pageWidth - margin * 2 - (gap * 2)) / 3;
+    const cardHeight = 40;
 
-    pdf.setFillColor(248, 249, 250);
-    pdf.rect(margin, currentY, cardWidth, cardHeight, "F");
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(66, 66, 66);
-    pdf.text(this.tr("t-spc-provider-1"), margin + 6, currentY + 7);
-    pdf.setFontSize(7);
-    pdf.setFont("helvetica", "normal");
-    pdf.text((providerA?.serviceProviderName || "-").slice(0, 28), margin + 6, currentY + 14);
-    pdf.text((providerA?.serviceProviderTypeName || "").slice(0, 28), margin + 6, currentY + 20);
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(`${amountFormate(providerATotal)} MT`, margin + 6, currentY + 29);
+    const drawCard = (
+      x: number,
+      y: number,
+      iconBg: [number, number, number],
+      title: string,
+      headline: string,
+      lines: string[],
+      headlineColor: [number, number, number] = [55, 71, 79]
+    ) => {
+      const maxTextWidth = cardWidth - 18;
+      const fitSingleLine = (text: string, fontSize: number): string => {
+        pdf.setFontSize(fontSize);
+        let output = text || "";
+        while (pdf.getTextWidth(output) > maxTextWidth && output.length > 1) {
+          output = `${output.slice(0, -2)}...`;
+        }
+        return output;
+      };
+      const fitMultiLines = (text: string, fontSize: number, maxLines: number): string[] => {
+        pdf.setFontSize(fontSize);
+        const split = pdf.splitTextToSize(text || "", maxTextWidth) as string[];
+        if (split.length <= maxLines) return split;
+        const clipped = split.slice(0, maxLines);
+        clipped[maxLines - 1] = fitSingleLine(clipped[maxLines - 1], fontSize);
+        return clipped;
+      };
 
-    const card2X = margin + cardWidth + 7.5;
-    pdf.setFillColor(255, 235, 238);
-    pdf.rect(card2X, currentY, cardWidth, cardHeight, "F");
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(66, 66, 66);
-    pdf.text(this.tr("t-spc-provider-2"), card2X + 6, currentY + 7);
-    pdf.setFontSize(7);
-    pdf.setFont("helvetica", "normal");
-    pdf.text((providerB?.serviceProviderName || "").slice(0, 28), card2X + 6, currentY + 14);
-    pdf.text((providerB?.serviceProviderTypeName || "").slice(0, 28), card2X + 6, currentY + 20);
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.text(`${amountFormate(providerBTotal)} MT`, card2X + 6, currentY + 29);
+      pdf.setDrawColor(225, 229, 235);
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(x, y, cardWidth, cardHeight, 2, 2, "FD");
+      pdf.setFillColor(iconBg[0], iconBg[1], iconBg[2]);
+      pdf.roundedRect(x + 4, y + 4, 8, 8, 1.5, 1.5, "F");
 
-    const card3X = card2X + cardWidth + 7.5;
-    pdf.setFillColor(241, 248, 233);
-    pdf.rect(card3X, currentY, cardWidth, cardHeight, "F");
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(46, 125, 50);
-    pdf.text(this.tr("t-spc-difference"), card3X + 6, currentY + 7);
-    pdf.setFontSize(7);
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(90, 90, 90);
-    pdf.text(`${this.tr("t-start-period")}: ${period.start}`, card3X + 6, currentY + 14);
-    pdf.text(`${this.tr("t-end-period")}: ${period.end}`, card3X + 6, currentY + 20);
-    pdf.setFontSize(8);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(27, 94, 32);
-    pdf.text(`${amountFormate(Math.abs(providerATotal - providerBTotal))} MT`, card3X + 6, currentY + 29);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(fitSingleLine(title, 7), x + 14, y + 7);
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.setTextColor(headlineColor[0], headlineColor[1], headlineColor[2]);
+      const headlineLines = fitMultiLines(headline, 10, 2);
+      const headlineStartY = y + 12;
+      const headlineLineHeight = 4.2;
+      pdf.text(headlineLines, x + 14, headlineStartY);
+
+      const dividerY = Math.min(headlineStartY + ((headlineLines.length - 1) * headlineLineHeight) + 3, y + cardHeight - 12);
+      pdf.setDrawColor(236, 239, 244);
+      pdf.line(x + 3, dividerY, x + cardWidth - 3, dividerY);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(90, 90, 90);
+      let lineY = dividerY + 5;
+      lines.forEach((line) => {
+        const contentLines = fitMultiLines(line, 7, 2);
+        contentLines.forEach((contentLine) => {
+          if (lineY <= (y + cardHeight - 3)) {
+            pdf.text(contentLine, x + 4, lineY);
+            lineY += 4.2;
+          }
+        });
+        lineY += 0.8;
+      });
+    };
+
+    drawCard(
+      margin,
+      currentY,
+      [227, 242, 253],
+      this.tr("t-spc-provider-1"),
+      providerA?.serviceProviderName || "-",
+      [
+        providerA?.serviceProviderTypeName || "",
+        `${amountFormate(providerATotal)} MT`
+      ]
+    );
+
+    const card2X = margin + cardWidth + gap;
+    drawCard(
+      card2X,
+      currentY,
+      [255, 235, 238],
+      this.tr("t-spc-provider-2"),
+      providerB?.serviceProviderName || "-",
+      [
+        providerB?.serviceProviderTypeName || "",
+        `${amountFormate(providerBTotal)} MT`
+      ]
+    );
+
+    const card3X = card2X + cardWidth + gap;
+    drawCard(
+      card3X,
+      currentY,
+      [241, 248, 233],
+      this.tr("t-spc-difference"),
+      `${amountFormate(Math.abs(providerATotal - providerBTotal))} MT`,
+      [
+        `${this.tr("t-start-period")}: ${period.start}`,
+        `${this.tr("t-end-period")}: ${period.end}`
+      ],
+      [27, 94, 32]
+    );
 
     currentY += cardHeight + 10;
 
@@ -335,9 +394,11 @@ export class ServiceProviderComparisonReportExporter {
       const footerText = this.tr("t-spr-system-footer");
       const pageText = this.tr("t-spr-page-of", { current: i, total: totalPages });
       const dateFooter = `${this.tr("t-spr-date")}: ${this.getCurrentDate()}`;
+      const generatedText = `${this.tr("t-spr-generated-at")}: ${generatedAt}`;
       const userFooter = `${this.tr("t-spr-user")}: ${userName || this.tr("t-spr-system-user")}`;
 
       pdf.text(footerText, margin, footerY - 5);
+      pdf.text(generatedText, margin, footerY - 12);
       pdf.text(pageText, pageWidth - margin - pdf.getTextWidth(pageText), footerY - 5);
       pdf.text(dateFooter, pageWidth - margin - pdf.getTextWidth(dateFooter), footerY - 12);
       pdf.text(userFooter, pageWidth - margin - pdf.getTextWidth(userFooter), footerY - 19);
@@ -530,3 +591,4 @@ export class ServiceProviderComparisonReportExporter {
     window.URL.revokeObjectURL(url);
   }
 }
+

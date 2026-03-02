@@ -40,6 +40,7 @@ export type InvoiceListingType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     flag?: string;
+    areItemsFlagged?: boolean;
     enable: boolean;
     createdAt: Date ;
     updatedAt: Date | null;
@@ -88,6 +89,7 @@ export type InvoiceResponseType = {
     };
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    areItemsFlagged?: boolean;
     enable: boolean;
     createdAt: Date ;
     updatedAt: Date | null;

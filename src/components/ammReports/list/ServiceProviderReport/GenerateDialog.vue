@@ -156,6 +156,7 @@ const onSubmit = async (exportType: ExportType = 'pdf') => {
 
   try {
     const payload: ServiceProviderReportType = {
+      companyId: companyId.value,
       serviceProviderId: serviceProviderId.value,
       coveragePeriodId: filterType.value === "1" ? coveragePeriodId.value : undefined,
       startDate: filterType.value === "2" ? startDate.value : undefined,

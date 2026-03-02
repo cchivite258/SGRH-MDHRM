@@ -1,22 +1,22 @@
-<script lang="ts" setup>
-import { computed, ref, watch, onMounted } from "vue";
-import { ServiceProviderReportType } from "@/components/ammReports/types";
+﻿<script lang="ts" setup>
+import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { useToast } from 'vue-toastification';
+import { useToast } from "vue-toastification";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import { serviceProviderReportService } from "@/app/http/httpServiceProvider";
+import { totalBilledByProviderReportService } from "@/app/http/httpServiceProvider";
 import { useRouter } from "vue-router";
-import { useServiceProviderReportStore } from "@/store/reports/serviceProviderReportStore";
+import { useTotalBilledByProviderReportStore } from "@/store/reports/totalBilledByProviderReportStore";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
+import type { TotalBilledByProviderFilterType } from "@/components/ammReports/types";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
-const reportStore = useServiceProviderReportStore();
+const reportStore = useTotalBilledByProviderReportStore();
 const serviceProviderStore = useServiceProviderStore();
 const coveragePeriodStore = useCoveragePeriodStore();
 const institutionStore = useInstitutionStore();
@@ -67,24 +67,24 @@ const institutions = computed(() => {
 const emit = defineEmits(["update:modelValue"]);
 
 const requiredRules = {
-  companyId: [(v: string) => !!v || t('t-please-enter-institution')],
-  filterType: [(v: string) => !!v || t('t-please-select-filter')],
-  serviceProviderId: [(v: string) => !!v || t('t-please-enter-service-provider')],
+  companyId: [(v: string) => !!v || t("t-please-enter-institution")],
+  filterType: [(v: string) => !!v || t("t-please-select-filter")],
+  serviceProviderId: [(v: string) => !!v || t("t-please-enter-service-provider")],
   coveragePeriodId: [
     (v: string) => {
-      if (filterType.value === '1') return !!v || t('t-please-enter-coverage-period');
+      if (filterType.value === "1") return !!v || t("t-please-enter-coverage-period");
       return true;
     }
   ],
   startDate: [
     (v: Date | null) => {
-      if (filterType.value === '2') return !!v || t('t-please-enter-start-date');
+      if (filterType.value === "2") return !!v || t("t-please-enter-start-date");
       return true;
     }
   ],
   endDate: [
     (v: Date | null) => {
-      if (filterType.value === '2') return !!v || t('t-please-enter-end-date');
+      if (filterType.value === "2") return !!v || t("t-please-enter-end-date");
       return true;
     }
   ],
@@ -111,21 +111,13 @@ const onSubmit = async () => {
     (filter === "2" && (!startDate.value || !endDate.value));
 
   if (isMissingRequired) {
-    toast.error(t('t-validation-error'));
+    toast.error(t("t-validation-error"));
     return;
-  }
-
-  if (form.value) {
-    const { valid } = await form.value.validate();
-    if (!valid) {
-      toast.error(t('t-validation-error'));
-      return;
-    }
   }
 
   localLoading.value = true;
 
-  const payload: ServiceProviderReportType = {
+  const payload: TotalBilledByProviderFilterType = {
     companyId: companyId.value,
     serviceProviderId: serviceProviderId.value,
     coveragePeriodId: filter === "1" ? coveragePeriodId.value : undefined,
@@ -133,18 +125,17 @@ const onSubmit = async () => {
     endDate: filter === "2" ? endDate.value : undefined,
   };
 
-  const response = await serviceProviderReportService.createReport(payload);
-  console.log("serviceProviderReportService", response)
+  const response = await totalBilledByProviderReportService.createReport(payload);
   localLoading.value = false;
 
-  if (response.status === 'error') {
-    toast.error(response.error?.message || t('t-error-generating-report'));
+  if (response.status === "error") {
+    toast.error(response.error?.message || t("t-error-generating-report"));
     return;
   }
 
   reportStore.setReport(response.data);
   emit("update:modelValue", false);
-  router.push({ name: "ReportPreview100003" });
+  router.push({ name: "ReportPreview100008" });
 };
 
 onMounted(async () => {
@@ -189,7 +180,7 @@ onMounted(async () => {
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-filter-by') }} <i class="ph-asterisk text-danger" />
               </div>
@@ -220,14 +211,14 @@ onMounted(async () => {
                 <div class="font-weight-bold text-caption mb-1">
                   {{ $t('t-start-date') }} <i class="ph-asterisk text-danger" />
                 </div>
-                <ValidatedDatePicker v-model="startDate" :rules="requiredRules.startDate" :teleport="true" />
+                <ValidatedDatePicker v-model="startDate" :rules="requiredRules.startDate" :teleport="false" />
               </v-col>
 
               <v-col cols="12" lg="6" class="mt-n6">
                 <div class="font-weight-bold text-caption mb-1">
                   {{ $t('t-end-date') }} <i class="ph-asterisk text-danger" />
                 </div>
-                <ValidatedDatePicker v-model="endDate" :rules="requiredRules.endDate" :teleport="true" />
+                <ValidatedDatePicker v-model="endDate" :rules="requiredRules.endDate" :teleport="false" />
               </v-col>
             </template>
           </v-row>
@@ -247,3 +238,4 @@ onMounted(async () => {
     </v-form>
   </v-dialog>
 </template>
+

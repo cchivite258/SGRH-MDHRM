@@ -109,6 +109,7 @@ const onSubmit = async () => {
   }
 
   const payload: TopServiceTypesByClinicFilterType = {
+    companyId: companyId.value,
     startDate: finalStartDate,
     endDate: finalEndDate,
   };

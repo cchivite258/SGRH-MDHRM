@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { CompanyHospitalProceduresBalanceType } from "@/components/ammReports/types";
@@ -55,6 +55,7 @@ export class ReportExporter {
   ): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
+        const generatedAt = this.getCurrentDateTime();
         const pdf = new jsPDF({
           orientation: 'portrait',
           unit: 'mm',
@@ -78,7 +79,7 @@ export class ReportExporter {
         const tableResult = this.addPDFTable(pdf, report, margin, currentY);
         currentY = tableResult.finalY;
 
-        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight);
+        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight, generatedAt);
 
         const fileName = options?.fileName
           ? `${options.fileName}.pdf`
@@ -100,8 +101,6 @@ export class ReportExporter {
     currentY: number,
     pageWidth: number
   ): void {
-    const currentDate = this.getCurrentDateTime();
-
     pdf.setFontSize(16);
     pdf.setFont('helvetica', 'bold');
     pdf.text(this.tr('t-hpr-report-title'), margin, currentY);
@@ -117,11 +116,6 @@ export class ReportExporter {
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    const dateText = `${this.tr('t-hpr-generated-at')}: ${currentDate}`;
-
-    const dateWidth = pdf.getTextWidth(dateText);
-    pdf.text(dateText, pageWidth - margin - dateWidth, currentY + 6);
-
     pdf.setDrawColor(180, 180, 180);
     pdf.setLineWidth(0.3);
     pdf.line(margin, currentY + 20, pageWidth - margin, currentY + 20);
@@ -130,66 +124,84 @@ export class ReportExporter {
   private static addPDFSummaryCards(
     pdf: jsPDF,
     report: CompanyHospitalProceduresBalanceType,
-    userName: string,
+    _userName: string,
     margin: number,
     contentWidth: number,
     currentY: number
   ): number {
-    const cardWidth = (contentWidth - 15) / 3;
-    const cardHeight = 35;
-
-    pdf.setFillColor(248, 249, 250);
-    pdf.rect(margin, currentY, cardWidth, cardHeight, 'F');
-
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(66, 66, 66);
-    pdf.text(this.tr('t-institution'), margin + 8, currentY + 8);
-
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    const companyName = report.company?.name || this.tr('t-hpr-na');
-    if (companyName.length > 35) {
-      pdf.text(`${companyName.substring(0, 35)}...`, margin + 8, currentY + 14);
-    } else {
-      pdf.text(companyName, margin + 8, currentY + 14);
-    }
-
-    pdf.setFontSize(7);
-    pdf.setTextColor(100, 100, 100);
-    const email = report.company?.email || this.tr('t-hpr-na');
-    if (email.length > 35) {
-      pdf.text(`${email.substring(0, 35)}...`, margin + 8, currentY + 20);
-    } else {
-      pdf.text(email, margin + 8, currentY + 24);
-    }
-    pdf.text(`${this.tr('t-hpr-phone-short')}: ${report.company?.phone || this.tr('t-hpr-na')}`, margin + 8, currentY + 30);
-
+    const gap = 5;
+    const cardWidth = (contentWidth - (gap * 2)) / 3;
+    const cardHeight = 40;
     const hasCoveragePeriod = report.coveragePeriod !== null && report.coveragePeriod !== undefined;
-    const card2X = margin + cardWidth + 7.5;
 
-    pdf.setFillColor(232, 245, 233);
-    pdf.rect(card2X, currentY, cardWidth, cardHeight, 'F');
+    const drawCard = (
+      x: number,
+      y: number,
+      iconBg: [number, number, number],
+      title: string,
+      headline: string,
+      lines: string[],
+      headlineColor: [number, number, number] = [55, 71, 79]
+    ) => {
+      const maxTextWidth = cardWidth - 18;
+      const fitSingleLine = (text: string, fontSize: number): string => {
+        pdf.setFontSize(fontSize);
+        let output = text || '';
+        while (pdf.getTextWidth(output) > maxTextWidth && output.length > 1) {
+          output = `${output.slice(0, -2)}...`;
+        }
+        return output;
+      };
+      const fitMultiLines = (text: string, fontSize: number, maxLines: number): string[] => {
+        pdf.setFontSize(fontSize);
+        const split = pdf.splitTextToSize(text || '', maxTextWidth) as string[];
+        if (split.length <= maxLines) return split;
+        const clipped = split.slice(0, maxLines);
+        clipped[maxLines - 1] = fitSingleLine(clipped[maxLines - 1], fontSize);
+        return clipped;
+      };
 
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(66, 66, 66);
-    const periodTitle = hasCoveragePeriod ? this.tr('t-period') : this.tr('t-issue-period');
-    pdf.text(periodTitle, card2X + 8, currentY + 8);
+      pdf.setDrawColor(225, 229, 235);
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
 
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setTextColor(0, 0, 0);
-    const periodName = hasCoveragePeriod ? report.coveragePeriod?.name || this.tr('t-hpr-na') : this.tr('t-custom-period');
-    if (periodName.length > 20) {
-      pdf.text(`${periodName.substring(0, 20)}...`, card2X + 8, currentY + 14);
-    } else {
-      pdf.text(periodName, card2X + 8, currentY + 14);
-    }
+      pdf.setFillColor(iconBg[0], iconBg[1], iconBg[2]);
+      pdf.roundedRect(x + 4, y + 4, 8, 8, 1.5, 1.5, 'F');
 
-    pdf.setFontSize(7);
-    pdf.setTextColor(100, 100, 100);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(120, 120, 120);
+      pdf.text(fitSingleLine(title, 7), x + 14, y + 7);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(headlineColor[0], headlineColor[1], headlineColor[2]);
+      const headlineLines = fitMultiLines(headline, 10, 2);
+      const headlineStartY = y + 12;
+      const headlineLineHeight = 4.2;
+      pdf.text(headlineLines, x + 14, headlineStartY);
+
+      const headlineBottomY = headlineStartY + ((headlineLines.length - 1) * headlineLineHeight);
+      const dividerY = Math.min(headlineBottomY + 3, y + cardHeight - 12);
+      pdf.setDrawColor(236, 239, 244);
+      pdf.line(x + 3, dividerY, x + cardWidth - 3, dividerY);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.setTextColor(90, 90, 90);
+      let lineY = dividerY + 5;
+      lines.forEach((line) => {
+        const contentLines = fitMultiLines(line, 7, 2);
+        contentLines.forEach((contentLine) => {
+          if (lineY <= (y + cardHeight - 3)) {
+            pdf.text(contentLine, x + 4, lineY);
+            lineY += 4.2;
+          }
+        });
+        lineY += 0.8;
+      });
+    };
+
     const startDate = hasCoveragePeriod && report.coveragePeriod?.startDate
       ? formateDate(report.coveragePeriod.startDate)
       : (report.issueDateFrom ? formateDate(report.issueDateFrom) : this.tr('t-hpr-na'));
@@ -197,32 +209,42 @@ export class ReportExporter {
       ? formateDate(report.coveragePeriod.endDate)
       : (report.issueDateTo ? formateDate(report.issueDateTo) : this.tr('t-hpr-na'));
 
-    pdf.text(`${this.tr('t-start-period')}: ${startDate}`, card2X + 8, currentY + 24);
-    pdf.text(`${this.tr('t-end-period')}: ${endDate}`, card2X + 8, currentY + 30);
+    drawCard(
+      margin,
+      currentY,
+      [227, 242, 253],
+      this.tr('t-institution'),
+      report.company?.name || this.tr('t-hpr-na'),
+      [
+        `${this.tr('t-hpr-email')}: ${report.company?.email || this.tr('t-hpr-na')}`,
+        `${this.tr('t-hpr-phone-short')}: ${report.company?.phone || this.tr('t-hpr-na')}`
+      ]
+    );
 
-    const card3X = card2X + cardWidth + 7.5;
+    drawCard(
+      margin + cardWidth + gap,
+      currentY,
+      [232, 245, 233],
+      hasCoveragePeriod ? this.tr('t-coverage-period') : this.tr('t-issue-period'),
+      hasCoveragePeriod ? (report.coveragePeriod?.name || this.tr('t-hpr-na')) : this.tr('t-custom-period'),
+      [
+        `${this.tr('t-start-period')}: ${startDate}`,
+        `${this.tr('t-end-period')}: ${endDate}`
+      ],
+      [46, 125, 50]
+    );
 
-    pdf.setFillColor(255, 235, 238);
-    pdf.rect(card3X, currentY, cardWidth, cardHeight, 'F');
-
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.setTextColor(66, 66, 66);
-    pdf.text(this.tr('t-total-spent'), card3X + 8, currentY + 8);
-
-    pdf.setFontSize(12);
-    pdf.setTextColor(183, 28, 28);
-    const totalAmount = amountFormate(report.totalAmount);
-    if (totalAmount.length > 15) {
-      pdf.text(`${totalAmount.substring(0, 15)}... MT`, card3X + 8, currentY + 15);
-    } else {
-      pdf.text(`${totalAmount} MT`, card3X + 8, currentY + 15);
-    }
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(`${this.tr('t-procedures')}: ${report.procedureExpenses?.length || 0}`, card3X + 8, currentY + 30);
+    drawCard(
+      margin + ((cardWidth + gap) * 2),
+      currentY,
+      [255, 235, 238],
+      this.tr('t-total-spent'),
+      `${amountFormate(report.totalAmount)} MT`,
+      [
+        `${this.tr('t-procedures')}: ${report.procedureExpenses?.length || 0}`
+      ],
+      [183, 28, 28]
+    );
 
     return currentY + cardHeight + 5;
   }
@@ -301,7 +323,8 @@ export class ReportExporter {
     pdf: jsPDF,
     margin: number,
     pageWidth: number,
-    pageHeight: number
+    pageHeight: number,
+    generatedAt: string
   ): void {
     const currentDate = this.getCurrentDate();
     const totalPages = pdf.getNumberOfPages();
@@ -321,6 +344,7 @@ export class ReportExporter {
 
       const footerText = this.tr('t-hpr-system-footer');
       const dateText = `${this.tr('t-hpr-date')}: ${currentDate}`;
+      const generatedAtText = `${this.tr('t-hpr-generated-at')}: ${generatedAt}`;
       const pageText = this.tr('t-hpr-page-of', { current: i, total: totalPages });
 
       pdf.text(footerText, margin, footerY - 5);
@@ -330,6 +354,8 @@ export class ReportExporter {
 
       const dateTextWidth = pdf.getTextWidth(dateText);
       pdf.text(dateText, pageWidth - margin - dateTextWidth, footerY - 12);
+
+      pdf.text(generatedAtText, margin, footerY - 12);
     }
   }
 
@@ -396,7 +422,8 @@ export class ReportExporter {
 
       const excelBuffer = XLSX.write(workbook, {
         bookType: 'xlsx',
-        type: 'array'
+        type: 'array',
+        cellStyles: true
       });
 
       const fileName = options?.fileName
@@ -411,13 +438,17 @@ export class ReportExporter {
   }
 
   private static applyExcelStyles(ws: XLSX.WorkSheet): void {
-    const colWidths = [{ wch: 25 }, { wch: 30 }];
+    const colWidths = [{ wch: 30 }, { wch: 45 }];
     ws['!cols'] = colWidths;
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }
+    ];
 
     if (ws['A1']) {
       ws['A1'].s = {
-        font: { sz: 14, bold: true, color: { rgb: '1F3A93' } },
-        alignment: { horizontal: 'center' }
+        font: { sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+        fill: { fgColor: { rgb: '1F3A93' } },
+        alignment: { horizontal: 'center', vertical: 'center' }
       };
     }
 
@@ -425,11 +456,21 @@ export class ReportExporter {
       const cell = `A${row}`;
       if (ws[cell]) {
         ws[cell].s = {
-          font: { sz: 11, bold: true, color: { rgb: '333333' } },
-          fill: { fgColor: { rgb: 'E8E8E8' } }
+          font: { sz: 11, bold: true, color: { rgb: '1F3A93' } },
+          fill: { fgColor: { rgb: 'DCEBFF' } }
         };
       }
     });
+
+    for (let row = 3; row <= 20; row++) {
+      const labelCell = `A${row}`;
+      if (ws[labelCell] && ![7, 13, 17].includes(row)) {
+        ws[labelCell].s = {
+          ...(ws[labelCell].s || {}),
+          font: { ...(ws[labelCell].s?.font || {}), bold: true, color: { rgb: '333333' } }
+        };
+      }
+    }
 
     if (ws['B14']) {
       ws['B14'].s = {
