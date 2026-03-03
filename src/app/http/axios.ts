@@ -22,12 +22,13 @@ type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 let refreshPromise: Promise<string | null> | null = null;
 
 const logAuthFlow = (step: string, payload?: unknown) => {
-  const timestamp = new Date().toISOString();
-  if (payload !== undefined) {
-    console.log(`[AUTH_FLOW][${timestamp}] ${step}`, payload);
-    return;
-  }
-  console.log(`[AUTH_FLOW][${timestamp}] ${step}`);
+  // const timestamp = new Date().toISOString();
+  // if (payload !== undefined) {
+  //   console.log(`[AUTH_FLOW][${timestamp}] ${step}`, payload);
+  //   return;
+  // }
+  // console.log(`[AUTH_FLOW][${timestamp}] ${step}`);
+  return;
 };
 
 logAuthFlow("axios.ts loaded (interceptors active)");

@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { useI18n } from "vue-i18n";
 import { amountFormate } from "@/app/common/amountFormate";
+import { formateDate } from "@/app/common/dateFormate";
 import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
 import { EmployeeExpenseStatementReportExporter } from "./exportUtils";
 
@@ -223,18 +224,20 @@ const exportOptions = [
         <v-table density="comfortable" hover>
           <thead>
             <tr>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-issue-date") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-number") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-service-provider") }}</th>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-autorized-by") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-patient") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-procedures") }}</th>
               <th class="text-right text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-total-billed") }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(row, index) in details" :key="row.invoiceId || index" class="table-row">
-              <td class="pa-4">{{ row.invoiceId || "-" }}</td>
+              <td class="pa-4">{{ row.invoiceIssueDate ? formateDate(row.invoiceIssueDate) : "-" }}</td>
+              <td class="pa-4">{{ row.invoiceNumber || "-" }}</td>
               <td class="pa-4">{{ row.serviceProviderName || "-" }}</td>
-              <td class="pa-4">{{ row.authorizedBy || "-" }}</td>
+              <td class="pa-4">{{ row.pacientName || "-" }}</td>
               <td class="pa-4">{{ (row.hospitalProcedureTypeName || []).join(", ") || "-" }}</td>
               <td class="text-right pa-4 font-weight-medium">{{ amountFormate(Number(row.invoiceTotalAmount || 0)) }} MT</td>
             </tr>
@@ -242,6 +245,7 @@ const exportOptions = [
           <tfoot>
             <tr class="total-row">
               <td class="pa-4 font-weight-bold text-grey-darken-3">{{ $t("t-totals") }}</td>
+              <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>

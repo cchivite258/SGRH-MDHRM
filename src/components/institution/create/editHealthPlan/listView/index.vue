@@ -18,7 +18,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
-import Status from "@/app/common/components/Status.vue";
+import Status from "@/app/common/components/Status.vue"; 
 
 //Options Enums
 import {
@@ -130,10 +130,10 @@ const requiredRules = {
 const coveragePeriods = computed(() => {
   return (coveragePeriodStore.coverage_periods_for_dropdown || [])
     .filter((item: CoveragePeriodListingType) =>
-      !item.status || item.status.toString().toUpperCase() !== 'CLOSED'
+      !item.status || item.status.toString().toUpperCase() 
     )
     .map((item: CoveragePeriodListingType) => ({
-      value: item.id,
+      value: item.id, 
       label: item.name,
     }));
 });
@@ -462,7 +462,7 @@ const getLimitTypeLabel = (value: string) => {
         <v-row class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-2">
-              {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" /> 
             </div>
             <MenuSelect v-model="healthPlanFormData.coveragePeriod" :items="coveragePeriods"
               :loading="coveragePeriodStore.loading" :rules="requiredRules.coveragePeriod" />

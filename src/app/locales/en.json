@@ -149,6 +149,7 @@
   "t-heatmap": "Heatmap",
   "t-treemap": "Treemap",
   "t-pie": "Pie",
+  "t-patient": "Patient Name",
   "t-radialbar": "Radialbar",
   "t-radar": "Radar",
   "t-polar-area": "Polar Area",

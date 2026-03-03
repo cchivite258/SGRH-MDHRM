@@ -166,7 +166,7 @@ onMounted(async () => {
 
 <template>
   <v-dialog :model-value="props.modelValue" width="500" persistent>
-    <v-form ref="form" @submit.prevent="onSubmit">
+    <v-form ref="form" @submit.prevent="() => onSubmit()">
       <Card :title="$t('t-filters')" title-class="py-0">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />

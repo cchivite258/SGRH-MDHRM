@@ -189,9 +189,12 @@ export type EmployeeExpenseStatementFilterType = {
 
 export type EmployeeExpenseStatementDetailType = {
   invoiceId?: string;
+  invoiceNumber?: string;
+  invoiceIssueDate?: string;
   serviceProviderId?: string | number;
   serviceProviderName?: string;
   authorizedBy?: string;
+  pacientName?: string;
   invoiceTotalAmount?: number;
   hospitalProcedureTypeName?: string[];
 };

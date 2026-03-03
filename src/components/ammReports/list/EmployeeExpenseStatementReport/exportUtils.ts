@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
 import { amountFormate } from "@/app/common/amountFormate";
+import { formateDate } from "@/app/common/dateFormate";
 import i18n from "@/plugins/i18n";
 
 export interface ExportOptions {
@@ -85,7 +86,8 @@ export class EmployeeExpenseStatementReportExporter {
       headline: string,
       lines: string[],
       headlineColor: [number, number, number] = [55, 71, 79],
-      iconBg: [number, number, number] = [227, 242, 253]
+      iconBg: [number, number, number] = [227, 242, 253],
+      iconType: "employee" | "institution" | "financial" = "employee"
     ) => {
       const maxTextWidth = cardWidth - 16;
       const fitSingleLine = (text: string, fontSize: number): string => {
@@ -103,6 +105,22 @@ export class EmployeeExpenseStatementReportExporter {
 
       pdf.setFillColor(iconBg[0], iconBg[1], iconBg[2]);
       pdf.roundedRect(x + 3, y + 3, 7, 7, 1.2, 1.2, "F");
+      // Icones vetoriais para garantir renderizacao no PDF sem depender de fontes externas.
+      pdf.setDrawColor(255, 255, 255);
+      pdf.setLineWidth(0.35);
+      if (iconType === "employee") {
+        pdf.circle(x + 6.5, y + 5.2, 1.1, "S");
+        pdf.roundedRect(x + 5.2, y + 6.7, 2.6, 2.2, 0.6, 0.6, "S");
+      } else if (iconType === "institution") {
+        pdf.rect(x + 5.2, y + 4.6, 2.8, 4.0, "S");
+        pdf.line(x + 5.2, y + 5.9, x + 8.0, y + 5.9);
+        pdf.line(x + 6.1, y + 4.6, x + 6.1, y + 8.6);
+        pdf.line(x + 7.0, y + 4.6, x + 7.0, y + 8.6);
+      } else {
+        pdf.circle(x + 6.5, y + 6.5, 2.0, "S");
+        pdf.line(x + 5.5, y + 6.5, x + 7.5, y + 6.5);
+        pdf.line(x + 6.5, y + 5.5, x + 6.5, y + 7.5);
+      }
 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7);
@@ -139,7 +157,10 @@ export class EmployeeExpenseStatementReportExporter {
       [
         `${this.tr("t-department")}: ${report.employeeDepartmentName || "-"}`,
         `${this.tr("t-position")}: ${report.employeePositionName || "-"}`,
-      ]
+      ],
+      [55, 71, 79],
+      [227, 242, 253],
+      "employee"
     );
 
     drawCard(
@@ -152,7 +173,8 @@ export class EmployeeExpenseStatementReportExporter {
         `${this.tr("t-total-invoices")}: ${details.length}`,
       ],
       [46, 125, 50],
-      [232, 245, 233]
+      [232, 245, 233],
+      "institution"
     );
 
     drawCard(
@@ -166,7 +188,8 @@ export class EmployeeExpenseStatementReportExporter {
         `${this.tr("t-total-to-be-discounted")}: ${amountFormate(totalToBeDesconted)} MT`,
       ],
       [183, 28, 28],
-      [255, 235, 238]
+      [255, 235, 238],
+      "financial"
     );
 
     currentY += cardHeight + 8;
@@ -175,16 +198,18 @@ export class EmployeeExpenseStatementReportExporter {
       startY: currentY,
       margin: { left: margin, right: margin },
       head: [[
-        this.tr("t-invoice"),
+        this.tr("t-issue-date"),
+        this.tr("t-invoice-number"),
         this.tr("t-service-provider"),
-        this.tr("t-autorized-by"),
+        this.tr("t-patient"),
         this.tr("t-procedures"),
         this.tr("t-total-billed"),
       ]],
       body: details.map((item) => [
-        item.invoiceId || "-",
+        item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-",
+        item.invoiceNumber || "-",
         item.serviceProviderName || "-",
-        item.authorizedBy || "-",
+        item.pacientName || "-",
         (item.hospitalProcedureTypeName || []).join(", ") || "-",
         `${amountFormate(Number(item.invoiceTotalAmount || 0))} MT`,
       ]),
@@ -193,21 +218,24 @@ export class EmployeeExpenseStatementReportExporter {
         "-",
         "-",
         "-",
+        "-",
         `${amountFormate(totalAmount)} MT`,
       ]],
       theme: "grid",
+      tableWidth: contentWidth,
       styles: { fontSize: 7.5, cellPadding: 2, lineWidth: 0.1, lineColor: [200, 200, 200], overflow: "linebreak" },
       headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
       footStyles: { fillColor: [248, 249, 250], textColor: [0, 0, 0], fontStyle: "bold" },
       columnStyles: {
-        0: { cellWidth: 44 },
-        1: { cellWidth: 48 },
+        0: { cellWidth: 32 },
+        1: { cellWidth: 30 },
         2: { cellWidth: 44 },
-        3: { cellWidth: 96 },
-        4: { cellWidth: 32, halign: "right" },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 95 },
+        5: { cellWidth: 32, halign: "right" },
       },
       didParseCell: (data: any) => {
-        if (data.section === "foot" && data.column.index === 4) {
+        if (data.section === "foot" && data.column.index === 5) {
           data.cell.styles.textColor = [183, 28, 28];
         }
       },
@@ -256,41 +284,42 @@ export class EmployeeExpenseStatementReportExporter {
 
     const workbook = XLSX.utils.book_new();
     const data: string[][] = [
-      [this.tr("t-ees-report-title").toUpperCase(), "", "", "", ""],
-      [`${this.tr("t-employee")}: ${employeeName}`, "", "", "", ""],
-      [`${this.tr("t-institution")}: ${report.companyName || "-"}`, "", "", "", ""],
-      [`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, "", "", "", ""],
-      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-by-company"), `${amountFormate(totalByCompany)} MT`, ""],
-      [this.tr("t-total-by-employee"), `${amountFormate(totalByEmployee)} MT`, this.tr("t-total-to-be-discounted"), `${amountFormate(totalToBeDesconted)} MT`, ""],
-      ["", "", "", "", ""],
-      [this.tr("t-report-details").toUpperCase(), "", "", "", ""],
-      [this.tr("t-invoice"), this.tr("t-service-provider"), this.tr("t-autorized-by"), this.tr("t-procedures"), `${this.tr("t-total-billed")} (MT)`],
+      [this.tr("t-ees-report-title").toUpperCase(), "", "", "", "", ""],
+      [`${this.tr("t-employee")}: ${employeeName}`, "", "", "", "", ""],
+      [`${this.tr("t-institution")}: ${report.companyName || "-"}`, "", "", "", "", ""],
+      [`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, "", "", "", "", ""],
+      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-by-company"), `${amountFormate(totalByCompany)} MT`, "", ""],
+      [this.tr("t-total-by-employee"), `${amountFormate(totalByEmployee)} MT`, this.tr("t-total-to-be-discounted"), `${amountFormate(totalToBeDesconted)} MT`, "", ""],
+      ["", "", "", "", "", ""],
+      [this.tr("t-report-details").toUpperCase(), "", "", "", "", ""],
+      [this.tr("t-issue-date"), this.tr("t-invoice-number"), this.tr("t-service-provider"), this.tr("t-patient"), this.tr("t-procedures"), `${this.tr("t-total-billed")} (MT)`],
       ...details.map((item) => [
-        item.invoiceId || "-",
+        item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-",
+        item.invoiceNumber || "-",
         item.serviceProviderName || "-",
-        item.authorizedBy || "-",
+        item.pacientName || "-",
         (item.hospitalProcedureTypeName || []).join(", ") || "-",
         String(item.invoiceTotalAmount || 0),
       ]),
-      [this.tr("t-totals").toUpperCase(), "-", "-", "-", String(totalAmount)],
-      ["", "", "", "", ""],
-      [this.tr("t-generated-by"), userName || this.tr("t-spr-system-user"), this.tr("t-spr-generated-at"), this.getCurrentDate(), ""],
+      [this.tr("t-totals").toUpperCase(), "-", "-", "-", "-", String(totalAmount)],
+      ["", "", "", "", "", ""],
+      [this.tr("t-generated-by"), userName || this.tr("t-spr-system-user"), this.tr("t-spr-generated-at"), this.getCurrentDate(), "", ""],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [{ wch: 36 }, { wch: 28 }, { wch: 28 }, { wch: 55 }, { wch: 24 }];
+    ws["!cols"] = [{ wch: 20 }, { wch: 20 }, { wch: 28 }, { wch: 28 }, { wch: 52 }, { wch: 20 }];
     ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 4 } },
-      { s: { r: 7, c: 0 }, e: { r: 7, c: 4 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 5 } },
+      { s: { r: 7, c: 0 }, e: { r: 7, c: 5 } },
     ];
 
     if (ws["A1"]) ws["A1"].s = { font: { sz: 14, bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1F3A93" } } };
     if (ws["A8"]) ws["A8"].s = { font: { sz: 11, bold: true, color: { rgb: "333333" } }, fill: { fgColor: { rgb: "E8E8E8" } } };
 
-    ["A9", "B9", "C9", "D9", "E9"].forEach((cell) => {
+    ["A9", "B9", "C9", "D9", "E9", "F9"].forEach((cell) => {
       if (ws[cell]) {
         ws[cell].s = {
           font: { sz: 10, bold: true, color: { rgb: "1F3A93" } },
@@ -320,28 +349,28 @@ export class EmployeeExpenseStatementReportExporter {
       const isTotals = row === totalsRow;
       const fill = isTotals ? this.LIGHT_GRAY : row % 2 === 0 ? "FAFCFF" : "FFFFFF";
 
-      ["A", "B", "C", "D", "E"].forEach((col) => {
+      ["A", "B", "C", "D", "E", "F"].forEach((col) => {
         const cell = `${col}${row}`;
         if (!ws[cell]) return;
 
         ws[cell].s = {
           fill: { fgColor: { rgb: fill } },
           border: borderStyle,
-          alignment: { horizontal: col === "E" ? "right" : "left", vertical: "center", wrapText: true },
+          alignment: { horizontal: col === "F" ? "right" : "left", vertical: "center", wrapText: true },
           font: { bold: isTotals },
         };
       });
 
-      if (ws[`E${row}`]) ws[`E${row}`].z = '#,##0.00" MT"';
-      if (isTotals && ws[`E${row}`]) {
-        ws[`E${row}`].s = {
-          ...(ws[`E${row}`].s || {}),
+      if (ws[`F${row}`]) ws[`F${row}`].z = '#,##0.00" MT"';
+      if (isTotals && ws[`F${row}`]) {
+        ws[`F${row}`].s = {
+          ...(ws[`F${row}`].s || {}),
           font: { bold: true, color: { rgb: "B71C1C" } },
         };
       }
     }
 
-    ws["!autofilter"] = { ref: `A9:E${totalsRow}` };
+    ws["!autofilter"] = { ref: `A9:F${totalsRow}` };
 
     XLSX.utils.book_append_sheet(workbook, ws, this.tr("t-ees-sheet"));
 
@@ -373,13 +402,13 @@ export class EmployeeExpenseStatementReportExporter {
     csvContent += `${this.tr("t-total-by-employee")},${totalByEmployee}\n`;
     csvContent += `${this.tr("t-total-to-be-discounted")},${totalToBeDesconted}\n\n`;
 
-    csvContent += `${this.tr("t-invoice")},${this.tr("t-service-provider")},${this.tr("t-autorized-by")},${this.tr("t-procedures")},${this.tr("t-total-billed")}\n`;
+    csvContent += `${this.tr("t-issue-date")},${this.tr("t-invoice-number")},${this.tr("t-service-provider")},${this.tr("t-patient")},${this.tr("t-procedures")},${this.tr("t-total-billed")}\n`;
 
     details.forEach((item) => {
-      csvContent += `${item.invoiceId || "-"},${item.serviceProviderName || "-"},${item.authorizedBy || "-"},"${(item.hospitalProcedureTypeName || []).join(", ")}",${item.invoiceTotalAmount || 0}\n`;
+      csvContent += `${item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-"},${item.invoiceNumber || "-"},${item.serviceProviderName || "-"},${item.pacientName || "-"},"${(item.hospitalProcedureTypeName || []).join(", ")}",${item.invoiceTotalAmount || 0}\n`;
     });
 
-    csvContent += `${this.tr("t-totals").toUpperCase()},-,-,-,${totalAmount}\n\n`;
+    csvContent += `${this.tr("t-totals").toUpperCase()},-,-,-,-,${totalAmount}\n\n`;
     csvContent += `${this.tr("t-generated-by")},${userName || this.tr("t-spr-system-user")}\n`;
     csvContent += `${this.tr("t-spr-generated-at")},${this.getCurrentDate()}\n`;
 

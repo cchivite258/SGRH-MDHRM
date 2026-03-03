@@ -12,7 +12,7 @@ import { healthPlanService, hospitalProcedureService } from "@/app/http/httpServ
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
-import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import DataTableServer from "@/app/common/components/DataTableServer.vue"; 
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import Status from "@/app/common/components/Status.vue";
@@ -77,6 +77,16 @@ const healthPlanFormData = ref<HealthPlanInsertType>({
   enabled: true
 });
 
+const coveragePeriods = computed(() => {
+  return (coveragePeriodStore.coverage_periods_for_dropdown || [])
+    .filter((item: CoveragePeriodListingType) =>
+      !item.status || item.status.toString().toUpperCase() !== 'CLOSED'
+    )
+    .map((item: CoveragePeriodListingType) => ({
+      value: item.id, 
+      label: item.name,
+    }));
+});
 
 
 
@@ -103,7 +113,7 @@ onMounted(async () => {
           fixedAmount: healthPlan.fixedAmount,
           salaryComponent: healthPlan.salaryComponent,
           companyContributionPercentage: healthPlan.companyContributionPercentage,
-          coveragePeriod: healthPlan.coveragePeriod.id,
+          coveragePeriod: healthPlan.coveragePeriod,
           company: healthPlan.company?.id,
           enabled: healthPlan.enabled
         };
@@ -276,6 +286,11 @@ const handleSubmit = async () => {
 /**
  * Prepara dados para criação/edição
  */
+const getHealthPlanLimitLabel = (value: string | undefined) => {
+  const option = healthPlanLimitOptions.find(opt => opt.value === value);
+  return option ? option.label : value;
+};
+
 const getLimitTypeLabel = (value: string | undefined) => {
   const option = limitTypeDefinitionOptions.find(opt => opt.value === value);
   return option ? option.label : value;
@@ -331,7 +346,7 @@ const getSalaryComponentLabel = (value: string | undefined) => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <div>{{ getLimitTypeLabel(healthPlanFormData.healthPlanLimit) || '-' }}</div>
+            <div>{{ getHealthPlanLimitLabel(healthPlanFormData.healthPlanLimit) || '-' }}</div>
           </v-col>
 
           <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->

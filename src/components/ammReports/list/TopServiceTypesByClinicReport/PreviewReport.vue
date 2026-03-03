@@ -84,7 +84,7 @@ const endPeriod = computed(() => {
   return date ? formateDate(date) : "-";
 });
 
-const detailRows = computed(() => groupedRows.value.filter((r) => r.type === "detail") as Extract<GroupedRow, { type: "detail" }[]>);
+const detailRows = computed(() => groupedRows.value.filter((r) => r.type === "detail") as Extract<GroupedRow, { type: "detail" }>[]);
 const totalAmount = computed(() => detailRows.value.reduce((sum, item) => sum + (item.totalBilled || 0), 0));
 const totalProviders = computed(() => props.report?.length || 0);
 
