@@ -98,13 +98,13 @@ const getsalaryComponentLabel = (value: string | undefined) => {
           </v-col>
         </v-row>
         <v-row class="">
-          <v-col cols="12" lg="6">
+          <v-col :cols="12" :lg="props.data?.healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-health-plan-limit') }}
             </div>
             <div>{{ gethealthPlanLimitLabel(props.data?.healthPlanLimit) || '-' }}</div>
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="6" v-if="props.data?.healthPlanLimit === 'FIXED_AMOUNT'">
             <div class="font-weight-bold mb-2">
               {{ $t('t-fixed-amount') }}
             </div>
@@ -112,13 +112,13 @@ const getsalaryComponentLabel = (value: string | undefined) => {
           </v-col>
         </v-row>
         <v-row class="">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="6" v-if="props.data?.healthPlanLimit === 'ANUAL_SALARY'">
             <div class="font-weight-bold mb-2">
               {{ $t('t-salary-component') }}
             </div>
             <div>{{ getsalaryComponentLabel(props.data?.salaryComponent) || '-' }}</div>
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="6" v-if="props.data?.healthPlanLimit === 'ANUAL_SALARY'">
             <div class="font-weight-bold mb-2">
               {{ $t('t-company-contribuition-percentage') }}
             </div>

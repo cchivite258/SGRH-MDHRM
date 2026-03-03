@@ -3,7 +3,7 @@
 // IMPORTS
 // =============================================
 // Vue e Vue Utilities
-import { ref, reactive, computed, watch, onMounted } from "vue";
+import { ref, reactive, computed, watch, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -13,7 +13,7 @@ import { invoiceService, invoiceItemService } from "@/app/http/httpServiceProvid
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 
 // Tipos e Componentes
-import { InvoiceInsertType, InvoiceItemInsertType } from "../types";
+import { InvoiceInsertType, InvoiceItemInsertType, InvoiceListingType, InvoiceResponseType } from "../types";
 import InvoiceForm from "@/components/invoice/createInvoice/InvoiceForm.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -52,7 +52,7 @@ const invoiceId = ref<string | null>(
 // Dados principais da fatura
 const invoiceData = reactive<InvoiceInsertType>({
   invoiceNumber: '',
-  clinic: undefined,
+  serviceProvider: undefined,
   currency: undefined,
   employee: undefined,
   issueDate: new Date(),
@@ -65,6 +65,28 @@ const invoiceData = reactive<InvoiceInsertType>({
   invoiceReferenceNumber: '',
   coveragePeriod: undefined
 });
+
+const resetInvoiceData = () => {
+  Object.assign(invoiceData, {
+    invoiceNumber: '',
+    serviceProvider: undefined,
+    currency: undefined,
+    employee: undefined,
+    issueDate: new Date(),
+    dueDate: new Date(),
+    totalAmount: 0,
+    isEmployeeInvoice: false,
+    dependent: undefined,
+    company: '',
+    authorizedBy: '',
+    invoiceReferenceNumber: '',
+    coveragePeriod: undefined
+  });
+
+  invoiceItems.value = [];
+  basicDataValidated.value = false;
+};
+
 
 // =============================================
 // COMPUTED PROPERTIES
@@ -95,12 +117,15 @@ const loadInvoiceData = async (id: string) => {
       invoiceService.getInvoiceById(id),
       invoiceItemService.getInvoiceItemByInvoice(id)
     ]);
+    console.log('no index loadInvoiceData Carregando fatura com ID: xxx ', id);
+    console.log('no index loadInvoiceData invoiceResponse: xxx ', invoiceResponse);
+
 
     if (invoiceResponse?.data) {
       Object.assign(invoiceData, {
         ...invoiceResponse.data,
         company: invoiceResponse.data.employee?.companyId,
-        clinic: invoiceResponse.data.clinic?.id,
+        serviceProvider: invoiceResponse.data.serviceProvider?.id,
         employee: invoiceResponse.data.employee?.id,
         currency: invoiceResponse.data.currency?.id,
         dependent: invoiceResponse.data.dependent?.id
@@ -126,19 +151,35 @@ const loadInvoiceData = async (id: string) => {
 /**
  * Handler para sucesso na operação
  */
-const handleSaveSuccess = (response: any) => {
+const handleSaveSuccess = async (response: any) => {
+  if (!response?.data?.id) {
+    console.error('No invoice ID in response');
+    toast.error(t('t-message-save-error'));
+    return;
+  }
+
+  const newInvoiceId = response.data.id;
+
+  // Atualiza a store primeiro
   invoiceStore.setDraftInvoice(invoiceData);
-  invoiceStore.fetchInvoices();
+  invoiceStore.setCurrentInvoiceId(newInvoiceId);
 
   toast.success(isEditMode.value
     ? t('t-invoice-updated-success')
     : t('t-invoice-created-success'));
 
-  if (!isEditMode.value && response?.data?.id) {
-    emit('invoice-created', response.data.id);
+  if (!isEditMode.value) {
+    emit('invoice-created', newInvoiceId);
   }
 
-  router.push(`/invoices/edit/${response.data.id}`);
+  // Aguarda um tick para garantir que tudo está atualizado
+  await nextTick();
+
+  // Navega para a rota de edição e recarrega os dados
+  router.push(`/invoices/edit/${newInvoiceId}`).then(() => {
+    // Força o recarregamento dos dados após a navegação
+    loadInvoiceData(newInvoiceId);
+  });
 };
 
 // =============================================
@@ -190,6 +231,7 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
 const saveInvoice = async (
   param: InvoiceInsertType | InvoiceItemInsertType[],
   callbacks?: {
@@ -201,66 +243,103 @@ const saveInvoice = async (
     loading.value = true;
     errorMsg.value = "";
 
-    let response: ServiceResponse<any>;
+    let response: ServiceResponse<InvoiceResponseType>;
 
     if (Array.isArray(param)) {
+      // Calcula o total amount
       const totalAmount = param.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
       invoiceData.totalAmount = totalAmount;
 
-      if (isEditMode.value) {
-        response = await invoiceService.updateInvoice(currentInvoiceId.value!, invoiceData);
+      if (isEditMode.value && invoiceId.value) {
+        // Modo edição - atualiza fatura e itens
+        response = await invoiceService.updateInvoice(invoiceId.value, invoiceData);
 
-        // Verifica se a resposta contém erro
-        if (response.status === 'error') {
-          toast.error(response.error?.message || t('t-message-save-error'));
+        if (response?.status === "error") {
+          const validationErrors = response?.error?.error?.errors;
+
+          if (validationErrors && typeof validationErrors === "object") {
+            Object.values(validationErrors).forEach((messages: any) => {
+              if (Array.isArray(messages)) {
+                messages.forEach((msg) => toast.error(msg));
+              }
+            });
+            return;
+          }
+
+          toast.error(response.error?.message || t("t-message-save-error"));
           return;
         }
 
-        await processInvoiceItems(currentInvoiceId.value!, param);
-
+        if (response?.data) {
+          await processInvoiceItems(invoiceId.value, param);
+          await handleSaveSuccess(response);
+        }
       } else {
+        // Modo criação - cria fatura primeiro, depois itens
         response = await invoiceService.createInvoice(invoiceData);
 
-        // Verifica se a resposta contém erro
-        if (response.status === 'error') {
-          toast.error(response.error?.message || t('t-message-save-error'));
+        if (response?.status === "error") {
+          const validationErrors = response?.error?.error?.errors;
+
+          if (validationErrors && typeof validationErrors === "object") {
+            Object.values(validationErrors).forEach((messages: any) => {
+              if (Array.isArray(messages)) {
+                messages.forEach((msg) => toast.error(msg));
+              }
+            });
+            return;
+          }
+
+          toast.error(response.error?.message || t("t-message-save-error"));
           return;
         }
 
-        router.push(`/invoices/edit/${response.data.id}`);
-
-        const newInvoiceId = response.data?.id;
-        if (!newInvoiceId) throw new Error('Invoice ID not available');
-
-        await processInvoiceItems(newInvoiceId, param);
+        if (response?.data?.id) {
+          const newInvoiceId = response.data.id;
+          await processInvoiceItems(newInvoiceId, param);
+          await handleSaveSuccess(response);
+        }
       }
     } else {
-      response = isEditMode.value
-        ? await invoiceService.updateInvoice(currentInvoiceId.value!, param)
-        : await invoiceService.createInvoice(param);
-
-      // Verifica se a resposta contém erro
-      if (response.status === 'error') {
-        toast.error(response.error?.message || t('t-message-save-error'));
-        return;
+      // Apenas dados básicos da fatura
+      if (isEditMode.value && invoiceId.value) {
+        response = await invoiceService.updateInvoice(invoiceId.value, param);
+      } else {
+        response = await invoiceService.createInvoice(param);
       }
 
-      router.push(`/invoices/edit/${response.data.id}`);
-
+      if (response?.data) {
+        await handleSaveSuccess(response);
+      }
     }
 
-    // Só mostra sucesso se realmente foi bem-sucedido
-    toast.success(isEditMode.value ? t('t-toast-message-update') : t('t-toast-message-created'));
     callbacks?.onSuccess?.();
 
   } catch (error: any) {
     console.error("Erro ao salvar fatura:", error);
-    toast.error(t('t-message-save-error'));
+
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     loading.value = false;
     callbacks?.onFinally?.();
   }
 };
+
 
 // =============================================
 // LIFECYCLE & WATCHERS
@@ -272,21 +351,43 @@ watch(() => route.params.id, async (newId) => {
   if (parsedId) {
     await loadInvoiceData(parsedId);
     invoiceStore.setCurrentInvoiceId(parsedId);
+    console.log('no index Rota mudou, carregando fatura com ID: xxx ', parsedId);
   }
 }, { immediate: true });
 
-onMounted(() => {
-  if (!route.params.id) {
-    invoiceStore.setCurrentInvoiceId('');
-  }
+watch(
+  () => route.params.id,
+  (id) => {
+    if (!id) {
+      console.log('Modo criação → limpar estado');
 
+      invoiceStore.clearDraft();
+      resetInvoiceData();
+      invoiceId.value = null;
+    }
+  },
+  { immediate: true }
+);
+
+
+
+onMounted(() => {
   invoiceStore.loadFromStorage();
 
-  if (invoiceStore.currentInvoiceId) {
+  if (!route.params.id && invoiceStore.currentInvoiceId) {
+    // Apenas em modo criação
+    console.log(
+      'Carregando rascunho do armazenamento local:',
+      invoiceStore.currentInvoiceId
+    );
+
     invoiceId.value = invoiceStore.currentInvoiceId;
+    loadInvoiceData(invoiceStore.currentInvoiceId);
     basicDataValidated.value = true;
   }
+  
 });
+
 </script>
 
 <template>
@@ -294,7 +395,8 @@ onMounted(() => {
     <v-row justify="center">
       <v-col cols="12" xl="9">
         <InvoiceForm v-model="invoiceData" :is-edit-mode="isEditMode" :loading="loading" :initial-items="invoiceItems"
-          @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)" />
+          @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)"
+          @invoiceAttachmentUploaded="loadInvoiceData" />
       </v-col>
     </v-row>
   </v-container>

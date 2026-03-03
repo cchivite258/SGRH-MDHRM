@@ -34,6 +34,7 @@ import type {
   DependentListingType,
   DependentInsertType
 } from "@/components/employee/types";
+import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
@@ -169,6 +170,12 @@ const onCreateEditClick = (data: DependentInsertType | DependentListingType | nu
 /**
  * Submete dados do formulário
  */
+interface ServiceResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: ApiErrorResponse;
+}
+
 const onSubmit = async (
   data: DependentInsertType,
   callbacks?: {
@@ -177,27 +184,68 @@ const onSubmit = async (
   }
 ) => {
   try {
+    let response: ServiceResponse<DependentListingType>;
+
     if (!data.id) {
-      await dependentEmployeeService.createDependent(data);
-      toast.success(t('t-toast-message-created'));
+      response = await dependentEmployeeService.createDependent(data);
     } else {
-      await dependentEmployeeService.updateDependent(data.id, data);
-      toast.success(t('t-toast-message-update'));
+      response = await dependentEmployeeService.updateDependent(data.id, data);
     }
+
+    if (response?.status === "error") {
+      const validationErrors = response?.error?.error?.errors;
+
+      if (validationErrors && typeof validationErrors === "object") {
+        Object.values(validationErrors).forEach((messages: any) => {
+          if (Array.isArray(messages)) {
+            messages.forEach((msg) => toast.error(msg));
+          }
+        });
+        return;
+      }
+
+      toast.error(response.error?.message || t("t-message-save-error"));
+      return;
+    }
+
+    toast.success(
+      data.id
+        ? t("t-toast-message-update")
+        : t("t-toast-message-created")
+    );
 
     await dependentStore.fetchDependentsEmployee(
       employeeId.value,
       0,
       itemsPerPage.value
     );
+
     callbacks?.onSuccess?.();
-  } catch (error) {
+
+  } catch (error: any) {
     console.error("Erro ao gravar dependentes:", error);
-    toast.error(t('t-message-save-error'));
+
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     callbacks?.onFinally?.();
   }
 };
+
 
 /**
  * Prepara dados para visualização
@@ -332,8 +380,8 @@ onBeforeUnmount(() => {
 
   <v-card-actions class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
-      {{ $t('t-back-to-institution-and-classification') }} 
+      {{ $t('t-back-to-institution-and-classification') }}
     </v-btn>
-    
+
   </v-card-actions>
 </template>

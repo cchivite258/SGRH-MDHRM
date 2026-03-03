@@ -383,7 +383,7 @@ const submitForm = async () => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-nacionality') }}
             </div>
-            <MenuSelect v-model="employeeData.nationality" :items="nationalityOptions" />
+            <MenuSelect v-model="employeeData.nationality" :items="nationalityOptions" /> 
           </v-col>
         </v-row>
 
@@ -497,8 +497,7 @@ const submitForm = async () => {
               {{ $t('t-id-card-expiry-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
-              :rules="requiredRules.idCardExpiryDate" :placeholder="$t('t-enter-id-card-expiry-date')"
-              format="dd/MM/yyyy" />
+              :rules="requiredRules.idCardExpiryDate" :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy" />
           </v-col>
         </v-row>
 

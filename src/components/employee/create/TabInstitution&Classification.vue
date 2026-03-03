@@ -15,6 +15,7 @@ import { useToast } from 'vue-toastification';
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 
 // Stores
 import { useInstitutionStore } from '@/store/institution/institutionStore';
@@ -30,6 +31,10 @@ import { email } from "@vuelidate/validators";
 const { t } = useI18n();
 const toast = useToast();
 
+import {
+  contractDurationTypeOptions
+} from "@/components/employee/create/utils";
+
 // Stores
 const institutionStore = useInstitutionStore();
 const departmentStore = useDepartmentStore();
@@ -41,8 +46,8 @@ const form2 = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 // Emits e Props
 const emit = defineEmits<{
   (e: 'onStepChange', step: number): void;
-  (e: 'save', payload: EmployeeInsertType): void; 
-  (e: 'update:modelValue', value: EmployeeInsertType): void; 
+  (e: 'save', payload: EmployeeInsertType): void;
+  (e: 'update:modelValue', value: EmployeeInsertType): void;
 }>();
 
 const props = defineProps<{
@@ -62,7 +67,7 @@ let employeeData = computed({
 
 // Estado da UI
 const errorMsg = ref("");
-let alertTimeout: ReturnType<typeof setTimeout> | null = null; 
+let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Regras de validação para os campos do formulário
@@ -77,10 +82,57 @@ const requiredRules = {
   position: [
     (v: string) => !!v || t('t-please-select-position'),
   ],
-  salary: [
+  baseSalary: [
     (v: number) => !!v || t('t-please-enter-salary'),
     (v: number) => v > 0 || t('t-please-enter-a-valid-salary'),
   ],
+  contractDurationType: [
+    (v: string) => !!v || t('t-please-select-contract-duration-type'),
+  ],
+  hireDate: [
+    (v: string) => !!v || t('t-please-enter-hire-date'),
+    (v: string) => {
+
+      const hireDate = new Date(v);
+      const minDate = new Date('1900-01-01'); // Data mínima
+      const today = new Date();
+
+      if (isNaN(hireDate.getTime())) return t('t-invalid-date');
+      if (hireDate < minDate) return t('t-date-too-old');
+      if (hireDate > today) return t('t-date-cannot-be-future');
+
+      return true;
+    }
+  ],
+  terminationDate: [
+    (v: string) => {
+      if (employeeData.value.contractDurationType === 'FIXED_TERM') {
+        // 1. Validar se terminationDate foi preenchido
+        if (!v) return t('t-please-enter-termination-date');
+
+        const terminationDate = new Date(v);
+        if (isNaN(terminationDate.getTime())) return t('t-invalid-date');
+
+        // 2. Validar se hireDate existe e é válido
+        if (!employeeData.value.hireDate) {
+          return t('t-please-enter-hire-date-first');
+        }
+
+        const hireDate = new Date(employeeData.value.hireDate);
+        if (isNaN(hireDate.getTime())) return t('t-invalid-hire-date');
+
+        // 3. Validar se terminationDate é depois de hireDate
+        if (terminationDate <= hireDate) {
+          return t('t-termination-date-after-hire-date');
+        }
+
+        return true;
+      }
+
+      return true;
+    }
+  ],
+
 }
 
 /**
@@ -198,10 +250,10 @@ const saveData = async () => {
     }, 5000);
     return;
   }
-  
+
   console.log("Dados do funcionário:", employeeData.value);
 
-  // Garante que o salary seja enviado como número
+  // Garante que o baseSalary seja enviado como número
   const payload = {
     ...employeeData.value
   };
@@ -226,29 +278,16 @@ const saveData = async () => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect 
-              v-model="employeeData.company" 
-              :items="institutions" 
-              :loading="institutionStore.loading"
-              :placeholder="t('t-select-institution')" 
-              clearable 
-              :rules="requiredRules.institution"
-            />
+            <MenuSelect v-model="employeeData.company" :items="institutions" :loading="institutionStore.loading"
+              :placeholder="t('t-select-institution')" clearable :rules="requiredRules.institution" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-department') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect 
-              v-model="employeeData.department" 
-              :items="departments" 
-              :loading="departmentStore.loading"
-              :placeholder="t('t-select-department')" 
-              :disabled="!employeeData.company" 
-              :rules="requiredRules.department"
-              @scroll-end="loadMoreDepartments" 
-              clearable 
-            />
+            <MenuSelect v-model="employeeData.department" :items="departments" :loading="departmentStore.loading"
+              :placeholder="t('t-select-department')" :disabled="!employeeData.company"
+              :rules="requiredRules.department" @scroll-end="loadMoreDepartments" clearable />
           </v-col>
         </v-row>
 
@@ -256,52 +295,67 @@ const saveData = async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-position') }} <i class="ph-asterisk ph-xs text-danger" /> 
+              {{ $t('t-position') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect 
-              v-model="employeeData.position" 
-              :items="positions" 
-              :loading="positionStore.loading" 
-              :rules="requiredRules.position"
-              :placeholder="t('t-select-position')" 
-              :disabled="!employeeData.department" 
-              @scroll-end="loadMorePositions"
-              clearable 
-            />
+            <MenuSelect v-model="employeeData.position" :items="positions" :loading="positionStore.loading"
+              :rules="requiredRules.position" :placeholder="t('t-select-position')" :disabled="!employeeData.department"
+              @scroll-end="loadMorePositions" clearable />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-base-salary') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <TextField 
-              v-model="employeeData.salary" 
-              type="number"
-              :placeholder="t('t-enter-the-employee-base-salary')" 
-              :rules="requiredRules.salary"
-              class="mb-2" 
-            />
+            <TextField v-model="employeeData.baseSalary" type="number"
+              :placeholder="t('t-enter-the-employee-base-salary')" :rules="requiredRules.baseSalary" class="mb-2" />
           </v-col>
         </v-row>
+
+        <v-row class="mt-n9">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-hire-date') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <ValidatedDatePicker ref="hireDatePicker" v-model="employeeData.hireDate"
+              :placeholder="$t('t-enter-hire-date')" :rules="requiredRules.hireDate" :teleport="true"
+              format="dd/MM/yyyy" />
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-duration') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <MenuSelect v-model="employeeData.contractDurationType" :items="contractDurationTypeOptions"
+              :rules="requiredRules.contractDurationType" />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-n6">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-termination-date') }} <i v-if="employeeData.contractDurationType === 'FIXED_TERM'"
+                class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <ValidatedDatePicker ref="terminationDatePicker" v-model="employeeData.terminationDate"
+              :placeholder="$t('t-enter-termination-date')" :teleport="true" format="dd/MM/yyyy"
+              :rules="requiredRules.terminationDate" />
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-rehire-date') }}
+            </div>
+            <ValidatedDatePicker ref="rehireDatePicker" v-model="employeeData.rehireDate" :teleport="true"
+              :placeholder="$t('t-enter-rehire-date')" format="dd/MM/yyyy" />
+          </v-col>
+        </v-row>
+
       </v-card-text>
 
       <!-- Ações do formulário -->
       <v-card-actions class="d-flex justify-space-between mt-5">
-        <v-btn 
-          color="secondary" 
-          variant="outlined" 
-          class="me-2" 
-          @click="emit('onStepChange', 1)" 
-          :disabled="loading"
-        >
+        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
           {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
 
-        <v-btn 
-          color="success" 
-          variant="elevated" 
-          @click="saveData" 
-          :loading="loading"
-        >
+        <v-btn color="success" variant="elevated" @click="saveData" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

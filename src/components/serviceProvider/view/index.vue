@@ -65,7 +65,12 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   personOfContactFullname2: '',
   personOfContactPhone2: '',
   personOfContactEmail2: '',
-  enabled: true
+  providerTypeId: undefined,
+  contractStartDate: undefined,
+  contractEndDate: undefined,
+  enabled: true,
+  countryId: undefined,
+  provinceId: undefined
 });
 
 /**

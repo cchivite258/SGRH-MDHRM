@@ -14,7 +14,7 @@ export type ServiceProviderUpdateType = {
   personOfContactPhone2: string;
   personOfContactEmail2: string;
   providerTypeId: string | undefined;
-  serviceProviderType?: {
+  providerTypes?: {
     id: number;
     name: string
   } | undefined;
@@ -40,7 +40,7 @@ export type ServiceProviderResponseType = {
   providerTypeId: string | undefined;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
-  serviceProviderType?: {
+  providerTypes?: {
     id: number;
     name: string
   } | undefined;
@@ -66,11 +66,13 @@ export type ServiceProviderInsertType = {
   providerTypeId: string | undefined;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
-  serviceProviderType?: {
+  providerTypes?: {
     id: number;
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };
 
 export type ServiceProviderListingType = {
@@ -91,11 +93,13 @@ export type ServiceProviderListingType = {
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypeId: string | undefined;
-  serviceProviderType?: {
+  providerTypes?: {
     id: number;
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };
 
 export type ServiceProviderListingForListType = {
@@ -116,9 +120,11 @@ export type ServiceProviderListingForListType = {
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypeId: string | undefined;
-  serviceProviderType?: {
+  providerTypes?: {
     id: number;
     name: string
   } | undefined;
   enabled: boolean;
+  provinceId: string | undefined;
+  countryId: string | undefined;
 };

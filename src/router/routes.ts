@@ -32,6 +32,7 @@ const employeePrefix = "/employee";
 const baseTablePrefix = "/baseTable";
 const usersPrefix = "/users";
 const serviceProviderPrefix = "/service-provider";
+const reportsPrefix = "/reports";
 
 
 const institutionRoutes = [
@@ -71,6 +72,25 @@ const institutionRoutes = [
     component: () => import("@/views/institution/editHealthPlan/List.vue"),
     meta: { title: "EditHealthPlan", authRequired: true },
   },
+   {
+    path: `${institutionPrefix}/healthPlan/view/:id`,
+    name: "ViewHealthPlan",
+    component: () => import("@/views/institution/viewHealthPlan/List.vue"),
+    meta: { title: "ViewHealthPlan", authRequired: true },
+  },
+  {
+    path: `${institutionPrefix}/coveragePeriod/:id`,
+    name: "EditCoveragePeriod",
+    component: () => import("@/views/institution/editCoveragePeriod/List.vue"),
+    meta: { title: "EditCoveragePeriod", authRequired: true },
+  },
+  {
+    path: `${institutionPrefix}/coveragePeriod/view/:id`,
+    name: "ViewCoveragePeriod",
+    component: () => import("@/views/institution/viewCoveragePeriod/List.vue"),
+    meta: { title: "ViewCoveragePeriod", authRequired: true },
+  }
+
 ].map((data) => {
   return {
     ...data,
@@ -110,10 +130,16 @@ const employeeRoutes = [
     meta: { title: "View Employee", requiresAuth: true }
   },
   {
-    path: `${employeePrefix}/healthPlan/:id`,
-    name: "ViewHealthPlan",
+    path: `${employeePrefix}/healthPlan/edit/:id`,
+    name: "EditEmployeeHealthPlan",
     component: () => import("@/views/employee/viewHealthPlan/List.vue"),
-    meta: { title: "ViewHealthPlan", authRequired: true },
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
+  },
+  {
+    path: `${employeePrefix}/healthPlan/view/:id`,
+    name: "ViewEmployeeHealthPlan",
+    component: () => import("@/views/employee/viewHealthPlan/View.vue"),
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
   },
 ].map((data) => {
   return {
@@ -153,6 +179,76 @@ const serviceProviderRoutes = [
     component: () => import('@/views/serviceProvider/View.vue'),
     meta: { title: "View Service Provider", requiresAuth: true }
   }
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+
+const ammReportRoutes = [
+  {
+    path: `${reportsPrefix}/list`,
+    name: "ReportsList",
+    component: () => import("@/views/ammReports/List.vue"),
+    meta: { title: "t-reports-list", authRequired: true },
+  },
+  {
+  path: `${reportsPrefix}/preview`,
+  name: "ReportPreview",
+  component: () => import("@/views/ammReports/CompanyHospitalProceduresBalances/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+ {
+  path: `${reportsPrefix}100002/preview`,
+  name: "ReportPreview100002",
+  component: () => import("@/views/ammReports/CostPerEmployeeReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100003/preview`,
+  name: "ReportPreview100003",
+  component: () => import("@/views/ammReports/ServiceProviderReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100004/preview`,
+  name: "ReportPreview100004",
+  component: () => import("@/views/ammReports/TopServiceTypesByClinicReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100005/preview`,
+  name: "ReportPreview100005",
+  component: () => import("@/views/ammReports/ServiceProviderComparisonReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100006/preview`,
+  name: "ReportPreview100006",
+  component: () => import("@/views/ammReports/CompanyEmployeeLimitsReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100007/preview`,
+  name: "ReportPreview100007",
+  component: () => import("@/views/ammReports/TotalBilledMedicalAssistanceReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100008/preview`,
+  name: "ReportPreview100008",
+  component: () => import("@/views/ammReports/TotalBilledByProviderReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100009/preview`,
+  name: "ReportPreview100009",
+  component: () => import("@/views/ammReports/EmployeeExpenseStatementReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+}
+
+
 ].map((data) => {
   return {
     ...data,
@@ -1242,6 +1338,7 @@ export const routes = [
   ...baseTableRoutes,
   ...usersRoutes,
   ...serviceProviderRoutes,
+  ...ammReportRoutes,
   {
     path: "/widgets",
     name: "Widgets",

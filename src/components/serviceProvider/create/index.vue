@@ -14,7 +14,7 @@ import Step2 from "@/components/serviceProvider/create/TabServiceProviderContact
 import { serviceProviderService } from "@/app/http/httpServiceProvider";
 
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
-import { ServiceProviderInsertType  } from "@/components/serviceProvider/types";
+import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 
 // Props
 const props = defineProps({
@@ -61,7 +61,9 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   providerTypeId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
-  enabled: true
+  enabled: true,
+  countryId: undefined,
+  provinceId: undefined
 });
 
 /**
@@ -172,7 +174,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
     loading.value = true;
     errorMsg.value = "";
 
-    console.log("Dados recebidos do Step1:", serviceProviderData); 
+    console.log("Dados recebidos do Step1:", serviceProviderData);
 
     let response;
     if (serviceProviderId.value) {
@@ -193,6 +195,25 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       }
     }
 
+    // Verifica se a resposta contém erro
+    if (response.status === 'error') {
+      const apiError = response.error;
+
+      // Caso haja erros de validação
+      if (apiError?.error?.errors) {
+        const validationErrors = apiError.error.errors;
+
+        Object.values(validationErrors).forEach(errList => {
+          errList.forEach(err => toast.error(err));
+        });
+
+        return;
+      }
+
+      // Erro normal
+      toast.error(apiError?.message || t('t-message-save-error'));
+      return;
+    }
     // Salvar draft na store
     serviceProviderStore.setDraftServiceProvider(serviceProviderData);
 
@@ -209,9 +230,19 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
     } else {
       step.value++;
     }
-  } catch (error) {
-    console.error('Error saving serviceProvider:', error);
-    handleApiError(error);
+  } catch (error: any) {
+
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
   } finally {
     loading.value = false;
   }
@@ -242,11 +273,11 @@ onBeforeUnmount(() => {
       </transition>
 
       <!-- Abas do formulário -->
-      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(false)"
-        :loading="loading" />
+      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="serviceProviderData"
+        @save="saveServiceProvider(false)" :loading="loading" />
 
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(true)"
-        :loading="loading" />
+      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="serviceProviderData"
+        @save="saveServiceProvider(true)" :loading="loading" />
     </v-card-text>
   </Card>
 </template>

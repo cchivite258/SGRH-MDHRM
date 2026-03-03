@@ -41,3 +41,11 @@ export const healthPlanHeader: DataTableHeaderType[] = [
   //{ title: "status", key: "status", sortable: true },
   { title: "action", sortable: false, align: "right" }
 ];
+
+export const hospitalProcedureBalanceHeader: DataTableHeaderType[] = [
+  { title: "hospital-procedure-type-name", key: "hospitalProcedureType.name", sortable: true },
+  { title: "allocated-balance", key: "allocatedBalance", sortable: true },
+  { title: "used-balance", key: "usedBalance", sortable: true },
+  { title: "remaining-balance", key: "remainingBalance", sortable: true },
+  { title: "enabled", key: "enabled", sortable: true }
+];

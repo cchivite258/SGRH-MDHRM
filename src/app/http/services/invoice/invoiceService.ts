@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType, InvoiceAdviceResponseType } from "@/components/invoice/types";
+import type { InvoiceInsertType, InvoiceResponseType, InvoiceListingType, InvoiceAdviceResponseType, InvoiceAttachmentType } from "@/components/invoice/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { bi } from "@/assets/images/flags/utils";
 
@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.name,clinic.name,dependent.name,coveragePeriod.name,currency.anme');
+        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -54,7 +54,7 @@ export default class InvoiceService extends HttpService {
         params.append('query_operator', logicalOperator);
       }
 
-      const includesToUse = 'employee,clinic,currency,invoiceAttachment,coveragePeriod';
+      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,coveragePeriod';
       params.append(`includes`, includesToUse);
 
       const url = `/amm/invoices?${params.toString()}`;
@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,clinic,currency,dependent,coveragePeriod`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,coveragePeriod,invoiceAttachment`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 
@@ -202,6 +202,21 @@ export default class InvoiceService extends HttpService {
         `/amm/invoices/${id}/post`
       );
       console.log('Resposta ao post da factura:------------------------', response);
+
+      return {
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async postFlaggedInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+    try {
+      const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
+        `/amm/invoices/${id}/post-flagged`
+      );
+      console.log('Resposta ao post flagged da factura:------------------------', response);
 
       return {
         data: response.data
@@ -246,7 +261,7 @@ export default class InvoiceService extends HttpService {
         dueDate: invoiceData.dueDate,
         totalAmount: invoiceData.totalAmount,
         employee: invoiceData.employee,
-        clinic: invoiceData.clinic,
+        serviceProvider: invoiceData.serviceProvider,
         currency: invoiceData.currency,
         isEmployeeInvoice: invoiceData.isEmployeeInvoice,
         dependent: invoiceData.dependent,
@@ -311,5 +326,94 @@ export default class InvoiceService extends HttpService {
   }
 
 
+  //Attachment upload
+ async uploadAttachment(payload: InvoiceAttachmentType): Promise<ServiceResponse<InvoiceAttachmentType>> {
+  try {
+    const formData = new FormData();
+    formData.append('file', payload.file as File);
+
+    console.log("✅ FormData file appended:", formData.get('file'));
+
+    const response = await this.putFile<ApiResponse<InvoiceAttachmentType>>(
+      `/amm/invoices/${payload.id}/attach-file`,
+      formData
+    );
+
+    console.log('Resposta ao upload do anexo:------------------------', response);
+
+    return {
+      status: 'success',
+      data: response.data
+    };
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: 'error',
+        error: error.response.data as ApiErrorResponse
+      };
+    }
+    return {
+      status: 'error',
+      error: this.NetworkErrorResponse()
+    };
+  }
+}
+
+async downloadAttachment(id: string, name: string, extension: string): Promise<ServiceResponse<void>> {
+  try {
+    const blob = await this.downloadFile(`/amm/invoices/${id}/download-file`);
+
+    // cria um link temporário para download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name; // ou outro nome dinâmico
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    return { status: "success", data: undefined };
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: "error",
+        error: error.response.data as ApiErrorResponse,
+      };
+    }
+    return {
+      status: "error",
+      error: this.NetworkErrorResponse(),
+    };
+  }
+}
+
+
+async deleteAttachment(id: string): Promise<ServiceResponse<void>> {
+  try {
+    await this.delete(`/amm/invoices/${id}/delete-file`);
+
+    return { status: "success", data: undefined };
+
+  } catch (error: any) {
+    if (error.response) {
+      return {
+        status: "error",
+        error: error.response.data as ApiErrorResponse,
+      };
+    }
+    return {
+      status: "error",
+      error: this.NetworkErrorResponse(),
+    };
+  }
 
 }
+
+
+       
+    
+
+}
+
+

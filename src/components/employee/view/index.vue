@@ -7,7 +7,7 @@
  * 2. Instituição & Classificação
  */
 
-import { ref, reactive, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -17,6 +17,7 @@ import ButtonNav from "@/components/employee/view/ButtonNav.vue";
 import Step1 from "@/components/employee/view/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/view/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/view/TabDependents.vue";
+import Step4 from "@/components/employee/view/TabHealthPlan.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -92,9 +93,9 @@ let employeeData = reactive<EmployeeInsertType>({
   passportIssuanceDate: new Date().toISOString().split('T')[0],
   passportExpiryDate: new Date().toISOString().split('T')[0],
   enabled: true,
-  
+
   // Dados da segunda tab
-  salary: null,
+  baseSalary: null,
   company: undefined,
   department: undefined,
   position: undefined
@@ -125,7 +126,7 @@ const handleApiError = (error: any) => {
       }, 5000);
     }
     message = error.response.data.message || message;
-  } 
+  }
   // Erros gerais
   else if (error.message) {
     message = error.message;
@@ -191,8 +192,34 @@ onMounted(async () => {
  * @param value - Número da aba (1 ou 2)
  */
 const onStepChange = (value: number) => {
-  step.value = value;
+  // Permite sempre voltar para tabs anteriores
+  if (value < step.value) {
+    step.value = value;
+    return;
+  }
+
+  // No modo de edição ou quando dados básicos já foram validados, permite navegar livremente
+  if (employeeId.value || employeeId.value) {
+    step.value = value;
+    return;
+  }
+
+  // No modo criação, só permite avançar para a próxima tab sequencialmente
+  if (value === step.value + 1) {
+    step.value = value;
+  }
 };
+
+
+// E o watcher deve ficar assim:
+watch(() => route.query.tab, (newTab) => {
+  if (newTab) {
+    const tabNumber = Number(newTab);
+    if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
+      onStepChange(tabNumber);
+    }
+  }
+}, { immediate: true });
 
 /**
  * Salva os dados do employee
@@ -210,7 +237,7 @@ const saveEmployee = async (isFinalStep: boolean = false) => {
     } else {
       // Modo criação
       response = await employeeService.createEmployee(employeeData);
-      
+
       if (response?.data?.id) {
         employeeId.value = response.data.id;
       } else {
@@ -263,23 +290,15 @@ onBeforeUnmount(() => {
       </transition>
 
       <!-- Abas do formulário -->
-      <Step1 
-        v-if="step === 1" 
-        @onStepChange="onStepChange" 
-        v-model="employeeData" 
-        @save="saveEmployee(false)"
-        :loading="loading" 
-      />
+      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(false)"
+        :loading="loading" />
 
-      <Step2 
-        v-if="step === 2" 
-        @onStepChange="onStepChange" 
-        v-model="employeeData" 
-        @save="saveEmployee(true)"
-        :loading="loading" 
-      />
+      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
+        :loading="loading" />
 
-       <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>

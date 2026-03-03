@@ -1,170 +1,170 @@
-<script lang="ts" setup>
-import { ref, computed, watch } from "vue"
-import { useRouter } from "vue-router"
-import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
-import { serviceProviderService } from "@/app/http/httpServiceProvider"
-import { useToast } from 'vue-toastification'
-import { useI18n } from "vue-i18n"
-import Status from "@/app/common/components/Status.vue";
+  <script lang="ts" setup>
+  import { ref, computed, watch } from "vue"
+  import { useRouter } from "vue-router"
+  import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
+  import { serviceProviderService } from "@/app/http/httpServiceProvider"
+  import { useToast } from 'vue-toastification'
+  import { useI18n } from "vue-i18n"
+  import Status from "@/app/common/components/Status.vue";
 
-// Components
-import QuerySearch from "@/app/common/components/filters/QuerySearch.vue"
-import DataTableServer from "@/app/common/components/DataTableServer.vue"
-import TableAction from "@/app/common/components/TableAction.vue"
-import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
-import { serviceProviderHeader } from "@/components/serviceProvider/list/utils"
-import Card from "@/app/common/components/Card.vue"
-import { ServiceProviderListingType } from "@/components/serviceProvider/types"
-import AdvancedFilter from "@/components/serviceProvider/list/AdvancedFilter.vue";
+  // Components
+  import QuerySearch from "@/app/common/components/filters/QuerySearch.vue"
+  import DataTableServer from "@/app/common/components/DataTableServer.vue"
+  import TableAction from "@/app/common/components/TableAction.vue"
+  import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
+  import { serviceProviderHeader } from "@/components/serviceProvider/list/utils"
+  import Card from "@/app/common/components/Card.vue"
+  import { ServiceProviderListingType } from "@/components/serviceProvider/types"
+  import AdvancedFilter from "@/components/serviceProvider/list/AdvancedFilter.vue";
 
-const { t } = useI18n()
-const toast = useToast()
-const router = useRouter()
-const serviceProviderStore = useServiceProviderStore()
+  const { t } = useI18n()
+  const toast = useToast()
+  const router = useRouter()
+  const serviceProviderStore = useServiceProviderStore()
 
-// Estado do componente
-const searchQuery = ref("")
-const searchProps = "name,description,address,phone,email,website" // Campos de pesquisa
-const deleteDialog = ref(false)
-const deleteId = ref<string | null>(null)
-const deleteLoading = ref(false)
-const itemsPerPage = ref(10)
-const selectedServiceProvider = ref<any[]>([]) /// Armazena os funcionários selecionados
+  // Estado do componente
+  const searchQuery = ref("")
+  const searchProps = "name,description,address,phone,email,website" // Campos de pesquisa
+  const deleteDialog = ref(false)
+  const deleteId = ref<string | null>(null)
+  const deleteLoading = ref(false)
+  const itemsPerPage = ref(10)
+  const selectedServiceProvider = ref<any[]>([]) /// Armazena os funcionários selecionados
 
-// Computed properties
-const loading = computed(() => serviceProviderStore.loading)
-const totalItems = computed(() => serviceProviderStore.pagination.totalElements)
+  // Computed properties
+  const loading = computed(() => serviceProviderStore.loading)
+  const totalItems = computed(() => serviceProviderStore.pagination.totalElements)
 
-// Observa mudanças nos funcionários selecionados
-watch(selectedServiceProvider, (newSelection) => {
-  console.log('serviceProvider selecionados:', newSelection)
-}, { deep: true })
+  // Observa mudanças nos funcionários selecionados
+  watch(selectedServiceProvider, (newSelection) => {
+    console.log('serviceProvider selecionados:', newSelection)
+  }, { deep: true })
 
-interface FetchParams {
-  page: number
-  itemsPerPage: number
-  sortBy: { key: string, order: 'asc' | 'desc' }[]
-  search: string
-}
-
-// Busca os funcionários com os parâmetros atuais
-const fetchServiceProviders = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  await serviceProviderStore.fetchServiceProviders(
-    page - 1, // Ajuste para API que começa em 0
-    itemsPerPage,
-    sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc'
-  )
-}
-
-// Navega para a página de visualização
-const onView = (id: string) => {
-  router.push(`/service-provider/view/${id}`)
-}
-
-// Abre o diálogo de confirmação para exclusão
-const openDeleteDialog = (id: string) => {
-  deleteId.value = id
-  deleteDialog.value = true
-}
-
-// Executa a exclusão do funcionário
-const deleteServiceProvider = async () => {
-  if (!deleteId.value) return
-
-  deleteLoading.value = true
-  try {
-    await serviceProviderService.deleteServiceProvider(deleteId.value)
-    toast.success(t('t-toast-message-deleted'))
-    await serviceProviderStore.fetchServiceProviders(0, itemsPerPage.value)
-  } catch (error) {
-    toast.error(t('t-toast-message-deleted-error'))
-  } finally {
-    deleteLoading.value = false
-    deleteDialog.value = false
+  interface FetchParams {
+    page: number
+    itemsPerPage: number
+    sortBy: { key: string, order: 'asc' | 'desc' }[]
+    search: string
   }
-}
 
-const toggleSelection = (item: ServiceProviderListingType) => {
-  const index = selectedServiceProvider.value.findIndex(selected => selected.id === item.id);
-  if (index === -1) {
-    selectedServiceProvider.value = [...selectedServiceProvider.value, item];
-  } else {
-    selectedServiceProvider.value = selectedServiceProvider.value.filter(selected => selected.id !== item.id);
+  // Busca os funcionários com os parâmetros atuais
+  const fetchServiceProviders = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
+    await serviceProviderStore.fetchServiceProviders(
+      page - 1, // Ajuste para API que começa em 0
+      itemsPerPage,
+      sortBy[0]?.key || 'createdAt',
+      sortBy[0]?.order || 'asc'
+    )
   }
-};
 
-const truncate = (text: string, maxLength = 30) => {
-  if (!text) return ''
-  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
-}
+  // Navega para a página de visualização
+  const onView = (id: string) => {
+    router.push(`/service-provider/view/${id}`)
+  }
 
-</script>
+  // Abre o diálogo de confirmação para exclusão
+  const openDeleteDialog = (id: string) => {
+    deleteId.value = id
+    deleteDialog.value = true
+  }
 
-<template>
-  <Card :title="$t('t-service-provider-list')" class="mt-7">
+  // Executa a exclusão do funcionário
+  const deleteServiceProvider = async () => {
+    if (!deleteId.value) return
 
-    <v-card-title class="mt-2">
-      <v-row justify="space-between" class="mt-n6">
-        <v-col lg="12">
-          <AdvancedFilter />
-        </v-col>
-      </v-row>
-      <v-row justify="space-between" class="mt-n6">
-        <v-col lg="8">
-        </v-col>
-        <v-col lg="auto">
-          <v-btn color="secondary" to="/service-provider/create" block>
-            <i class="ph-plus-circle" /> {{ $t('t-add-service-provider') }}
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-card-title>
+    deleteLoading.value = true
+    try {
+      await serviceProviderService.deleteServiceProvider(deleteId.value)
+      toast.success(t('t-toast-message-deleted'))
+      await serviceProviderStore.fetchServiceProviders(0, itemsPerPage.value)
+    } catch (error) {
+      toast.error(t('t-toast-message-deleted-error'))
+    } finally {
+      deleteLoading.value = false
+      deleteDialog.value = false
+    }
+  }
 
-    <v-card-text>
-      <DataTableServer v-model="selectedServiceProvider"
-        :headers="serviceProviderHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" :items="serviceProviderStore.service_providers"
-        :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loading" :search-query="searchQuery"
-        @load-items="fetchServiceProviders" item-value="id" show-select>
-        <template #body="{ items }: { items: readonly unknown[] }">
-          <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id">
-            <td>
-              <v-checkbox :model-value="selectedServiceProvider.some(selected => selected.id === item.id)"
-                @update:model-value="toggleSelection(item)" hide-details density="compact" />
-            </td>
-            <td class="text-primary cursor-pointer" @click="onView(item.id)">
-              {{ truncate(item.name) }}
-            </td>
-            <td>{{ item.serviceProviderType?.name || 'N/A' }} </td>
-            <td>{{ truncate(item.address) }}</td>
-            <td>{{ truncate(item.phone) }}</td>
-            <td>{{ truncate(item.email) }}</td>
-            <td>
-              <Status :status="item.enabled ? 'enabled' : 'disabled'" />
-            </td>
-            <td>
-              <TableAction @on-view="() => router.push(`/service-provider/view/${item.id}`)"
-                @onEdit="() => router.push(`/service-provider/edit/${item.id}`)" @onDelete="() => openDeleteDialog(item.id)" />
-            </td>
-          </tr>
-        </template>
+  const toggleSelection = (item: ServiceProviderListingType) => {
+    const index = selectedServiceProvider.value.findIndex(selected => selected.id === item.id);
+    if (index === -1) {
+      selectedServiceProvider.value = [...selectedServiceProvider.value, item];
+    } else {
+      selectedServiceProvider.value = selectedServiceProvider.value.filter(selected => selected.id !== item.id);
+    }
+  };
 
-        <template v-if="serviceProviderStore.service_providers.length === 0" #body>
-          <tr>
-            <td :colspan="serviceProviderHeader.length" class="text-center py-10">
-              <v-avatar size="80" color="primary" variant="tonal">
-                <i class="ph-magnifying-glass" style="font-size: 30px" />
-              </v-avatar>
-              <div class="text-subtitle-1 font-weight-bold mt-3">
-                {{ $t('t-search-not-found-message') }}
-              </div>
-            </td>
-          </tr>
-        </template>
+  const truncate = (text: string, maxLength = 30) => {
+    if (!text) return ''
+    return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
+  }
 
-      </DataTableServer>
-    </v-card-text>
-  </Card>
+  </script>
 
-  <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteServiceProvider" :loading="deleteLoading" />
-</template>
+  <template>
+    <Card :title="$t('t-service-provider-list')" class="mt-7">
+
+      <v-card-title class="mt-2">
+        <v-row justify="space-between" class="mt-n6">
+          <v-col lg="12">
+            <AdvancedFilter />
+          </v-col>
+        </v-row>
+        <v-row justify="space-between" class="mt-n6">
+          <v-col lg="8">
+          </v-col>
+          <v-col lg="auto">
+            <v-btn color="secondary" to="/service-provider/create" block>
+              <i class="ph-plus-circle" /> {{ $t('t-add-service-provider') }}
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-title>
+
+      <v-card-text>
+        <DataTableServer v-model="selectedServiceProvider"
+          :headers="serviceProviderHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" :items="serviceProviderStore.service_providers"
+          :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loading" :search-query="searchQuery"
+          @load-items="fetchServiceProviders" item-value="id" show-select>
+          <template #body="{ items }: { items: readonly unknown[] }">
+            <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id">
+              <td>
+                <v-checkbox :model-value="selectedServiceProvider.some(selected => selected.id === item.id)"
+                  @update:model-value="toggleSelection(item)" hide-details density="compact" />
+              </td>
+              <td class="text-primary cursor-pointer" @click="onView(item.id)">
+                {{ truncate(item.name) }}
+              </td>
+              <td>{{ item.providerTypes?.name || 'N/A' }} </td>
+              <td>{{ truncate(item.address) }}</td>
+              <td>{{ truncate(item.phone) }}</td>
+              <td>{{ truncate(item.email) }}</td>
+              <td>
+                <Status :status="item.enabled ? 'enabled' : 'disabled'" />
+              </td>
+              <td>
+                <TableAction @on-view="() => router.push(`/service-provider/view/${item.id}`)"
+                  @onEdit="() => router.push(`/service-provider/edit/${item.id}`)" @onDelete="() => openDeleteDialog(item.id)" />
+              </td>
+            </tr>
+          </template>
+
+          <template v-if="serviceProviderStore.service_providers.length === 0" #body>
+            <tr>
+              <td :colspan="serviceProviderHeader.length" class="text-center py-10">
+                <v-avatar size="80" color="primary" variant="tonal">
+                  <i class="ph-magnifying-glass" style="font-size: 30px" />
+                </v-avatar>
+                <div class="text-subtitle-1 font-weight-bold mt-3">
+                  {{ $t('t-search-not-found-message') }}
+                </div>
+              </td>
+            </tr>
+          </template>
+
+        </DataTableServer>
+      </v-card-text>
+    </Card>
+
+    <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteServiceProvider" :loading="deleteLoading" />
+  </template>

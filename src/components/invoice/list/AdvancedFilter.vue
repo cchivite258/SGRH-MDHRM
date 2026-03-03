@@ -117,7 +117,7 @@ const filterableFields = ref([
     { text: t('t-total-amount'), value: 'totalAmount', type: 'text' },
     { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },
     { text: t('t-employee-name'), value: 'employee.name', type: 'text' },
-    { text: t('t-clinic-name'), value: 'clinic.name', type: 'text' },
+    { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'text' },
     { text: t('t-currency'), value: 'currency.name', type: 'text' },
     { text: t('t-flag'), value: 'flag', type: 'enum', enumType: 'flagGroup' },
     { text: t('t-dependent'), value: 'dependent.name', type: 'text' },

@@ -27,11 +27,17 @@
     "chart.js": "^4.4.0",
     "core-js": "^3.29.0",
     "emoji-picker-element": "^1.18.4",
+    "esbuild": "^0.27.1",
+    "file-saver": "^2.0.5",
+    "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.1",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "libphonenumber-js": "^1.10.49",
     "maska": "^2.1.10",
     "maz-ui": "^3.19.3",
     "pinia": "^2.0.0",
+    "pinia-plugin-persistedstate": "^4.7.1",
     "roboto-fontface": "*",
     "sass-loader": "^13.3.2",
     "simplebar": "^6.2.5",
@@ -46,7 +52,9 @@
     "vue3-count-to": "^1.1.2",
     "vue3-google-map": "^0.18.0",
     "vuetify": "^3.4.3",
-    "webfontloader": "^1.0.0"
+    "webfontloader": "^1.0.0",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0"
   },
   "devDependencies": {
     "@babel/types": "^7.21.4",

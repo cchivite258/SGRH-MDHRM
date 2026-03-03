@@ -1,12 +1,29 @@
 <script lang="ts" setup>
 import { useRoute } from "vue-router";
-import { breadcrumb } from "@/components/institution/create/utils";
+import { computed } from "vue";
+import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import Edit from "@/components/institution/create/index.vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
 const route = useRoute();
-const employeeId = route.params.id;
+const institutionId = route.params.id;
+
+const breadcrumb = computed<BreadcrumbType[]>(() => [
+  {
+    title: "institution-list",
+    disabled: false,
+    to: "/institution/list"
+  },
+  {
+    title: "edit-institution",
+    disabled: true,
+    to:
+      typeof institutionId === "string"
+        ? `/institution/edit/${institutionId}`
+        : undefined
+  }
+]);
 </script>
 
 <template>

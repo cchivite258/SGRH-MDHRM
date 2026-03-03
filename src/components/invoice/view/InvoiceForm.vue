@@ -4,7 +4,7 @@ import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ProductCard from "@/components/invoice/view/ProductCard.vue";
 import { ref, computed, onMounted, watch, reactive } from "vue";
 import { InvoiceInsertType, InvoiceItemInsertType } from "@/components/invoice/types";
-import { useClinicStore } from "@/store/clinic/clinicStore";
+import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useEmployeeStore } from "@/store/employee/employeeStore";
 import { useCurrencyStore } from "@/store/baseTables/currencyStore";
@@ -14,6 +14,7 @@ import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useRouter } from "vue-router";
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
+import { invoiceService } from "@/app/http/httpServiceProvider";
 
 // Composables
 const { t } = useI18n();
@@ -49,7 +50,7 @@ const emit = defineEmits<{
 }>();
 
 // Stores
-const clinicStore = useClinicStore();
+const serviceProviderStore = useServiceProviderStore();
 const institutionStore = useInstitutionStore();
 const employeeStore = useEmployeeStore();
 const currencyStore = useCurrencyStore();
@@ -88,10 +89,10 @@ const institutions = computed(() => {
   }));
 });
 
-const clinics = computed(() => {
-  return clinicStore.clinics_list.map((clinic) => ({
-    value: clinic.id,
-    label: clinic.name
+const service_providers = computed(() => {
+  return serviceProviderStore.service_provider_list.map((service_provider) => ({
+    value: service_provider.id,
+    label: service_provider.name
   }));
 });
 
@@ -119,7 +120,7 @@ const dependents = computed(() => {
 // Validation rules
 const requiredRules = {
   institution: [(v: string) => !!v || t('t-institution-required')],
-  clinic: [(v: string) => !!v || t('t-clinic-required')],
+  service_provider: [(v: string) => !!v || t('t-service-provider-required')],
   employee: [(v: string) => !!v || t('t-employee-required')],
   issueDate: [(v: Date) => !!v || t('t-issue-date-required')],
   dueDate: [(v: Date) => !!v || t('t-due-date-required')],
@@ -234,13 +235,38 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
   }
 });
 
+const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
+  if (!id) return;
+  onSubmitDownloadInvoice(id, name, extension);
+};
+
+const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extension: string, callbacks?: {
+  onSuccess?: () => void;
+  onFinally?: () => void;
+}) => {
+  try {
+    const response = await invoiceService.downloadAttachment(invoiceId, name, extension);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-download-error"));
+      return;
+    }
+
+    //toast.success(t("t-toast-message-downloaded"));
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t("t-message-download-error"));
+  } finally {
+    callbacks?.onFinally?.();
+  }
+};
 // Lifecycle
 onMounted(async () => {
   try {
     await Promise.all([
       institutionStore.fetchInstitutions(),
       currencyStore.fetchCurrenciesForDropdown(),
-      clinicStore.fetchClinicsForDropdown()
+      serviceProviderStore.fetchServiceProvidersForDropdown()
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
@@ -251,19 +277,42 @@ onMounted(async () => {
 <template>
   <v-form ref="form">
     <v-card elevation="0" class="position-relative h-100 d-block">
-      <div class="invoice-detail-card-image">
-        <InvoiceSVG />
-      </div>
+
       <v-card-text>
-        <v-row justify="end" class="mt-4 pt-16 pt-md-0">
-          <v-col cols="12" lg="4">
+        <v-row class="mt-4 pt-16 pt-md-0">
+          <v-col cols="12" lg="4" class="mt-6">
+            <v-card class="bg-light" elevation="0" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-card-text class="py-3">
+                <div class="d-flex justify-space-between">
+                  <span class="font-weight-bold align-center d-flex">
+                    <i class="ph ph-file me-2" /> {{ invoiceData.invoiceAttachment.originalFilename }}</span>
+                  <span class="text-muted">{{ invoiceData.invoiceAttachment.fileSize }} KB</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated"
+                @click="onDownloadClick(invoiceData.id, invoiceData.invoiceAttachment.originalFilename, invoiceData.invoiceAttachment.extension)"
+                block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-download-simple me-2" /> {{ $t('t-download-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+          </v-col>
+          <v-col cols="12" lg="4" class="text-center">
+            <h2 class="font-weight-bold mb-0"></h2>
+          </v-col>
+          <v-col cols="12" lg="4" justify="end">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
               :rules="requiredRules.institution" :placeholder="$t('t-institution')" disabled />
 
-            <div class="font-weight-bold mt-n1">{{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" /></div>
-            <MenuSelect v-model="invoiceData.clinic" :items="clinics" :loading="clinicStore.loading"
-              :rules="requiredRules.clinic" :placeholder="$t('t-clinic')" disabled />
+            <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i class="ph-asterisk ph-xs text-danger" /></div>
+            <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers" :loading="serviceProviderStore.loading"
+              :rules="requiredRules.service_provider" :placeholder="$t('t-service-provider')" disabled />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
             <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary" disabled>

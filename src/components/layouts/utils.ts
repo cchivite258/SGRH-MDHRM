@@ -152,6 +152,13 @@ export const menuItems: MenuItemType[] = [
     prefix: "/invoices",
     link: "/invoices/list"
   },
+  {
+    label: "reports",
+    icon: "ph ph-presentation-chart",
+    id: "sidebarReports",
+    prefix: "/reports",
+    link: "/reports/list"
+  },
   /*{
     label: "real-estate",
     icon: "ph-buildings",

@@ -272,7 +272,7 @@ onBeforeUnmount(() => {
             </td>
             <td class="text-end" style="padding-right: 5px;">
               <TableAction 
-              @onEdit="() => router.push(`/institution/department/${item.id}`)" 
+              @onEdit="() => router.push({ path: `/institution/department/${item.id}`, query: { institutionId, tab: '4' } })" 
               @onView="onViewClick(item)" 
               @onDelete="onDelete(item.id)" />
             </td>
@@ -310,4 +310,3 @@ onBeforeUnmount(() => {
   </v-btn>
 </v-card-actions>
 </template>
-

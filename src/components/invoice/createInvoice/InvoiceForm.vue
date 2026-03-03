@@ -13,9 +13,12 @@ import InvoiceSVG from "@/assets/images/invoice.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ProductCard from "@/components/invoice/createInvoice/ProductCard.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import CreateEditAttachmentDialog from "@/components/invoice/createInvoice/CreateEditAttachmentDialog.vue";
+import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 
 // Stores
-import { useClinicStore } from "@/store/clinic/clinicStore";
+import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useEmployeeStore } from "@/store/employee/employeeStore";
 import { useCurrencyStore } from "@/store/baseTables/currencyStore";
@@ -24,7 +27,9 @@ import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 
 // Types
-import { InvoiceInsertType, InvoiceItemInsertType } from "@/components/invoice/types";
+import { InvoiceInsertType, InvoiceItemInsertType, InvoiceAttachmentType } from "@/components/invoice/types";
+import { invoiceService } from "@/app/http/httpServiceProvider";
+import { file } from "@babel/types";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -60,12 +65,13 @@ const emit = defineEmits<{
   (e: 'save', invoiceData: InvoiceInsertType): void;
   (e: 'update:modelValue', value: InvoiceInsertType): void;
   (e: 'items-ready', items: InvoiceItemInsertType[]): void;
+  (e: 'invoiceAttachmentUploaded', id: string): void;
 }>();
 
 // =============================================
 // STORES
 // =============================================
-const clinicStore = useClinicStore();
+const serviceProviderStore = useServiceProviderStore();
 const institutionStore = useInstitutionStore();
 const employeeStore = useEmployeeStore();
 const currencyStore = useCurrencyStore();
@@ -75,10 +81,16 @@ const dependentStore = useDependentEmployeeStore();
 // =============================================
 // REACTIVE STATE
 // =============================================
+const AttachmentDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const productCardRef = ref<{ emitItemsReady: () => boolean }>();
 const errorMsg = ref("");
 const alertTimeout = ref<number | null>(null);
+const attachmentData = ref<InvoiceAttachmentType | null>(null);
+
+const deleteDialog = ref(false);
+const deleteId = ref<string | null>(null);
+const deleteLoading = ref(false);
 
 const invoiceItemData = reactive<InvoiceItemInsertType>({
   unitPrice: 0,
@@ -105,10 +117,10 @@ const institutions = computed(() =>
   }))
 );
 
-const clinics = computed(() =>
-  clinicStore.enabledClinics.map(clinic => ({
-    value: clinic.id,
-    label: clinic.name
+const service_providers = computed(() =>
+  serviceProviderStore.enabledServiceProviders.map(service_provider => ({
+    value: service_provider.id,
+    label: service_provider.name
   }))
 );
 
@@ -138,7 +150,7 @@ const dependents = computed(() =>
 // =============================================
 const requiredRules = {
   institution: [(v: string) => !!v || t('t-institution-required')],
-  clinic: [(v: string) => !!v || t('t-clinic-required')],
+  service_provider: [(v: string) => !!v || t('t-service-provider-required')],
   employee: [(v: string) => !!v || t('t-employee-required')],
   issueDate: [(v: Date) => !!v || t('t-issue-date-required')],
   dueDate: [(v: Date) => !!v || t('t-due-date-required')],
@@ -168,6 +180,117 @@ const handleLoadError = (resource: string, error: unknown) => {
   }, 5000);
 };
 
+interface ServiceResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: ApiErrorResponse;
+}
+
+
+
+const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
+  if (!id) return;
+  onSubmitDownloadInvoice(id, name, extension);
+};
+
+const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extension: string, callbacks?: {
+  onSuccess?: () => void;
+  onFinally?: () => void;
+}) => {
+  try {
+    const response = await invoiceService.downloadAttachment(invoiceId, name, extension);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-download-error"));
+      return;
+    }
+
+    //toast.success(t("t-toast-message-downloaded"));
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t("t-message-download-error"));
+  } finally {
+    callbacks?.onFinally?.();
+  }
+};
+
+const onUploadClick = (data: InvoiceAttachmentType | undefined) => {
+  console.log("onUploadClick data: ", invoiceData.value);
+  attachmentData.value = {
+    ...(data || {}),
+    id: invoiceData.value.id || undefined,
+    file: data?.file || null
+  };
+  AttachmentDialog.value = true;
+};
+
+const onSubmitInvoiceAttachment = async (
+  data: InvoiceAttachmentType,
+  callbacks?: {
+    onSuccess?: () => void,
+    onFinally?: () => void
+  }
+) => {
+  try {
+
+    let response: ServiceResponse<InvoiceAttachmentType>;
+
+    response = await invoiceService.uploadAttachment(data);
+
+    // Verifica se a resposta contém erro
+    if (response.status === 'error') {
+      toast.error(response.error?.message || t('t-message-save-error'));
+      return;
+    }
+
+    // Só mostra sucesso se realmente foi bem-sucedido
+    toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
+    emit('invoiceAttachmentUploaded', invoiceData.value.id!);
+
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    toast.error(t('t-message-save-error'));
+  } finally {
+    callbacks?.onFinally?.();
+  }
+};
+
+
+
+watch(deleteDialog, (newVal: boolean) => {
+  if (!newVal) {
+    deleteId.value = null;
+  }
+});
+
+const onDeleteAttachmentClick = (id: string) => {
+  deleteId.value = id;
+  deleteDialog.value = true;
+};
+
+
+const onConfirmDelete = async () => {
+  deleteLoading.value = true;
+
+  try {
+    const response = await invoiceService.deleteAttachment(deleteId.value!);
+
+    if (response.status === "error") {
+      toast.error(response.error?.message || t("t-message-delete-error"));
+      return;
+    }
+
+    toast.success(t("t-toast-message-deleted"));
+    emit('invoiceAttachmentUploaded', deleteId.value!);
+  } catch (error) {
+    toast.error(t("t-message-delete-error"));
+  }
+  finally {
+    deleteLoading.value = false;
+    deleteDialog.value = false;
+  }
+};
+
 /**
  * Submete o formulário da fatura
  */
@@ -193,6 +316,7 @@ const submitInvoice = async () => {
   }
 };
 
+
 /**
  * Processa os itens prontos para envio
  */
@@ -214,48 +338,47 @@ const onBack = () => {
 // WATCHERS
 // =============================================
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
-  if (!newInstitutionId) {
+  if (newInstitutionId) {
+    try {
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
+
+      if (invoiceData.value.employee) {
+        const currentEmployee = employeeStore.employeesForDropdown.find(
+          c => c.id === invoiceData.value.employee
+        );
+        if (!currentEmployee) {
+          invoiceData.value.employee = undefined;
+        }
+      }
+    } catch (error) {
+      handleLoadError("employees", error);
+    }
+  } else {
     employeeStore.clearEmployeesForDropdown();
     invoiceData.value.employee = undefined;
-    return;
-  }
-
-  try {
-    await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
-
-    if (invoiceData.value.employee) {
-      const employeeExists = employeeStore.employeesForDropdown.some(
-        e => e.id === invoiceData.value.employee
-      );
-      if (!employeeExists) {
-        invoiceData.value.employee = undefined;
-      }
-    }
-  } catch (error) {
-    handleLoadError("employees", error);
   }
 });
 
+
 watch(() => invoiceData.value.employee, async (newEmployeeId) => {
-  if (!newEmployeeId) {
+  if (newEmployeeId) {
+    try {
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
+
+      if (invoiceData.value.dependent) {
+        const currentDependent = dependentStore.dependentsForDropdown.find(
+          c => c.id === invoiceData.value.dependent
+        );
+        if (!currentDependent) {
+          invoiceData.value.dependent = undefined;
+        }
+      }
+    } catch (error) {
+      handleLoadError("dependents", error);
+    }
+  } else {
     dependentStore.clearDependentForDropdown();
     invoiceData.value.dependent = undefined;
-    return;
-  }
-
-  try {
-    await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
-
-    if (invoiceData.value.dependent) {
-      const dependentExists = dependentStore.dependentsForDropdown.some(
-        d => d.id === invoiceData.value.dependent
-      );
-      if (!dependentExists) {
-        invoiceData.value.dependent = undefined;
-      }
-    }
-  } catch (error) {
-    handleLoadError("dependents", error);
   }
 });
 
@@ -265,9 +388,9 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutionsforListing(0,100000000),
-      currencyStore.fetchCurrenciesForDropdown(0,1000000000),
-      clinicStore.fetchClinicsForDropdown(0,1000000000)
+      institutionStore.fetchInstitutionsforListing(0, 100000000),
+      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
@@ -278,21 +401,62 @@ onMounted(async () => {
 <template>
   <v-form ref="form">
     <v-card elevation="0" class="position-relative h-100 d-block">
-      <div class="invoice-detail-card-image">
-        <InvoiceSVG />
-      </div>
+
 
       <v-card-text>
         <!-- Seção de Informações Básicas -->
-        <v-row justify="end" class="mt-4 pt-16 pt-md-0">
-          <v-col cols="12" lg="4">
+        <v-row class="mt-4 pt-16 pt-md-0">
+          <v-col cols="12" lg="4" class="mt-6">
+            <v-card class="bg-light" elevation="0" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-card-text class="py-3">
+                <div class="d-flex justify-space-between">
+                  <span class="font-weight-bold align-center d-flex">
+                    <i class="ph ph-file me-2" /> {{ invoiceData.invoiceAttachment.originalFilename }}</span>
+                  <span class="text-muted">{{ invoiceData.invoiceAttachment.fileSize }} KB</span>
+                </div>
+              </v-card-text>
+            </v-card>
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated"
+                @click="onDownloadClick(invoiceData.id, invoiceData.invoiceAttachment.originalFilename, invoiceData.invoiceAttachment.extension)"
+                block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-download-simple me-2" /> {{ $t('t-download-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+              <v-btn color="black" variant="elevated" @click="onDeleteAttachmentClick(invoiceData.id)" block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-trash me-2" /> {{ $t('t-delete-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+            <div class="mt-3" v-if="invoiceData.id">
+              <v-btn color="black" variant="elevated" @click="onUploadClick(undefined)" block>
+                <span class="font-weight-bold align-center d-flex">
+                  <i class="ph ph-upload-simple me-2" /> {{ $t('t-upload-original-invoice') }}
+                </span>
+              </v-btn>
+            </div>
+
+          </v-col>
+          <v-col cols="12" lg="4" class="text-center">
+            <h2 class="font-weight-bold mb-0"></h2>
+          </v-col>
+          <v-col cols="12" lg="4" justify="end">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
               :rules="requiredRules.institution" :placeholder="$t('t-institution')" />
 
-            <div class="font-weight-bold mt-n1">{{ $t('t-clinic') }} <i class="ph-asterisk ph-xs text-danger" /></div>
-            <MenuSelect v-model="invoiceData.clinic" :items="clinics" :loading="clinicStore.loading"
-              :rules="requiredRules.clinic" :placeholder="$t('t-clinic')" :disabled="!clinics.length" />
+            <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i
+                class="ph-asterisk ph-xs text-danger" /></div>
+            <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers"
+              :loading="serviceProviderStore.loading" :rules="requiredRules.service_provider"
+              :placeholder="$t('t-service-provider')" :disabled="!service_providers.length" />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
             <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary">
@@ -378,8 +542,9 @@ onMounted(async () => {
 
         <!-- Componente de Itens da Fatura -->
         <div class="mb-12">
-          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''" :employee-id="invoiceData.employee || ''"
-            :initial-items="initialItems" :is-edit-mode="isEditMode" @items-ready="handleItemsReady" />
+          <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''"
+            :employee-id="invoiceData.employee || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
+            @items-ready="handleItemsReady" />
         </div>
       </v-card-text>
 
@@ -395,4 +560,11 @@ onMounted(async () => {
       </v-card-actions>
     </v-card>
   </v-form>
+
+
+  <CreateEditAttachmentDialog v-if="attachmentData" v-model="AttachmentDialog" :data="attachmentData"
+    @onSubmit="onSubmitInvoiceAttachment" />
+
+  <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
+    :loading="deleteLoading" />
 </template>
