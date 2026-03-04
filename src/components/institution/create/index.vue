@@ -20,7 +20,7 @@ import Step2 from "@/components/institution/create/TabPeriods.vue";
 import Step3 from "@/components/institution/create/TabHealthPlan.vue";
 import Step4 from "@/components/institution/create/TabOrganizationalStructure.vue";
 import Step5 from "@/components/institution/create/TabContacts.vue";
-import Step6 from "@/components/institution/create/TabClinics.vue";
+import Step6 from "@/components/institution/create/TabServiceProvider.vue";
 import Step7 from "@/components/institution/create/TabEmployees.vue";
 
 

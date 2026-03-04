@@ -144,6 +144,7 @@ export default class HealthPlanService extends HttpService {
             const payload = {
                 maxNumberOfDependents: healthPlanData.maxNumberOfDependents,
                 childrenMaxAge: healthPlanData.childrenMaxAge,
+                childrenInUniversityMaxAge: healthPlanData.childrenInUniversityMaxAge,
                 healthPlanLimit: healthPlanData.healthPlanLimit,
                 salaryComponent: healthPlanData.salaryComponent,
                 companyContributionPercentage: healthPlanData.companyContributionPercentage,

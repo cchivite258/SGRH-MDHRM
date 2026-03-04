@@ -16,7 +16,7 @@ const state = useLayoutStore();
 
 const mobileNavigationDrawer = ref(false);
 
-const navigationDrawer = computed(() => {
+const isDesktopDrawerVisible = computed(() => {
   return state.layoutType === LAYOUTS.VERTICAL && !isSmallSideBar.value;
 });
 
@@ -55,8 +55,8 @@ watch(sideBarSize, () => {
 });
 </script>
 <template>
-  <v-navigation-drawer v-if="$vuetify.display.smAndUp" v-model="navigationDrawer" :width="verticalDrawerWidth"
-    :absolute="isScrollableLayout" :permanent="$vuetify.display.smAndUp" :location="!isRtl ? 'start' : 'end'" temporary
+  <v-navigation-drawer v-if="$vuetify.display.smAndUp && isDesktopDrawerVisible" :width="verticalDrawerWidth"
+    :absolute="isScrollableLayout" permanent :location="!isRtl ? 'start' : 'end'"
     :style="isScrollableLayout ? 'overflow-y: auto' : 'height: unset !important'
       ">
     <div class="app-menu navbar-menu h-100">
@@ -125,7 +125,7 @@ watch(sideBarSize, () => {
     </div>
   </v-navigation-drawer>
 
-  <v-navigation-drawer v-if="$vuetify.display.smAndUp && !navigationDrawer" v-model="isSmallSideBar" :rail-width="70"
+  <v-navigation-drawer v-if="$vuetify.display.smAndUp && !isDesktopDrawerVisible" v-model="isSmallSideBar" :rail-width="70"
     :location="isRtl ? 'end' : 'start'" rail permanent class="vertical-navigation-drawer-rail"
     style="height: unset !important">
     <div class="d-flex justify-center navbar-brand-box">

@@ -83,6 +83,7 @@ const requiredRules = {
   ],
   address: [
     (v: string) => !!v || t('t-please-enter-address'),
+    (v: string) => v.length <= 50 || t('t-max-length-50'),
   ],
   phone: [
     (v: string) => !!v || t('t-please-enter-phone-number'),
@@ -179,7 +180,7 @@ const submitGeneralInfo = async () => {
         <v-row class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-institution-type') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-institution-type') }} <i class="ph-asterisk ph-xs text-danger" /> 
             </div>
             <MenuSelect v-model="institutionData.institutionType" :items="institutionTypes"
               :loading="institutionTypeStore.loading" :rules="requiredRules.institutionType" />

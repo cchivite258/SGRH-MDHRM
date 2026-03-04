@@ -33,6 +33,7 @@ const props = defineProps({
     default: () => ({
       id: undefined,
       maxNumberOfDependents: 0,
+      childrenInUniversityMaxAge: 0,
       childrenMaxAge: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
@@ -51,12 +52,14 @@ const errorMsg = ref("");
 const id = ref("");
 const maxNumberOfDependents = ref(0);
 const childrenMaxAge = ref(0);
+const childrenInUniversityMaxAge = ref(0);
 const healthPlanLimit = ref("");
 const fixedAmount = ref(0);
 const salaryComponent = ref<string | undefined>(undefined);
 const companyContributionPercentage = ref(0);
 const coveragePeriod = ref("");
 const company = ref("");
+const enabled = ref(true);
 //Options Enums
 import {
   limitTypeDefinitionOptions
@@ -68,10 +71,12 @@ watch(() => props.data, (newData) => {
   id.value = newData.id || "";
   maxNumberOfDependents.value = newData.maxNumberOfDependents || 0;
   childrenMaxAge.value = newData.childrenMaxAge || 0;
+  childrenInUniversityMaxAge.value = newData.childrenInUniversityMaxAge || 0;
   fixedAmount.value = newData.fixedAmount || 0;
   companyContributionPercentage.value = newData.companyContributionPercentage || 0;
   healthPlanLimit.value = newData.healthPlanLimit || "";
   salaryComponent.value = newData.salaryComponent || undefined;
+  enabled.value = newData.enabled || true;
   if (typeof newData.coveragePeriod === 'object' && newData.coveragePeriod !== null) {
     coveragePeriod.value = newData.coveragePeriod.id;
   } else {
@@ -107,6 +112,10 @@ const requiredRules = {
   maxNumberOfDependents: [
     (v: number) => !!v || t('t-please-enter-max-dependents'),
     (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+  ],
+  childrenInUniversityMaxAge: [
+    (v: number) => !!v || t('t-please-enter-max-university-age'),
+    (v: number) => (v && v >= 0) || t('t-min-zero-age')
   ],
   childrenMaxAge: [
     (v: number) => !!v || t('t-please-enter-max-age'),
@@ -175,6 +184,7 @@ const onSubmitClonePlan = async () => {
   const payload: HealthPlanInsertType = {
     id: id.value || undefined,
     maxNumberOfDependents: maxNumberOfDependents.value,
+    childrenInUniversityMaxAge: childrenInUniversityMaxAge.value,
     childrenMaxAge: childrenMaxAge.value,
     fixedAmount: fixedAmount.value,
     companyContributionPercentage: companyContributionPercentage.value,
@@ -182,7 +192,7 @@ const onSubmitClonePlan = async () => {
     salaryComponent: salaryComponent.value,
     coveragePeriod: coveragePeriod.value,
     company: props.data?.company ?? "",
-    enabled: true 
+    enabled: true
   };
 
   emit("onSubmitClone", payload, {
@@ -230,7 +240,7 @@ watch(() => props.data?.company, (newCompany) => {
  */
 
 onMounted(async () => {
-  // Garante que company.value está definido antes de carregar
+  // Garante que company.value está definido antes de carregar 
   if (!company.value && props.data?.company) {
     company.value = props.data.company;
   }
@@ -250,9 +260,9 @@ onMounted(async () => {
 </script>
 <template>
   <v-dialog v-model="dialogValue" width="500">
-
-    <v-form ref="form" @submit.prevent="onSubmitClonePlan">
-      <Card :title="$t('t-clone-health-plan')" title-class="py-0" style="overflow: hidden">
+ <v-form ref="form" @submit.prevent="onSubmitClonePlan">
+      <Card :title="isCreate ? $t('t-add-health-plan') : $t('t-edit-health-plan')" title-class="py-0"
+        style="overflow: hidden">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
         </template>
@@ -261,24 +271,24 @@ onMounted(async () => {
           <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mx-5 mt-3" variant="tonal" color="danger"
             density="compact" @click="errorMsg = ''" style="cursor: pointer;" />
         </transition>
-        <v-card-text >
+        <v-card-text>
           <v-row class="">
-            <v-col cols="12" lg="12">
-              <div class="font-weight-bold text-caption mb-1">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-2">
                 {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="coveragePeriod" :items="coveragePeriods" :loading="coveragePeriodStore.loading"
-                :rules="requiredRules.coveragePeriod" />
+                :rules="requiredRules.coveragePeriod"  />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-maximum-number-of-dependents') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="maxNumberOfDependents" :placeholder="t('t-enter-maximum-number-of-dependents')"
-                :rules="requiredRules.maxNumberOfDependents" type="number" class="mb-2" disabled />
+                :rules="requiredRules.maxNumberOfDependents" type="number" disabled />
             </v-col>
+          </v-row>
+          <v-row class="mt-n6">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-maximum-age-of-dependents') }} <i class="ph-asterisk ph-xs text-danger" />
@@ -286,40 +296,63 @@ onMounted(async () => {
               <TextField v-model.number="childrenMaxAge" :placeholder="t('t-enter-maximum-age-of-dependents')"
                 type="number" :rules="requiredRules.childrenMaxAge" class="mb-2" disabled />
             </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">
+                {{ $t('t-maximum-age-of-dependents-in-university') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model.number="childrenInUniversityMaxAge"
+                :placeholder="t('t-enter-maximum-age-of-dependents-in-university')" type="number"
+                :rules="requiredRules.childrenInUniversityMaxAge" class="mb-2" disabled />
+            </v-col>
           </v-row>
           <v-row class="mt-n6">
-            <v-col cols="12" lg="6">
+            <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
+            <v-col :cols="12" :lg="healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="healthPlanLimit" :items="healthPlanLimitOptions"
                 :rules="requiredRules.healthPlanLimit" disabled />
             </v-col>
-            <v-col cols="12" lg="6">
+
+            <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'FIXED_AMOUNT'">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-fixed-amount') }} <i v-if="healthPlanLimit === 'FIXED_AMOUNT'"
-                  class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="fixedAmount" type="number" :placeholder="t('t-enter-fixed-amount')"
-                :rules="requiredRules.fixedAmount" class="mb-2" disabled />
+                :rules="requiredRules.fixedAmount" class="mb-2" disabled/>
             </v-col>
           </v-row>
-          <v-row class="mt-n5">
-            <v-col cols="12" lg="6">
+
+          <v-row class="mt-n6">
+            <!-- Campo Salary Component - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'ANUAL_SALARY'">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-salary-component') }} <i v-if="healthPlanLimit === 'ANUAL_SALARY'"
-                  class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-salary-component') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="salaryComponent" :items="salaryComponentOptions"
                 :rules="requiredRules.salaryComponent" disabled />
             </v-col>
-            <v-col cols="12" lg="6">
+
+            <!-- Campo Company Contribution - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'ANUAL_SALARY'">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-company-contribuition-percentage') }}
               </div>
               <TextField v-model="companyContributionPercentage"
                 :placeholder="t('t-enter-company-contribuition-percentage')" type="number" class="mb-2"
-                :rules="requiredRules.companyContributionPercentage" disabled />
+                :rules="requiredRules.companyContributionPercentage" disabled/>
+            </v-col>
+          </v-row>
+          <v-row :class="healthPlanLimit === 'ANUAL_SALARY' ? 'mt-n6' : ''">
+            <v-col cols="12" lg="12" class="">
+              <div class="font-weight-bold">{{ $t('t-availability') }}</div>
+              <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex" disabled>
+                <template #label>
+                  <span>{{ $t('t-is-enabled') }}</span>
+                </template>
+              </v-checkbox>
             </v-col>
           </v-row>
         </v-card-text>
@@ -331,7 +364,7 @@ onMounted(async () => {
             </v-btn>
             <v-btn color="primary" variant="elevated" @click="onSubmitClonePlan" :loading="localCloneLoading"
               :disabled="localCloneLoading">
-              {{ localCloneLoading ? $t('t-saving') : $t('t-clone') }}
+              {{ localCloneLoading ? $t('t-saving') : $t('t-save') }}
             </v-btn>
           </div>
         </v-card-actions>

@@ -227,9 +227,10 @@ export default class EmployeeService extends HttpService {
 
   async getEmployeeById(id: string): Promise<{ data: EmployeeResponseType }> {
     try {
+      console.log('ID recebido para busca:', id);
       const response = await this.get<{ data: EmployeeResponseType; meta: any }>
         (`/human-resource/employees/${id}?includes=position,department,company,province,country`);
-      console.log('Resposta da requisição:------------------------', response);
+      console.log('Resposta da requisição id:------------------------', response);
       return {
         data: response.data
       };
@@ -255,7 +256,7 @@ export default class EmployeeService extends HttpService {
   async updateEmployee(id: string, employeeData: EmployeeInsertType): Promise<EmployeeResponseType> {
     try {
 
-      console.log('employeeData on update', employeeData.salary)
+      console.log('employeeData on update', employeeData.baseSalary)
       // Corpo da requisição conforme especificado
       const payload = {
         employeeNumber: employeeData.employeeNumber,
@@ -287,10 +288,14 @@ export default class EmployeeService extends HttpService {
         passportIssuer: employeeData.passportIssuer,
         passportExpiryDate: employeeData.passportExpiryDate,
         passportIssuanceDate: employeeData.passportIssuanceDate,
-        salary: employeeData.salary,
+        baseSalary: employeeData.baseSalary,
         company: employeeData.company,
         department: employeeData.department,
         position: employeeData.position,
+        contractDurationType: employeeData.contractDurationType,
+        hireDate: employeeData.hireDate,
+        terminationDate: employeeData.terminationDate,
+        rehireDate: employeeData.rehireDate,
         enabled: employeeData.enabled
       };
 

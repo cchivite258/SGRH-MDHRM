@@ -194,9 +194,9 @@ export type ContactPersonInsertType = {
     enabled: boolean;
 };
 
-export type ClinicListingType = {
+export type ServiceProviderListingType = {
     id: string;
-    clinic: {
+    serviceProvider: {
         id: string | number;
         name: string;
         description: string;
@@ -217,9 +217,9 @@ export type ClinicListingType = {
     enabled: boolean;
 };
 
-export type ClinicInsertType = {
+export type ServiceProviderInsertType = {
     id?: string | null; 
-    clinic: string; 
+    serviceProvider: string; 
     company: string; 
     enabled: boolean;
 };
@@ -259,7 +259,7 @@ export type CoveragePeriodListingType = {
     startDate: Date;
     endDate: Date;
     status: string; 
-    company: string ;
+    company: any;
     createdAt: Date | null;
     updatedAt: Date | null;
     deletedAt: Date | null;
@@ -274,7 +274,7 @@ export type CoveragePeriodInsertType = {
     name: string;
     startDate: Date;
     endDate: Date;
-    company: string;
+    company: any | undefined;
     enabled: boolean;
 };
 
@@ -282,6 +282,7 @@ export type CoveragePeriodInsertType = {
 export type HealthPlanListingType = {
     id: string;
     maxNumberOfDependents: number | undefined;
+    childrenInUniversityMaxAge: number | undefined;
     childrenMaxAge: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
@@ -303,6 +304,7 @@ export type HealthPlanInsertType = {
     id?: string | undefined; 
     maxNumberOfDependents: number | undefined;
     childrenMaxAge: number | undefined;
+    childrenInUniversityMaxAge: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
     salaryComponent: string | undefined;
@@ -318,3 +320,48 @@ export type HealthPlanCloneType = {
     company: string;
     enabled: boolean;
 }; 
+
+
+export type BudgetInsertType = {
+    id?: string | null;
+    name: string;
+    budgetAmount: number | undefined;
+    coveragePeriod: string | undefined;
+    budgetSpended?: number | undefined;
+    totalAmountByCompanyEmployees?: number | undefined;
+    coveragePeriodBudgetTransaction?: any[];
+    enabled: boolean;
+}
+
+export type BudgetListingType = {
+    id: string;
+    name: string;
+    budgetAmount: number | undefined;
+    coveragePeriod: any;
+    coveragePeriodId: string;
+    budgetSpended: number | undefined;
+    totalAmountByCompanyEmployees: number | undefined;
+    coveragePeriodBudgetTransaction: any[];
+    removable: boolean;
+    createdAt: Date | null;
+    updatedAt: Date | null;
+    deletedAt: Date | null;
+    createdBy: string;
+    updatedBy: string;
+    deletedBy: string;
+    enabled: boolean;
+}
+
+export type TransactionType = {
+  id: string
+  invoiceId: string | null
+  coveragePeriodBudgetId: string
+  totalAmount: number
+  postingOperation: string
+  removable: boolean
+  enabled: boolean
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  updatedBy: string
+}

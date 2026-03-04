@@ -22,8 +22,9 @@ import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
 
 // Types
-import { InstitutionListingType  } from "@/components/institution/types";
+import { InstitutionListingType } from "@/components/institution/types";
 import { EmployeeInsertType } from "@/components/employee/types";
+import { formateDate } from "@/app/common/dateFormate";
 
 // Configuração inicial
 const { t } = useI18n();
@@ -33,6 +34,11 @@ const toast = useToast();
 const institutionStore = useInstitutionStore();
 const departmentStore = useDepartmentStore();
 const positionStore = usePositionStore();
+
+//Utils
+import {
+  contractDurationTypeOptions
+} from "@/components/employee/create/utils";
 
 // Referência do formulário
 const form2 = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
@@ -172,7 +178,7 @@ const loadMorePositions = () => {
 /**
  * Trata erros de forma consistente
  */
-const handleError = (message: string, error: any) => { 
+const handleError = (message: string, error: any) => {
   console.error(message, error);
   errorMsg.value = message;
   alertTimeout = setTimeout(() => {
@@ -217,6 +223,11 @@ const positionName = computed(() => {
   return position ? position.name : '-';
 });
 
+const getContractDurationLabel = (value: string | undefined) => {
+  const option = contractDurationTypeOptions.find(opt => opt.value === value);
+  return option ? option.label : value;
+};
+
 </script>
 
 <template>
@@ -233,15 +244,15 @@ const positionName = computed(() => {
         <v-row>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-institution') }} 
+              {{ $t('t-institution') }}
             </div>
             <div>{{ companyName || '-' }}</div>
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-department') }} 
+              {{ $t('t-department') }}
             </div>
-             <div>{{ departmentName|| '-' }}</div>
+            <div>{{ departmentName || '-' }}</div>
           </v-col>
         </v-row>
 
@@ -249,38 +260,60 @@ const positionName = computed(() => {
         <v-row class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-position') }} 
+              {{ $t('t-position') }}
             </div>
             <div>{{ positionName || '-' }}</div>
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-base-salary') }} 
+              {{ $t('t-base-salary') }}
             </div>
-            <div>{{ employeeData.salary || '-' }}</div>
+            <div>{{ employeeData.baseSalary || '-' }}</div>
           </v-col>
         </v-row>
+
+
+        <v-row class="">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-hire-date') }}
+            </div>
+            <div>{{ formateDate(employeeData.hireDate) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-duration') }}
+            </div>
+            <div>{{ getContractDurationLabel(employeeData.contractDurationType) || '-' }}</div>
+          </v-col>
+        </v-row>
+
+
+        <v-row class="">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-termination-date') }}
+            </div>
+            <div>{{ formateDate(employeeData.terminationDate) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-rehire-date') }}
+            </div>
+            <div>{{ formateDate(employeeData.rehireDate) || '-' }}</div>
+          </v-col>
+        </v-row>
+
+
       </v-card-text>
 
       <!-- Ações do formulário -->
       <v-card-actions class="d-flex justify-space-between mt-5">
-        <v-btn 
-          color="secondary" 
-          variant="outlined" 
-          class="me-2" 
-          @click="emit('onStepChange', 1)" 
-          :disabled="loading"
-        >
+        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
           {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
 
-        <v-btn 
-          color="secondary" 
-          variant="outlined" 
-          class="me-2" 
-          @click="emit('onStepChange', 1)" 
-          :disabled="loading"
-        >
+        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
 

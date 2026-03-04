@@ -1,6 +1,6 @@
 // services/departmentService.ts
 import HttpService from "@/app/http/httpService";
-import type { HealthPlanListingType } from "@/components/employee/types";
+import type { HealthPlanListingType, ExpensePerProcedureType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -23,7 +23,7 @@ export default class EmployeeHealthPlanService extends HttpService {
     direction: string = 'asc',
     query_value?: string,
     query_props?: string
-  ): Promise<{ content: HealthPlanListingType[], meta: any }> {
+  ): Promise<{ content: HealthPlanListingType[], meta: any }> { 
     try {
       const queryParams = [
         //`id=${id}`,
@@ -32,6 +32,8 @@ export default class EmployeeHealthPlanService extends HttpService {
         `sortColumn=${sortColumn}`,
         `direction=${direction}`
       ];
+
+      console.log('ID recebido em getHealthPlansByEmployee:', id);
 
       // Adiciona o ID apenas se query_value não estiver vazio
       if (query_value) {
@@ -53,7 +55,7 @@ export default class EmployeeHealthPlanService extends HttpService {
       const url = `/amm/employee-health-plans?${queryString}`;
 
 
-      console.log('URL da requisição:', url);
+      console.log('URL da requisição dos planos:', url);
       const response = await this.get<ApiResponse<HealthPlanListingType[]>>(url);
 
       return {
@@ -97,7 +99,7 @@ export default class EmployeeHealthPlanService extends HttpService {
         const url = `/amm/employee-health-plans/${id}?${queryString}`;
 
 
-        console.log('URL da requisição:', url);
+        console.log('URL da requisição dos planos:', url);
         const response = await this.get<ApiResponse<HealthPlanListingType>>(url);
   
         return {
@@ -110,10 +112,6 @@ export default class EmployeeHealthPlanService extends HttpService {
         throw error;
       }
     }
-
-
-
-
 
   handleError(error: any) {
     if (error.response) {
@@ -128,6 +126,51 @@ export default class EmployeeHealthPlanService extends HttpService {
       details: null
     };
   }
+
+
+  async getHospitalProcedureBalancebyEmployee(
+      id: string | null,
+      page: number = 0,
+      size: number = 10,
+      sortColumn: string = 'createdAt',
+      direction: string = 'asc',
+      query_value?: string,
+      query_props?: string
+    ): Promise<{ content: ExpensePerProcedureType [], meta: any }> {
+      try {
+        const queryParams = [
+          `id=${id}`,
+          `page=${page}`,
+          `size=${size}`,
+          `sortColumn=${sortColumn}`,
+          `direction=${direction}`
+        ];
+  
+          if (query_value && query_props) {
+            queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+            queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+          }
+    
+        const includesToUse = 'hospitalProcedureType';
+        queryParams.push(`includes=${includesToUse}`);
+  
+        const queryString = queryParams.join('&');
+        const url = `/amm/employee-hospital-procedure-plan-limits/by-employee-health-plan?${queryString}`;
+
+
+        console.log('Procedimentos  URL da requisição:', url);
+        const response = await this.get<ApiResponse<ExpensePerProcedureType[]>>(url);
+  
+        return {
+          content: response.data || [],
+          meta: response.meta || []
+        };
+        
+      } catch (error) {
+        console.error("❌ Erro ao buscar dependentes:", error);
+        throw error;
+      }
+    }
 
 
 

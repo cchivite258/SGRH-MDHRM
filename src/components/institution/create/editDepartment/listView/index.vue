@@ -16,6 +16,7 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
+import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -70,7 +71,7 @@ onMounted(async () => {
           name: dept.name,
           description: dept.description || "",
           company: dept.company?.id,
-          enabled: dept.enabled 
+          enabled: dept.enabled
         };
       }
 
@@ -121,17 +122,27 @@ const toggleSelection = (item: PositionListingForListType) => {
 
 // Modal de criação/edição de posição
 const onCreateEditClick = (data: PositionListingForListType | null) => {
-  positionFormData.value = data 
+  positionFormData.value = data
     ? { ...data, department: departmentId.value || "" }
     : {
-        id: undefined,
-        name: "",
-        description: "",
-        department: departmentId.value || "",
-        enabled: true
-      };
+      id: undefined,
+      name: "",
+      description: "",
+      department: departmentId.value || "",
+      enabled: true
+    };
   dialog.value = true;
 };
+
+
+/**
+ * Submete dados do formulário
+ */
+interface ServiceResponse<T> {
+  status: 'success' | 'error';
+  data?: T;
+  error?: ApiErrorResponse;
+}
 
 const onSubmitPosition = async (
   data: PositionInsertType,
@@ -141,13 +152,37 @@ const onSubmitPosition = async (
   }
 ) => {
   try {
+    let response: ServiceResponse<PositionListingForListType>;
+
     if (!data.id) {
-      await positionService.createPosition(data);
-      toast.success(t('t-toast-message-created'));
+      response = await positionService.createPosition(data);
     } else {
-      await positionService.updatePosition(data.id, data);
-      toast.success(t('t-toast-message-update'));
+      response = await positionService.updatePosition(data.id, data);
     }
+
+    // Verifica se a resposta contém erro
+    if (response.status === 'error') {
+      const apiError = response.error;
+
+      // Caso haja erros de validação
+      if (apiError?.error?.errors) {
+        const validationErrors = apiError.error.errors;
+
+        Object.values(validationErrors).forEach(errList => {
+          errList.forEach(err => toast.error(err));
+        });
+
+        return;
+      }
+
+      // Erro normal
+      toast.error(apiError?.message || t('t-message-save-error'));
+      return;
+    }
+
+
+    // Só mostra sucesso se realmente foi bem-sucedido
+    toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
 
     await fetchPositions({
       page: positionStore.pagination.currentPage + 1,
@@ -155,10 +190,25 @@ const onSubmitPosition = async (
       sortBy: [],
       search: searchQuery.value
     });
-    
+
     callbacks?.onSuccess?.();
-  } catch (error) {
-    toast.error(t('t-message-save-error'));
+  } catch (error: any) {
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     callbacks?.onFinally?.();
   }
@@ -208,7 +258,7 @@ const onBack = () => {
   // Obtém o ID da instituição do departamento atual
   const institutionId = form.value.company;
   console.log("Institution ID:", institutionId);
-  
+
   if (institutionId) {
     // Navega para a rota de edição da instituição e força a tab 3
     router.push({
@@ -237,7 +287,7 @@ const handleSubmit = async () => {
       await departmentService.createDepartment(form.value);
       toast.success(t('t-toast-message-created'));
     }
-    
+
     await departmentStore.fetchDepartmentsForList(form.value.company);
   } catch (error) {
     toast.error(t('t-message-save-error'));
@@ -267,19 +317,19 @@ const handleSubmit = async () => {
             </v-col>
           </v-row>
           <v-row class="mt-n6">
-          <v-col cols="12" lg="12" class="">
-            <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
-            <v-checkbox v-model="form.enabled" density="compact" color="primary" class="d-inline-flex">
-              <template #label>
-                <span>{{ $t('t-is-enabled') }}</span>
-              </template>
-            </v-checkbox>
-          </v-col>
-        </v-row>
+            <v-col cols="12" lg="12" class="">
+              <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
+              <v-checkbox v-model="form.enabled" density="compact" color="primary" class="d-inline-flex">
+                <template #label>
+                  <span>{{ $t('t-is-enabled') }}</span>
+                </template>
+              </v-checkbox>
+            </v-col>
+          </v-row>
         </v-card-text>
       </v-card>
     </v-card-text>
-    
+
     <v-card-text>
       <Card :title="$t('t-position-list')" title-class="pt-0">
         <template #title-action>
@@ -290,7 +340,7 @@ const handleSubmit = async () => {
           </div>
         </template>
       </Card>
-      
+
       <v-row class="mt-n3">
         <v-col cols="12" lg="12">
           <v-card class="mt-5">
@@ -304,23 +354,14 @@ const handleSubmit = async () => {
               </v-card-text>
               <DataTableServer v-model="selectedPositions"
                 :headers="positionHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="positionStore.positions_list"
-                :items-per-page="itemsPerPage"
-                :total-items="totalItems"
-                :loading="loadingList"
-                :search-query="searchQuery"
-                :search-props="searchProps"
-                @load-items="fetchPositions"
-              >
+                :items="positionStore.positions_list" :items-per-page="itemsPerPage" :total-items="totalItems"
+                :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
+                @load-items="fetchPositions">
                 <template #body="{ items }">
                   <tr v-for="item in items as PositionListingForListType[]" :key="item.id">
                     <td>
-                      <v-checkbox 
-                        :model-value="selectedPositions.some(selected => selected.id === item.id)"
-                        @update:model-value="toggleSelection(item)" 
-                        hide-details 
-                        density="compact" 
-                      />
+                      <v-checkbox :model-value="selectedPositions.some(selected => selected.id === item.id)"
+                        @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
                     <td>{{ item.name }}</td>
                     <td>{{ item.description }}</td>
@@ -328,15 +369,12 @@ const handleSubmit = async () => {
                       <Status :status="item.enabled ? 'enabled' : 'disabled'" />
                     </td>
                     <td style="padding-right: 0px;">
-                      <TableAction 
-                        @onView="onViewClick(item)" 
-                        @onEdit="onCreateEditClick(item)"
-                        @onDelete="onDelete(item.id)" 
-                      />
+                      <TableAction @onView="onViewClick(item)" @onEdit="onCreateEditClick(item)"
+                        @onDelete="onDelete(item.id)" />
                     </td>
                   </tr>
                 </template>
-                
+
                 <template v-if="positionStore.positions_list.length === 0" #body>
                   <tr>
                     <td :colspan="positionHeader.length" class="text-center py-10">
@@ -354,41 +392,24 @@ const handleSubmit = async () => {
           </v-card>
         </v-col>
       </v-row>
-      
+
       <v-card-actions class="d-flex justify-space-between mt-10">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn 
-          color="success" 
-          variant="elevated" 
-          :loading="loading" 
-          :disabled="!form.name || !form.description"
-          @click="handleSubmit"
-        >
-          {{ $t('t-save') }} 
+        <v-btn color="success" variant="elevated" :loading="loading" :disabled="!form.name || !form.description"
+          @click="handleSubmit">
+          {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>
     </v-card-text>
   </Card>
 
-  <CreateUpdatePositionModal 
-    v-if="positionFormData" 
-    v-model="dialog" 
-    :data="positionFormData" 
-    @onSubmit="onSubmitPosition" 
-  />
+  <CreateUpdatePositionModal v-if="positionFormData" v-model="dialog" :data="positionFormData"
+    @onSubmit="onSubmitPosition" />
 
-  <ViewPositionModal 
-    v-if="positionFormData" 
-    v-model="viewDialog" 
-    :data="positionFormData" 
-  />
+  <ViewPositionModal v-if="positionFormData" v-model="viewDialog" :data="positionFormData" />
 
-  <RemoveItemConfirmationDialog 
-    v-if="deleteId" 
-    v-model="deleteDialog" 
-    :loading="deleteLoading" 
-    @onConfirm="onConfirmDelete"
-  />
+  <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" :loading="deleteLoading"
+    @onConfirm="onConfirmDelete" />
 </template>

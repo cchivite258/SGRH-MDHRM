@@ -176,6 +176,8 @@ export default class CoveragePeriodService extends HttpService {
     async updateCoveragePeriod(id: string, coveragePeriodData: CoveragePeriodInsertType): Promise<ServiceResponse<CoveragePeriodListingType>> {
         try {
 
+            console.log('Dados para atualização do periodo:', coveragePeriodData);
+
             // Corpo da requisição conforme especificado
             const payload = {
                 name: coveragePeriodData.name,

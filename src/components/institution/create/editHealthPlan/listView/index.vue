@@ -18,7 +18,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
-import Status from "@/app/common/components/Status.vue";
+import Status from "@/app/common/components/Status.vue"; 
 
 //Options Enums
 import {
@@ -61,7 +61,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,limitTypeDefinition";
+const searchProps = "fixedAmount,percentage,limitTypeDefinition,hospitalProcedureType.name";
 const loading = ref(false);
 
 // Computed properties
@@ -72,6 +72,7 @@ const totalItems = computed(() => hospitalProcedureStore.pagination.totalElement
 const healthPlanFormData = ref<HealthPlanInsertType>({
   id: healthPlanId.value || undefined,
   maxNumberOfDependents: 0,
+  childrenInUniversityMaxAge: 0,
   childrenMaxAge: 0,
   healthPlanLimit: "",
   fixedAmount: 0,
@@ -90,6 +91,10 @@ const requiredRules = {
   maxNumberOfDependents: [
     (v: number) => !!v || t('t-please-enter-max-dependents'),
     (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+  ],
+  childrenInUniversityMaxAge: [
+    (v: number) => !!v || t('t-please-enter-max-age-university'),
+    (v: number) => (v && v >= 0) || t('t-min-zero-age')
   ],
   childrenMaxAge: [
     (v: number) => !!v || t('t-please-enter-max-age'),
@@ -125,10 +130,10 @@ const requiredRules = {
 const coveragePeriods = computed(() => {
   return (coveragePeriodStore.coverage_periods_for_dropdown || [])
     .filter((item: CoveragePeriodListingType) =>
-      !item.status || item.status.toString().toUpperCase() !== 'CLOSED'
+      !item.status || item.status.toString().toUpperCase() 
     )
     .map((item: CoveragePeriodListingType) => ({
-      value: item.id,
+      value: item.id, 
       label: item.name,
     }));
 });
@@ -152,6 +157,7 @@ onMounted(async () => {
         healthPlanFormData.value = {
           id: healthPlan.id,
           maxNumberOfDependents: healthPlan.maxNumberOfDependents,
+          childrenInUniversityMaxAge: healthPlan.childrenInUniversityMaxAge,
           childrenMaxAge: healthPlan.childrenMaxAge,
           healthPlanLimit: healthPlan.healthPlanLimit,
           fixedAmount: healthPlan.fixedAmount,
@@ -244,7 +250,21 @@ const onSubmitHospitalProcedure = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      const apiError = response.error;
+
+      // Caso haja erros de validação
+      if (apiError?.error?.errors) {
+        const validationErrors = apiError.error.errors;
+
+        Object.values(validationErrors).forEach(errList => {
+          errList.forEach(err => toast.error(err));
+        });
+
+        return;
+      }
+
+      // Erro normal
+      toast.error(apiError?.message || t('t-message-save-error'));
       return;
     }
 
@@ -259,8 +279,23 @@ const onSubmitHospitalProcedure = async (
     });
 
     callbacks?.onSuccess?.();
-  } catch (error) {
-    toast.error(t('t-message-save-error'));
+  } catch (error: any) {
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     callbacks?.onFinally?.();
   }
@@ -365,7 +400,21 @@ const handleSubmit = async () => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      const apiError = response.error;
+
+      // Caso haja erros de validação
+      if (apiError?.error?.errors) {
+        const validationErrors = apiError.error.errors;
+
+        Object.values(validationErrors).forEach(errList => {
+          errList.forEach(err => toast.error(err));
+        });
+
+        return;
+      }
+
+      // Erro normal
+      toast.error(apiError?.message || t('t-message-save-error'));
       return;
     }
 
@@ -374,8 +423,23 @@ const handleSubmit = async () => {
 
     await healthPlanStore.fetchHealthPlans(healthPlanFormData.value.company);
 
-  } catch (error) {
-    toast.error(t('t-message-save-error'));
+  } catch (error: any) {
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     loading.value = false;
   }
@@ -395,83 +459,91 @@ const getLimitTypeLabel = (value: string) => {
   <Card title="">
     <v-form ref="formulario" @submit.prevent="handleSubmit">
       <v-card-text>
-        <v-card>
-          <v-card-text>
-            <v-row class="">
-              <v-col cols="12" lg="12">
-                <div class="font-weight-bold mb-1">
-                  {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <MenuSelect v-model="healthPlanFormData.coveragePeriod" :items="coveragePeriods"
-                  :loading="coveragePeriodStore.loading" :rules="requiredRules.coveragePeriod" />
-              </v-col>
-            </v-row>
-            <v-row class="mt-n6">
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-maximum-number-of-dependents') }}<i class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <TextField v-model.number="healthPlanFormData.maxNumberOfDependents"
-                  :placeholder="t('t-enter-maximum-number-of-dependents')" :rules="requiredRules.maxNumberOfDependents"
-                  type="number" class="mb-2" />
-              </v-col>
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-maximum-age-of-dependents') }} <i class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <TextField v-model.number="healthPlanFormData.childrenMaxAge"
-                  :placeholder="t('t-enter-maximum-age-of-dependents')" type="number"
-                  :rules="requiredRules.childrenMaxAge" class="mb-2" />
-              </v-col>
-            </v-row>
-            <v-row class="mt-n6">
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <MenuSelect v-model="healthPlanFormData.healthPlanLimit" :items="healthPlanLimitOptions"
-                  :rules="requiredRules.healthPlanLimit" />
-              </v-col>
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-fixed-amount') }} <i v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'"
-                    class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <TextField v-model.number="healthPlanFormData.fixedAmount" type="number"
-                  :placeholder="t('t-enter-fixed-amount')" :rules="requiredRules.fixedAmount" class="mb-2" />
-              </v-col>
-            </v-row>
-            <v-row class="mt-n5">
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-salary-component') }} <i v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'"
-                    class="ph-asterisk ph-xs text-danger" />
-                </div>
-                <MenuSelect v-model="healthPlanFormData.salaryComponent" :items="salaryComponentOptions"
-                  :rules="requiredRules.salaryComponent" />
-              </v-col>
-              <v-col cols="12" lg="6">
-                <div class="font-weight-bold mb-2">
-                  {{ $t('t-company-contribuition-percentage') }}
-                </div>
-                <TextField v-model="healthPlanFormData.companyContributionPercentage"
-                  :placeholder="t('t-enter-company-contribuition-percentage')" type="number" class="mb-2"
-                  :rules="requiredRules.companyContributionPercentage" />
-              </v-col>
-            </v-row>
-            <v-row class="mt-n6">
-              <v-col cols="12" lg="12" class="">
-                <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
-                <v-checkbox v-model="healthPlanFormData.enabled" density="compact" color="primary"
-                  class="d-inline-flex">
-                  <template #label>
-                    <span>{{ $t('t-is-enabled') }}</span>
-                  </template>
-                </v-checkbox>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+        <v-row class="">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-2">
+              {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" /> 
+            </div>
+            <MenuSelect v-model="healthPlanFormData.coveragePeriod" :items="coveragePeriods"
+              :loading="coveragePeriodStore.loading" :rules="requiredRules.coveragePeriod" />
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-maximum-number-of-dependents') }}<i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField v-model.number="healthPlanFormData.maxNumberOfDependents"
+              :placeholder="t('t-enter-maximum-number-of-dependents')" :rules="requiredRules.maxNumberOfDependents"
+              type="number" />
+          </v-col>
+        </v-row>
+        <v-row class="mt-n6">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-maximum-age-of-dependents') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField v-model.number="healthPlanFormData.childrenMaxAge"
+              :placeholder="t('t-enter-maximum-age-of-dependents')" type="number" :rules="requiredRules.childrenMaxAge"
+              class="mb-2" />
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-maximum-age-of-dependents-in-university') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField v-model.number="healthPlanFormData.childrenInUniversityMaxAge"
+              :placeholder="t('t-enter-maximum-age-of-dependents-in-university')" type="number"
+              :rules="requiredRules.childrenInUniversityMaxAge" class="mb-2" />
+          </v-col>
+        </v-row>
+        <v-row class="mt-n6">
+          <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
+          <v-col :cols="12" :lg="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <MenuSelect v-model="healthPlanFormData.healthPlanLimit" :items="healthPlanLimitOptions"
+              :rules="requiredRules.healthPlanLimit" />
+          </v-col>
+
+          <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
+          <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField v-model.number="healthPlanFormData.fixedAmount" type="number"
+              :placeholder="t('t-enter-fixed-amount')" :rules="requiredRules.fixedAmount" class="mb-2" />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-n6">
+          <!-- Campo Salary Component - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+          <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-salary-component') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <MenuSelect v-model="healthPlanFormData.salaryComponent" :items="salaryComponentOptions"
+              :rules="requiredRules.salaryComponent" />
+          </v-col>
+
+          <!-- Campo Company Contribution - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
+          <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY'">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-company-contribuition-percentage') }}
+            </div>
+            <TextField v-model="healthPlanFormData.companyContributionPercentage"
+              :placeholder="t('t-enter-company-contribuition-percentage')" type="number" class="mb-2"
+              :rules="requiredRules.companyContributionPercentage" />
+          </v-col>
+        </v-row>
+        <v-row :class="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY' ? 'mt-n6' : ''">
+          <v-col cols="12" lg="12" class="">
+            <div class="font-weight-bold">{{ $t('t-availability') }}</div>
+            <v-checkbox v-model="healthPlanFormData.enabled" density="compact" color="primary" class="d-inline-flex">
+              <template #label>
+                <span>{{ $t('t-is-enabled') }}</span>
+              </template>
+            </v-checkbox>
+          </v-col>
+        </v-row>
       </v-card-text>
     </v-form>
 
@@ -512,7 +584,9 @@ const getLimitTypeLabel = (value: string) => {
                     <td>{{ getLimitTypeLabel(item.limitTypeDefinition) }}</td>
                     <td>{{ item.fixedAmount }}</td>
                     <td>{{ item.percentage }}%</td>
-                    <td><Status :status="item.enabled ? 'enabled' : 'disabled'" /></td>
+                    <td>
+                      <Status :status="item.enabled ? 'enabled' : 'disabled'" />
+                    </td>
                     <td>
                       <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
                         @onDelete="onDelete(item.id)" />

@@ -48,7 +48,7 @@ const isEditMode = computed(() => !!invoiceId.value); // Determina se está em m
  */
 const invoiceData = reactive<InvoiceInsertType>({
   invoiceNumber: '',
-  clinic: undefined,
+  serviceProvider: undefined,
   currency: undefined,
   employee: undefined,
   issueDate: new Date(),
@@ -84,7 +84,7 @@ const loadInvoiceData = async (id: string) => {
       Object.assign(invoiceData, invoiceResponse.data);
       // Mapeia os relacionamentos
       invoiceData.company = invoiceResponse.data.employee?.companyId || undefined;
-      invoiceData.clinic = invoiceResponse.data.clinic?.id || undefined;
+      invoiceData.serviceProvider = invoiceResponse.data.serviceProvider?.id || undefined;
       invoiceData.employee = invoiceResponse.data.employee?.id || undefined;
       invoiceData.currency = invoiceResponse.data.currency?.id || undefined;
       invoiceData.dependent = invoiceResponse.data.dependent?.id || undefined;

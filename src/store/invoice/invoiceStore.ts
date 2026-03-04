@@ -148,6 +148,9 @@ export const useInvoiceStore = defineStore('invoices', {
     loadFromStorage() {
       const draft = localStorage.getItem('invoiceDraft');
       const id = localStorage.getItem('currentInvoiceId');
+      console.log(' no loadFromStorage Carregando rascunho de factura do armazenamento local: xxx', draft);
+      console.log(' no loadFromStorageCarregando ID de factura actual do armazenamento local: xxx', id);
+
       if (draft) this.draftInvoice = JSON.parse(draft);
       if (id) this.currentInvoiceId = id;
     }

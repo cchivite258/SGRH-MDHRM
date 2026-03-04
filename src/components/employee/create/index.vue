@@ -18,6 +18,7 @@ import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/create/TabDependents.vue";
 import Step4 from "@/components/employee/create/TabHealthPlan.vue";
+import Step5 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -98,10 +99,14 @@ let employeeData = reactive<EmployeeInsertType>({
   enabled: true,
 
   // Dados da segunda tab
-  salary: null,
+  baseSalary: null,
   company: undefined,
   department: undefined,
-  position: undefined
+  position: undefined,
+  contractDurationType: undefined,
+  hireDate: undefined,
+  terminationDate: undefined,
+  rehireDate: undefined
 });
 
 /**
@@ -331,6 +336,8 @@ onBeforeUnmount(() => {
       <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
       <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>

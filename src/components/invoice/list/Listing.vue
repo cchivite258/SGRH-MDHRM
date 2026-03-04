@@ -29,8 +29,11 @@ const invoiceStore = useInvoiceStore()
 const searchQuery = ref("")
 const searchProps = "invoiceNumber,issueDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus" // Campos de pesquisa,
 const postDialog = ref(false)
+const postFlaggedDialog = ref(false)
 const postId = ref<string | null>(null)
+const postFlaggedId = ref<string | null>(null)
 const postLoading = ref(false)
+const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
@@ -67,6 +70,47 @@ const fetchInvoices = async ({ page, itemsPerPage, sortBy, search }: FetchParams
 const onView = (id: string) => {
   router.push(`/invoices/view/${id}`)
 }
+
+// Abre o diálogo de confirmação para do lançamento
+const openPostFlaggedDialog = (id: string) => {
+  postFlaggedId.value = id
+  postFlaggedDialog.value = true
+}
+
+const postFlaggedInvoice = async () => {
+  if (!postFlaggedId.value) return;
+
+  postFlaggedLoading.value = true;
+  try {
+    await invoiceService.postFlaggedInvoice(postFlaggedId.value);
+    toast.success(t('t-toast-message-post'));
+    await invoiceStore.fetchInvoices(0, itemsPerPage.value);
+  } catch (error: unknown) {
+    console.log('Erro completo:', error); // Para debugging
+    
+    if (typeof error === 'object' && error !== null) {
+      const apiError = error as {
+        message?: string;
+        details?: any;
+        status?: number;
+      };
+      
+      if (apiError.message) {
+        // Mostra a mensagem direta do erro
+        toast.error(apiError.message);
+      } else {
+        // Fallback para mensagem genérica
+        toast.error(t('t-toast-message-error'));
+      }
+    } else {
+      // Caso o erro não seja um objeto
+      toast.error(t('t-toast-message-error'));
+    }
+  } finally {
+    postFlaggedLoading.value = false;
+    postFlaggedDialog.value = false;
+  }
+};
 
 // Abre o diálogo de confirmação para do lançamento
 const openPostDialog = (id: string) => {
@@ -201,10 +245,14 @@ const onDelete = (id: string) => {
 openDeleteDialog(id);
 }
 */
+
 const onPost = (id: string) => {
   openPostDialog(id);
 }
 
+const onPostFlagged = (id: string) => {
+  openPostFlaggedDialog(id);
+}
 const onCancel = (id: string) => {
   openCancelDialog(id);
 }
@@ -238,6 +286,9 @@ const onSelect = (option: string, data: InvoiceListingType) => {
     case "post":
       onPost(data.id); 
       break;
+    case "force-post":
+      onPostFlagged(data.id); 
+      break;
     case "cancel":
       onCancel(data.id); 
       break;
@@ -254,6 +305,11 @@ const formatAmount = (amount: number | string) => {
     maximumFractionDigits: 2
   }).format(num);
 };
+
+const hasFlaggedItems = (invoice: InvoiceListingType) => invoice.areItemsFlagged === true;
+
+const shouldHighlight = (invoice: InvoiceListingType) =>
+  invoice.flag !== 'UNFLAGGED' || hasFlaggedItems(invoice);
 </script>
 <template>
   <Card :title="$t('t-invoice-list')" class="mt-7">
@@ -282,16 +338,24 @@ const formatAmount = (amount: number | string) => {
         :loading="loading" :search-query="searchQuery" @load-items="fetchInvoices" item-value="id"
         show-select>
         <template #body="{ items }: { items: readonly unknown[] }">
-          <tr v-for="item in items as InvoiceListingType[]" :key="item.id">
+          <tr v-for="item in items as InvoiceListingType[]" :key="item.id" :class="[shouldHighlight(item) ? 'bg-danger-subtle' : '']" >
             <td>
               <v-checkbox :model-value="selectedInvoices.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
             <td class="text-primary cursor-pointer" @click="onView(item.id)">
-              {{ item.invoiceNumber || 'N/A' }}
+              <div class="d-flex align-center ga-2">
+                <span>{{ item.invoiceNumber || 'N/A' }}</span>
+                <v-tooltip v-if="hasFlaggedItems(item)" location="top">
+                  <template #activator="{ props }">
+                    <i v-bind="props" class="ph ph-warning-circle text-danger" />
+                  </template>
+                  <span>{{ $t('t-items-flagged') }}</span>
+                </v-tooltip>
+              </div>
             </td>
             <td>{{ item.employee?.firstName || 'N/A' }} {{ item.employee?.lastName || 'N/A' }} </td>
-            <td>{{ item.clinic?.name || 'N/A' }}</td>
+            <td>{{ item.serviceProvider?.name || 'N/A' }}</td>
             <td>{{ formatAmount(item.totalAmount) || 'N/A' }} {{ item.currency?.symbol }}</td>
             <td>{{ formateDate(item.dueDate) || 'N/A' }}</td>
             <td><Status :status="item.invoiceStatus" /></td>
@@ -319,5 +383,6 @@ const formatAmount = (amount: number | string) => {
   </Card>
 
   <PostInvoiceConfirmationDialog v-model="postDialog" @onConfirm="postInvoice" :loading="postLoading" />
+  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" @onConfirm="postFlaggedInvoice" :loading="postFlaggedLoading" />
   <CancelInvoiceConfirmationDialog v-model="cancelDialog" @onConfirm="cancelInvoice" :loading="cancelLoading" />
 </template>

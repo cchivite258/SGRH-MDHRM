@@ -5,8 +5,8 @@ import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
-import ClinicInstitutionService from "@/app/http/services/institution/clinicService";
-import ClinicService from "@/app/http/services/clinicService";
+import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
+import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
 import CoveragePeriodsService from "@/app/http/services/institution/coveragePeriodsService";
@@ -24,6 +24,19 @@ import InstitutionTypeService from "@/app/http/services/baseTables/institutionTy
 import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leaveReasonService";
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
+import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
+import BudgetService from "@/app/http/services/institution/budgetService";
+
+//Reports
+import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
+import CostPerEmployeeService from "@/app/http/services/ammReports/CostPerEmployeeService";
+import ServiceProviderReportService from "@/app/http/services/ammReports/serviceProviderReportService";
+import TopServiceTypesByClinicReportService from "@/app/http/services/ammReports/topServiceTypesByClinicReportService";
+import ServiceProviderComparisonReportService from "@/app/http/services/ammReports/serviceProviderComparisonReportService";
+import CompanyEmployeeLimitsReportService from "@/app/http/services/ammReports/companyEmployeeLimitsReportService";
+import TotalBilledMedicalAssistanceReportService from "@/app/http/services/ammReports/totalBilledMedicalAssistanceReportService";
+import TotalBilledByProviderReportService from "@/app/http/services/ammReports/totalBilledByProviderReportService";
+import EmployeeExpenseStatementReportService from "@/app/http/services/ammReports/employeeExpenseStatementReportService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -36,14 +49,26 @@ const departmentService = new DepartmentService();
 const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
 const healthPlanService = new HealthPlanService();
-const clinicService = new ClinicService();
+const serviceProviderService = new ServiceProviderService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
-const clinicInstitutionService = new ClinicInstitutionService();
+const serviceProviderInstitutionService = new ServiceProviderInstitutionService();
 const invoiceService = new InvoiceService();
 const dependentEmployeeService = new DependentEmployeeService();
 const invoiceItemService = new InvoiceItemService();
 const healthPlanEmployeeService = new HealthPlanEmployeeService();
+const budgetService = new BudgetService();
+
+//Reports
+const companyHospitalProceduresBalancesService = new CompanyHospitalProceduresBalancesService();
+const costPerEmployeeService = new CostPerEmployeeService();
+const serviceProviderReportService = new ServiceProviderReportService();
+const topServiceTypesByClinicReportService = new TopServiceTypesByClinicReportService();
+const serviceProviderComparisonReportService = new ServiceProviderComparisonReportService();
+const companyEmployeeLimitsReportService = new CompanyEmployeeLimitsReportService();
+const totalBilledMedicalAssistanceReportService = new TotalBilledMedicalAssistanceReportService();
+const totalBilledByProviderReportService = new TotalBilledByProviderReportService();
+const employeeExpenseStatementReportService = new EmployeeExpenseStatementReportService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -53,6 +78,7 @@ const institutionTypeService = new InstitutionTypeService();
 const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
+const providerTypeService = new ProviderTypeService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -71,9 +97,9 @@ export {
     institutionService, 
     departmentService, 
     positionService, 
-    clinicService,
+    serviceProviderService,
     contactPersonService,
-    clinicInstitutionService,
+    serviceProviderInstitutionService,
     hospitalProcedureService,
     invoiceService,
     dependentEmployeeService,
@@ -81,5 +107,16 @@ export {
     invoiceItemService,
     coveragePeriodsService,
     healthPlanService,
-    healthPlanEmployeeService
+    healthPlanEmployeeService,
+    providerTypeService,
+    budgetService,
+    companyHospitalProceduresBalancesService,
+    costPerEmployeeService,
+    serviceProviderReportService,
+    topServiceTypesByClinicReportService,
+    serviceProviderComparisonReportService,
+    companyEmployeeLimitsReportService,
+    totalBilledMedicalAssistanceReportService,
+    totalBilledByProviderReportService,
+    employeeExpenseStatementReportService
 };

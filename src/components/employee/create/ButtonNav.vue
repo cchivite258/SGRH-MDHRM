@@ -64,9 +64,14 @@ const isTabDisabled = (tabNumber: number) => {
       </v-col>
        <v-col cols="6">
         <v-btn rounded="0" color="primary" block :variant="step === 5 ? 'elevated' : 'tonal'" @click="step = 5" :disabled="isTabDisabled(2)">
-          {{ $t('t-dependents') }}
+          {{ $t('t-expenses-per-procedure') }}
         </v-btn>
       </v-col>
+      <!--<v-col cols="6">
+        <v-btn rounded="0" color="primary" block :variant="step === 5 ? 'elevated' : 'tonal'" @click="step = 5" :disabled="isTabDisabled(2)">
+          {{ $t('t-dependents') }}
+        </v-btn>
+      </v-col>-->
     </v-row>
   </div>
 </template>

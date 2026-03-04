@@ -8,6 +8,7 @@ export interface ApiErrorResponse {
       status: number;
       detail?: string;
       instance: string;
+      errors?: Record<string, string[]>;
     };
     meta: {
       timestamp: string;

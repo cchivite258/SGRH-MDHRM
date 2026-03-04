@@ -23,6 +23,10 @@ const props = defineProps({
   disabled: {  
     type: Boolean,
     default: false
+  },
+  teleport: {
+    type: [Boolean, String],
+    default: false
   }
 });
 
@@ -95,6 +99,7 @@ defineExpose({
       :class="[{ 'error-border': internalError || errorMessages }, { 'is-disabled': disabled }]"
       :enable-time-picker="false"
       :disabled="disabled"
+      :teleport="teleport"
       auto-apply
       @update:model-value="handleUpdate"
       @blur="handleBlur"

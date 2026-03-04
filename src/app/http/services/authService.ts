@@ -7,6 +7,9 @@ class AuthService {
 
     async login(email: string, password: string) {
         try {
+        
+          console.log("----------------------------------------antes------------------------------------------------------------------------");
+
           const response = await axiosInstance.post("/auth/login", { email, password });
     
           console.log("🔍 Resposta do login:", response);
@@ -44,7 +47,7 @@ class AuthService {
           return response.data;
     
         } catch (error: any) {
-            console.error("❌ Erro no login:", error.response?.data || error.message || error);
+            console.error("❌ Erro no login:", error || error.message || error);
             throw error;
           }
           

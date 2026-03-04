@@ -26,6 +26,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import CloneHealthPlanDialog from "@/components/institution/create/CloneHealthPlanDialog.vue";
 import TableAction from "@/app/common/components/TableAction.vue";
 import { formateDate } from "@/app/common/dateFormate";
+import { amountFormate } from "@/app/common/amountFormate";
 // Stores e Services
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import { healthPlanService } from "@/app/http/httpServiceProvider";
@@ -137,12 +138,13 @@ const onCreateEditClick = (data: HealthPlanInsertType | HealthPlanListingType | 
       id: undefined,
       maxNumberOfDependents: 0,
       childrenMaxAge: 0,
+      childrenInUniversityMaxAge: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
       salaryComponent: "",
       companyContributionPercentage: 0,
       coveragePeriod: "",
-      company: company, 
+      company: company,
       enabled: true
     };
 
@@ -164,7 +166,7 @@ const onSubmit = async (
   callbacks?: {
     onSuccess?: () => void,
     onFinally?: () => void
-  } 
+  }
 ) => {
   try {
     let response: ServiceResponse<HealthPlanListingType>;
@@ -175,9 +177,19 @@ const onSubmit = async (
       response = await healthPlanService.updateHealthPlan(data.id, data);
     }
 
-    // Verifica se a resposta contém erro
-    if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+    if (response?.status === "error") {
+      const validationErrors = response?.error?.error?.errors;
+
+      if (validationErrors && typeof validationErrors === "object") {
+        Object.values(validationErrors).forEach((messages: any) => {
+          if (Array.isArray(messages)) {
+            messages.forEach((msg) => toast.error(msg));
+          }
+        });
+        return;
+      }
+
+      toast.error(response.error?.message || t("t-message-save-error"));
       return;
     }
 
@@ -193,7 +205,23 @@ const onSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar plano de saúde:", error);
-    toast.error(t('t-message-save-error'));
+
+    const validationErrors = error?.response?.data?.error?.errors;
+
+    if (validationErrors && typeof validationErrors === "object") {
+      Object.values(validationErrors).forEach((messages: any) => {
+        if (Array.isArray(messages)) {
+          messages.forEach((msg) => toast.error(msg));
+        }
+      });
+      return;
+    }
+
+    toast.error(
+      error?.response?.data?.message ||
+      error?.message ||
+      t("t-message-save-error")
+    );
   } finally {
     callbacks?.onFinally?.();
   }
@@ -219,10 +247,10 @@ Opcoes da lista
 const getDynamicOptions = (invoice: HealthPlanListingType) => {
   // Opções base
   let availableOptions = [...Options];
-  
+
   // Se o status for RUNNING, remove as opções de editar e deletar
   if (invoice.coveragePeriod?.status === 'RUNNING') {
-    availableOptions = availableOptions.filter(option => 
+    availableOptions = availableOptions.filter(option =>
       option.value !== 'edit' && option.value !== 'delete'
     );
   }
@@ -276,7 +304,7 @@ const onSubmitClone = async (
 
 
     response = await healthPlanService.cloneHealthPlan(data);
-    
+
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
       toast.error(response.error?.message || t('t-message-save-error'));
@@ -305,7 +333,10 @@ const onSubmitClone = async (
  * Prepara exclusão de contato
  */
 const onEdit = (id: string) => {
-  router.push(`/institution/healthPlan/${id}`);
+  router.push({
+    path: `/institution/healthPlan/${id}`,
+    query: { institutionId: institutionId.value || undefined, tab: "3" }
+  });
 };
 
 /**
@@ -317,8 +348,12 @@ watch(viewDialog, (newVal: boolean) => {
   }
 });
 const onViewClick = (data: HealthPlanListingType) => {
-  healthPlanDataView.value = { ...data };
-  viewDialog.value = true;
+  //healthPlanDataView.value = { ...data };
+  //viewDialog.value = true;
+   router.push({
+    path: `/institution/healthPlan/view/${data.id}`,
+    query: { institutionId: institutionId.value || undefined, tab: "3" }
+  });
 };
 
 /**
@@ -404,10 +439,9 @@ onBeforeUnmount(() => {
             </td>
             <td>{{ item.maxNumberOfDependents }}</td>
             <td>{{ item.childrenMaxAge }}</td>
+            <td>{{ item.childrenInUniversityMaxAge }}</td>
             <td>{{ gethealthPlanLimitLabel(item.healthPlanLimit) }}</td>
-            <td>{{ item.fixedAmount }}</td>
-            <td>{{ getsalaryComponentLabel(item.salaryComponent) }}</td>
-            <td>{{ item.companyContributionPercentage }}</td>
+            <td>{{ amountFormate(item.fixedAmount) }}</td>
             <td>
               <Status :status="item.status" />
             </td>
