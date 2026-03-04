@@ -26,7 +26,8 @@ RUN yarn build
 FROM nginx:alpine
 
 # Remove conteúdo default do Nginx
-RUN rm -rf /usr/share/nginx/html/*
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copia arquivos build para diretório que o Nginx serve
 COPY --from=0 /app/dist /usr/share/nginx/html

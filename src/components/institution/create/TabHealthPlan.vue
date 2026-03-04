@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabPeriods - Componente para  de pessoas de contato de instituições
+ * TabPeriods - Componente para  de pessoas de contato de entidades
  * 
  * Funcionalidades:
  * - Listagem de períodos de cobertura
@@ -486,3 +486,4 @@ onBeforeUnmount(() => {
 
   </v-card-actions>
 </template>
+

@@ -39,7 +39,7 @@ const totalItems = computed(() => institutionStore.pagination.totalElements)
 
 // Observa mudanças nos funcionários selecionados
 watch(selectedInstitutions, (newSelection) => {
-  console.log('Instituicoes selecionadas:', newSelection)
+  console.log('Entidades selecionadas:', newSelection)
 }, { deep: true })
 
 interface FetchParams {
