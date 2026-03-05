@@ -194,13 +194,13 @@ watch(idCardIssuanceDate, () => delete serverErrors.value.idCardIssuanceDate);
 const onSubmit = async () => {
   if (!form.value) return;
   serverErrors.value = {};
-  await birthDatePicker.value?.validate?.();
-  await idCardExpiryDatePicker.value?.validate?.();
-  await idCardIssuanceDatePicker.value?.validate?.();
+  const isBirthDateValid = birthDatePicker.value?.validate?.() ?? true;
+  const isIdCardExpiryDateValid = idCardExpiryDatePicker.value?.validate?.() ?? true;
+  const isIdCardIssuanceDateValid = idCardIssuanceDatePicker.value?.validate?.() ?? true;
 
   const { valid } = await form.value.validate();
 
-  if (!valid) {
+  if (!valid || !isBirthDateValid || !isIdCardExpiryDateValid || !isIdCardIssuanceDateValid) {
     toast.error(t('t-validation-error'));
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {

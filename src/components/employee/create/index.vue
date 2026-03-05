@@ -215,16 +215,30 @@ const onStepChange = (value: number) => {
   }
 
   // No modo de edição ou quando dados básicos já foram validados, permite navegar livremente
-  if (employeeId.value || employeeId.value) {
+  if (employeeId.value || basicDataValidated.value) {
     step.value = value;
     return;
   }
 
   // No modo criação, só permite avançar para a próxima tab sequencialmente
-  if (value === step.value + 1) {
+  if (value === step.value + 1 && basicDataValidated.value) {
     step.value = value;
   }
 };
+
+const onBasicDataValidated = () => {
+  basicDataValidated.value = true;
+};
+
+watch(
+  () => employeeData,
+  () => {
+    if (!employeeId.value && step.value === 1) {
+      basicDataValidated.value = false;
+    }
+  },
+  { deep: true }
+);
 
 
 // E o watcher deve ficar assim:
@@ -344,7 +358,7 @@ onBeforeUnmount(() => {
       <!-- Abas do formulário -->
       <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData"
         @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" />
+        @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
 
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData"
         @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"

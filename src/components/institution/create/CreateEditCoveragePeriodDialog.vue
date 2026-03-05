@@ -32,6 +32,8 @@ const props = defineProps({
 const localLoading = ref(false);
 const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
+const startDatePickerRef = ref<{ validate: () => boolean } | null>(null);
+const endDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 
 // Form fields
 const id = ref("");
@@ -55,6 +57,12 @@ watch(() => props.data, (newData) => {
 
 const isCreate = computed(() => !id.value);
 
+const toDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const dialogValue = computed({
   get() {
     return props.modelValue;  
@@ -76,6 +84,12 @@ const dialogValue = computed({
   ],
   endDate: [
     (v: Date) => !!v || t('t-please-enter-end-date'),
+    (v: Date) => {
+      const start = toDate(startDate.value);
+      const end = toDate(v);
+      if (!start || !end) return true;
+      return end >= start || t('t-contract-end-date-must-be-after-start-date');
+    }
   ]
 };
 
@@ -108,8 +122,10 @@ const onSubmit = async () => {
   serverErrors.value = {};
 
   const { valid } = await form.value.validate();
+  const isStartDateValid = startDatePickerRef.value?.validate() ?? true;
+  const isEndDateValid = endDatePickerRef.value?.validate() ?? true;
   
-  if (!valid) {
+  if (!valid || !isStartDateValid || !isEndDateValid) {
     toast.error(t('t-validation-error'));
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
@@ -176,14 +192,16 @@ const onSubmit = async () => {
               {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')"
-              :rules="applyServerErrorsToRules('startDate', requiredRules.startDate)" :teleport="true" />
+              :rules="applyServerErrorsToRules('startDate', requiredRules.startDate)" :teleport="true"
+              ref="startDatePickerRef" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')"
-              :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)" :teleport="true" />
+              :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)" :teleport="true"
+              ref="endDatePickerRef" />
           </v-col>
         </v-row>
         <v-row class="">

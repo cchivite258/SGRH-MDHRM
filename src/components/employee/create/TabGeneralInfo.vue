@@ -47,6 +47,7 @@ const emit = defineEmits<{
   (e: 'save', payload: EmployeeInsertType): void;
   (e: 'update:modelValue', value: EmployeeInsertType): void;
   (e: 'clear-server-error', field: string): void;
+  (e: 'validated'): void;
 }>();
 
 const props = defineProps({
@@ -314,6 +315,7 @@ const submitForm = async () => {
       return;
     }
 
+    emit('validated');
     emit('onStepChange', 2);
 
   } catch (error) {

@@ -48,7 +48,8 @@ const isTabDisabled = (tabNumber: number) => {
         </v-btn>
       </v-col>
       <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2" >
+        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2"
+          :disabled="isTabDisabled(2)">
           {{ $t('t-institution-and-classification') }}
         </v-btn>
       </v-col>
