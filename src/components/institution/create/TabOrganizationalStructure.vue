@@ -27,6 +27,7 @@ import TableAction from "@/app/common/components/TableAction.vue";
 // Stores e Services
 import { useDepartmentStore } from "@/store/institution/departmentStore";
 import { departmentService } from "@/app/http/httpServiceProvider";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -145,6 +146,7 @@ const onSubmit = async (
   data: DepartmentInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -165,7 +167,8 @@ const onSubmit = async (
     callbacks?.onSuccess?.();
   } catch (error) {
     console.error("Erro ao gravar pessoa de contacto:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }

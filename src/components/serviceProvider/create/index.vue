@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 
-import { ref, reactive, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // Components
 import ButtonNav from "@/components/serviceProvider/create/ButtonNav.vue";
@@ -38,6 +40,7 @@ const serviceProviderId = ref<string | null>(
 );
 const loading = ref(false);
 const errorMsg = ref("");
+const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
@@ -77,35 +80,23 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  // Mensagem de erro padrão
-  let message = t('t-error-saving-clinic');
-
-  // Tratamento específico para erros da API
-  if (error?.response?.data) {
-    if (error.response.data.error) {
-      // Erros de validação
-      errorMsg.value = error.response.data.message;
-      alertTimeout = setTimeout(() => {
-        errorMsg.value = "";
-        alertTimeout = null;
-      }, 5000);
-    }
-    message = error.response.data.message || message;
-  }
-  // Erros gerais
-  else if (error.message) {
-    message = error.message;
-  }
-
-  // Exibe erro no toast e no alert
-  toast.error(message);
-  errorMsg.value = message;
+  const messages = getApiErrorMessages(error, t('t-error-saving-clinic'));
+  apiFieldErrors.value = getApiValidationErrors(error);
+  messages.forEach((message) => toast.error(message));
+  errorMsg.value = Object.keys(apiFieldErrors.value).length > 0 ? "" : messages.join("\n");
 
   // Configura timeout para limpar a mensagem
   alertTimeout = setTimeout(() => {
     errorMsg.value = "";
     alertTimeout = null;
   }, 5000);
+};
+
+const clearApiFieldError = (field: string) => {
+  if (!apiFieldErrors.value[field]) return;
+  const next = { ...apiFieldErrors.value };
+  delete next[field];
+  apiFieldErrors.value = next;
 };
 
 /**
@@ -115,6 +106,7 @@ onMounted(async () => {
   if (serviceProviderId.value) {
     try {
       loading.value = true;
+      basicDataValidated.value = true;
       const response = await serviceProviderService.getServiceProviderById(serviceProviderId.value);
 
       if (!response.data) {
@@ -150,16 +142,30 @@ const onStepChange = (value: number) => {
   }
 
   // No modo de edição ou quando dados básicos já foram validados, permite navegar livremente
-  if (serviceProviderId.value || serviceProviderId.value) {
+  if (serviceProviderId.value || basicDataValidated.value) {
     step.value = value;
     return;
   }
 
   // No modo criação, só permite avançar para a próxima tab sequencialmente
-  if (value === step.value + 1) {
+  if (value === step.value + 1 && basicDataValidated.value) {
     step.value = value;
   }
 };
+
+const onBasicDataValidated = () => {
+  basicDataValidated.value = true;
+};
+
+watch(
+  () => serviceProviderData,
+  () => {
+    if (!serviceProviderId.value && step.value === 1) {
+      basicDataValidated.value = false;
+    }
+  },
+  { deep: true }
+);
 
 
 
@@ -173,17 +179,34 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
   try {
     loading.value = true;
     errorMsg.value = "";
+    apiFieldErrors.value = {};
 
     console.log("Dados recebidos do Step1:", serviceProviderData);
+    const normalizedPayload = { ...serviceProviderData } as ServiceProviderInsertType;
+    normalizeObjectStringFieldsInPlace(normalizedPayload as Record<string, any>, {
+      name: "trimToEmpty",
+      description: "trimToEmpty",
+      address: "trimToEmpty",
+      phone: "trimToEmpty",
+      email: "trimToNull",
+      website: "trimToNull",
+      incomeTaxNumber: "trimToEmpty",
+      personOfContactFullname1: "trimToNull",
+      personOfContactPhone1: "trimToNull",
+      personOfContactEmail1: "trimToNull",
+      personOfContactFullname2: "trimToNull",
+      personOfContactPhone2: "trimToNull",
+      personOfContactEmail2: "trimToNull",
+    });
 
     let response;
     if (serviceProviderId.value) {
       // Modo edição
-      response = await serviceProviderService.updateServiceProvider(serviceProviderId.value, serviceProviderData);
+      response = await serviceProviderService.updateServiceProvider(serviceProviderId.value, normalizedPayload);
       console.log('Response from updateServiceProvider:', response);
     } else {
       // Modo criação
-      response = await serviceProviderService.createServiceProvider(serviceProviderData);
+      response = await serviceProviderService.createServiceProvider(normalizedPayload);
       console.log('Response from createServiceProvider:', response);
 
       if (response?.data?.id) {
@@ -197,24 +220,11 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      handleApiError(response.error);
       return;
     }
     // Salvar draft na store
+    Object.assign(serviceProviderData, normalizedPayload);
     serviceProviderStore.setDraftServiceProvider(serviceProviderData);
 
     // Feedback de sucesso
@@ -231,17 +241,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       step.value++;
     }
   } catch (error: any) {
-
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
+    handleApiError(error);
 
   } finally {
     loading.value = false;
@@ -261,7 +261,8 @@ onBeforeUnmount(() => {
   <Card>
     <v-card-text>
       <!-- Navegação entre abas -->
-      <ButtonNav v-model="step" class="mb-2" />
+      <ButtonNav v-model="step" class="mb-2" :service-provider-id="serviceProviderId as string"
+        :basic-data-validated="basicDataValidated" />
 
       <!-- Indicador de loading -->
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
@@ -274,10 +275,12 @@ onBeforeUnmount(() => {
 
       <!-- Abas do formulário -->
       <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="serviceProviderData"
-        @save="saveServiceProvider(false)" :loading="loading" />
+        @save="saveServiceProvider(false)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
 
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="serviceProviderData"
-        @save="saveServiceProvider(true)" :loading="loading" />
+        @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" />
     </v-card-text>
   </Card>
 </template>

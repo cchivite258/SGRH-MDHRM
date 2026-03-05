@@ -15,6 +15,7 @@ import { useRoute } from 'vue-router';
 import DataTableServer from "@/app/common/components/DataTableServer.vue"; 
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import Status from "@/app/common/components/Status.vue";
 
 //Options Enums
@@ -238,21 +239,7 @@ const handleSubmit = async () => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -262,22 +249,7 @@ const handleSubmit = async () => {
     await healthPlanStore.fetchHealthPlans(healthPlanFormData.value.company);
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }

@@ -418,6 +418,8 @@
   "t-please-enter-employee-number": "Please enter employee number!",
   "t-please-enter-employee": "Please select an employee!",
   "t-please-enter-lastname": "Please enter last name!",
+  "t-please-enter-country": "Please select the country.",
+  "t-please-enter-province": "Please select the province.",
   "t-please-enter-id-card-number": "Please enter ID card number!",
   "t-please-enter-id-card-issuer": "Please enter ID card issuer!",
   "t-please-enter-id-card-expiry-date": "Please enter ID card expiry date!",
@@ -426,6 +428,9 @@
   "t-please-select-marital-status": "Please select marital status!",
   "t-invalid-id-card-expiry-date": "Invalid ID card expiry date!",
   "t-invalid-id-card-issuance-date": "Invalid ID card issuance date!",
+  "t-maximum-20-characters": "Please enter a maximum of 20 characters!",
+  "t-maximum-255-characters": "Please enter a maximum of 255 characters!",
+  "t-maximum-512-characters": "Please enter a maximum of 512 characters!",
   "t-back": "Back",
   "t-footer-text": "Design & Develop by MD Consultores",
   "t-enter-the-6-digit-code": "Please enter the 6-digit code sent to",
@@ -609,5 +614,6 @@
   "t-cel-exceeded-limit": "Exceeded limit",
   "t-cel-check-limit": "Check limit",
   "t-file-generated-successfully": "{format} generated successfully",
-  "t-clinic": "Clinic"
+  "t-clinic": "Clinic",
+  "t-contract-end-date-must-be-after-start-date": "The contract end date cannot be earlier than the start date."
 }

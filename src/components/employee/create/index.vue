@@ -11,6 +11,8 @@ import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // Components
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
@@ -60,6 +62,7 @@ const employeeId = ref<string | null>(
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
 const errorMsg = ref("");
+const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
@@ -120,35 +123,23 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  // Mensagem de erro padrão
-  let message = t('t-error-saving-employee');
-
-  // Tratamento específico para erros da API
-  if (error?.response?.data) {
-    if (error.response.data.error) {
-      // Erros de validação
-      errorMsg.value = error.response.data.message;
-      alertTimeout = setTimeout(() => {
-        errorMsg.value = "";
-        alertTimeout = null;
-      }, 5000);
-    }
-    message = error.response.data.message || message;
-  }
-  // Erros gerais
-  else if (error.message) {
-    message = error.message;
-  }
-
-  // Exibe erro no toast e no alert
-  toast.error(message);
-  errorMsg.value = message;
+  const messages = getApiErrorMessages(error, t('t-error-saving-employee'));
+  apiFieldErrors.value = getApiValidationErrors(error);
+  messages.forEach((message) => toast.error(message));
+  errorMsg.value = Object.keys(apiFieldErrors.value).length > 0 ? "" : messages.join("\n");
 
   // Configura timeout para limpar a mensagem
   alertTimeout = setTimeout(() => {
     errorMsg.value = "";
     alertTimeout = null;
   }, 5000);
+};
+
+const clearApiFieldError = (field: string) => {
+  if (!apiFieldErrors.value[field]) return;
+  const next = { ...apiFieldErrors.value };
+  delete next[field];
+  apiFieldErrors.value = next;
 };
 
 /**
@@ -255,18 +246,42 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
   try {
     loading.value = true;
     errorMsg.value = "";
+    apiFieldErrors.value = {};
     console.log('EmployeeInsertType:', payload);
 
     // Usa os dados recebidos do payload
     Object.assign(employeeData, payload);
+    const normalizedPayload = { ...payload } as EmployeeInsertType;
+    normalizeObjectStringFieldsInPlace(normalizedPayload as Record<string, any>, {
+      employeeNumber: "trimToEmpty",
+      firstName: "trimToEmpty",
+      middleName: "trimToNull",
+      lastName: "trimToEmpty",
+      bloodGroup: "trimToNull",
+      placeOfBirth: "trimToNull",
+      nationality: "trimToNull",
+      incomeTaxNumber: "trimToNull",
+      socialSecurityNumber: "trimToNull",
+      address: "trimToNull",
+      postalCode: "trimToNull",
+      email: "trimToNull",
+      phone: "trimToNull",
+      mobile: "trimToNull",
+      emergencyContactName: "trimToNull",
+      emergencyContactPhone: "trimToNull",
+      idCardNumber: "trimToEmpty",
+      idCardIssuer: "trimToEmpty",
+      passportNumber: "trimToNull",
+      passportIssuer: "trimToNull",
+    });
 
     let response;
     if (employeeId.value) {
       // Modo edição
-      response = await employeeService.updateEmployee(employeeId.value, payload);
+      response = await employeeService.updateEmployee(employeeId.value, normalizedPayload);
     } else {
       // Modo criação
-      response = await employeeService.createEmployee(payload);
+      response = await employeeService.createEmployee(normalizedPayload);
 
       if (response?.data?.id) {
         employeeId.value = response.data.id;
@@ -328,10 +343,12 @@ onBeforeUnmount(() => {
 
       <!-- Abas do formulário -->
       <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, false)" :loading="loading" />
+        @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" />
 
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, true)" :loading="loading" />
+        @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" />
 
       <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 

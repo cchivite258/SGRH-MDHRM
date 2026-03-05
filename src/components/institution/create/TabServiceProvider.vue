@@ -38,6 +38,7 @@ import type {
 // Utils
 import { serviceProviderHeader } from "@/components/institution/create/utils";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -160,6 +161,7 @@ const onSubmit = async (
   data: ServiceProviderInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -175,7 +177,8 @@ const onSubmit = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -192,7 +195,8 @@ const onSubmit = async (
 
   } catch (error) {
     console.error("Erro ao gravar provedor de servico:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }

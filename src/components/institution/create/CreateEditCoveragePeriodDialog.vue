@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch } from "vue";
+import { PropType, computed, ref, watch, nextTick } from "vue";
 import { CoveragePeriodInsertType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -30,6 +31,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -84,9 +86,26 @@ const dialogValue = computed({
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
   
@@ -114,8 +133,12 @@ const onSubmit = async () => {
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
-      // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      serverErrors.value = getApiValidationErrors(error);
+      if (Object.keys(serverErrors.value).length === 0) {
+        errorMsg.value = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
+      } else {
+        errorMsg.value = "";
+      }
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -143,7 +166,8 @@ const onSubmit = async () => {
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <TextField v-model="name" :placeholder="$t('t-enter-name')" :rules="requiredRules.name" />
+            <TextField v-model="name" :placeholder="$t('t-enter-name')"
+              :rules="applyServerErrorsToRules('name', requiredRules.name)" />
           </v-col>
         </v-row>
         <v-row class="mt-n6">
@@ -151,13 +175,15 @@ const onSubmit = async () => {
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')" :rules="requiredRules.startDate" :teleport="true" />
+            <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')"
+              :rules="applyServerErrorsToRules('startDate', requiredRules.startDate)" :teleport="true" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')" :rules="requiredRules.endDate" :teleport="true" />
+            <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')"
+              :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)" :teleport="true" />
           </v-col>
         </v-row>
         <v-row class="">

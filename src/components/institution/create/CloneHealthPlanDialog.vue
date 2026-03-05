@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch, onMounted } from "vue";
+import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
 import { HealthPlanInsertType, HospitalProcedureListingType, CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmitClone"]);
@@ -47,6 +48,7 @@ const props = defineProps({
 
 const localCloneLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -96,6 +98,9 @@ watch(healthPlanLimit, (newVal) => {
 
 const isCreate = computed(() => !id.value);
 
+const hasNumericValue = (v: number | string | null | undefined) =>
+  v !== null && v !== undefined && v !== "" && !Number.isNaN(Number(v));
+
 const dialogValue = computed({
   get() {
     return props.modelValue;
@@ -110,16 +115,16 @@ const dialogValue = computed({
  */
 const requiredRules = {
   maxNumberOfDependents: [
-    (v: number) => !!v || t('t-please-enter-max-dependents'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-dependents'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-dependents')
   ],
   childrenInUniversityMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-university-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-university-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   childrenMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   coveragePeriod: [
     (v: string) => !!v || t('t-please-select-coverage-period')
@@ -162,10 +167,19 @@ const coveragePeriods = computed(() => {
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmitClonePlan = async () => {
   console.log("onSubmitClonePlan called");
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
 
@@ -198,8 +212,12 @@ const onSubmitClonePlan = async () => {
   emit("onSubmitClone", payload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
-      // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      serverErrors.value = getApiValidationErrors(error);
+      if (Object.keys(serverErrors.value).length === 0) {
+        errorMsg.value = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
+      } else {
+        errorMsg.value = "";
+      }
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -278,7 +296,7 @@ onMounted(async () => {
                 {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="coveragePeriod" :items="coveragePeriods" :loading="coveragePeriodStore.loading"
-                :rules="requiredRules.coveragePeriod"  />
+                :rules="requiredRules.coveragePeriod" :error-messages="getServerErrors('coveragePeriod')"  />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">

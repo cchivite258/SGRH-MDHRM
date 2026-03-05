@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch, onMounted } from "vue";
+import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
 import { HealthPlanListingType, HospitalProcedureInsertType, HospitalProcedureListingType } from "@/components/institution/types";
 import { HospitalProcedureTypeListing } from "@/components/baseTables/hospitalProcedureType/types";
 import { useI18n } from "vue-i18n";
@@ -7,6 +7,7 @@ import { useToast } from 'vue-toastification';
 import { useHospitalProcedureTypeStore } from '@/store/baseTables/hospitalProcedureTypeStore';
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -40,6 +41,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -149,9 +151,26 @@ const heathPlanOptions = computed(() => {
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
 
@@ -181,8 +200,12 @@ const onSubmit = async () => {
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
-      // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      serverErrors.value = getApiValidationErrors(error);
+      if (Object.keys(serverErrors.value).length === 0) {
+        errorMsg.value = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
+      } else {
+        errorMsg.value = "";
+      }
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -250,7 +273,8 @@ onMounted(async () => {
                 {{ $t('t-hospital-procedure-type') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="hospitalProcedureType" :items="hospitalProceduresTypes"
-                :loading="hospitalProcedureTypeStore.loading" :rules="requiredRules.hospitalProcedureType" :disabled="!isCreate"/>
+                :loading="hospitalProcedureTypeStore.loading" :rules="requiredRules.hospitalProcedureType"
+                :error-messages="getServerErrors('hospitalProcedureType')" :disabled="!isCreate"/>
             </v-col>
           </v-row> 
           <v-row class="mt-n6">
@@ -259,7 +283,7 @@ onMounted(async () => {
                 {{ $t('t-limit-type-definition') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="limitTypeDefinition" :items="limitTypeDefinitionOptions"
-                :rules="requiredRules.limitTypeDefinition" />
+                :rules="requiredRules.limitTypeDefinition" :error-messages="getServerErrors('limitTypeDefinition')" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -269,7 +293,7 @@ onMounted(async () => {
                   class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="fixedAmount" type="number" :placeholder="$t('t-enter-fixed-amount')"
-                :rules="requiredRules.fixedAmount" />
+                :rules="applyServerErrorsToRules('fixedAmount', requiredRules.fixedAmount)" />
             </v-col>     
             <v-col :cols="12" :lg="limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="limitTypeDefinition === 'PERCENTAGE'">
               <div class="font-weight-bold text-caption mb-1">
@@ -277,7 +301,7 @@ onMounted(async () => {
                   class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="percentage" type="number" :placeholder="$t('t-enter-percentage')"
-                :rules="requiredRules.percentage" />
+                :rules="applyServerErrorsToRules('percentage', requiredRules.percentage)" />
             </v-col>
           </v-row>
           <v-row :class="limitTypeDefinition === 'FIXED_AMOUNT' || limitTypeDefinition === 'PERCENTAGE' ? 'mt-n6' : 'mt-6'">

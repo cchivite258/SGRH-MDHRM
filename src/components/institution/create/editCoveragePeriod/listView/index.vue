@@ -18,6 +18,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 
 const { t } = useI18n();
@@ -156,18 +157,7 @@ const onSubmitBudget = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
       return;
     }
 
@@ -183,22 +173,7 @@ const onSubmitBudget = async (
 
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }
@@ -286,21 +261,7 @@ const handleSubmit = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => { 
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -318,22 +279,7 @@ const handleSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar periodo de cobertura:", error);
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }

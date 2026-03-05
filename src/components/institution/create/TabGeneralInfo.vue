@@ -3,7 +3,7 @@
  * TabGeneralInfo - Componente para informações gerais do instituicao
  * 
  */
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
@@ -21,6 +21,7 @@ import { useInstitutionStore } from '@/store/institution/institutionStore';
 import type { InstitutionTypeListing } from '@/components/baseTables/institutionTypes/types';
 import { InstitutionInsertType } from "@/components/institution/types";
 import { email } from "@vuelidate/validators";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 
 // Configuração inicial
@@ -30,7 +31,7 @@ const router = useRouter();
 
 
 // Emits e Props
-const emit = defineEmits(['onStepChange', 'save', 'update:modelValue']);
+const emit = defineEmits(['onStepChange', 'save', 'update:modelValue', 'clear-server-error']);
 
 const props = defineProps({
   modelValue: {
@@ -40,6 +41,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  serverErrors: {
+    type: Object as () => Record<string, string[]>,
+    default: () => ({})
   }
 });
 
@@ -64,6 +69,53 @@ let institutionData = computed({
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => {
+  return [
+    ...rules,
+    (value: any) => {
+      const hasFrontendError = rules.some((rule) => rule(value) !== true);
+      if (hasFrontendError) {
+        return true;
+      }
+      const firstError = getServerErrors(field)[0];
+      return firstError || true;
+    }
+  ];
+};
+
+watch(
+  () => props.serverErrors,
+  async (errors) => {
+    if (errors && Object.keys(errors).length > 0) {
+      await nextTick();
+      await form.value?.validate();
+    }
+  },
+  { deep: true }
+);
+
+watch(() => institutionData.value.name, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'name');
+});
+watch(() => institutionData.value.institutionType, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'institutionType');
+});
+watch(() => institutionData.value.incomeTaxNumber, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'incomeTaxNumber');
+});
+watch(() => institutionData.value.address, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'address');
+});
+watch(() => institutionData.value.phone, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'phone');
+});
+watch(() => institutionData.value.email, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'email');
+});
+watch(() => institutionData.value.website, (value, oldValue) => {
+  if (value !== oldValue) emit('clear-server-error', 'website');
+});
 
 
 
@@ -130,9 +182,6 @@ const onBack = () => {
   router.push('/institution/list');
 };
 
-/**
- * Valida e envia o formulário
- */
 const submitGeneralInfo = async () => {
   if (!form.value) return;
 
@@ -147,6 +196,15 @@ const submitGeneralInfo = async () => {
     }, 5000);
     return;
   }
+  normalizeObjectStringFieldsInPlace(institutionData.value as Record<string, any>, {
+    name: "trimToEmpty",
+    incomeTaxNumber: "trimToEmpty",
+    phone: "trimToEmpty",
+    email: "trimToEmpty",
+    address: "trimToNull",
+    website: "trimToNull",
+    description: "trimToNull",
+  });
 
   emit('save', false);
 
@@ -176,21 +234,22 @@ const submitGeneralInfo = async () => {
           {{ $t('t-institution-name') }} <i class="ph-asterisk ph-xs text-danger" />
         </div>
         <TextField v-model="institutionData.name" :placeholder="$t('t-enter-institution-name')"
-          :rules="requiredRules.name" />
+          :rules="applyServerErrorsToRules('name', requiredRules.name)" />
         <v-row class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-institution-type') }} <i class="ph-asterisk ph-xs text-danger" /> 
             </div>
             <MenuSelect v-model="institutionData.institutionType" :items="institutionTypes"
-              :loading="institutionTypeStore.loading" :rules="requiredRules.institutionType" />
+              :loading="institutionTypeStore.loading" :rules="requiredRules.institutionType"
+              :error-messages="getServerErrors('institutionType')" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               NUIT <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="institutionData.incomeTaxNumber" :placeholder="$t('t-enter-nuit')"
-              :rules="requiredRules.incomeTaxNumber" />
+              :rules="applyServerErrorsToRules('incomeTaxNumber', requiredRules.incomeTaxNumber)" />
           </v-col>
         </v-row>
         <v-row class="mt-n6">
@@ -199,14 +258,14 @@ const submitGeneralInfo = async () => {
               {{ $t('t-address') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="institutionData.address" :placeholder="$t('t-enter-address')"
-              :rules="requiredRules.address" />
+              :rules="applyServerErrorsToRules('address', requiredRules.address)" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-phone-number') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="institutionData.phone" :placeholder="$t('t-enter-phone-number')"
-              :rules="requiredRules.phone" />
+              :rules="applyServerErrorsToRules('phone', requiredRules.phone)" />
           </v-col>
         </v-row>
         <v-row class="mt-n6">
@@ -215,13 +274,14 @@ const submitGeneralInfo = async () => {
               {{ $t('t-email') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="institutionData.email" :placeholder="$t('t-enter-email-address')"
-              :rules="requiredRules.email" />
+              :rules="applyServerErrorsToRules('email', requiredRules.email)" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-website') }}
             </div>
-            <TextField v-model="institutionData.website" :placeholder="$t('t-enter-website')" hide-details />
+            <TextField v-model="institutionData.website" :placeholder="$t('t-enter-website')"
+              :rules="applyServerErrorsToRules('website', [])" />
           </v-col>
         </v-row>
         <v-row class="mt-n6">

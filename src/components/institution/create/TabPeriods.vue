@@ -31,6 +31,7 @@ import { formateDate } from "@/app/common/dateFormate";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { coveragePeriodsService } from "@/app/http/httpServiceProvider";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -160,6 +161,7 @@ const onSubmit = async (
   data: CoveragePeriodInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -174,7 +176,8 @@ const onSubmit = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -190,7 +193,8 @@ const onSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar periodo de cobertura:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -268,25 +272,7 @@ const onConfirmClose = async () => {
     await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
-
-    if (typeof error === 'object' && error !== null) {
-      const apiError = error as {
-        message?: string;
-        details?: any;
-        status?: number;
-      };
-
-      if (apiError.message) {
-        // Mostra a mensagem direta do erro
-        toast.error(apiError.message);
-      } else {
-        // Fallback para mensagem genérica
-        toast.error(t('t-toast-message-error'));
-      }
-    } else {
-      // Caso o erro não seja um objeto
-      toast.error(t('t-toast-message-error'));
-    }
+    getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
   } finally {
     periodCloseLoading.value = false;
     periodCloseDialog.value = false;
@@ -312,25 +298,7 @@ const onConfirmStart = async () => {
     await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
-
-    if (typeof error === 'object' && error !== null) {
-      const apiError = error as {
-        message?: string;
-        details?: any;
-        status?: number;
-      };
-
-      if (apiError.message) {
-        // Mostra a mensagem direta do erro
-        toast.error(apiError.message);
-      } else {
-        // Fallback para mensagem genérica
-        toast.error(t('t-toast-message-error'));
-      }
-    } else {
-      // Caso o erro não seja um objeto
-      toast.error(t('t-toast-message-error'));
-    }
+    getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
   } finally {
     periodStartLoading.value = false;
     periodStartDialog.value = false;

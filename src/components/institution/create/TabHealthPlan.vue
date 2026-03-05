@@ -31,6 +31,7 @@ import { amountFormate } from "@/app/common/amountFormate";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import { healthPlanService } from "@/app/http/httpServiceProvider";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -165,6 +166,7 @@ const onSubmit = async (
   data: HealthPlanInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -178,18 +180,8 @@ const onSubmit = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -206,22 +198,8 @@ const onSubmit = async (
   } catch (error: any) {
     console.error("Erro ao gravar plano de saúde:", error);
 
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -296,6 +274,7 @@ const onSubmitClone = async (
   data: HealthPlanInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -307,7 +286,8 @@ const onSubmitClone = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -323,7 +303,8 @@ const onSubmitClone = async (
 
   } catch (error: any) {
     console.error("Erro ao clonar plano de saúde:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
