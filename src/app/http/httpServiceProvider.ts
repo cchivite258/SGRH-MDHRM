@@ -20,6 +20,8 @@ import InvoiceItemService from "@/app/http/services/invoice/invoiceItemService";
 import CountryService from "@/app/http/services/baseTables/country/countryService";
 import CurrencyService from "@/app/http/services/baseTables/currency/currencyService";
 import HospitalProcedureTypeService from "@/app/http/services/baseTables/hospitalProcedureType/hospitalProcedureTypeService";
+import HospitalProcedureGroupService from "@/app/http/services/baseTables/hospitalProcedureGroup/hospitalProcedureGroupService";
+import HospitalProcedureGroupingService from "@/app/http/services/baseTables/hospitalProcedureGrouping/hospitalProcedureGroupingService";
 import InstitutionTypeService from "@/app/http/services/baseTables/institutionTypes/institutionTypeService";
 import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leaveReasonService";
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
@@ -74,6 +76,8 @@ const employeeExpenseStatementReportService = new EmployeeExpenseStatementReport
 const countryService = new CountryService();
 const currencyService = new CurrencyService();
 const hospitalProcedureTypeService = new HospitalProcedureTypeService();
+const hospitalProcedureGroupService = new HospitalProcedureGroupService();
+const hospitalProcedureGroupingService = new HospitalProcedureGroupingService();
 const institutionTypeService = new InstitutionTypeService();
 const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
@@ -91,6 +95,8 @@ export {
     countryService, 
     currencyService, 
     hospitalProcedureTypeService, 
+    hospitalProcedureGroupService,
+    hospitalProcedureGroupingService,
     institutionTypeService, 
     leaveReasonService, 
     languageService, 
