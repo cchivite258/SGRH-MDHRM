@@ -15,6 +15,7 @@ import { useCountryStore } from "@/store/baseTables/countryStore";
 import { countryService } from "@/app/http/httpServiceProvider";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { CountryOption } from "@/components/baseTables/country/types";
 
@@ -57,18 +58,7 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.response?.data?.error?.errors?.name?.[0] ||
-    error?.response?.data?.error?.errors?.code?.[0] ||
-    error?.response?.data?.error?.errors?.currency?.[0] ||
-    error?.response?.data?.error?.errors?.currencyCode?.[0] ||
-    error?.response?.data?.error?.errors?.currencySymbol?.[0] ||
-    error?.response?.data?.error?.errors?.iso2Code?.[0] ||
-    error?.response?.data?.error?.errors?.iso3Code?.[0] ||
-    error?.response?.data?.error?.errors?.phoneCode?.[0] ||
-    error?.response?.data?.message ||
-    error?.message ||
-    t("t-message-save-error");
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
 
   errorMsg.value = message;
 
@@ -171,7 +161,7 @@ const onSubmit = async (data: CountryListingType, callbacks?: {
     // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
 
   } finally {
@@ -232,7 +222,7 @@ const onConfirmDelete = async () => {
 
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     deleteLoading.value = false;
@@ -321,3 +311,4 @@ const onConfirmDelete = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
+

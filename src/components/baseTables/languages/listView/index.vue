@@ -15,6 +15,7 @@ import { languageService } from "@/app/http/httpServiceProvider";
 import { useLanguagesStore } from "@/store/baseTables/languageStore";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { LanguagesOption } from "@/components/baseTables/languages/types";
 import Status from "@/app/common/components/Status.vue";
@@ -53,13 +54,7 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.error?.errors?.name?.[0] ||
-    error?.error?.errors?.code?.[0] || 
-    error?.error?.errors?.localizedName?.[0] ||
-    error?.error?.errors?.region?.[0] ||// tenta capturar erro por campo
-    error?.message ||                                  // erro genérico
-    t("t-message-save-error");                         // fallback traduzido
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
 
   errorMsg.value = message;
 
@@ -149,7 +144,7 @@ const onSubmit = async (data: LanguagesListing, callbacks?: {
     // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     // Callback para desativar o loading
@@ -207,7 +202,7 @@ const onConfirmDelete = async () => {
 
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     deleteLoading.value = false;
@@ -291,3 +286,4 @@ const onConfirmDelete = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
+

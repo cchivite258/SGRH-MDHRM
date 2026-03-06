@@ -1,10 +1,13 @@
 <script lang="ts" setup>
 import { PropType, computed, ref } from "vue";
-import { HospitalProcedureTypeInsert } from "@/components/baseTables/hospitalProcedureType/types";
+import { LeaveReasonInsert } from "@/components/baseTables/leaveReason/types";
 import { useI18n } from "vue-i18n";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
+import { useToast } from "vue-toastification";
 
 const localLoading = ref(false);
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
+const toast = useToast();
 
 const prop = defineProps({
   modelValue: {
@@ -12,7 +15,7 @@ const prop = defineProps({
     default: false,
   },
   data: {
-    type: Object as PropType<HospitalProcedureTypeInsert>,
+    type: Object as PropType<LeaveReasonInsert>,
     required: true,
   },
   error: {
@@ -23,6 +26,7 @@ const prop = defineProps({
 
 const isCreate = computed(() => prop.data.id === "-1");
 const formData = ref(prop.data);
+const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 const dialogValue = computed({
   get() {
@@ -36,47 +40,21 @@ const dialogValue = computed({
 const id = ref(formData.value.id || "");
 const name = ref(formData.value.name || "");
 const description = ref(formData.value.description || "");
-const enabled = ref(formData.value.enabled)
-
-// Erro vindo da API
+const enabled = ref(formData.value.enabled);
 const errorMessage = computed(() => prop.error);
-
-// Erro de validação local
-const validationAlertMessage = ref("");
-let validationAlertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const { t } = useI18n();
 
-const validateForm = () => {
-  let isValid = true;
-  const messages: string[] = [];
-
-  if (validationAlertTimeout) {
-    clearTimeout(validationAlertTimeout);
-    validationAlertTimeout = null;
-  }
-
-  validationAlertMessage.value = "";
-
-  if (!name.value.trim()) {
-    messages.push(t("t-please-enter-leave-reason"));
-    isValid = false;
-  }
-
-  if (messages.length > 0) {
-    validationAlertMessage.value = messages.join("<br/>");
-
-    validationAlertTimeout = setTimeout(() => {
-      validationAlertMessage.value = "";
-      validationAlertTimeout = null;
-    }, 5000);
-  }
-
-  return isValid;
+const requiredRules = {
+  name: [(v: string) => !!v?.trim() || t("t-please-enter-leave-reason")],
 };
 
-const onSubmit = () => {
-  if (!validateForm()) {
+const onSubmit = async () => {
+  if (!form.value) return;
+
+  const { valid } = await form.value.validate();
+  if (!valid) {
+    toast.error(t("t-validation-error"));
     return;
   }
 
@@ -89,14 +67,14 @@ const onSubmit = () => {
     enabled: enabled.value
   };
 
+  normalizeObjectStringFieldsInPlace(data as Record<string, any>, {
+    name: "trimToEmpty",
+    description: "trimToNull"
+  });
+
   emit("onSubmit", data, {
     onSuccess: () => {
       dialogValue.value = false;
-      if (validationAlertTimeout) {
-        clearTimeout(validationAlertTimeout);
-        validationAlertTimeout = null;
-      }
-      validationAlertMessage.value = "";
     },
     onFinally: () => {
       localLoading.value = false;
@@ -107,64 +85,60 @@ const onSubmit = () => {
 
 <template>
   <v-dialog v-model="dialogValue" width="500" scrollable>
-    <Card :title="isCreate ? $t('t-add-leave-reason') : $t('t-edit-leave-reason')" title-class="py-0"
-      style="overflow: hidden">
-      <template #title-action>
-        <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
-      </template>
+    <v-form ref="form" @submit.prevent="onSubmit">
+      <Card :title="isCreate ? $t('t-add-leave-reason') : $t('t-edit-leave-reason')" title-class="py-0"
+        style="overflow: hidden">
+        <template #title-action>
+          <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
+        </template>
 
-      <v-divider />
+        <v-divider />
 
-      <v-card-text class="overflow-y-auto" :style="{ 'max-height': isCreate ? '70vh' : '45vh' }">
+        <v-card-text class="overflow-y-auto" :style="{ 'max-height': isCreate ? '70vh' : '45vh' }">
+          <v-alert v-if="errorMessage" :text="errorMessage" type="error" class="mb-4" variant="tonal" color="danger"
+            density="compact" />
 
-        <!-- Erro vindo da API -->
-        <v-alert v-if="errorMessage" :text="errorMessage" type="error" class="mb-4" variant="tonal" color="danger"
-          density="compact" />
+          <v-row>
+            <v-col cols="12" lg="12">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-reason") }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model="name" :placeholder="$t('t-enter-reason')" :rules="requiredRules.name" />
+            </v-col>
 
-        <!-- Erro de validação local -->
-        <v-alert v-if="validationAlertMessage" :text="validationAlertMessage" type="error" class="mb-4" variant="tonal"
-          color="danger" density="compact" />
+            <v-col cols="12" lg="12">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-description") }}
+              </div>
+              <TextArea v-model="description" :placeholder="$t('t-enter-description')" hide-details />
+            </v-col>
+          </v-row>
+          <v-row class="">
+            <v-col cols="12" lg="12" class="">
+              <div class="font-weight-bold">{{ $t('t-availability') }}</div>
+              <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
+                <template #label>
+                  <span>{{ $t('t-is-enabled') }}</span>
+                </template>
+              </v-checkbox>
+            </v-col>
+          </v-row>
+        </v-card-text>
 
-        <v-row>
-          <v-col cols="12" lg="12">
-            <div class="font-weight-bold text-caption mb-1">
-              {{ $t("t-reason") }} <i class="ph-asterisk ph-xs text-danger" />
-            </div>
-            <TextField v-model="name" :placeholder="$t('t-enter-reason')" hide-details />
-          </v-col>
+        <v-divider />
 
-          <v-col cols="12" lg="12">
-            <div class="font-weight-bold text-caption mb-1">
-              {{ $t("t-description") }}
-            </div>
-            <TextArea v-model="description" :placeholder="$t('t-enter-description')" hide-details />
-          </v-col>
-        </v-row>
-        <v-row class="">
-          <v-col cols="12" lg="12" class="">
-            <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-            <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
-              <template #label>
-                <span>{{ $t('t-is-enabled') }}</span>
-              </template>
-            </v-checkbox>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-divider />
-
-      <v-card-actions class="d-flex justify-end">
-        <div>
-          <v-btn color="danger" class="me-1" @click="dialogValue = false">
-            <i class="ph-x me-1" /> {{ $t("t-close") }}
-          </v-btn>
-          <v-btn color="primary" variant="elevated" @click="onSubmit" :loading="localLoading" :disabled="localLoading">
-            {{ localLoading ? $t("t-saving") : $t("t-save") }}
-          </v-btn>
-        </div>
-      </v-card-actions>
-    </Card>
+        <v-card-actions class="d-flex justify-end">
+          <div>
+            <v-btn color="danger" class="me-1" @click="dialogValue = false">
+              <i class="ph-x me-1" /> {{ $t("t-close") }}
+            </v-btn>
+            <v-btn color="primary" variant="elevated" @click="onSubmit" :loading="localLoading" :disabled="localLoading">
+              {{ localLoading ? $t("t-saving") : $t("t-save") }}
+            </v-btn>
+          </div>
+        </v-card-actions>
+      </Card>
+    </v-form>
   </v-dialog>
 </template>
 
