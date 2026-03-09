@@ -1,8 +1,11 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch } from "vue";
+import { PropType, computed, ref, watch, nextTick } from "vue";
 import { DependentInsertType, DependentListingType } from "@/components/employee/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -45,6 +48,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -60,6 +64,9 @@ const idCardIssuer = ref("");
 const idCardExpiryDate = ref<Date | undefined>();
 const idCardIssuanceDate = ref<Date | undefined>();
 const enabled = ref(true);
+const birthDatePicker = ref();
+const idCardExpiryDatePicker = ref();
+const idCardIssuanceDatePicker = ref();
 
 // Watch for data changes
 watch(() => props.data, (newData) => {
@@ -122,9 +129,33 @@ const requiredRules = {
   ],
   idCardExpiryDate: [
     (v: Date | string | null) => !!v || t('t-please-enter-id-card-expiry-date'),
+    (v: Date | string | null) => {
+      if (!v) return true;
+      const expiryDate = new Date(v);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (expiryDate < today) return t('t-invalid-id-card-expiry-date');
+      if (idCardIssuanceDate.value) {
+        const issuanceDate = new Date(idCardIssuanceDate.value);
+        if (expiryDate <= issuanceDate) return t('t-invalid-id-card-expiry-date');
+      }
+      return true;
+    }
   ],
   idCardIssuanceDate: [
     (v: Date | string | null) => !!v || t('t-please-enter-id-card-issuance-date'),
+    (v: Date | string | null) => {
+      if (!v) return true;
+      const issuanceDate = new Date(v);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (issuanceDate > today) return t('t-invalid-id-card-issuance-date');
+      if (idCardExpiryDate.value) {
+        const expiryDate = new Date(idCardExpiryDate.value);
+        if (issuanceDate >= expiryDate) return t('t-invalid-id-card-issuance-date');
+      }
+      return true;
+    }
   ]
 
 };
@@ -132,13 +163,44 @@ const requiredRules = {
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
+
+watch(firstName, () => delete serverErrors.value.firstName);
+watch(middleName, () => delete serverErrors.value.middleName);
+watch(lastName, () => delete serverErrors.value.lastName);
+watch(gender, () => delete serverErrors.value.gender);
+watch(birthDate, () => delete serverErrors.value.birthDate);
+watch(relationship, () => delete serverErrors.value.relationship);
+watch(idCardNumber, () => delete serverErrors.value.idCardNumber);
+watch(idCardIssuer, () => delete serverErrors.value.idCardIssuer);
+watch(idCardExpiryDate, () => delete serverErrors.value.idCardExpiryDate);
+watch(idCardIssuanceDate, () => delete serverErrors.value.idCardIssuanceDate);
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
+  const isBirthDateValid = birthDatePicker.value?.validate?.() ?? true;
+  const isIdCardExpiryDateValid = idCardExpiryDatePicker.value?.validate?.() ?? true;
+  const isIdCardIssuanceDateValid = idCardIssuanceDatePicker.value?.validate?.() ?? true;
 
   const { valid } = await form.value.validate();
 
-  if (!valid) {
+  if (!valid || !isBirthDateValid || !isIdCardExpiryDateValid || !isIdCardIssuanceDateValid) {
     toast.error(t('t-validation-error'));
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
@@ -167,9 +229,30 @@ const onSubmit = async () => {
     idCardIssuanceDate: idCardIssuanceDate.value,
     enabled: enabled.value
   };
+  normalizeObjectStringFieldsInPlace(payload as Record<string, any>, {
+    firstName: "trimToEmpty",
+    middleName: "trimToNull",
+    lastName: "trimToEmpty",
+    idCardNumber: "trimToEmpty",
+    idCardIssuer: "trimToEmpty"
+  });
 
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
+    onError: (error: { error?: ApiErrorResponse }) => {
+      serverErrors.value = getApiValidationErrors(error);
+      const message = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
+      toast.error(message);
+      if (Object.keys(serverErrors.value).length === 0) {
+        errorMsg.value = message;
+      } else {
+        errorMsg.value = "";
+      }
+      alertTimeout = setTimeout(() => {
+        errorMsg.value = "";
+        alertTimeout = null;
+      }, 5000);
+    },
     onFinally: () => localLoading.value = false
   });
 };
@@ -193,7 +276,8 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-firstname') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="firstName" :placeholder="$t('t-enter-firstname')" :rules="requiredRules.firstName" />
+              <TextField v-model="firstName" :placeholder="$t('t-enter-firstname')"
+                :rules="applyServerErrorsToRules('firstName', requiredRules.firstName)" />
             </v-col>
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
@@ -205,7 +289,8 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-lastname') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="lastName" :placeholder="$t('t-enter-lastname')" :rules="requiredRules.lastName" />
+              <TextField v-model="lastName" :placeholder="$t('t-enter-lastname')"
+                :rules="applyServerErrorsToRules('lastName', requiredRules.lastName)" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -213,20 +298,22 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-relationship') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <MenuSelect v-model="relationship" :items="relationshipOptions" :rules="requiredRules.relationship" />
+              <MenuSelect v-model="relationship" :items="relationshipOptions"
+                :rules="requiredRules.relationship" :error-messages="getServerErrors('relationship')" />
             </v-col>
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-gender') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <MenuSelect v-model="gender" :items="genderOptions" :rules="requiredRules.gender" />
+              <MenuSelect v-model="gender" :items="genderOptions" :rules="requiredRules.gender"
+                :error-messages="getServerErrors('gender')" />
             </v-col>
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-birth-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <ValidatedDatePicker ref="birthDatePicker" v-model="birthDate" :placeholder="$t('t-enter-birth-date')"
-                :rules="requiredRules.birthDate" format="dd/MM/yyyy" />
+                :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)" format="dd/MM/yyyy" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -235,14 +322,14 @@ const onSubmit = async () => {
                 {{ $t('t-id-card-number') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="idCardNumber" :placeholder="$t('t-enter-id-card-number')"
-                :rules="requiredRules.idCardNumber" />
+                :rules="applyServerErrorsToRules('idCardNumber', requiredRules.idCardNumber)" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-id-card-issuer') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="idCardIssuer" :placeholder="$t('t-enter-id-card-issuer')"
-                :rules="requiredRules.idCardIssuer" />
+                :rules="applyServerErrorsToRules('idCardIssuer', requiredRules.idCardIssuer)" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -251,7 +338,8 @@ const onSubmit = async () => {
                 {{ $t('t-id-card-expiry-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="idCardExpiryDate"
-                :placeholder="$t('t-enter-id-card-expiry-date')" :rules="requiredRules.idCardExpiryDate"
+                :placeholder="$t('t-enter-id-card-expiry-date')"
+                :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
                 format="dd/MM/yyyy" />
             </v-col>
             <v-col cols="12" lg="6">
@@ -259,7 +347,8 @@ const onSubmit = async () => {
                 {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="idCardIssuanceDate"
-                :placeholder="$t('t-enter-id-card-issuance-date')" :rules="requiredRules.idCardIssuanceDate"
+                :placeholder="$t('t-enter-id-card-issuance-date')"
+                :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
                 format="dd/MM/yyyy" />
             </v-col>
           </v-row>

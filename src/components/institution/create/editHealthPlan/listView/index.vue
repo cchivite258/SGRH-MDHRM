@@ -19,6 +19,7 @@ import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore'
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import Status from "@/app/common/components/Status.vue"; 
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 //Options Enums
 import {
@@ -87,18 +88,21 @@ const healthPlanFormData = ref<HealthPlanInsertType>({
 /**
  * Regras de validação para os campos do formulário
  */
+const hasNumericValue = (v: number | string | null | undefined) =>
+  v !== null && v !== undefined && v !== "" && !Number.isNaN(Number(v));
+
 const requiredRules = {
   maxNumberOfDependents: [
-    (v: number) => !!v || t('t-please-enter-max-dependents'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-dependents'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-dependents')
   ],
   childrenInUniversityMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age-university'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age-university'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   childrenMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   coveragePeriod: [
     (v: string) => !!v || t('t-please-select-coverage-period')
@@ -234,6 +238,7 @@ const onSubmitHospitalProcedure = async (
   data: HospitalProcedureInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -250,21 +255,8 @@ const onSubmitHospitalProcedure = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -280,22 +272,8 @@ const onSubmitHospitalProcedure = async (
 
     callbacks?.onSuccess?.();
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -400,21 +378,7 @@ const handleSubmit = async () => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -424,22 +388,7 @@ const handleSubmit = async () => {
     await healthPlanStore.fetchHealthPlans(healthPlanFormData.value.company);
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }

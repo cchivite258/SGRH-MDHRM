@@ -5,14 +5,10 @@ import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import FileUploader from "@/app/common/components/FileUploader.vue";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
-
-// Components
-
-
-// Store para tipos de procedimentos hospitalares
 
 const props = defineProps({
   modelValue: {
@@ -31,6 +27,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const file = ref<any[]>([]);
@@ -43,8 +40,6 @@ watch(() => props.data, (newData) => {
   }
 }, { immediate: true });
 
-
-
 const dialogValue = computed({
   get() {
     return props.modelValue;
@@ -54,26 +49,19 @@ const dialogValue = computed({
   },
 });
 
-/**
- * Regras de validação para os campos do formulário
- */
-const requiredRules = {
-  file: [
-    (v: File | null) => !!v || t('t-please-upload-file'),
-  ]
-};
-
-
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
+  const selectedFile = file.value[0]?.file || file.value[0] || null;
+  const hasFile = !!selectedFile;
 
-  if (!valid) {
+  if (!valid || !hasFile) {
     toast.error(t('t-validation-error'));
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
@@ -87,17 +75,16 @@ const onSubmit = async () => {
 
   const payload: InvoiceAttachmentType = {
     id: props.data?.id,
-    file: file.value[0]?.file || file.value[0] || null,
+    file: selectedFile,
   };
-
-
-  console.log("Submitting payload: ", payload);
 
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
-      // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      serverErrors.value = getApiValidationErrors(error);
+      errorMsg.value = Object.keys(serverErrors.value).length > 0
+        ? ""
+        : getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -107,7 +94,6 @@ const onSubmit = async () => {
     onFinally: () => localLoading.value = false
   });
 };
-
 
 onMounted(async () => {
 

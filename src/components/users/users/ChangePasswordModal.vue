@@ -2,6 +2,8 @@
 import { ref, computed, watch, PropType } from "vue";
 import { useI18n } from "vue-i18n";
 import { changePasswordListingType } from "@/components/users/types"
+import { normalizeStringValue } from "@/app/common/normalizers";
+import { useToast } from "vue-toastification";
 
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
 
@@ -22,6 +24,8 @@ const prop = defineProps({
 
 const formData = ref(prop.data);
 const localLoading = ref(false);
+const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const toast = useToast();
 
 const id = ref(formData.value.id || "");
 const newPassword = ref(formData.value.newPassword || "");
@@ -38,6 +42,13 @@ const formErrors = ref<Record<string, string>>({
 });
 
 const { t } = useI18n();
+const requiredRules = {
+  newPassword: [(v: string) => !!v?.trim() || t('t-please-enter-password')],
+  confirmPassword: [
+    (v: string) => !!v?.trim() || t('t-please-enter-password-confirm'),
+    (v: string) => (v?.trim() || "") === (newPassword.value?.trim() || "") || t('t-please-enter-same-password-and-password-confirm')
+  ]
+};
 
 const validateForm = () => {
   let isValid = true;
@@ -47,28 +58,39 @@ const validateForm = () => {
     formErrors.value[key] = '';
   });
 
-  if (!newPassword.value) {
-    formErrors.value.newPassword = t('t-field-required');
+  if (!newPassword.value.trim()) {
+    formErrors.value.newPassword = t('t-please-enter-password');
     isValid = false;
   }
 
-  if (!confirmPassword.value) {
-    formErrors.value.confirmPassword = t('t-field-required');
+  if (!confirmPassword.value.trim()) {
+    formErrors.value.confirmPassword = t('t-please-enter-password-confirm');
     isValid = false;
-  } 
+  }
+
+  if (newPassword.value.trim() && confirmPassword.value.trim() && newPassword.value.trim() !== confirmPassword.value.trim()) {
+    formErrors.value.confirmPassword = t('t-please-enter-same-password-and-password-confirm');
+    isValid = false;
+  }
 
   return isValid;
 };
 
-function onSubmit() {
-  if (!validateForm()) return;
+async function onSubmit() {
+  if (!form.value) return;
+
+  const { valid } = await form.value.validate();
+  if (!valid || !validateForm()) {
+    toast.error(t('t-validation-error'));
+    return;
+  }
 
   localLoading.value = true;
 
   emit("onSubmit", {
-    newPassword: newPassword.value,
-    confirmPassword: confirmPassword.value,
-    passwordsMatching: newPassword.value === confirmPassword.value,
+    newPassword: normalizeStringValue(newPassword.value, "trimToEmpty") || "",
+    confirmPassword: normalizeStringValue(confirmPassword.value, "trimToEmpty") || "",
+    passwordsMatching: newPassword.value.trim() === confirmPassword.value.trim(),
   }, {
     onSuccess: () => {
       dialogValue.value = false;
@@ -82,7 +104,8 @@ function onSubmit() {
 
 <template>
   <v-dialog v-model="dialogValue" width="500" scrollable>
-    <Card :title="$t('t-change-password')" title-class="py-0">
+    <v-form ref="form" @submit.prevent="onSubmit">
+      <Card :title="$t('t-change-password')" title-class="py-0">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
       </template>
@@ -100,12 +123,9 @@ function onSubmit() {
               v-model="newPassword" 
               :placeholder="$t('t-enter-password')" 
               :error-messages="formErrors.newPassword ? [formErrors.newPassword] : []"
-              hide-details
+              :rules="requiredRules.newPassword"
               isPassword
             />
-            <div v-if="formErrors.newPassword" class="text-red text-extra-small pt-1">
-              {{ formErrors.newPassword }}
-            </div>
           </v-col>
           
           <v-col cols="12" lg="6">
@@ -116,7 +136,7 @@ function onSubmit() {
               v-model="confirmPassword" 
               :placeholder="$t('t-enter-password-confirm')" 
               :error-messages="formErrors.confirmPassword ? [formErrors.confirmPassword] : []"
-              hide-details
+              :rules="requiredRules.confirmPassword"
               isPassword
             />
           </v-col>
@@ -142,6 +162,7 @@ function onSubmit() {
         </div>
       </v-card-actions>
     </Card>
+    </v-form>
   </v-dialog>
 </template>
 

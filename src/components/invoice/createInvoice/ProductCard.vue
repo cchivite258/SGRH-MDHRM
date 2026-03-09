@@ -322,7 +322,15 @@ const validateItems = (items: InvoiceItemInsertType[]): boolean => {
   );
 };
 
-const emitItemsReady = (): boolean => {
+const emitItemsReady = async (): Promise<boolean> => {
+  if (form.value) {
+    const { valid } = await form.value.validate();
+    if (!valid) {
+      toast.error(t('t-validation-error'));
+      return false;
+    }
+  }
+
   const items = prepareItemsForSubmission();
 
   if (!validateItems(items)) {

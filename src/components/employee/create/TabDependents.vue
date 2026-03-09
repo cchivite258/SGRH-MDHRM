@@ -35,6 +35,7 @@ import type {
   DependentInsertType
 } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
@@ -180,6 +181,7 @@ const onSubmit = async (
   data: DependentInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: unknown) => void,
     onFinally?: () => void
   }
 ) => {
@@ -193,18 +195,7 @@ const onSubmit = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      callbacks?.onError?.(response.error);
       return;
     }
 
@@ -224,23 +215,11 @@ const onSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar dependentes:", error);
-
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
+    const messages = getApiErrorMessages(error, t("t-message-save-error"));
+    if (messages.length === 0) {
+      toast.error(t("t-message-save-error"));
     }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }

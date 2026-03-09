@@ -31,6 +31,7 @@ import { amountFormate } from "@/app/common/amountFormate";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import { healthPlanService } from "@/app/http/httpServiceProvider";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -54,6 +55,10 @@ const props = defineProps({
   institutionId: {
     type: String as PropType<string | null>,
     default: null
+  },
+  isViewMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -165,6 +170,7 @@ const onSubmit = async (
   data: HealthPlanInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -178,18 +184,8 @@ const onSubmit = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -206,22 +202,8 @@ const onSubmit = async (
   } catch (error: any) {
     console.error("Erro ao gravar plano de saúde:", error);
 
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -245,6 +227,15 @@ const getsalaryComponentLabel = (value: string | undefined) => {
 Opcoes da lista
 */
 const getDynamicOptions = (invoice: HealthPlanListingType) => {
+  if (props.isViewMode) {
+    return Options
+      .filter((option) => option.title === "view")
+      .map((option) => ({
+        ...option,
+        title: t(`t-${option.title}`)
+      }));
+  }
+
   // Opções base
   let availableOptions = [...Options];
 
@@ -296,6 +287,7 @@ const onSubmitClone = async (
   data: HealthPlanInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -307,7 +299,8 @@ const onSubmitClone = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -323,7 +316,8 @@ const onSubmitClone = async (
 
   } catch (error: any) {
     console.error("Erro ao clonar plano de saúde:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -402,7 +396,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-health-plan-list')" title-class="py-5">
-    <template #title-action>
+    <template v-if="!props.isViewMode" #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-health-plan') }}
@@ -430,10 +424,10 @@ onBeforeUnmount(() => {
         :headers="healthPlanHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="healthPlanStore.health_plans" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchHealthPlans"
-        item-value="id" show-select>
+        item-value="id" :show-select="!props.isViewMode">
         <template #body="{ items }">
           <tr v-for="item in items as HealthPlanListingType[]" :key="item.id" height="50">
-            <td>
+            <td v-if="!props.isViewMode">
               <v-checkbox :model-value="selectedHealthPlans.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -476,7 +470,7 @@ onBeforeUnmount(() => {
   <CloneHealthPlanDialog v-model="healthPlanCloneDialog" :data="healthPlanData" @onSubmitClone="onSubmitClone" />
   <ViewHealthPlanDialog v-model="viewDialog" :data="healthPlanDataView" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
+  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
       {{ $t('t-back-to-period') }} <i class="ph-arrow-left ms-2" />
     </v-btn>

@@ -12,6 +12,8 @@ import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizeStringValue } from "@/app/common/normalizers";
 
 // Components
 import ButtonNav from "@/components/institution/create/ButtonNav.vue";
@@ -52,6 +54,7 @@ const institutionId = ref<string | undefined>(
 const isCreated = ref(!institutionId.value); 
 const loading = ref(false); // Estado de loading global
 const errorMsg = ref(""); // Mensagem de erro global
+const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null; // Timeout para mensagens de erro
 
 const basicDataValidated = ref(false);
@@ -90,29 +93,10 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  // Mensagem de erro padrão
-  let message = t('t-error-saving-employee');
-
-  // Tratamento específico para erros da API
-  if (error?.response?.data) {
-    if (error.response.data.error) {
-      // Erros de validação
-      errorMsg.value = error.response.data.message;
-      alertTimeout = setTimeout(() => {
-        errorMsg.value = "";
-        alertTimeout = null;
-      }, 5000);
-    }
-    message = error.response.data.message || message;
-  }
-  // Erros gerais
-  else if (error.message) {
-    message = error.message;
-  }
-
-  // Exibe erro no toast e no alert
-  toast.error(message);
-  errorMsg.value = message;
+  const messages = getApiErrorMessages(error, t('t-error-saving-employee'));
+  messages.forEach((message) => toast.error(message));
+  apiFieldErrors.value = getApiValidationErrors(error);
+  errorMsg.value = Object.keys(apiFieldErrors.value).length > 0 ? "" : messages.join("\n");
 
   // Configura timeout para limpar a mensagem
   alertTimeout = setTimeout(() => {
@@ -174,6 +158,13 @@ const onStepChange = (value: number) => {
   }
 };
 
+const clearApiFieldError = (field: string) => {
+  if (!apiFieldErrors.value[field]) return;
+  const next = { ...apiFieldErrors.value };
+  delete next[field];
+  apiFieldErrors.value = next;
+};
+
 // Modifique a função onStepChange para:
 const onStepChangeforDialog = (value: number) => {
   // Se veio de query param, respeita esse valor
@@ -224,6 +215,8 @@ const saveInstitution = async (isFinalStep: boolean = false) => {
   try {
     loading.value = true;
     errorMsg.value = "";
+    apiFieldErrors.value = {};
+    institutionData.website = normalizeStringValue(institutionData.website, "trimToNull");
 
     let response;
     if (institutionId.value) {
@@ -296,7 +289,7 @@ onBeforeUnmount(() => {
       </transition>
 
       <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="institutionData" @save="saveInstitution(false)"
-        :loading="loading" />
+        :loading="loading" :server-errors="apiFieldErrors" @clear-server-error="clearApiFieldError" />
       <Step2 v-if="step === 2" @onStepChange="onStepChange" :institution-id="institutionId" />
       <Step3 v-if="step === 3" @onStepChange="onStepChange" :institution-id="institutionId"/>
       <Step4 v-if="step === 4" @onStepChange="onStepChange" :institution-id="institutionId"/>

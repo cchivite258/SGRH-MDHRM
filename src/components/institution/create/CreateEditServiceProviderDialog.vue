@@ -1,17 +1,19 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch, onMounted } from "vue";
+import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
 import { ServiceProviderInsertType, ServiceProviderListingType } from "@/components/institution/types";
 import { ServiceProviderListingForListType } from "@/components/serviceProvider/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import { getApiValidationErrors } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'onSubmit', data: ServiceProviderInsertType, callbacks?: {  
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }): void
 }>();
@@ -36,6 +38,7 @@ const props = defineProps({
 const serviceProviderStore = useServiceProviderStore();
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 const id = ref("");
 const serviceProvider = ref<string | number>(""); // Pode ser string ou number
 
@@ -80,9 +83,18 @@ const clinics = computed(() => {
 
 const formClinic = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await formClinic.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmit = async () => {
   if (!formClinic.value) return;
+  serverErrors.value = {};
 
   const { valid } = await formClinic.value.validate();
   
@@ -104,6 +116,9 @@ const onSubmit = async () => {
 
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
+    onError: (error: any) => {
+      serverErrors.value = getApiValidationErrors(error);
+    },
     onFinally: () => localLoading.value = false
   });
 };
@@ -136,7 +151,8 @@ onMounted(async () => {
               {{ $t('t-service-provider') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="serviceProvider" :items="clinics"
-              :loading="serviceProviderStore.loading" :rules="requiredRules.serviceProvider" />
+              :loading="serviceProviderStore.loading" :rules="requiredRules.serviceProvider"
+              :error-messages="getServerErrors('serviceProvider')" />
           </v-col>
         </v-row>
       </v-card-text>

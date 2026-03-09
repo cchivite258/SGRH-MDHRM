@@ -9,7 +9,7 @@
  * - Endereço
  */
 
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
@@ -49,11 +49,14 @@ const emit = defineEmits<{
   (e: 'onStepChange', step: number): void;
   (e: 'save'): void;
   (e: 'update:modelValue', value: ServiceProviderInsertType): void;
+  (e: 'clear-server-error', field: string): void;
+  (e: 'validated'): void;
 }>();
 
 const props = defineProps<{
   modelValue: ServiceProviderInsertType,
-  loading?: boolean
+  loading?: boolean,
+  serverErrors?: Record<string, string[]>
 }>();
 
 // Stores
@@ -77,6 +80,30 @@ let serviceProviderData = computed({
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const idContractStartDatePicker = ref();
+const idContractEndDatePicker = ref();
+const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(
+  () => props.serverErrors,
+  async (errors) => {
+    if (errors && Object.keys(errors).length > 0) {
+      await nextTick();
+      await idContractStartDatePicker.value?.validate?.();
+      await idContractEndDatePicker.value?.validate?.();
+      await form.value?.validate();
+    }
+  },
+  { deep: true }
+);
 
 /**
  * Regras de validação para os campos do formulário
@@ -101,12 +128,10 @@ const requiredRules = {
     (v: string) => /^\+?\d{9,13}$/.test(v) || t('t-phone-must-have-between-9-and-13-digits')
   ],
   email: [
-    (v: string) => !!v || t('t-please-enter-service-provider-email'),
-    (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email')
+    (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email')
   ],
   website: [
-    (v: string) => !!v || t('t-please-enter-service-provider-website'),
-    (v: string) => /^(https?:\/\/)?([\w\d-]+\.)+\w{2,}(\/.*)?$/.test(v) || t('t-invalid-website')
+    (v: string) => !v || /^(https?:\/\/)?([\w\d-]+\.)+\w{2,}(\/.*)?$/.test(v) || t('t-invalid-website')
   ],
   providerType: [
     (v: string) => !!v || t('t-please-enter-provider-type'),
@@ -116,6 +141,17 @@ const requiredRules = {
   ],
   contractEndDate: [
     (v: Date) => !!v || t('t-please-enter-contract-end-date'),
+    (v: Date) => {
+      if (!v || !serviceProviderData.value.contractStartDate) return true;
+      const startDate = new Date(serviceProviderData.value.contractStartDate);
+      const endDate = new Date(v);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        return t('t-validation-error');
+      }
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
+      return endDate >= startDate || t('t-contract-end-date-must-be-after-start-date');
+    }
   ]
 
 };
@@ -125,6 +161,7 @@ const requiredRules = {
  * Observa mudanças no país para carregar as províncias correspondentes
  */
 watch(() => serviceProviderData.value.countryId, async (newCountryId, oldCountryId) => {
+  emit('clear-server-error', 'countryId');
   // Só executa se o país realmente mudou
   if (newCountryId !== oldCountryId) {
     if (newCountryId) {
@@ -138,9 +175,11 @@ watch(() => serviceProviderData.value.countryId, async (newCountryId, oldCountry
           );
           if (!currentProvince) {
             serviceProviderData.value.provinceId = undefined;
+            emit('clear-server-error', 'provinceId');
           }
         } else {
           serviceProviderData.value.provinceId = undefined;
+          emit('clear-server-error', 'provinceId');
         }
       } catch (error) {
         console.error("Failed to load provinces:", error);
@@ -155,9 +194,18 @@ watch(() => serviceProviderData.value.countryId, async (newCountryId, oldCountry
     } else {
       provinceStore.clearProvinces();
       serviceProviderData.value.provinceId = undefined;
+      emit('clear-server-error', 'provinceId');
     }
   }
 });
+watch(() => serviceProviderData.value.name, () => emit('clear-server-error', 'name'));
+watch(() => serviceProviderData.value.providerTypeId, () => emit('clear-server-error', 'providerTypeId'));
+watch(() => serviceProviderData.value.address, () => emit('clear-server-error', 'address'));
+watch(() => serviceProviderData.value.phone, () => emit('clear-server-error', 'phone'));
+watch(() => serviceProviderData.value.email, () => emit('clear-server-error', 'email'));
+watch(() => serviceProviderData.value.website, () => emit('clear-server-error', 'website'));
+watch(() => serviceProviderData.value.contractStartDate, () => emit('clear-server-error', 'contractStartDate'));
+watch(() => serviceProviderData.value.contractEndDate, () => emit('clear-server-error', 'contractEndDate'));
 
 /**
  * Carrega dados iniciais quando o componente é montado
@@ -230,9 +278,11 @@ const onBack = () => {
  */
 const submitForm = async () => {
   if (!form.value) return;
+  const isContractStartDateValid = await idContractStartDatePicker.value?.validate?.();
+  const isContractEndDateValid = await idContractEndDatePicker.value?.validate?.();
 
   const { valid } = await form.value.validate();
-  if (!valid) {
+  if (!valid || isContractStartDateValid === false || isContractEndDateValid === false) {
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
       errorMsg.value = "";
@@ -241,7 +291,7 @@ const submitForm = async () => {
     return;
   }
 
-  // emit('save'); // Se necessário para guardar os dados antes
+  emit('validated');
   emit('onStepChange', 2); // Avançar para o próximo passo (step 2)
 };
 
@@ -278,14 +328,15 @@ const submitForm = async () => {
               {{ $t('t-service-provider-name') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="serviceProviderData.name" :placeholder="$t('t-enter-service-provider-name')"
-              :rules="requiredRules.name" />
+              :rules="applyServerErrorsToRules('name', requiredRules.name)" />
           </v-col>
           <v-col cols="12" lg="3">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t('t-provider-type') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="serviceProviderData.providerTypeId" :items="providerTypes"
-              :loading="providerTypeStore.loading" :rules="requiredRules.providerType" />
+              :loading="providerTypeStore.loading" :rules="requiredRules.providerType"
+              :error-messages="getServerErrors('providerTypeId')" />
           </v-col>
         </v-row>
 
@@ -293,16 +344,18 @@ const submitForm = async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-country') }}
+              {{ $t('t-country') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect v-model="serviceProviderData.countryId" :items="countries" :loading="countryStore.loading" />
+            <MenuSelect v-model="serviceProviderData.countryId" :items="countries" :loading="countryStore.loading"
+              :rules="requiredRules.countryId" :error-messages="getServerErrors('countryId')" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-province') }}
+              {{ $t('t-province') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="serviceProviderData.provinceId" :items="provinces" :loading="provinceStore.loading"
-              :disabled="!serviceProviderData.countryId || !Array.isArray(provinceStore.provincesbyCountry)" />
+              :disabled="!serviceProviderData.countryId || !Array.isArray(provinceStore.provincesbyCountry)"
+              :rules="requiredRules.provinceId" :error-messages="getServerErrors('provinceId')" />
           </v-col>
         </v-row>
 
@@ -313,14 +366,14 @@ const submitForm = async () => {
               {{ $t('t-service-provider-address') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="serviceProviderData.address" :placeholder="$t('t-enter-service-provider-address')"
-              :rules="requiredRules.address" />
+              :rules="applyServerErrorsToRules('address', requiredRules.address)" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-service-provider-phone') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="serviceProviderData.phone" :placeholder="$t('t-enter-service-provider-phone')"
-              :rules="requiredRules.phone" />
+              :rules="applyServerErrorsToRules('phone', requiredRules.phone)" />
           </v-col>
         </v-row>
 
@@ -328,17 +381,17 @@ const submitForm = async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-service-provider-email') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-service-provider-email') }}
             </div>
             <TextField v-model="serviceProviderData.email" :placeholder="$t('t-enter-service-provider-email')"
-              :rules="requiredRules.email" />
+              :rules="applyServerErrorsToRules('email', requiredRules.email)" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-service-provider-website') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-service-provider-website') }}
             </div>
             <TextField v-model="serviceProviderData.website" :placeholder="$t('t-enter-service-provider-website')"
-              :rules="requiredRules.website" />
+              :rules="applyServerErrorsToRules('website', requiredRules.website)" />
           </v-col>
         </v-row>
 
@@ -348,14 +401,16 @@ const submitForm = async () => {
               {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idContractStartDatePicker" v-model="serviceProviderData.contractStartDate"
-              :placeholder="$t('t-enter-contract-start-date')" :rules="requiredRules.contractStartDate" :teleport="true"/>
+              :placeholder="$t('t-enter-contract-start-date')"
+              :rules="applyServerErrorsToRules('contractStartDate', requiredRules.contractStartDate)" :teleport="true"/>
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idContractEndDatePicker" v-model="serviceProviderData.contractEndDate"
-              :teleport="true" :rules="requiredRules.contractEndDate" :placeholder="$t('t-enter-contract-end-date')"
+              :teleport="true" :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
+              :placeholder="$t('t-enter-contract-end-date')"
               format="dd/MM/yyyy" />
           </v-col>
         </v-row>

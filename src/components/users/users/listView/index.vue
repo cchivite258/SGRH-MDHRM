@@ -22,6 +22,7 @@ import { onBeforeUnmount } from "vue";
 import { changePasswordListingType } from "@/components/users/types";
 import EnableAccountConfirmationDialog from "@/components/users/users/EnableAccountConfirmationDialog.vue";
 import AdvancedFilter from "@/components/users/users/listView/AdvancedFilter.vue";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 //criacao da mensagem toast
@@ -67,11 +68,7 @@ const handleApiError = (error: any) => {
   }
 
   // Se o erro vier em formato de resposta do backend
-  const message =
-    error?.response?.data?.error.errors.passwordsMatching[0] ||
-    error?.message ||
-    t("t-message-save-error");
-
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
   errorMsg.value = message;
 
   alertTimeout = setTimeout(() => {
@@ -183,7 +180,7 @@ const onSubmit = async (data: UserListingType, callbacks?: {
     callbacks?.onSuccess?.();
   } catch (error) {
     console.error("Erro ao salvar usuário:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
 
   } finally {
     // Callback para desativar o loading
@@ -207,7 +204,7 @@ const onSubmitChangePassword = async (data: changePasswordType, callbacks?: {
     callbacks?.onSuccess?.();
   } catch (error) {
     console.error("Erro ao alterar senha:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     callbacks?.onFinally?.();
@@ -294,7 +291,7 @@ const onConfirmEnableAccount = async () => {
       toast.success(t("t-toast-message-user-enabled"));
     }
   } catch (error) {
-    toast.error(t("t-message-enable-error"));
+    getApiErrorMessages(error, t("t-message-enable-error")).forEach((message) => toast.error(message));
     console.error("Erro ao alterar estado da conta:", error);
   } finally {
     lockerLoading.value = false;
@@ -331,12 +328,8 @@ const onConfirmDelete = async () => {
     toast.success(t('t-toast-message-deleted'));
 
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
     console.error("Delete error:", error);
-
-    // Opcional: Mostrar detalhes do erro se disponível
-    const errorMessage = (error as any)?.response?.data?.message || t('t-message-delete-error-unknown');
-    toast.error(errorMessage);
 
   } finally {
     deleteLoading.value = false;

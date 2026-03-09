@@ -30,6 +30,8 @@ import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 import { InvoiceInsertType, InvoiceItemInsertType, InvoiceAttachmentType } from "@/components/invoice/types";
 import { invoiceService } from "@/app/http/httpServiceProvider";
 import { file } from "@babel/types";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -83,7 +85,9 @@ const dependentStore = useDependentEmployeeStore();
 // =============================================
 const AttachmentDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const productCardRef = ref<{ emitItemsReady: () => boolean }>();
+const productCardRef = ref<{ emitItemsReady: () => Promise<boolean> }>();
+const issueDatePickerRef = ref<{ validate: () => boolean } | null>(null);
+const dueDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const errorMsg = ref("");
 const alertTimeout = ref<number | null>(null);
 const attachmentData = ref<InvoiceAttachmentType | null>(null);
@@ -201,14 +205,14 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
     const response = await invoiceService.downloadAttachment(invoiceId, name, extension);
 
     if (response.status === "error") {
-      toast.error(response.error?.message || t("t-message-download-error"));
+      getApiErrorMessages(response.error, t("t-message-download-error")).forEach((message) => toast.error(message));
       return;
     }
 
     //toast.success(t("t-toast-message-downloaded"));
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t("t-message-download-error"));
+    getApiErrorMessages(error, t("t-message-download-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }
@@ -239,7 +243,7 @@ const onSubmitInvoiceAttachment = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
       return;
     }
 
@@ -249,7 +253,7 @@ const onSubmitInvoiceAttachment = async (
 
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }
@@ -276,14 +280,14 @@ const onConfirmDelete = async () => {
     const response = await invoiceService.deleteAttachment(deleteId.value!);
 
     if (response.status === "error") {
-      toast.error(response.error?.message || t("t-message-delete-error"));
+      getApiErrorMessages(response.error, t("t-message-delete-error")).forEach((message) => toast.error(message));
       return;
     }
 
     toast.success(t("t-toast-message-deleted"));
     emit('invoiceAttachmentUploaded', deleteId.value!);
   } catch (error) {
-    toast.error(t("t-message-delete-error"));
+    getApiErrorMessages(error, t("t-message-delete-error")).forEach((message) => toast.error(message));
   }
   finally {
     deleteLoading.value = false;
@@ -296,19 +300,28 @@ const onConfirmDelete = async () => {
  */
 const submitInvoice = async () => {
   if (!form.value) return;
+  const isIssueDateValid = issueDatePickerRef.value?.validate() ?? true;
+  const isDueDateValid = dueDatePickerRef.value?.validate() ?? true;
 
   const { valid } = await form.value.validate();
-  if (!valid) {
+  if (!valid || !isIssueDateValid || !isDueDateValid) {
     toast.error(t('t-validation-error'));
     return;
   }
 
   try {
+    const normalizedInvoice = { ...invoiceData.value };
+    normalizeObjectStringFieldsInPlace(normalizedInvoice as Record<string, any>, {
+      invoiceNumber: "trimToEmpty",
+      authorizedBy: "trimToEmpty",
+      invoiceReferenceNumber: "trimToNull"
+    });
+
     if (productCardRef.value) {
-      const itemsValid = productCardRef.value.emitItemsReady();
+      const itemsValid = await productCardRef.value.emitItemsReady();
       if (!itemsValid) return;
     } else {
-      emit('save', { ...invoiceData.value });
+      emit('save', normalizedInvoice);
     }
   } catch (error) {
     console.error("Error submitting invoice:", error);
@@ -399,7 +412,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <v-form ref="form">
+  <v-form ref="form" @submit.prevent="submitInvoice">
     <v-card elevation="0" class="position-relative h-100 d-block">
 
 
@@ -503,7 +516,7 @@ onMounted(async () => {
             <div class="font-weight-bold">
               {{ $t('t-issue-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="invoiceData.issueDate" :teleport="true" :enable-time-picker="false"
+            <ValidatedDatePicker ref="issueDatePickerRef" v-model="invoiceData.issueDate" :teleport="true" :enable-time-picker="false"
               :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" />
           </v-col>
 
@@ -519,7 +532,7 @@ onMounted(async () => {
             <div class="font-weight-bold">
               {{ $t('t-due-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="invoiceData.dueDate" :teleport="true" :enable-time-picker="false"
+            <ValidatedDatePicker ref="dueDatePickerRef" v-model="invoiceData.dueDate" :teleport="true" :enable-time-picker="false"
               :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" />
           </v-col>
         </v-row>

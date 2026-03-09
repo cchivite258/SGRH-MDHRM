@@ -60,8 +60,7 @@ const fetchInstitutions = async ({ page, itemsPerPage, sortBy }: FetchParams) =>
 
 // Navega para a página de visualização
 const onView = (id: string) => {
-  //router.push(`/institution/view/${id}`)
-  router.push(`/institution/list`)
+  router.push(`/institution/view/${id}`)
 }
 
 // Abre o diálogo de confirmação para exclusão
@@ -146,7 +145,8 @@ const toggleSelection = (item: InstitutionListingType) => {
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
             <td>
-              <TableAction @onEdit="() => router.push(`/institution/edit/${item.id}`)" 
+              <TableAction @onEdit="() => router.push(`/institution/edit/${item.id}`)"
+                @onView="() => onView(item.id)"
                 @onDelete="() => openDeleteDialog(item.id)" />
             </td>
           </tr>
@@ -171,3 +171,4 @@ const toggleSelection = (item: InstitutionListingType) => {
 
   <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteInstitution" :loading="deleteLoading" />
 </template>
+

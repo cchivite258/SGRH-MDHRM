@@ -1,8 +1,9 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch } from "vue";
+import { PropType, computed, ref, watch, nextTick } from "vue";
 import { ContactPersonInsertType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { getApiValidationErrors } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -29,6 +30,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -79,9 +81,26 @@ const requiredRules = {
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
 
@@ -108,6 +127,9 @@ const onSubmit = async () => {
 
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
+    onError: (error: any) => {
+      serverErrors.value = getApiValidationErrors(error);
+    },
     onFinally: () => localLoading.value = false
   });
 };
@@ -129,7 +151,8 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-fullname') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="fullname" :placeholder="$t('t-enter-fullname')" :rules="requiredRules.fullname" />
+              <TextField v-model="fullname" :placeholder="$t('t-enter-fullname')"
+                :rules="applyServerErrorsToRules('fullname', requiredRules.fullname)" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -137,14 +160,15 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-phone') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="phone" :placeholder="$t('t-enter-phone')" :rules="requiredRules.phone" />
+              <TextField v-model="phone" :placeholder="$t('t-enter-phone')"
+                :rules="applyServerErrorsToRules('phone', requiredRules.phone)" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-email') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="email" !isEmail :placeholder="$t('t-enter-email-form')"
-                :rules="requiredRules.email" />
+                :rules="applyServerErrorsToRules('email', requiredRules.email)" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
