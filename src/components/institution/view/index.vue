@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import { onMounted, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -59,7 +59,7 @@ onMounted(async () => {
     const response = await institutionService.getInstitutionById(institutionId.value);
 
     if (!response?.data) {
-      throw new Error("Dados da entidade não disponíveis.");
+      throw new Error("Dados do contrato nÃ£o disponÃ­veis.");
     }
 
     Object.assign(institutionData, response.data);
@@ -146,3 +146,4 @@ onMounted(async () => {
     </v-card-text>
   </Card>
 </template>
+
