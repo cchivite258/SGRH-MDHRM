@@ -127,10 +127,43 @@ const normalizeInvoicePayload = (payload: InvoiceInsertType): InvoiceInsertType 
     return undefined;
   };
 
+  const normalizeNumericId = (value: unknown): number | undefined => {
+    if (!value) return undefined;
+
+    if (typeof value === "object" && value !== null) {
+      const record = value as Record<string, unknown>;
+      const nestedId = record.id ?? record.value;
+
+      if (typeof nestedId === "number" && Number.isFinite(nestedId)) {
+        return nestedId;
+      }
+
+      if (typeof nestedId === "string") {
+        const trimmed = nestedId.trim();
+        if (!trimmed) return undefined;
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const normalizedValue = normalizeStringValue(value, "trimToNull");
+      if (!normalizedValue) return undefined;
+      const parsed = Number(normalizedValue);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    return undefined;
+  };
+
   normalized.company = normalizeId(normalized.company) || "";
   normalized.serviceProvider = normalizeId(normalized.serviceProvider);
   normalized.employee = normalizeId(normalized.employee);
-  normalized.currency = normalizeId(normalized.currency);
+  normalized.currency = normalizeNumericId(normalized.currency);
   normalized.coveragePeriod = normalizeId(normalized.coveragePeriod);
   normalized.dependent = normalized.isEmployeeInvoice ? undefined : normalizeId(normalized.dependent);
 
