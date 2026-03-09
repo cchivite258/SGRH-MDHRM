@@ -50,6 +50,10 @@ const props = defineProps({
   institutionId: {
     type: String as PropType<string | null>,
     default: null
+  },
+  isViewMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -233,7 +237,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-department-list')" title-class="py-5">
-    <template #title-action>
+    <template v-if="!props.isViewMode" #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-department') }}
@@ -261,10 +265,10 @@ onBeforeUnmount(() => {
         :headers="departmentHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="departmentStore.departmentsList" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchDepartments" 
-        item-value="id" show-select>
+        item-value="id" :show-select="!props.isViewMode">
         <template #body="{ items }">
           <tr v-for="item in items as DepartmentListingType[]" :key="item.id" height="50"> 
-            <td>
+            <td v-if="!props.isViewMode">
               <v-checkbox :model-value="selectedDepartments.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -273,11 +277,23 @@ onBeforeUnmount(() => {
             <td>
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
-            <td class="text-end" style="padding-right: 5px;">
-              <TableAction 
-              @onEdit="() => router.push({ path: `/institution/department/${item.id}`, query: { institutionId, tab: '4' } })" 
-              @onView="onViewClick(item)" 
-              @onDelete="onDelete(item.id)" />
+            <td class="text-end">
+              <v-btn
+                v-if="props.isViewMode"
+                icon
+                size="small"
+                variant="tonal"
+                color="primary"
+                @click="onViewClick(item)"
+              >
+                <i class="ph-eye" />
+              </v-btn>
+              <TableAction
+                v-else
+                @onEdit="() => router.push({ path: `/institution/department/${item.id}`, query: { institutionId, tab: '4' } })"
+                @onView="onViewClick(item)"
+                @onDelete="onDelete(item.id)"
+              />
             </td>
           </tr>
         </template>
@@ -303,7 +319,7 @@ onBeforeUnmount(() => {
   <ViewDepartmentDialog v-model="viewDialog" :data="departmentDataView" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
+  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
 
   <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
     {{ $t('t-back-to-health-plan') }} <i class="ph-arrow-left ms-2" />

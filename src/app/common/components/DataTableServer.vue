@@ -3,7 +3,7 @@
     <v-data-table-server v-model:items-per-page="itemsPerPage" v-model:page="page" v-model="selectedItems"
       :headers="processedHeadersWithSelect" :items-length="totalItems" :items="serverItems" :loading="loading"
       :search="searchQuery" @update:options="loadItems" class="table-component" density="compact"
-      :item-value="itemValue" :show-select="true" return-object>
+      :item-value="itemValue" :show-select="props.showSelect" return-object>
       <template #body="{ items }">
         <slot name="body" :items="items" />
       </template>
@@ -100,6 +100,10 @@ const props = defineProps({
   searchProps: {
     type: String,
     default: ''
+  },
+  showSelect: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -116,13 +120,6 @@ const serverItems = ref(props.items)
 const selectedItems = ref(props.modelValue)
 
 const processedHeadersWithSelect = computed<DataTableHeader[]>(() => {
-  const selectColumn: DataTableHeader = {
-    key: 'data-table-select',
-    title: '',
-    sortable: false,
-    width: '48px'
-  };
-
   const mappedHeaders = props.headers.map(header => {
     const align: 'start' | 'center' | 'end' =
       header.align === 'center' ? 'center' :
@@ -137,6 +134,17 @@ const processedHeadersWithSelect = computed<DataTableHeader[]>(() => {
       value: header.value
     } satisfies DataTableHeader;
   });
+
+  if (!props.showSelect) {
+    return mappedHeaders;
+  }
+
+  const selectColumn: DataTableHeader = {
+    key: 'data-table-select',
+    title: '',
+    sortable: false,
+    width: '48px'
+  };
 
   return [selectColumn, ...mappedHeaders];
 });

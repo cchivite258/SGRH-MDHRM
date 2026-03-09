@@ -118,12 +118,7 @@ const onCreateEditClick = (data: HospitalProcedureGroupListing | null) => {
     };
     dialog.value = true;
   } else {
-    router.push({
-      path: "/baseTable/edit-hospital-procedure-group",
-      query: {
-        id: data.id,
-      },
-    });
+    router.push(`/baseTable/edit-hospital-procedure-group/${data.id}`);
   }
 };
 
@@ -156,13 +151,7 @@ const onSubmit = async (data: HospitalProcedureGroupListing, callbacks?: {
 
 const onViewClick = (data: HospitalProcedureGroupListing | null) => {
   if (!data) return;
-  router.push({
-    path: "/baseTable/edit-hospital-procedure-group",
-    query: {
-      id: data.id,
-      mode: "view",
-    },
-  });
+  router.push(`/baseTable/view-hospital-procedure-group/${data.id}`);
 };
 
 
@@ -230,13 +219,13 @@ const onConfirmDelete = async () => {
               <v-checkbox :model-value="selectedHospitalProcedureGroups.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
-            <td>{{ item.name }}</td>
+            <td class="text-primary cursor-pointer" @click="onViewClick(item)">{{ item.name }}</td>
             <td>{{ item.description }}</td>
             <td>
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
             <td>
-              <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
+              <TableAction @onEdit="onCreateEditClick(item)" @on-view="onViewClick(item)"
                 @onDelete="onDelete(item.id)" />
             </td>
           </tr>
@@ -263,4 +252,3 @@ const onConfirmDelete = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
-

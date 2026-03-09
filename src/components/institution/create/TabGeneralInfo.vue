@@ -21,7 +21,6 @@ import { useInstitutionStore } from '@/store/institution/institutionStore';
 import type { InstitutionTypeListing } from '@/components/baseTables/institutionTypes/types';
 import { InstitutionInsertType } from "@/components/institution/types";
 import { email } from "@vuelidate/validators";
-import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 
 // Configuração inicial
@@ -31,7 +30,7 @@ const router = useRouter();
 
 
 // Emits e Props
-const emit = defineEmits(['onStepChange', 'save', 'update:modelValue', 'clear-server-error']);
+const emit = defineEmits(['onStepChange', 'save', 'update:modelValue']);
 
 const props = defineProps({
   modelValue: {
@@ -73,11 +72,7 @@ const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
 const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => {
   return [
     ...rules,
-    (value: any) => {
-      const hasFrontendError = rules.some((rule) => rule(value) !== true);
-      if (hasFrontendError) {
-        return true;
-      }
+    () => {
       const firstError = getServerErrors(field)[0];
       return firstError || true;
     }
@@ -94,28 +89,6 @@ watch(
   },
   { deep: true }
 );
-
-watch(() => institutionData.value.name, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'name');
-});
-watch(() => institutionData.value.institutionType, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'institutionType');
-});
-watch(() => institutionData.value.incomeTaxNumber, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'incomeTaxNumber');
-});
-watch(() => institutionData.value.address, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'address');
-});
-watch(() => institutionData.value.phone, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'phone');
-});
-watch(() => institutionData.value.email, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'email');
-});
-watch(() => institutionData.value.website, (value, oldValue) => {
-  if (value !== oldValue) emit('clear-server-error', 'website');
-});
 
 
 
@@ -182,6 +155,20 @@ const onBack = () => {
   router.push('/institution/list');
 };
 
+const normalizeNullableText = (value: string | null | undefined): string | null => {
+  if (value === null || value === undefined) return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+};
+
+const normalizeRequiredText = (value: string | null | undefined): string => {
+  if (value === null || value === undefined) return "";
+  return value.trim();
+};
+
+/**
+ * Valida e envia o formulário
+ */
 const submitGeneralInfo = async () => {
   if (!form.value) return;
 
@@ -196,15 +183,16 @@ const submitGeneralInfo = async () => {
     }, 5000);
     return;
   }
-  normalizeObjectStringFieldsInPlace(institutionData.value as Record<string, any>, {
-    name: "trimToEmpty",
-    incomeTaxNumber: "trimToEmpty",
-    phone: "trimToEmpty",
-    email: "trimToEmpty",
-    address: "trimToNull",
-    website: "trimToNull",
-    description: "trimToNull",
-  });
+  institutionData.value = {
+    ...institutionData.value,
+    name: normalizeRequiredText(institutionData.value.name),
+    incomeTaxNumber: normalizeRequiredText(institutionData.value.incomeTaxNumber),
+    phone: normalizeRequiredText(institutionData.value.phone),
+    email: normalizeRequiredText(institutionData.value.email),
+    address: normalizeNullableText(institutionData.value.address),
+    website: normalizeNullableText(institutionData.value.website),
+    description: normalizeNullableText(institutionData.value.description),
+  };
 
   emit('save', false);
 

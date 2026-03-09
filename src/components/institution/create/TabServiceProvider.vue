@@ -53,6 +53,10 @@ const props = defineProps({
   institutionId: {
     type: String as PropType<string | null>,
     default: null
+  },
+  isViewMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -261,7 +265,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-service-provider-list')" title-class="py-5">
-    <template #title-action>
+    <template v-if="!props.isViewMode" #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-service-provider') }} 
@@ -289,16 +293,26 @@ onBeforeUnmount(() => {
         :headers="serviceProviderHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="serviceProviderInstitutionStore.service_providers" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-        @load-items="fetchInstitutionServiceProviders" item-value="id" show-select>
+        @load-items="fetchInstitutionServiceProviders" item-value="id" :show-select="!props.isViewMode">
         <template #body="{ items }">
           <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id" height="50">
-            <td>
+            <td v-if="!props.isViewMode">
               <v-checkbox :model-value="selectedServiceProviders.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
             <td>{{ item.serviceProvider.name }}</td>
-            <td class="justify-end">
-              <TableActionSimplified @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+            <td class="text-end">
+              <v-btn
+                v-if="props.isViewMode"
+                icon
+                size="small"
+                variant="tonal"
+                color="primary"
+                @click="onViewClick(item)"
+              >
+                <i class="ph-eye" />
+              </v-btn>
+              <TableActionSimplified v-else @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
             </td>
           </tr>
         </template>
@@ -324,7 +338,7 @@ onBeforeUnmount(() => {
   <ViewServiceProviderDialog v-model="viewDialog" :data="serviceProviderViewData" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
+  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
       {{ $t('t-back-to-contact-person') }} <i class="ph-arrow-left ms-2" />
     </v-btn>

@@ -19,9 +19,8 @@ const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const hospitalProcedureTypeStore = useHospitalProcedureTypeStore();
-const isViewMode = computed(() => String(route.query.mode || "").toLowerCase() === "view");
 
-const groupId = computed(() => String(route.query.id || ""));
+const groupId = computed(() => String(route.params.id || route.query.id || ""));
 const loading = ref(false);
 const loadingRelations = ref(false);
 const searchQuery = ref("");
@@ -58,6 +57,9 @@ const orderedHospitalProcedureTypes = computed(() => {
     return (a.name || "").localeCompare((b.name || ""), undefined, { sensitivity: "base" });
   });
 });
+const displayedHospitalProcedureTypes = computed(() => {
+  return orderedHospitalProcedureTypes.value;
+});
 
 const isIdSelected = (id: string | number) => selectedHospitalProcedureTypeIds.value.some(item => String(item) === String(id));
 const extractId = (item: any): string | number | null => {
@@ -68,8 +70,6 @@ const extractId = (item: any): string | number | null => {
 };
 
 const toggleSelection = (item: HospitalProcedureTypeListing) => {
-  if (isViewMode.value) return;
-
   const index = selectedHospitalProcedureTypeIds.value.findIndex((id) => String(id) === String(item.id));
 
   if (index === -1) {
@@ -239,26 +239,25 @@ onMounted(async () => {
       <v-card>
         <v-card-text class="pt-0">
           <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="w-100 mb-4" density="compact" />
-
           <v-row>
             <v-col cols="12" lg="12">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="form.name" :placeholder="$t('t-enter-name')" :disabled="isViewMode" hide-details />
+              <TextField v-model="form.name" :placeholder="$t('t-enter-name')" hide-details />
             </v-col>
             <v-col cols="12" lg="12">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-description') }}
               </div>
-              <TextArea v-model="form.description" :placeholder="$t('t-enter-description')" :disabled="isViewMode" hide-details />
+              <TextArea v-model="form.description" :placeholder="$t('t-enter-description')" hide-details />
             </v-col>
           </v-row>
 
           <v-row>
             <v-col cols="12" lg="12">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-              <v-checkbox v-model="form.enabled" :disabled="isViewMode" density="compact" color="primary" class="d-inline-flex">
+              <v-checkbox v-model="form.enabled" density="compact" color="primary" class="d-inline-flex">
                 <template #label>
                   <span>{{ $t('t-is-enabled') }}</span>
                 </template>
@@ -287,7 +286,7 @@ onMounted(async () => {
               <DataTableServer
                 v-model="selectedHospitalProcedureTypes"
                 :headers="listViewHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="orderedHospitalProcedureTypes"
+                :items="displayedHospitalProcedureTypes"
                 :items-per-page="itemsPerPage"
                 :total-items="totalItems"
                 :loading="loadingList"
@@ -301,7 +300,6 @@ onMounted(async () => {
                     <td>
                       <v-checkbox
                         :model-value="isIdSelected(item.id)"
-                        :disabled="isViewMode"
                         @update:model-value="toggleSelection(item)"
                         hide-details
                         density="compact"
@@ -334,7 +332,7 @@ onMounted(async () => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn v-if="!isViewMode" color="success" variant="elevated" :loading="loading" @click="onSave">
+        <v-btn color="success" variant="elevated" :loading="loading" @click="onSave">
           {{ $t('t-save') }} <i class="ph-floppy-disk ms-2" />
         </v-btn>
       </v-card-actions>
