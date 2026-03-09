@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabContacts - Componente para  de pessoas de contato de entidades
+ * TabContacts - Componente para  de pessoas de contato de contratos
  * 
  * Funcionalidades:
  * - Listagem de departamentos

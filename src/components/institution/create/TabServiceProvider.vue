@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabServiceProviders - Componente para  de prestadores de serviço que tem convenio com entidades
+ * TabServiceProviders - Componente para  de prestadores de serviço que tem convenio com contratos
  *
  * Funcionalidades:
  * - Listagem de clínicas

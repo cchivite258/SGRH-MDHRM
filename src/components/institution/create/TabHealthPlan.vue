@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabPeriods - Componente para  de pessoas de contato de entidades
+ * TabPeriods - Componente para  de pessoas de contato de contratos
  * 
  * Funcionalidades:
  * - Listagem de períodos de cobertura
