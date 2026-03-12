@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue"
-import { useRouter } from "vue-router"
+import { ref, computed, watch, onBeforeMount } from "vue"
+import { useRouter, onBeforeRouteLeave } from "vue-router"
 import { useInstitutionStore } from "@/store/institution/institutionStore"
 import { institutionService } from "@/app/http/httpServiceProvider"
 import { useToast } from 'vue-toastification'
@@ -28,6 +28,12 @@ const searchQuery = ref("")
 const searchProps = "name,description,address,phone,email,website,incomeTaxNumber,institutionType.name" 
 const itemsPerPage = ref(10)
 const selectedInstitutions = ref<any[]>([]) 
+
+const resetListingFilters = () => {
+  institutionStore.clearFilters()
+  searchQuery.value = ""
+  selectedInstitutions.value = []
+}
 
 const deleteDialog = ref(false)
 const deleteId = ref<string | null>(null)
@@ -99,6 +105,14 @@ const toggleSelection = (item: InstitutionListingType) => {
     selectedInstitutions.value = selectedInstitutions.value.filter(selected => selected.id !== item.id);
   }
 };
+
+onBeforeMount(() => {
+  resetListingFilters()
+})
+
+onBeforeRouteLeave(() => {
+  resetListingFilters()
+})
 
 
 </script>

@@ -15,8 +15,8 @@ const isSubmitted = ref(false);
 const isRemember = ref(false);
 const errorMsg = ref("");
 const formData = ref({
-  email: { value: "admin@localhost", isValid: true },
-  password: { value: "admin", isValid: true },
+  email: { value: "", isValid: true },
+  password: { value: "", isValid: true },
 });
 
 const isValidFormData = computed(() => {
