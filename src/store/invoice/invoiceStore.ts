@@ -88,6 +88,7 @@ export const useInvoiceStore = defineStore('invoices', {
     clearFilters() {
       this.globalSearch = '';
       this.advancedFilters = [];
+      this.logicalOperator = 'AND';
     },
     async fetchInvoicesForListing(
       page?: number,

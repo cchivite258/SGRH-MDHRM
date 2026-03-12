@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue"
-import { useRouter } from "vue-router"
+import { ref, computed, watch, onBeforeMount } from "vue"
+import { useRouter, onBeforeRouteLeave } from "vue-router"
 import { useInvoiceStore } from "@/store/invoice/invoiceStore"
 import { invoiceService } from "@/app/http/httpServiceProvider"
 import { useToast } from 'vue-toastification'
@@ -39,6 +39,11 @@ const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
 const itemsPerPage = ref(10)
 const selectedInvoices = ref<any[]>([]) // Armazena os funcionários selecionados
+const resetListingFilters = () => {
+  invoiceStore.clearFilters()
+  searchQuery.value = ""
+  selectedInvoices.value = []
+}
 
 // Computed properties
 const loading = computed(() => invoiceStore.loading)
@@ -310,6 +315,14 @@ const hasFlaggedItems = (invoice: InvoiceListingType) => invoice.areItemsFlagged
 
 const shouldHighlight = (invoice: InvoiceListingType) =>
   invoice.flag !== 'UNFLAGGED' || hasFlaggedItems(invoice);
+
+onBeforeMount(() => {
+  resetListingFilters()
+})
+
+onBeforeRouteLeave(() => {
+  resetListingFilters()
+})
 </script>
 <template>
   <Card :title="$t('t-invoice-list')" class="mt-7">

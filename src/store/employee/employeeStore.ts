@@ -117,6 +117,7 @@ export const useEmployeeStore = defineStore('employees', {
     clearFilters() {
       this.globalSearch = '';
       this.advancedFilters = [];
+      this.logicalOperator = 'AND';
     },
 
     setDraftEmployee(data: EmployeeInsertType) {

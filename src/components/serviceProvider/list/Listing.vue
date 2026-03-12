@@ -1,6 +1,6 @@
   <script lang="ts" setup>
-  import { ref, computed, watch } from "vue"
-  import { useRouter } from "vue-router"
+  import { ref, computed, watch, onBeforeMount } from "vue"
+  import { useRouter, onBeforeRouteLeave } from "vue-router"
   import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
   import { serviceProviderService } from "@/app/http/httpServiceProvider"
   import { useToast } from 'vue-toastification'
@@ -30,6 +30,11 @@
   const deleteLoading = ref(false)
   const itemsPerPage = ref(10)
   const selectedServiceProvider = ref<any[]>([]) /// Armazena os funcionários selecionados
+  const resetListingFilters = () => {
+    serviceProviderStore.clearFilters()
+    searchQuery.value = ""
+    selectedServiceProvider.value = []
+  }
 
   // Computed properties
   const loading = computed(() => serviceProviderStore.loading)
@@ -98,6 +103,14 @@
     if (!text) return ''
     return text.length > maxLength ? text.slice(0, maxLength) + '...' : text
   }
+
+  onBeforeMount(() => {
+    resetListingFilters()
+  })
+
+  onBeforeRouteLeave(() => {
+    resetListingFilters()
+  })
 
   </script>
 

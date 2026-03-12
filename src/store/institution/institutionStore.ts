@@ -89,6 +89,7 @@ export const useInstitutionStore = defineStore('institutions', {
     clearFilters() {
       this.globalSearch = '';
       this.advancedFilters = [];
+      this.logicalOperator = 'AND';
     },
 
     async fetchInstitutionsforListing(

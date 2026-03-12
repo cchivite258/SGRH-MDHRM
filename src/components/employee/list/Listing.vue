@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue"
-import { useRouter } from "vue-router"
+import { ref, computed, watch, onBeforeMount } from "vue"
+import { useRouter, onBeforeRouteLeave } from "vue-router"
 import { useEmployeeStore } from "@/store/employee/employeeStore"
 import { employeeService } from "@/app/http/httpServiceProvider"
 import { useToast } from 'vue-toastification'
@@ -30,6 +30,12 @@ const deleteId = ref<string | null>(null)
 const deleteLoading = ref(false)
 const itemsPerPage = ref(10)
 const selectedEmployees = ref<any[]>([]) /// Armazena os funcionários selecionados
+
+const resetListingFilters = () => {
+  employeeStore.clearFilters()
+  searchQuery.value = ""
+  selectedEmployees.value = []
+}
 
 // Computed properties
 const loading = computed(() => employeeStore.loading)
@@ -109,6 +115,14 @@ const getAlertMessage = (employee: EmployeeListingType) => {
       return 'Problemas identificados no cadastro';
   }
 }
+
+onBeforeMount(() => {
+  resetListingFilters()
+})
+
+onBeforeRouteLeave(() => {
+  resetListingFilters()
+})
 
 
 </script>

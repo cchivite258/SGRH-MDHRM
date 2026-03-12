@@ -1,12 +1,10 @@
 <template>
     <v-card class="mb-4">
         <v-card-text class="pa-4">
-            <!-- 🔍 Pesquisa Global -->
             <QuerySearch v-model="globalSearch" :placeholder="$t('t-service-provider-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
                 @update:model-value="onGlobalSearch" class="mb-2" />
 
-            <!-- 🎛️ Filtros Avançados -->
             <v-expansion-panels class="expansion-panels expansion-panel mt-5">
                 <v-expansion-panel>
                     <v-expansion-panel-title class="text-caption font-weight-medium px-2">
@@ -30,26 +28,22 @@
                             </v-radio>
                         </v-radio-group>
 
-                        <v-row v-for="(filter, index) in advancedFilters" :key="`filter-${index}`" class="mb-1 mx-0"
-                            dense>
+                        <v-row v-for="(filter, index) in advancedFilters" :key="`filter-${index}`" class="mb-1 mx-0" dense>
                             <v-col cols="12" sm="4" class="py-1 px-1">
                                 <MenuSelect v-model="filter.prop" :items="filterableFields" :label="$t('t-field')"
                                     item-title="text" item-value="value" density="compact" variant="outlined"
-                                    @update:model-value="onFieldChange(index)" return-object />
+                                    @update:model-value="onFieldChange(index)" />
                             </v-col>
                             <v-col cols="12" sm="3" class="py-1 px-1">
-                                <MenuSelect v-model="filter.comparison"
-                                    :items="getOperatorsForField(filter.prop?.value || filter.prop)"
+                                <MenuSelect v-model="filter.comparison" :items="getOperatorsForField(filter.prop)"
                                     :placeholder="$t('t-operator')" item-title="text" item-value="value"
                                     density="compact" variant="outlined" />
                             </v-col>
-                            <v-col cols="12" sm="4" class="py-1 px-1"
-                                v-if="isDateField(filter.prop?.value || filter.prop)">
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-if="isDateField(filter.prop)">
                                 <VueDatePicker v-model="filter.value" :teleport="true" :placeholder="$t('t-enter-date')"
                                     :enable-time-picker="false" format="dd/MM/yyyy" />
                             </v-col>
-                            <v-col cols="12" sm="4" class="py-1 px-1"
-                                v-else-if="isBooleanField(filter.prop?.value || filter.prop)">
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
                                     item-title="text" item-value="value" density="compact" variant="outlined" />
                             </v-col>
@@ -70,9 +64,16 @@
                             </v-btn>
 
                             <v-btn color="secondary" variant="tonal" @click="applyAdvancedFilters"
-                                :disabled="advancedFilters.length === 0" :loading="loading" size="small">
+                                :disabled="advancedFilters.length === 0 || hasIncompleteFilters" :loading="loading"
+                                size="small" :title="hasIncompleteFilters ? 'Preencha todos os campos dos filtros' : ''">
                                 <i class="ph-funnel me-1"></i>
                                 {{ $t('t-apply-filters') }}
+                            </v-btn>
+
+                            <v-btn color="error" variant="tonal" @click="clearAllFilters" class="ml-2" size="small"
+                                :loading="loading">
+                                <i class="ph-x me-1"></i>
+                                Limpar
                             </v-btn>
                         </div>
                     </v-expansion-panel-text>
@@ -83,22 +84,56 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useServiceProviderStore } from '@/store/serviceProvider/serviceProviderStore';
 import { useI18n } from 'vue-i18n';
+import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
-import QuerySearch from "@/app/common/components/filters/QuerySearch.vue"
+import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
 
 const { t } = useI18n();
+const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 const serviceProviderStore = useServiceProviderStore();
+
+const QUERY_KEYS = {
+    search: 'search',
+    operator: 'operator',
+    filters: 'filters'
+} as const;
+
+type LogicalOperator = 'AND' | 'OR';
+type FilterType = 'text' | 'boolean' | 'date';
+
+interface FilterableField {
+    text: string;
+    value: string;
+    type: FilterType;
+}
+
+interface AdvancedFilter {
+    prop: string;
+    comparison: string;
+    value: string | boolean | Date;
+}
+
+interface StoreAdvancedFilter {
+    prop: string;
+    operator: string;
+    value: string | boolean | Date;
+}
 
 const globalSearch = ref('');
 const loading = ref(false);
-const logicalOperator = ref<'AND' | 'OR'>('AND');
+const logicalOperator = ref<LogicalOperator>('AND');
+const SEARCH_DEBOUNCE_MS = 400;
+let globalSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+let routeSyncInProgress = false;
 
-// Definição dos campos filtráveis com tipos específicos
-const filterableFields = ref([
+const filterableFields = ref<FilterableField[]>([
     { text: t('t-name'), value: 'name', type: 'text' },
     { text: t('t-description'), value: 'description', type: 'text' },
     { text: t('t-address'), value: 'address', type: 'text' },
@@ -108,7 +143,7 @@ const filterableFields = ref([
     { text: t('t-income-tax-number'), value: 'incomeTaxNumber', type: 'text' },
     { text: t('t-person-of-contact-fullname-1'), value: 'personOfContactFullname1', type: 'text' },
     { text: t('t-person-of-contact-phone-1'), value: 'personOfContactPhone1', type: 'text' },
-    { text: t('t-person-of-contact-phone-1'), value: 'personOfContactEmail1', type: 'text' },
+    { text: t('t-person-of-contact-email-1'), value: 'personOfContactEmail1', type: 'text' },
     { text: t('t-person-of-contact-fullname-2'), value: 'personOfContactFullname2', type: 'text' },
     { text: t('t-person-of-contact-phone-2'), value: 'personOfContactPhone2', type: 'text' },
     { text: t('t-person-of-contact-email-2'), value: 'personOfContactEmail2', type: 'text' },
@@ -121,7 +156,6 @@ const filterableFields = ref([
     { text: t('t-deleted-by'), value: 'deletedBy', type: 'text' },
 ]);
 
-// Operadores disponíveis
 const textOperators = [
     { text: t('t-contains'), value: 'contains' },
     { text: t('t-equals'), value: 'equals' },
@@ -139,95 +173,84 @@ const dateOperators = [
     { text: t('t-before'), value: 'before' }
 ];
 
-const enumOperators = [
-    { text: t('t-equals'), value: 'equals' },
-    { text: t('t-not-equals'), value: 'notEquals' }
-];
-
 const booleanOptions = ref([
     { text: t('t-true'), value: true },
     { text: t('t-false'), value: false }
 ]);
 
-// Definição das opções para cada enum
-const enumOptions = {
-    gender: [
-        { text: t('t-male'), value: 'MALE' },
-        { text: t('t-female'), value: 'FEMALE' },
-        { text: t('t-other'), value: 'OTHER' }
-    ],
-    maritalStatus: [
-        { text: t('t-single'), value: 'SINGLE' },
-        { text: t('t-married'), value: 'MARRIED' },
-        { text: t('t-divorced'), value: 'DIVORCED' },
-        { text: t('t-widowed'), value: 'WIDOWED' },
-        { text: t('t-unknown'), value: 'UNKNOWN' }
-    ],
-    bloodGroup: [
-        { text: 'A+', value: 'A+' },
-        { text: 'A-', value: 'A-' },
-        { text: 'B+', value: 'B+' },
-        { text: 'B-', value: 'B-' },
-        { text: 'AB+', value: 'AB+' },
-        { text: 'AB-', value: 'AB-' },
-        { text: 'O+', value: 'O+' },
-        { text: 'O-', value: 'O-' }
-    ]
-};
-
-interface AdvancedFilter {
-    prop: any;
-    comparison: string;
-    value: string | boolean | Date;
-}
-
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
-// Verifica se um campo é booleano
-const isBooleanField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'boolean';
+const normalizeRouteQueryValue = (value: unknown): string => {
+    if (Array.isArray(value)) return String(value[0] ?? '');
+    return typeof value === 'string' ? value : '';
 };
 
-// Verifica se um campo é enum
-const isEnumField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'enum';
-};
+const getFieldDefinition = (field: string): FilterableField | undefined =>
+    filterableFields.value.find(f => f.value === field);
 
-// Verifica se um campo é data
-const isDateField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'date';
-};
+const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
+const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
 
-
-// Obtém operadores apropriados para cada tipo de campo
 const getOperatorsForField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
+    const fieldDef = getFieldDefinition(field);
     if (!fieldDef) return textOperators;
 
-    switch (fieldDef.type) {
-        case 'boolean':
-            return booleanOperators;
-        case 'date':
-            return dateOperators;
-        case 'enum':
-            return enumOperators;
-        default:
-            return textOperators;
+    if (fieldDef.type === 'boolean') return booleanOperators;
+    if (fieldDef.type === 'date') return dateOperators;
+    return textOperators;
+};
+
+const parseRouteFilters = (): StoreAdvancedFilter[] => {
+    const raw = normalizeRouteQueryValue(route.query[QUERY_KEYS.filters]);
+    if (!raw) return [];
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed
+            .filter((item) => item && typeof item.prop === 'string' && typeof item.operator === 'string')
+            .map((item) => ({
+                prop: item.prop,
+                operator: item.operator,
+                value: item.value as string | boolean | Date
+            }));
+    } catch {
+        return [];
     }
 };
 
-// Quando o campo de um filtro muda, resetamos o operador e valor
-const onFieldChange = (index: number) => {
-    const field = advancedFilters.value[index].prop?.value || advancedFilters.value[index].prop;
+const mapStoreFiltersToUi = (filters: StoreAdvancedFilter[]): AdvancedFilter[] => {
+    const mapped: AdvancedFilter[] = [];
 
-    // Resetar operador para o padrão do tipo de campo
+    for (const filter of filters) {
+        const fieldDef = getFieldDefinition(filter.prop);
+        if (!fieldDef) continue;
+
+        let parsedValue: string | boolean | Date = filter.value as string | boolean | Date;
+        if (fieldDef.type === 'boolean' && typeof parsedValue !== 'boolean') {
+            parsedValue = String(parsedValue).toLowerCase() === 'true';
+        }
+        if (fieldDef.type === 'date' && typeof parsedValue === 'string') {
+            const parsedDate = new Date(parsedValue);
+            parsedValue = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+        }
+
+        mapped.push({
+            prop: fieldDef.value,
+            comparison: filter.operator || getOperatorsForField(fieldDef.value)[0]?.value || 'equals',
+            value: parsedValue
+        });
+    }
+
+    return mapped;
+};
+
+const onFieldChange = (index: number) => {
+    const field = advancedFilters.value[index]?.prop || '';
     const operators = getOperatorsForField(field);
     advancedFilters.value[index].comparison = operators[0]?.value || '';
 
-    // Resetar valor baseado no tipo de campo
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
     } else if (isDateField(field)) {
@@ -237,57 +260,144 @@ const onFieldChange = (index: number) => {
     }
 };
 
-// Pesquisa global - atualiza automaticamente
-const onGlobalSearch = () => {
-    serviceProviderStore.setGlobalSearch(globalSearch.value);
-    serviceProviderStore.fetchServiceProviders();
+const isFilterValueFilled = (field: string, value: unknown) => {
+    if (isBooleanField(field)) return typeof value === 'boolean';
+    if (isDateField(field)) return value instanceof Date && !Number.isNaN(value.getTime());
+    return value !== undefined && value !== null && String(value).trim() !== '';
 };
 
-// Adiciona novo filtro
-const addFilter = () => {
-    advancedFilters.value.push({
-        prop: filterableFields.value[0],
-        comparison: 'contains',
-        value: isBooleanField(filterableFields.value[0].value) ? true :
-            isEnumField(filterableFields.value[0].value)
-    });
+const isFilterComplete = (filter: AdvancedFilter) => {
+    const field = filter.prop;
+    return !!field && !!filter.comparison && isFilterValueFilled(field, filter.value);
 };
 
-// Remove filtro
-const removeFilter = (index: number) => {
-    advancedFilters.value.splice(index, 1);
-    if (advancedFilters.value.length === 0) {
-        applyAdvancedFilters();
+const hasIncompleteFilters = computed(() =>
+    advancedFilters.value.some(filter => !isFilterComplete(filter))
+);
+
+const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
+    return advancedFilters.value
+        .filter(isFilterComplete)
+        .map((filter) => {
+            const prop = filter.prop;
+            let value = filter.value;
+
+            if (isDateField(prop) && value instanceof Date) {
+                value = format(value, 'yyyy-MM-dd');
+            }
+
+            return {
+                prop,
+                operator: filter.comparison,
+                value
+            };
+        });
+};
+
+const syncStateToRoute = async (filtersForStore: StoreAdvancedFilter[]) => {
+    const nextQuery = {
+        ...route.query,
+        [QUERY_KEYS.search]: globalSearch.value || undefined,
+        [QUERY_KEYS.operator]: logicalOperator.value || undefined,
+        [QUERY_KEYS.filters]: filtersForStore.length ? JSON.stringify(filtersForStore) : undefined
+    };
+
+    routeSyncInProgress = true;
+    try {
+        await router.replace({ query: nextQuery });
+    } finally {
+        routeSyncInProgress = false;
     }
 };
 
-// Aplica os filtros avançados
+const onGlobalSearch = () => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+    }
+
+    globalSearchDebounce = setTimeout(async () => {
+        const filtersForStore = buildStoreFiltersFromUi();
+        serviceProviderStore.setGlobalSearch(globalSearch.value);
+        serviceProviderStore.setLogicalOperator(logicalOperator.value);
+        serviceProviderStore.setAdvancedFilters(filtersForStore);
+        await syncStateToRoute(filtersForStore);
+        await serviceProviderStore.fetchServiceProviders();
+    }, SEARCH_DEBOUNCE_MS);
+};
+
+const addFilter = () => {
+    const defaultField = filterableFields.value[0];
+    advancedFilters.value.push({
+        prop: defaultField.value,
+        comparison: getOperatorsForField(defaultField.value)[0]?.value || 'contains',
+        value: ''
+    });
+};
+
+const removeFilter = async (index: number) => {
+    advancedFilters.value.splice(index, 1);
+    if (advancedFilters.value.length === 0) {
+        await applyAdvancedFilters();
+    }
+};
+
+const clearAllFilters = async () => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+        globalSearchDebounce = null;
+    }
+
+    globalSearch.value = '';
+    logicalOperator.value = 'AND';
+    advancedFilters.value = [];
+    serviceProviderStore.clearFilters();
+    await syncStateToRoute([]);
+    await serviceProviderStore.fetchServiceProviders();
+};
+
 const applyAdvancedFilters = async () => {
+    if (hasIncompleteFilters.value) {
+        toast.error('Preencha todos os campos dos filtros antes de aplicar.');
+        return;
+    }
+
     loading.value = true;
     try {
-        const filtersToSend = advancedFilters.value
-            .filter(f => f.prop && f.comparison && f.value !== '')
-            .map(f => {
-                const prop = typeof f.prop === 'object' ? f.prop.value : f.prop;
-                let value = f.value;
-
-                // Formata datas para yyyy-MM-dd
-                if (isDateField(prop) && f.value instanceof Date) {
-                    value = format(f.value, 'yyyy-MM-dd');
-                }
-
-                return {
-                    prop,
-                    operator: f.comparison,
-                    value: value
-                };
-            });
-
+        const filtersForStore = buildStoreFiltersFromUi();
+        serviceProviderStore.setGlobalSearch(globalSearch.value);
         serviceProviderStore.setLogicalOperator(logicalOperator.value);
-        serviceProviderStore.setAdvancedFilters(filtersToSend);
+        serviceProviderStore.setAdvancedFilters(filtersForStore);
+        await syncStateToRoute(filtersForStore);
         await serviceProviderStore.fetchServiceProviders();
     } finally {
         loading.value = false;
     }
 };
+
+watch(
+    () => route.query,
+    async () => {
+        if (routeSyncInProgress) return;
+
+        const querySearch = normalizeRouteQueryValue(route.query[QUERY_KEYS.search]);
+        const queryOperator = normalizeRouteQueryValue(route.query[QUERY_KEYS.operator]) === 'OR' ? 'OR' : 'AND';
+        const queryFilters = parseRouteFilters();
+
+        globalSearch.value = querySearch;
+        logicalOperator.value = queryOperator as LogicalOperator;
+        advancedFilters.value = mapStoreFiltersToUi(queryFilters);
+
+        serviceProviderStore.setGlobalSearch(globalSearch.value);
+        serviceProviderStore.setLogicalOperator(logicalOperator.value);
+        serviceProviderStore.setAdvancedFilters(queryFilters);
+        await serviceProviderStore.fetchServiceProviders();
+    },
+    { immediate: true, deep: true }
+);
+
+onBeforeUnmount(() => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+    }
+});
 </script>
