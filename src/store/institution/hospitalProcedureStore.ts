@@ -13,7 +13,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10, 
+      itemsPerPage: 9999999, 
       totalPages: 0
     },
     loading: false,
