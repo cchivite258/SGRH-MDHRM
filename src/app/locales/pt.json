@@ -950,6 +950,7 @@
   "t-unflagged": "Não Sinalizado",
   "t-exceeds-global-limit": "Excede o Limite Global",
   "t-items-flagged": "Itens Sinalizados",
+  "t-exceeds-procedure-limit": "Excede limite de procedimentos",
   "t-allocated-balance": "Saldo Alocado",
   "t-used-balance": "Saldo Utilizado",
   "t-remaining-balance": "Saldo Remanescente",

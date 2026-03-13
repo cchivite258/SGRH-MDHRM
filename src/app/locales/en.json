@@ -624,5 +624,8 @@
   "t-cel-check-limit": "Check limit",
   "t-file-generated-successfully": "{format} generated successfully",
   "t-clinic": "Clinic",
-  "t-contract-end-date-must-be-after-start-date": "The contract end date cannot be earlier than the start date."
+  "t-contract-end-date-must-be-after-start-date": "The contract end date cannot be earlier than the start date.",
+  "t-insufficient-funds": "Insufficient funds!",
+  "t-exceeds-global-limit": "Exceeds Global Limit",
+  "t-exceeds-procedure-limit": "Exceeds procedure limit"
 }
