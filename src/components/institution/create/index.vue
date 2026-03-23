@@ -46,11 +46,21 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast(); 
 
+const isInstitutionEditRoute = () => route.name === "EditInstitution";
+const isInstitutionCreateRoute = () => route.name === "CreateInstitution";
+const isInstitutionFormRoute = () => isInstitutionEditRoute() || isInstitutionCreateRoute();
+
+const getRouteInstitutionId = (): string | undefined => {
+  if (!isInstitutionEditRoute()) return undefined;
+  const rawId = route.params.id;
+  if (typeof rawId === "string") return rawId;
+  if (Array.isArray(rawId)) return rawId[0];
+  return undefined;
+};
+
 // Refs
 const step = ref(1); // Controla a aba atual (1 ou 2) 
-const institutionId = ref<string | undefined>(
-  typeof route.params.id === 'string' ? route.params.id : Array.isArray(route.params.id) ? route.params.id[0] : undefined
-);
+const institutionId = ref<string | undefined>(getRouteInstitutionId());
 const isCreated = ref(!institutionId.value); 
 const loading = ref(false); // Estado de loading global
 const errorMsg = ref(""); // Mensagem de erro global
@@ -82,6 +92,23 @@ let institutionData = reactive<InstitutionInsertType>({
 
 });
 
+const loadInstitutionData = async (id: string) => {
+  try {
+    loading.value = true;
+    const response = await institutionService.getInstitutionById(id);
+
+    if (response && response.data) {
+      Object.assign(institutionData, response.data);
+      institutionData.institutionType = response.data.institutionType?.id || undefined;
+    }
+  } catch (error) {
+    toast.error(t('t-error-loading-institution'));
+    console.error('Error loading institution:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
 /**
  * Trata erros da API de forma consistente
  * @param error - Objeto de erro da API
@@ -109,31 +136,49 @@ const handleApiError = (error: any) => {
  * Carrega dados do employee quando em modo de edição
  */
 onMounted(async () => {
-  institutionStore.loadFromStorage();
+  if (!isInstitutionFormRoute()) return;
 
+  institutionStore.loadFromStorage();
+  const routeInstitutionId = getRouteInstitutionId();
+
+  // Em modo edição, o ID da rota é a fonte de verdade.
+  if (routeInstitutionId) {
+    institutionId.value = routeInstitutionId;
+    basicDataValidated.value = true;
+    await loadInstitutionData(routeInstitutionId);
+    return;
+  }
+
+  // Em modo criação, permite retomar o draft salvo.
   if (institutionStore.currentInstitutionId) {
     institutionId.value = institutionStore.currentInstitutionId;
     basicDataValidated.value = true;
   }
 
   if (institutionId.value) {
-    try {
-      loading.value = true;
-      const response = await institutionService.getInstitutionById(institutionId.value);
-
-      if (response && response.data) {
-        Object.assign(institutionData, response.data);
-        institutionData.institutionType = response.data.institutionType?.id || undefined;
-      }
-
-    } catch (error) {
-      toast.error(t('t-error-loading-institution'));
-      console.error('Error loading institution:', error);
-    } finally {
-      loading.value = false;
-    }
+    await loadInstitutionData(institutionId.value);
   }
 });
+
+watch(
+  () => route.params.id,
+  async () => {
+    if (!isInstitutionEditRoute()) return;
+
+    const routeInstitutionId = getRouteInstitutionId();
+
+    // Se saiu de edição para create, não manter ID anterior em memória.
+    if (!routeInstitutionId) {
+      institutionId.value = undefined;
+      return;
+    }
+
+    if (institutionId.value === routeInstitutionId) return;
+    institutionId.value = routeInstitutionId;
+    basicDataValidated.value = true;
+    await loadInstitutionData(routeInstitutionId);
+  }
+);
 
 /**
  * Muda entre as abas do formulário

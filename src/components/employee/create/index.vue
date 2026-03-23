@@ -54,11 +54,21 @@ const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
 
+const isEmployeeEditRoute = () => route.name === "EditEmployee";
+const isEmployeeCreateRoute = () => route.name === "CreateEmployee";
+const isEmployeeFormRoute = () => isEmployeeEditRoute() || isEmployeeCreateRoute();
+
+const getRouteEmployeeId = (): string | null => {
+  if (!isEmployeeEditRoute()) return null;
+  const rawId = route.params.id;
+  if (typeof rawId === 'string') return rawId;
+  if (Array.isArray(rawId)) return rawId[0] || null;
+  return null;
+};
+
 // Refs
 const step = ref(1);
-const employeeId = ref<string | null>(
-  typeof route.params.id === 'string' ? route.params.id : Array.isArray(route.params.id) ? route.params.id[0] : null
-);
+const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
 const errorMsg = ref("");
@@ -94,6 +104,7 @@ let employeeData = reactive<EmployeeInsertType>({
   idCardNumber: null,
   idCardIssuer: '',
   idCardExpiryDate: undefined,
+  isLifeTimeCard: false,
   idCardIssuanceDate: undefined,
   passportNumber: null,
   passportIssuer: '',
@@ -111,6 +122,52 @@ let employeeData = reactive<EmployeeInsertType>({
   terminationDate: undefined,
   rehireDate: undefined
 });
+
+const loadEmployeeData = async (id: string) => {
+  try {
+    loading.value = true;
+    const response = await employeeService.getEmployeeById(id);
+
+    if (!response.data) {
+      throw new Error("Dados do funcionário não disponíveis.");
+    }
+
+    const data = response.data;
+    Object.assign(employeeData, data);
+
+    employeeData.country = data.country?.id;
+    employeeData.province = data.province?.id;
+    employeeData.company = data.company?.id;
+    employeeData.department = data.department?.id;
+    employeeData.position = data.position?.id;
+
+    if (employeeData.company) {
+      await departmentStore.fetchDepartments(employeeData.company);
+    }
+
+    if (employeeData.department) {
+      await positionStore.fetchPositions(employeeData.department);
+    }
+  } catch (error) {
+    toast.error(t('t-error-loading-employee'));
+    console.error('Error loading employee:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const applyCreateInstitutionContext = async () => {
+  if (!route.query.institutionId) return;
+
+  employeeData.company = Number(route.query.institutionId);
+  if (employeeData.company) {
+    await departmentStore.fetchDepartments(employeeData.company);
+  }
+
+  if (employeeData.department) {
+    await positionStore.fetchPositions(employeeData.department);
+  }
+};
 
 /**
  * Trata erros da API de forma consistente
@@ -146,61 +203,50 @@ const clearApiFieldError = (field: string) => {
  * Carrega dados do employee quando em modo de edição
  */
 onMounted(async () => {
-  if (employeeId.value) {
-    try {
-      loading.value = true;
-      const response = await employeeService.getEmployeeById(employeeId.value);
+  if (!isEmployeeFormRoute()) return;
 
-      if (!response.data) {
-        throw new Error("Dados do funcionário não disponíveis.");
-      }
+  employeeStore.loadFromStorage();
+  const routeEmployeeId = getRouteEmployeeId();
 
-      const data = response.data;
-
-      // Atribui os dados básicos
-      Object.assign(employeeData, data);
-
-      // Atribui IDs para relacionamentos
-      employeeData.country = data.country?.id;
-      employeeData.province = data.province?.id;
-      employeeData.company = data.company?.id;
-      console.log('Dados do funcionário carregados:', employeeData);
-      employeeData.department = data.department?.id;
-      employeeData.position = data.position?.id;
-
-
-
-      // Carrega dados dependentes
-      if (employeeData.company) {
-        await departmentStore.fetchDepartments(employeeData.company);
-      }
-
-      if (employeeData.department) {
-        await positionStore.fetchPositions(employeeData.department);
-      }
-
-    } catch (error) {
-      toast.error(t('t-error-loading-employee'));
-      console.error('Error loading employee:', error);
-    } finally {
-      loading.value = false;
-    }
+  // Em modo edicao, o ID da rota e a fonte de verdade.
+  if (routeEmployeeId) {
+    employeeId.value = routeEmployeeId;
+    basicDataValidated.value = true;
+    await loadEmployeeData(routeEmployeeId);
+    return;
   }
-  else {
-    if (route.query.institutionId) {
-      // Se estiver criando um novo funcionário, preenche o company com o institutionId da rota
-      employeeData.company = Number(route.query.institutionId);
-      if (employeeData.company) {
-        await departmentStore.fetchDepartments(employeeData.company);
-      }
 
-      if (employeeData.department) {
-        await positionStore.fetchPositions(employeeData.department);
-      }
-      console.log('Criando novo funcionário para instituição:', employeeData.company);
-    }
+  // Em modo criacao, permite retomar o draft salvo.
+  if (employeeStore.currentEmployeeId) {
+    employeeId.value = employeeStore.currentEmployeeId;
+    basicDataValidated.value = true;
+  }
+
+  if (employeeId.value) {
+    await loadEmployeeData(employeeId.value);
+  } else {
+    await applyCreateInstitutionContext();
   }
 });
+
+watch(
+  () => route.params.id,
+  async () => {
+    if (!isEmployeeEditRoute()) return;
+
+    const routeEmployeeId = getRouteEmployeeId();
+
+    if (!routeEmployeeId) {
+      employeeId.value = null;
+      return;
+    }
+
+    if (employeeId.value === routeEmployeeId) return;
+    employeeId.value = routeEmployeeId;
+    basicDataValidated.value = true;
+    await loadEmployeeData(routeEmployeeId);
+  }
+);
 
 /**
  * Muda entre as abas do formulário
@@ -443,3 +489,4 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+

@@ -36,6 +36,7 @@ const props = defineProps({
       gender: "",
       birthDate: undefined,
       relationship: "",
+      isUnivesityStudent: false,
       employee: "",
       idCardNumber: "",
       idCardIssuer: "",
@@ -58,6 +59,7 @@ const lastName = ref("");
 const gender = ref("");
 const birthDate = ref<Date | undefined>();
 const relationship = ref("");
+const isUnivesityStudent = ref(false);
 const employee = ref<string | { id: string; employeeNumber: string; firstName: string; lastName: string; }>("");
 const idCardNumber = ref("");
 const idCardIssuer = ref("");
@@ -78,6 +80,7 @@ watch(() => props.data, (newData) => {
   gender.value = newData.gender || "";
   birthDate.value = newData.birthDate ? new Date(newData.birthDate) : undefined;
   relationship.value = newData.relationship || "";
+  isUnivesityStudent.value = !!newData.isUnivesityStudent;
   employee.value = typeof newData.employee === 'string'
     ? newData.employee
     : newData.employee
@@ -186,6 +189,7 @@ watch(lastName, () => delete serverErrors.value.lastName);
 watch(gender, () => delete serverErrors.value.gender);
 watch(birthDate, () => delete serverErrors.value.birthDate);
 watch(relationship, () => delete serverErrors.value.relationship);
+watch(isUnivesityStudent, () => delete serverErrors.value.isUnivesityStudent);
 watch(idCardNumber, () => delete serverErrors.value.idCardNumber);
 watch(idCardIssuer, () => delete serverErrors.value.idCardIssuer);
 watch(idCardExpiryDate, () => delete serverErrors.value.idCardExpiryDate);
@@ -220,6 +224,7 @@ const onSubmit = async () => {
     gender: gender.value,
     birthDate: birthDate.value,
     relationship: relationship.value,
+    isUnivesityStudent: isUnivesityStudent.value,
     employee: typeof employee.value === 'string'
       ? employee.value
       : employee.value?.id ?? "",
@@ -268,9 +273,7 @@ const onSubmit = async () => {
         <v-divider />
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
-        <v-card-text class="overflow-y-auto" :style="{
-          'max-height': isCreate ? '70vh' : '45vh'
-        }">
+        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
           <v-row class="">
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
@@ -352,8 +355,16 @@ const onSubmit = async () => {
                 format="dd/MM/yyyy" />
             </v-col>
           </v-row>
-          <v-row class="mt-">
-            <v-col cols="12" lg="12" class="">
+          <v-row class="mt-0">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold">{{ $t('t-university-student') }}</div>
+              <v-checkbox v-model="isUnivesityStudent" density="compact" color="primary" class="d-inline-flex">
+                <template #label>
+                  <span>{{ $t('t-is-university-student') }}</span>
+                </template>
+              </v-checkbox>
+            </v-col>
+            <v-col cols="12" lg="6" class="">
               <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
                 <template #label>

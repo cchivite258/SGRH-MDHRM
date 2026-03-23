@@ -27,7 +27,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import TableAction from "@/app/common/components/TableAction.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
-import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
+import { dependentEmployeeService, employeeService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
@@ -77,6 +77,7 @@ const searchQuery = ref("");
 const searchProps = "firstName,middleName,lastName,gender,relationship,idCardNumber,idCardIssuer"; // Propriedades de busca
 const itemsPerPage = ref(10);
 const selectedDependentData = ref<DependentListingType[]>([]);
+const employeeAlertFlag = ref<string | undefined>(undefined);
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -106,6 +107,23 @@ const fetchContactPersons = async ({ page, itemsPerPage, sortBy, search }: Fetch
     search,
     searchProps
   );
+};
+
+const getEmployeeAlertMessage = () => {
+  if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+    return t('t-exceeds-number-of-dependents');
+  }
+  return '';
+};
+
+const fetchEmployeeAlertFlag = async () => {
+  if (!employeeId.value) return;
+  try {
+    const response = await employeeService.getEmployeeById(employeeId.value);
+    employeeAlertFlag.value = response?.data?.alertFlag;
+  } catch (error) {
+    console.error("Erro ao buscar alertFlag do colaborador:", error);
+  }
 };
 
 //get dos enums
@@ -156,6 +174,7 @@ const onCreateEditClick = (data: DependentInsertType | DependentListingType | nu
       gender: "",
       birthDate: undefined,
       relationship: "",
+      isUnivesityStudent: false,
       employee: employee,
       idCardNumber: "",
       idCardIssuer: "",
@@ -210,6 +229,11 @@ const onSubmit = async (
       0,
       itemsPerPage.value
     );
+    await fetchEmployeeAlertFlag();
+
+    if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+      toast.warning(t('t-exceeds-number-of-dependents'));
+    }
 
     callbacks?.onSuccess?.();
 
@@ -264,6 +288,10 @@ const onConfirmDelete = async () => {
       0,
       itemsPerPage.value
     );
+    await fetchEmployeeAlertFlag();
+    if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+      toast.warning(t('t-exceeds-number-of-dependents'));
+    }
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
     toast.error(t('t-toast-message-deleted-erros'));
@@ -283,6 +311,10 @@ onBeforeUnmount(() => {
     alertTimeout = null;
   }
 });
+
+onMounted(async () => {
+  await fetchEmployeeAlertFlag();
+});
 </script>
 
 <template>
@@ -301,6 +333,9 @@ onBeforeUnmount(() => {
       </div>
     </template>
   </Card>
+  <v-alert v-if="getEmployeeAlertMessage()" type="warning" variant="tonal" class="mt-4">
+    {{ getEmployeeAlertMessage() }}
+  </v-alert>
 
   <v-row class="mt-5">
     <v-col cols="12" lg="12">

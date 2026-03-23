@@ -182,8 +182,9 @@ export default class DependentEmployeeService extends HttpService {
 
 
   async updateDependent(id: string, dependentData: DependentInsertType): Promise<ServiceResponse<DependentListingType>> {
-    try {
 
+    try {
+      console.log("payload dependet", dependentData)
       // Corpo da requisição conforme especificado
       const payload = {
         firstName: dependentData.firstName,
@@ -192,6 +193,7 @@ export default class DependentEmployeeService extends HttpService {
         gender: dependentData.gender,
         birthDate: dependentData.birthDate,
         relationship: dependentData.relationship,
+        isUnivesityStudent: dependentData.isUnivesityStudent,
         employee: dependentData.employee,
         idCardNumber: dependentData.idCardNumber,
         idCardIssuer: dependentData.idCardIssuer,
@@ -222,5 +224,4 @@ export default class DependentEmployeeService extends HttpService {
 
 
 }
-
 
