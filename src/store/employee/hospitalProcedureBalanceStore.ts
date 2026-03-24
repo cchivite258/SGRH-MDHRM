@@ -157,7 +157,7 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
           params.sortColumn || 'createdAt',
           params.direction || 'asc',
           params.query_value,
-          params.query_props || "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance"
+          params.query_props || "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance"
         );
       }
     },

@@ -87,6 +87,7 @@ let employeeData = reactive<EmployeeInsertType>({
   idCardNumber: null,
   idCardIssuer: '',
   idCardExpiryDate: new Date().toISOString().split('T')[0],
+  isLifeTimeCard: false,
   idCardIssuanceDate: new Date().toISOString().split('T')[0],
   passportNumber: null,
   passportIssuer: '',

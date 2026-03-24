@@ -44,61 +44,58 @@ const formErrors = ref<Record<string, string>>({
 const totalItems = computed(() => hospitalProcedureTypeStore.pagination.totalElements);
 const loadingList = computed(() => hospitalProcedureTypeStore.loading || loadingRelations.value);
 const orderedHospitalProcedureTypes = computed(() => {
-  const items = [...(hospitalProcedureTypeStore.hospital_procedure_types || [])];
-
-  return items.sort((a, b) => {
-    const aSelected = isIdSelected(a.id) ? 0 : 1;
-    const bSelected = isIdSelected(b.id) ? 0 : 1;
-
-    if (aSelected !== bSelected) {
-      return aSelected - bSelected;
-    }
-
-    return (a.name || "").localeCompare((b.name || ""), undefined, { sensitivity: "base" });
-  });
+  const items = hospitalProcedureTypeStore.hospital_procedure_types || [];
+  const selected = items.filter((item) => isIdSelected(item.id));
+  const notSelected = items.filter((item) => !isIdSelected(item.id));
+  return [...selected, ...notSelected];
 });
 const displayedHospitalProcedureTypes = computed(() => {
   return orderedHospitalProcedureTypes.value;
 });
 
 const isIdSelected = (id: string | number) => selectedHospitalProcedureTypeIds.value.some(item => String(item) === String(id));
-const extractId = (item: any): string | number | null => {
+const extractId = (item: unknown): string | number | null => {
   if (item == null) return null;
   if (typeof item === "string" || typeof item === "number") return item;
-  if (typeof item === "object" && "id" in item) return item.id as string | number;
+  if (typeof item === "object" && "id" in (item as Record<string, unknown>)) {
+    return (item as { id?: string | number }).id ?? null;
+  }
   return null;
 };
+
+const syncVisibleSelection = () => {
+  const visible = hospitalProcedureTypeStore.hospital_procedure_types || [];
+  const selectedVisible = visible.filter((item) => isIdSelected(item.id));
+
+  const keptHidden = selectedHospitalProcedureTypes.value.filter(
+    (item) => !visible.some((visibleItem) => String(visibleItem.id) === String(item.id))
+  );
+
+  selectedHospitalProcedureTypes.value = [...keptHidden, ...selectedVisible];
+};
+
+watch(selectedHospitalProcedureTypes, (newSelection) => {
+  const selectedIds = (newSelection || [])
+    .map((item) => extractId(item))
+    .filter((id): id is string | number => id !== null);
+
+  const visibleIds = (hospitalProcedureTypeStore.hospital_procedure_types || []).map((item) => item.id);
+  const hiddenSelectedIds = selectedHospitalProcedureTypeIds.value.filter(
+    (id) => !visibleIds.some((visibleId) => String(visibleId) === String(id))
+  );
+
+  selectedHospitalProcedureTypeIds.value = Array.from(new Set([...hiddenSelectedIds, ...selectedIds]));
+}, { deep: true });
 
 const toggleSelection = (item: HospitalProcedureTypeListing) => {
   const index = selectedHospitalProcedureTypeIds.value.findIndex((id) => String(id) === String(item.id));
 
   if (index === -1) {
     selectedHospitalProcedureTypeIds.value = [...selectedHospitalProcedureTypeIds.value, item.id];
-    selectedHospitalProcedureTypes.value = [...selectedHospitalProcedureTypes.value, item];
     return;
   }
 
   selectedHospitalProcedureTypeIds.value = selectedHospitalProcedureTypeIds.value.filter((id) => String(id) !== String(item.id));
-  selectedHospitalProcedureTypes.value = selectedHospitalProcedureTypes.value.filter((it) => String(it.id) !== String(item.id));
-};
-
-watch(selectedHospitalProcedureTypes, (newSelection) => {
-  const ids = (newSelection || [])
-    .map((item) => extractId(item))
-    .filter((id): id is string | number => id !== null);
-
-  selectedHospitalProcedureTypeIds.value = Array.from(new Set(ids));
-}, { deep: true });
-
-const syncVisibleSelection = () => {
-  const visible = hospitalProcedureTypeStore.hospital_procedure_types || [];
-  const selectedVisible = visible.filter(item => isIdSelected(item.id));
-
-  const keptHidden = selectedHospitalProcedureTypes.value.filter(
-    item => !visible.some(visibleItem => String(visibleItem.id) === String(item.id))
-  );
-
-  selectedHospitalProcedureTypes.value = [...keptHidden, ...selectedVisible];
 };
 
 const fetchHospitalProcedureTypes = async ({ page, itemsPerPage, sortBy, search }: any) => {
@@ -132,16 +129,14 @@ const fetchRelations = async () => {
 
   loadingRelations.value = true;
   try {
-    const { content } = await hospitalProcedureGroupingService.getHospitalProcedureGroupings();
+    const { content } = await hospitalProcedureGroupingService.getHospitalProcedureGroupings(
+      groupId.value,
+      "hospitalProcedureGroup.id",
+      "hospitalProcedureType,hospitalProcedureGroup"
+    );
 
-    const groupRelations = (content || []).filter((item: HospitalProcedureGroupingListing) => {
-      const byDirect = item.hospitalProcedureGroupId != null && String(item.hospitalProcedureGroupId) === groupId.value;
-      const byNested = item.hospitalProcedureGroup?.id != null && String(item.hospitalProcedureGroup.id) === groupId.value;
-      return byDirect || byNested;
-    });
-
-    selectedHospitalProcedureTypeIds.value = groupRelations
-      .map((item: HospitalProcedureGroupingListing) => item.hospitalProcedureTypeId ?? item.hospitalProcedureType?.id)
+    selectedHospitalProcedureTypeIds.value = (content || [])
+      .map((item: HospitalProcedureGroupingListing) => item.hospitalProcedureType?.id ?? item.hospitalProcedureTypeId)
       .filter((id): id is string | number => id !== undefined && id !== null);
 
     syncVisibleSelection();
@@ -293,6 +288,7 @@ onMounted(async () => {
                 :search-query="searchQuery"
                 :search-props="searchProps"
                 item-value="id"
+                :show-select="true"
                 @load-items="fetchHospitalProcedureTypes"
               >
                 <template #body="{ items }">
@@ -312,7 +308,7 @@ onMounted(async () => {
 
                 <template v-if="!hospitalProcedureTypeStore.hospital_procedure_types.length" #body>
                   <tr>
-                    <td :colspan="listViewHeader.length + 2" class="text-center py-10">
+                    <td :colspan="listViewHeader.length + 1" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">
                         <i class="ph-magnifying-glass" style="font-size: 30px" />
                       </v-avatar>

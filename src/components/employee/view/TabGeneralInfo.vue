@@ -437,19 +437,25 @@ const provinceName = computed(() => {
 
       <!-- Documentos de identificação -->
       <v-row class="mb-3">
-        <v-col cols="12" lg="4">
+        <v-col cols="12" lg="3">
           <div class="font-weight-bold mb-2">
             {{ $t('t-id-card-number') }} 
           </div>
           <div>{{ employeeData.idCardNumber || '-' }}</div>
         </v-col>
-        <v-col cols="12" lg="4">
+        <v-col cols="12" lg="3">
           <div class="font-weight-bold mb-2">
             {{ $t('t-id-card-issuer') }} 
           </div>
           <div>{{ employeeData.idCardIssuer || '-' }}</div>
         </v-col>
-        <v-col cols="12" lg="4">
+        <v-col cols="12" lg="3">
+          <div class="font-weight-bold mb-2">
+            {{ $t('t-is-lifetime-id-card') }}
+          </div>
+          <div>{{ employeeData.isLifeTimeCard ? $t('t-yes') : $t('t-no') }}</div>
+        </v-col>
+        <v-col cols="12" lg="3">
           <div class="font-weight-bold mb-2">
             {{ $t('t-id-card-expiry-date') }} 
           </div>

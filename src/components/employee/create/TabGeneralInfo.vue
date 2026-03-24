@@ -122,6 +122,13 @@ watch(() => employeeData.value.idCardNumber, () => emit('clear-server-error', 'i
 watch(() => employeeData.value.idCardIssuer, () => emit('clear-server-error', 'idCardIssuer'));
 watch(() => employeeData.value.idCardExpiryDate, () => emit('clear-server-error', 'idCardExpiryDate'));
 watch(() => employeeData.value.idCardIssuanceDate, () => emit('clear-server-error', 'idCardIssuanceDate'));
+watch(() => employeeData.value.isLifeTimeCard, (isLifeTimeCard, previousValue) => {
+  emit('clear-server-error', 'isLifeTimeCard');
+  if (isLifeTimeCard && !previousValue) {
+    employeeData.value.idCardExpiryDate = undefined;
+    emit('clear-server-error', 'idCardExpiryDate');
+  }
+});
 watch(() => employeeData.value.email, () => emit('clear-server-error', 'email'));
 
 /**
@@ -175,8 +182,9 @@ const requiredRules = {
     (v: string) => (v && v.length <= 50) || t('t-maximum-50-characters'),
   ],
   idCardExpiryDate: [
-    (v: Date | string) => !!v || t('t-please-enter-id-card-expiry-date'),
+    (v: Date | string) => employeeData.value.isLifeTimeCard || !!v || t('t-please-enter-id-card-expiry-date'),
     (v: Date | string) => {
+      if (employeeData.value.isLifeTimeCard) return true;
       if (!v) return true;
       const date = new Date(v);
       const minDate = new Date();
@@ -300,7 +308,9 @@ const submitForm = async () => {
     // Forçar validação dos date pickers
     await birthDatePicker.value?.validate();
     await idCardIssuanceDatePicker.value?.validate();
-    await idCardExpiryDatePicker.value?.validate();
+    if (!employeeData.value.isLifeTimeCard) {
+      await idCardExpiryDatePicker.value?.validate();
+    }
 
     // Resto da validação...
     const { valid } = await form.value.validate();
@@ -534,17 +544,18 @@ const submitForm = async () => {
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-id-card-expiry-date') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-is-lifetime-id-card') }}
             </div>
-            <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
-              :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
-              :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy" />
+            <v-checkbox v-model="employeeData.isLifeTimeCard" density="compact" color="primary" hide-details>
+              <template #label>
+                <span>{{ $t('t-is-lifetime-id-card') }}</span>
+              </template>
+            </v-checkbox>
           </v-col>
         </v-row>
 
-        <!-- Datas de emissão de documentos -->
         <v-row class="mt-n6">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -552,14 +563,27 @@ const submitForm = async () => {
               :teleport="true" :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
               :placeholder="$t('t-enter-id-card-issuance-date')" format="dd/MM/yyyy" />
           </v-col>
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-id-card-expiry-date') }} <i v-if="!employeeData.isLifeTimeCard" class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
+              :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
+              :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy"
+              :disabled="employeeData.isLifeTimeCard" />
+          </v-col>
+        </v-row>
+
+        <!-- Datas de emissão de documentos -->
+        <v-row class="">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-number') }}
             </div>
             <TextField v-model="employeeData.passportNumber" :placeholder="$t('t-enter-passport-number')"
               hide-details />
           </v-col>
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-issuer') }}
             </div>

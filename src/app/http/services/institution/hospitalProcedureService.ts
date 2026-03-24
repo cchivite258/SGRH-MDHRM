@@ -16,6 +16,12 @@ interface ServiceResponse<T> {
 }
 
 export default class HospitalProcedureService extends HttpService {
+  private removeNullUndefinedAndEmptyFields<T extends Record<string, any>>(obj: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([, value]) => value !== null && value !== undefined && value !== "")
+    ) as Partial<T>;
+  }
+
   async getHospitalProcedureByInstitution(
     id: string | null,
     page: number = 0,
@@ -39,7 +45,7 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -83,7 +89,7 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -126,7 +132,7 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -167,7 +173,7 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -190,7 +196,8 @@ export default class HospitalProcedureService extends HttpService {
 
   async createHospitalProcedure(hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
-      const response = await this.post<ApiResponse<HospitalProcedureListingType>>('/administration/company/allowed-hospital-procedures', hospitalProcedureData);
+      const payload = this.removeNullUndefinedAndEmptyFields(hospitalProcedureData);
+      const response = await this.post<ApiResponse<HospitalProcedureListingType>>('/administration/company/allowed-hospital-procedures', payload);
       return {
         status: 'success',
         data: response.data
@@ -270,14 +277,20 @@ export default class HospitalProcedureService extends HttpService {
     try {
 
       // Corpo da requisição conforme especificado
-      const payload = {
+      const rawPayload = {
         fixedAmount: hospitalProcedureData.fixedAmount,
         percentage: hospitalProcedureData.percentage,
         limitTypeDefinition: hospitalProcedureData.limitTypeDefinition,
+        hospitalProcedureGroup: hospitalProcedureData.hospitalProcedureGroup,
+        groupFixedAmount: hospitalProcedureData.groupFixedAmount,
+        groupPercentage: hospitalProcedureData.groupPercentage,
+        hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit,
+        belongsToGroup: !!hospitalProcedureData.belongsToGroup,
         //hospitalProcedureType: hospitalProcedureData.hospitalProcedureType,
         companyHealthPlan: hospitalProcedureData.companyHealthPlan,
         enabled: hospitalProcedureData.enabled
       };
+      const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
 
       const response = await this.put<ApiResponse<HospitalProcedureListingType>>(`/administration/company/allowed-hospital-procedures/${id}`, payload);
       return {
@@ -305,5 +318,3 @@ export default class HospitalProcedureService extends HttpService {
 
 
 }
-
-

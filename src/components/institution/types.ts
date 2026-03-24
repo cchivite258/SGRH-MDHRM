@@ -229,6 +229,11 @@ export type HospitalProcedureListingType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
+    groupFixedAmount?: number | null;
+    groupPercentage?: number | null;
+    hospitalProcedureGroupLimit?: string | null;
+    belongsToGroup?: boolean;
     hospitalProcedureType: any | undefined;
     companyHealthPlan: any | undefined;
     company: any;
@@ -246,6 +251,11 @@ export type HospitalProcedureInsertType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
+    groupFixedAmount?: number | null;
+    groupPercentage?: number | null;
+    hospitalProcedureGroupLimit?: string | null;
+    belongsToGroup?: boolean;
     hospitalProcedureType: any | undefined;
     companyHealthPlan: any;
     company: any;

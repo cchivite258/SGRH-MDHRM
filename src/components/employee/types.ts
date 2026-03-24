@@ -51,6 +51,7 @@ export type EmployeeListingType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string;
   passportIssuer: string;
@@ -108,6 +109,7 @@ export type EmployeeResponseType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string;
   passportIssuer: string;
@@ -160,6 +162,7 @@ export type EmployeeInsertType = {
   idCardNumber: string | null;
   idCardIssuer: string;
   idCardExpiryDate: string | undefined;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string | undefined;
   passportNumber: string | null;
   passportIssuer: string;
@@ -202,6 +205,7 @@ export type EmployeeUpdateType = {
   idCardNumber: string | null;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string | null;
   passportIssuer: string;
@@ -226,6 +230,7 @@ export type DependentInsertType = {
   gender: string;
   birthDate: Date | undefined;
   relationship: string;
+  isUnivesityStudent: boolean;
   employee: string;
   idCardNumber: string;
   idCardIssuer: string;
@@ -242,6 +247,7 @@ export type DependentListingType = {
   gender: string;
   birthDate: Date | undefined;
   relationship: string;
+  isUnivesityStudent: boolean;
   employee: {
     id: string;
     employeeNumber: string;
@@ -292,6 +298,10 @@ export type ExpensePerProcedureType = {
  allocatedBalance: number;
  usedBalance: number;
  remainingBalance: number;
+ groupAllocatedBalance?: number | null;
+ groupUsedBalance?: number | null;
+ groupRemainingBalance?: number | null;
+ belongsToGroup?: boolean;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;

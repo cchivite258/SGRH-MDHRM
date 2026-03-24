@@ -10,9 +10,27 @@ interface ApiResponse<T> {
 }
 
 export default class HospitalProcedureGroupingService extends HttpService {
-  async getHospitalProcedureGroupings(): Promise<{ content: HospitalProcedureGroupingListing[]; meta: any }> {
+  async getHospitalProcedureGroupings(
+    query_value?: string | number,
+    query_props?: string,
+    includes?: string
+  ): Promise<{ content: HospitalProcedureGroupingListing[]; meta: any }> {
     try {
-      const response = await this.get<ApiResponse<HospitalProcedureGroupingListing[]>>("/administration/setup/hospital-procedure-grouping");
+      const queryParams: string[] = [];
+
+      if (query_value !== undefined && query_value !== null && query_value !== "" && query_props) {
+        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+        queryParams.push(`query_value=${encodeURIComponent(String(query_value))}`);
+      }
+
+      if (includes) {
+        queryParams.push(`includes=${encodeURIComponent(includes)}`);
+      }
+
+      const queryString = queryParams.length ? `?${queryParams.join("&")}` : "";
+      const response = await this.get<ApiResponse<HospitalProcedureGroupingListing[]>>(
+        `/administration/setup/hospital-procedure-grouping${queryString}`
+      );
       return {
         content: response.data || [],
         meta: response.meta || {}

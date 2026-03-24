@@ -283,6 +283,7 @@ export default class EmployeeService extends HttpService {
         idCardNumber: employeeData.idCardNumber,
         idCardIssuer: employeeData.idCardIssuer,
         idCardExpiryDate: employeeData.idCardExpiryDate,
+        isLifeTimeCard: employeeData.isLifeTimeCard,
         idCardIssuanceDate: employeeData.idCardIssuanceDate,
         passportNumber: employeeData.passportNumber,
         passportIssuer: employeeData.passportIssuer,

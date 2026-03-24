@@ -2,9 +2,11 @@
 import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
 import { HealthPlanListingType, HospitalProcedureInsertType, HospitalProcedureListingType } from "@/components/institution/types";
 import { HospitalProcedureTypeListing } from "@/components/baseTables/hospitalProcedureType/types";
+import { HospitalProcedureGroupListing } from "@/components/baseTables/hospitalProcedureGroup/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useHospitalProcedureTypeStore } from '@/store/baseTables/hospitalProcedureTypeStore';
+import { useHospitalProcedureGroupStore } from "@/store/baseTables/hospitalProcedureGroupStore";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
@@ -17,6 +19,7 @@ import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 
 // Store para tipos de procedimentos hospitalares
 const hospitalProcedureTypeStore = useHospitalProcedureTypeStore();
+const hospitalProcedureGroupStore = useHospitalProcedureGroupStore();
 const healthPlanStore = useHealthPlanStore();
 
 const props = defineProps({
@@ -32,6 +35,11 @@ const props = defineProps({
       fixedAmount: 0,
       percentage: 0,
       limitTypeDefinition: "",
+      hospitalProcedureGroup: "",
+      groupFixedAmount: null,
+      groupPercentage: null,
+      hospitalProcedureGroupLimit: "",
+      belongsToGroup: false,
       hospitalProcedureType: "",
       companyHealthPlan: "",
       enabled: true
@@ -48,6 +56,11 @@ const id = ref("");
 const fixedAmount = ref(0);
 const percentage = ref(0);
 const limitTypeDefinition = ref("");
+const hospitalProcedureGroup = ref("");
+const groupFixedAmount = ref<number | null>(null);
+const groupPercentage = ref<number | null>(null);
+const hospitalProcedureGroupLimit = ref("");
+const belongsToGroup = ref(false);
 const hospitalProcedureType = ref("");
 const companyHealthPlan = ref(""); 
 const enabled = ref(true);
@@ -57,13 +70,24 @@ import {
   limitTypeDefinitionOptions
 } from "@/components/institution/create/utils";
 
+const getHospitalProcedureGroupValue = (group: HospitalProcedureListingType["hospitalProcedureGroup"]) => {
+  if (!group) return "";
+  if (typeof group === "string") return group;
+  return group.id != null ? String(group.id) : "";
+};
+
 // Watch for data changes
 watch(() => props.data, (newData) => {
   if (newData) {
     id.value = newData.id || "";
-    fixedAmount.value = newData.fixedAmount || 0;
-    percentage.value = newData.percentage || 0;
+    fixedAmount.value = newData.fixedAmount ?? 0;
+    percentage.value = newData.percentage ?? 0;
     limitTypeDefinition.value = newData.limitTypeDefinition || "";
+    hospitalProcedureGroup.value = getHospitalProcedureGroupValue(newData.hospitalProcedureGroup) || (newData as any).hospitalProcedureGroupId || "";
+    groupFixedAmount.value = newData.groupFixedAmount ?? null;
+    groupPercentage.value = newData.groupPercentage ?? null;
+    hospitalProcedureGroupLimit.value = newData.hospitalProcedureGroupLimit ?? "";
+    belongsToGroup.value = newData.belongsToGroup ?? false;
     
     if (typeof newData.hospitalProcedureType === 'object' && newData.hospitalProcedureType !== null) {
       hospitalProcedureType.value = newData.hospitalProcedureType.id; 
@@ -73,17 +97,42 @@ watch(() => props.data, (newData) => {
     
     // Garanta que companyHealthPlan nunca seja perdido
     companyHealthPlan.value = newData.companyHealthPlan || (props.data?.companyHealthPlan || "");
-    enabled.value = newData.enabled || true;
+    enabled.value = newData.enabled ?? true;
 
   }
 }, { immediate: true });
 
 watch(limitTypeDefinition, (newVal) => {
+  if (belongsToGroup.value) return;
   if (newVal === 'FIXED_AMOUNT') {
     percentage.value = 0;
   } else if (newVal === 'PERCENTAGE') {
     fixedAmount.value = 0;
   }
+});
+
+watch(hospitalProcedureGroupLimit, (newVal) => {
+  if (!belongsToGroup.value) return;
+  if (newVal === 'FIXED_AMOUNT') {
+    groupPercentage.value = null;
+  } else if (newVal === 'PERCENTAGE') {
+    groupFixedAmount.value = null;
+  }
+});
+
+watch(belongsToGroup, (isGroupBased) => {
+  if (isGroupBased) {
+    hospitalProcedureType.value = "";
+    fixedAmount.value = 0;
+    percentage.value = 0;
+    limitTypeDefinition.value = "";
+    return;
+  }
+
+  hospitalProcedureGroup.value = "";
+  groupFixedAmount.value = null;
+  groupPercentage.value = null;
+  hospitalProcedureGroupLimit.value = "";
 });
 
 const isCreate = computed(() => !id.value);
@@ -102,10 +151,16 @@ const dialogValue = computed({
  */
 const requiredRules = {
   hospitalProcedureType: [
-    (v: string) => !!v || t('t-please-enter-hospital-procedure-type'),
+    (v: string) => belongsToGroup.value || !!v || t('t-please-enter-hospital-procedure-type'),
   ],
   limitTypeDefinition: [
-    (v: string) => !!v || t('t-please-enter-limit-type-definition'),
+    (v: string) => belongsToGroup.value || !!v || t('t-please-enter-limit-type-definition'),
+  ],
+  hospitalProcedureGroup: [
+    (v: string) => !belongsToGroup.value || !!v || t('t-please-enter-hospital-procedure-group'),
+  ],
+  hospitalProcedureGroupLimit: [
+    (v: string) => !belongsToGroup.value || !!v || t('t-please-enter-hospital-procedure-group-limit'),
   ],
   companyHealthPlan: [
     (v: string) => !!v || t('t-please-enter-health-plan'),
@@ -130,6 +185,25 @@ const requiredRules = {
       return true;
     }
   ],
+  groupFixedAmount: [
+    (v: number | null) => {
+      if (belongsToGroup.value && hospitalProcedureGroupLimit.value === 'FIXED_AMOUNT') {
+        if (v === undefined || v === null) return t('t-please-enter-group-fixed-amount');
+        if (v <= 0) return t('t-min-zero-amount');
+      }
+      return true;
+    }
+  ],
+  groupPercentage: [
+    (v: number | null) => {
+      if (belongsToGroup.value && hospitalProcedureGroupLimit.value === 'PERCENTAGE') {
+        if (v === undefined || v === null) return t('t-please-enter-group-percentage');
+        if (v <= 0) return t('t-min-zero-percentage');
+        if (v > 100) return t('t-max-100-percentage');
+      }
+      return true;
+    }
+  ],
 
 };
 
@@ -144,6 +218,13 @@ const heathPlanOptions = computed(() => {
   return (healthPlanStore.health_plans_for_dropdown || []).map((item: HealthPlanListingType) => ({
     value: item.id,
     label: item.healthPlanLimit + " - " + item.fixedAmount + item.salaryComponent,
+  }));
+});
+
+const hospitalProcedureGroups = computed(() => {
+  return (hospitalProcedureGroupStore.hospital_procedure_groups_dropdown || []).map((item: HospitalProcedureGroupListing) => ({
+    value: item.id,
+    label: item.name,
   }));
 });
 
@@ -188,16 +269,25 @@ const onSubmit = async () => {
 
   const payload: HospitalProcedureInsertType = {
     id: id.value || undefined,
-    fixedAmount: fixedAmount.value,
-    percentage: percentage.value,
-    limitTypeDefinition: limitTypeDefinition.value,
-    hospitalProcedureType: hospitalProcedureType.value,
+    fixedAmount: belongsToGroup.value ? null : fixedAmount.value,
+    percentage: belongsToGroup.value ? null : percentage.value,
+    limitTypeDefinition: belongsToGroup.value ? "" : limitTypeDefinition.value,
+    hospitalProcedureGroup: belongsToGroup.value ? (hospitalProcedureGroup.value || null) : null,
+    groupFixedAmount: belongsToGroup.value ? groupFixedAmount.value : null,
+    groupPercentage: belongsToGroup.value ? groupPercentage.value : null,
+    hospitalProcedureGroupLimit: belongsToGroup.value ? (hospitalProcedureGroupLimit.value || null) : null,
+    belongsToGroup: belongsToGroup.value,
+    hospitalProcedureType: belongsToGroup.value ? undefined : hospitalProcedureType.value,
     companyHealthPlan: companyHealthPlan.value,
     company: props.data?.company || "",
     enabled: enabled.value 
   };
 
-  emit("onSubmit", payload, {
+  const cleanPayload = Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== null && value !== undefined && value !== "")
+  ) as HospitalProcedureInsertType;
+
+  emit("onSubmit", cleanPayload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
       serverErrors.value = getApiValidationErrors(error);
@@ -224,6 +314,7 @@ watch(() => props.data?.companyHealthPlan, (newCompanyHealthPlan) => {
     companyHealthPlan.value = newCompanyHealthPlan;
     hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0, 10000000);
     healthPlanStore.fetchHealthPlansForDropdown(newCompanyHealthPlan, 0, 10000000);
+    hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
   }
 }, { immediate: true });
 
@@ -236,6 +327,7 @@ onMounted(async () => {
     if (companyHealthPlan.value) {
       await hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0,10000000);
       await healthPlanStore.fetchHealthPlansForDropdown(companyHealthPlan.value, 0, 10000000);
+      await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
     }
   } catch (error) {
     console.error("Failed to load procedimentos hospitalares:", error);
@@ -267,17 +359,62 @@ onMounted(async () => {
                 :loading="healthPlanStore.loading" :rules="requiredRules.companyHealthPlan" :disabled="!isCreate"/>
             </v-col>
           </v-row>-->
-          <v-row class="mt-n6">
+          <v-row class="">
             <v-col cols="12" lg="12">
+              <div class="font-weight-bold text-caption mb-1">{{ $t('t-belongs-to-group') }}</div>
+              <v-checkbox v-model="belongsToGroup" density="compact" color="primary" class="d-inline-flex">
+                <template #label>
+                  <span>{{ $t('t-belongs-to-group') }}?</span>
+                </template>
+              </v-checkbox>
+            </v-col>
+          </v-row>
+          <v-row class="mt-n3">
+            <v-col cols="12" lg="12" v-if="!belongsToGroup">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-hospital-procedure-type') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="hospitalProcedureType" :items="hospitalProceduresTypes"
                 :loading="hospitalProcedureTypeStore.loading" :rules="requiredRules.hospitalProcedureType"
-                :error-messages="getServerErrors('hospitalProcedureType')" :disabled="!isCreate"/>
+                :error-messages="getServerErrors('hospitalProcedureType')" :disabled="!isCreate" />
             </v-col>
-          </v-row> 
+            <v-col cols="12" lg="12" v-if="belongsToGroup">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-hospital-procedure-group') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuSelect v-model="hospitalProcedureGroup" :items="hospitalProcedureGroups"
+                :loading="hospitalProcedureGroupStore.loading"
+                :rules="applyServerErrorsToRules('hospitalProcedureGroup', requiredRules.hospitalProcedureGroup)" 
+                :error-messages="getServerErrors('hospitalProcedureGroup')" />
+            </v-col>
+          </v-row>
           <v-row class="mt-n6">
+            <v-col cols="12" lg="12" v-if="belongsToGroup">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-hospital-procedure-group-limit') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuSelect v-model="hospitalProcedureGroupLimit" :items="limitTypeDefinitionOptions"
+                :rules="applyServerErrorsToRules('hospitalProcedureGroupLimit', requiredRules.hospitalProcedureGroupLimit)"
+                :error-messages="getServerErrors('hospitalProcedureGroupLimit')" />
+            </v-col>
+          </v-row>
+          <v-row class="mt-n6">
+            <v-col :cols="12" :lg="12" v-if="belongsToGroup && hospitalProcedureGroupLimit === 'FIXED_AMOUNT'">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-group-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model="groupFixedAmount" type="number" :placeholder="$t('t-enter-group-fixed-amount')"
+                :rules="applyServerErrorsToRules('groupFixedAmount', requiredRules.groupFixedAmount)" />
+            </v-col>
+            <v-col :cols="12" :lg="12" v-if="belongsToGroup && hospitalProcedureGroupLimit === 'PERCENTAGE'">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-group-percentage') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model="groupPercentage" type="number" :placeholder="$t('t-enter-group-percentage')"
+                :rules="applyServerErrorsToRules('groupPercentage', requiredRules.groupPercentage)" />
+            </v-col>
+          </v-row>
+          <v-row class="mt-9" v-if="!belongsToGroup">
             <v-col cols="12" lg="12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-limit-type-definition') }} <i class="ph-asterisk ph-xs text-danger" />
@@ -286,7 +423,7 @@ onMounted(async () => {
                 :rules="requiredRules.limitTypeDefinition" :error-messages="getServerErrors('limitTypeDefinition')" />
             </v-col>
           </v-row>
-          <v-row class="mt-n6">
+          <v-row class="mt-n6" v-if="!belongsToGroup">
             <v-col :cols="12" :lg="limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="limitTypeDefinition === 'FIXED_AMOUNT'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-fixed-amount') }} <i v-if="limitTypeDefinition === 'FIXED_AMOUNT'"
@@ -304,9 +441,9 @@ onMounted(async () => {
                 :rules="applyServerErrorsToRules('percentage', requiredRules.percentage)" />
             </v-col>
           </v-row>
-          <v-row :class="limitTypeDefinition === 'FIXED_AMOUNT' || limitTypeDefinition === 'PERCENTAGE' ? 'mt-n6' : 'mt-6'">
+          <v-row class="mt-n3">
           <v-col cols="12" lg="12" class="">
-            <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-enabled') }}</div>
             <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
               <template #label>
                 <span>{{ $t('t-is-enabled') }}</span>

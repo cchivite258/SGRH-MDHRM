@@ -311,10 +311,21 @@ const formatAmount = (amount: number | string) => {
   }).format(num);
 };
 
-const hasFlaggedItems = (invoice: InvoiceListingType) => invoice.areItemsFlagged === true;
+const getInvoiceAlerts = (invoice: InvoiceListingType) => {
+  const alerts: string[] = [];
+
+  if (invoice.flag === 'EXCEEDS_GLOBAL_LIMIT') alerts.push(t('t-exceeds-global-limit'));
+  if (invoice.flag === 'INSUFFICIENT_FUNDS') alerts.push(t('t-insufficient-funds'));
+
+  if (invoice.areItemsFlagged === true) {
+    alerts.push(t('t-exceeds-procedure-limit'));
+  }
+
+  return alerts;
+};
 
 const shouldHighlight = (invoice: InvoiceListingType) =>
-  invoice.flag !== 'UNFLAGGED' || hasFlaggedItems(invoice);
+  (!!invoice.flag && invoice.flag !== 'UNFLAGGED') || invoice.areItemsFlagged === true;
 
 onBeforeMount(() => {
   resetListingFilters()
@@ -359,11 +370,11 @@ onBeforeRouteLeave(() => {
             <td class="text-primary cursor-pointer" @click="onView(item.id)">
               <div class="d-flex align-center ga-2">
                 <span>{{ item.invoiceNumber || 'N/A' }}</span>
-                <v-tooltip v-if="hasFlaggedItems(item)" location="top">
+                <v-tooltip v-if="getInvoiceAlerts(item).length" location="top">
                   <template #activator="{ props }">
                     <i v-bind="props" class="ph ph-warning-circle text-danger" />
                   </template>
-                  <span>{{ $t('t-items-flagged') }}</span>
+                  <span>{{ getInvoiceAlerts(item).join(' | ') }}</span>
                 </v-tooltip>
               </div>
             </td>
