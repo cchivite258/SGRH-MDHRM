@@ -77,8 +77,7 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
 
-// Dados reativos do formulário
-let employeeData = reactive<EmployeeInsertType>({
+const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
   employeeNumber: '',
   firstName: '',
@@ -122,6 +121,13 @@ let employeeData = reactive<EmployeeInsertType>({
   terminationDate: undefined,
   rehireDate: undefined
 });
+
+// Dados reativos do formulário
+let employeeData = reactive<EmployeeInsertType>(getDefaultEmployeeData());
+
+const resetEmployeeData = () => {
+  Object.assign(employeeData, getDefaultEmployeeData());
+};
 
 const loadEmployeeData = async (id: string) => {
   try {
@@ -205,7 +211,6 @@ const clearApiFieldError = (field: string) => {
 onMounted(async () => {
   if (!isEmployeeFormRoute()) return;
 
-  employeeStore.loadFromStorage();
   const routeEmployeeId = getRouteEmployeeId();
 
   // Em modo edicao, o ID da rota e a fonte de verdade.
@@ -216,23 +221,27 @@ onMounted(async () => {
     return;
   }
 
-  // Em modo criacao, permite retomar o draft salvo.
-  if (employeeStore.currentEmployeeId) {
-    employeeId.value = employeeStore.currentEmployeeId;
-    basicDataValidated.value = true;
-  }
-
-  if (employeeId.value) {
-    await loadEmployeeData(employeeId.value);
-  } else {
-    await applyCreateInstitutionContext();
-  }
+  // Em modo criação, iniciar sempre formulário limpo.
+  employeeStore.clearDraft();
+  employeeId.value = null;
+  basicDataValidated.value = false;
+  resetEmployeeData();
+  await applyCreateInstitutionContext();
 });
 
 watch(
   () => route.params.id,
   async () => {
-    if (!isEmployeeEditRoute()) return;
+    if (!isEmployeeEditRoute()) {
+      if (isEmployeeCreateRoute()) {
+        employeeStore.clearDraft();
+        employeeId.value = null;
+        basicDataValidated.value = false;
+        resetEmployeeData();
+        await applyCreateInstitutionContext();
+      }
+      return;
+    }
 
     const routeEmployeeId = getRouteEmployeeId();
 
@@ -352,8 +361,12 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
       }
     }
 
-    // Salvar draft na store
-    employeeStore.setDraftEmployee(employeeData);
+    // Salvar/limpar draft na store
+    if (isFinalStep) {
+      employeeStore.clearDraft();
+    } else {
+      employeeStore.setDraftEmployee(employeeData);
+    }
 
 
     // Feedback de sucesso

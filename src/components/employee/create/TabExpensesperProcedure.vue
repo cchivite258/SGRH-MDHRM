@@ -107,7 +107,7 @@ const fetchProcedures = async ({ page, itemsPerPage, sortBy, search }: {
       sortColumn: sortBy[0]?.key || 'createdAt',
       direction: sortBy[0]?.order || 'asc',
       query_value: search,
-      query_props: "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance"
+      query_props: "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance"
     }
   );
 };
@@ -133,6 +133,25 @@ const refreshPlan = async () => {
   isInitialLoad.value = true;
   await initializeComponent();
   isInitialLoad.value = false;
+};
+
+const isGroupedProcedure = (item: ExpensePerProcedureType) => {
+  return Boolean(item.belongsToGroup ?? item.companyHealthPlanHospitalProcedures?.belongsToGroup);
+};
+
+const getDisplayAllocatedBalance = (item: ExpensePerProcedureType) => {
+  const value = isGroupedProcedure(item) ? item.groupAllocatedBalance : item.allocatedBalance;
+  return formatCurrency(value ?? 0);
+};
+
+const getDisplayUsedBalance = (item: ExpensePerProcedureType) => {
+  const value = isGroupedProcedure(item) ? item.groupUsedBalance : item.usedBalance;
+  return formatCurrency(value ?? 0);
+};
+
+const getDisplayRemainingBalance = (item: ExpensePerProcedureType) => {
+  const value = isGroupedProcedure(item) ? item.groupRemainingBalance : item.remainingBalance;
+  return formatCurrency(value ?? 0);
 };
 
 // Limpeza ao desmontar
@@ -239,9 +258,9 @@ onBeforeUnmount(() => {
               />
             </td>
             <td>{{ item.hospitalProcedureType?.name || 'N/A' }}</td>
-            <td>{{ formatCurrency(item.allocatedBalance) }}</td>
-            <td>{{ formatCurrency(item.usedBalance) }}</td>
-            <td>{{ formatCurrency(item.remainingBalance) }}</td>
+            <td>{{ getDisplayAllocatedBalance(item) }}</td>
+            <td>{{ getDisplayUsedBalance(item) }}</td>
+            <td>{{ getDisplayRemainingBalance(item) }}</td>
             <td>
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>

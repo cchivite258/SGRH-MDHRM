@@ -298,6 +298,10 @@ export type ExpensePerProcedureType = {
  allocatedBalance: number;
  usedBalance: number;
  remainingBalance: number;
+ groupAllocatedBalance?: number | null;
+ groupUsedBalance?: number | null;
+ groupRemainingBalance?: number | null;
+ belongsToGroup?: boolean;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;
