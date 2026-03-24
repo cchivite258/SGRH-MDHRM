@@ -56,7 +56,7 @@ const hospitalProcedureFormData = ref<HospitalProcedureInsertType | HospitalProc
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,limitTypeDefinition,hospitalProcedureType.name";
+const searchProps = "fixedAmount,percentage,groupFixedAmount,groupPercentage,limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
 const loading = ref(false);
 
 // Computed properties
@@ -268,6 +268,30 @@ const getLimitTypeLabel = (value: string | undefined) => {
   return option ? option.label : value;
 };
 
+const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
+  if (!item.belongsToGroup) return "Sem grupo";
+
+  const group = item.hospitalProcedureGroup as string | { name?: string; id?: string | number } | null | undefined;
+  if (!group) return "Grupo sem nome";
+  if (typeof group === "string") return group;
+  return group.name || (group.id != null ? String(group.id) : "Grupo sem nome");
+};
+
+const getDisplayFixedAmount = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupFixedAmount : item.fixedAmount;
+  return value ?? "-";
+};
+
+const getDisplayPercentage = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupPercentage : item.percentage;
+  return value !== null && value !== undefined ? `${value}%` : "-";
+};
+
+const getDisplayLimitType = (item: HospitalProcedureListingType) => {
+  const limitType = item.belongsToGroup ? item.hospitalProcedureGroupLimit : item.limitTypeDefinition;
+  return getLimitTypeLabel(limitType || "");
+};
+
 const getSalaryComponentLabel = (value: string | undefined) => {
   const option = salaryComponentOptions.find(opt => opt.value === value);
   return option ? option.label : value;
@@ -379,9 +403,18 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
                     <td>{{ item.hospitalProcedureType.name }}</td>
-                    <td>{{ getLimitTypeLabel(item.limitTypeDefinition) }}</td>
-                    <td>{{ item.fixedAmount }}</td>
-                    <td>{{ item.percentage }}%</td>
+                    <td>
+                      <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
+                        <span class="group-dot" />
+                        <div class="group-text">
+                          <span class="group-name">{{ getHospitalProcedureGroupName(item) }}</span>
+                          <span class="group-state">{{ item.belongsToGroup ? 'Agrupado' : 'Individual' }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ getDisplayLimitType(item) }}</td>
+                    <td>{{ getDisplayFixedAmount(item) }}</td>
+                    <td>{{ getDisplayPercentage(item) }}</td>
                     <td>
                       <Status :status="item.enabled ? 'enabled' : 'disabled'" />
                     </td>
@@ -424,3 +457,43 @@ const getSalaryComponentLabel = (value: string | undefined) => {
   <ViewHospitalProcedureDialog v-if="hospitalProcedureFormData" v-model="viewDialog"
     :data="hospitalProcedureFormData" />
 </template>
+
+<style scoped>
+.group-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(var(--v-theme-on-surface), 0.35);
+  flex-shrink: 0;
+}
+
+.group-cell--grouped .group-dot {
+  background: rgb(var(--v-theme-info));
+}
+
+.group-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.02;
+}
+
+.group-name {
+  font-size: 0.78rem;
+  color: rgba(var(--v-theme-on-surface), 0.82);
+}
+
+.group-cell--grouped .group-name {
+  font-weight: 600;
+}
+
+.group-state {
+  font-size: 0.66rem;
+  color: rgba(var(--v-theme-on-surface), 0.52);
+}
+</style>

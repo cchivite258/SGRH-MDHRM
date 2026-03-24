@@ -19,6 +19,11 @@ const props = defineProps({
     fixedAmount: 0,
     percentage: 0,
     limitTypeDefinition: "",
+    hospitalProcedureGroup: null,
+    groupFixedAmount: null,
+    groupPercentage: null,
+    hospitalProcedureGroupLimit: null,
+    belongsToGroup: false,
     hospitalProcedureType: undefined,
     companyHealthPlan: undefined,
     company: undefined
@@ -34,6 +39,14 @@ const getLimitTypeLabel = (value: string) => {
   ];
   const option = options.find(opt => opt.value === value);
   return option ? option.label : value;
+};
+
+const getHospitalProcedureGroupLabel = (
+  group: HospitalProcedureListingType["hospitalProcedureGroup"] | HospitalProcedureInsertType["hospitalProcedureGroup"]
+) => {
+  if (!group) return "-";
+  if (typeof group === "string") return group;
+  return group.name || (group.id != null ? String(group.id) : "-");
 };
 
 const dialogValue = computed({
@@ -71,6 +84,38 @@ const dialogValue = computed({
         </v-row>
 
         <v-row class="mt-3">
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-belongs-to-group') }}</div>
+            <div>{{ props.data?.belongsToGroup ? $t('t-yes') : $t('t-no') }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3" v-if="props.data?.belongsToGroup">
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-group') }}</div>
+            <div>{{ getHospitalProcedureGroupLabel(props.data?.hospitalProcedureGroup) }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3" v-if="props.data?.belongsToGroup">
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-group-limit') }}</div>
+            <div>{{ getLimitTypeLabel(props.data?.hospitalProcedureGroupLimit || '') || '-' }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3" v-if="props.data?.belongsToGroup">
+          <v-col :cols="12" :lg="props.data?.hospitalProcedureGroupLimit === 'FIXED_AMOUNT' ? 12 : 6" v-if="props.data?.hospitalProcedureGroupLimit === 'FIXED_AMOUNT'">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-group-fixed-amount') }}</div>
+            <div>{{ props.data?.groupFixedAmount || '0' }}</div>
+          </v-col>
+          <v-col :cols="12" :lg="props.data?.hospitalProcedureGroupLimit === 'PERCENTAGE' ? 12 : 6" v-if="props.data?.hospitalProcedureGroupLimit === 'PERCENTAGE'">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-group-percentage') }}</div>
+            <div>{{ props.data?.groupPercentage || '0' }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3" v-if="!props.data?.belongsToGroup">
           <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'FIXED_AMOUNT'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-fixed-amount') }}</div>
             <div>{{ props.data?.fixedAmount || '0' }}</div>
