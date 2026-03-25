@@ -376,7 +376,7 @@ watch(() => invoiceData.value.company, async (newInstitutionId) => {
 watch(() => invoiceData.value.employee, async (newEmployeeId) => {
   if (newEmployeeId) {
     try {
-      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, 1000000000);
 
       if (invoiceData.value.dependent) {
         const currentDependent = dependentStore.dependentsForDropdown.find(

@@ -260,8 +260,8 @@ const loadProcedures = async () => {
     console.log("Active Health Plan ID:", activeHealthPlanId.value);
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value)
+      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
+      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
     ]);
   } catch (error) {
     handleError('t-error-loading-procedures', error);

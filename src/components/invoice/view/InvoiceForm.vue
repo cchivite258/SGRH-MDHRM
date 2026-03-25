@@ -264,9 +264,9 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutions(),
-      currencyStore.fetchCurrenciesForDropdown(),
-      serviceProviderStore.fetchServiceProvidersForDropdown()
+      institutionStore.fetchInstitutions(0, 1000000000),
+      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
