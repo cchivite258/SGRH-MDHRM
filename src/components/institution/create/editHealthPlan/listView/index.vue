@@ -62,7 +62,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,groupFixedAmount,groupPercentage,limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
+const searchProps = "limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
 const loading = ref(false);
 
 // Computed properties
