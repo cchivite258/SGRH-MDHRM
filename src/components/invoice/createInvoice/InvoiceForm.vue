@@ -353,7 +353,7 @@ const onBack = () => {
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
   if (newInstitutionId) {
     try {
-      await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, 1000000000);
 
       if (invoiceData.value.employee) {
         const currentEmployee = employeeStore.employeesForDropdown.find(
