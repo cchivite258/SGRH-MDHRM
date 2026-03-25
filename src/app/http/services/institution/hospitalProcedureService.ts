@@ -136,7 +136,7 @@ export default class HospitalProcedureService extends HttpService {
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-health-plan?${queryString}`; 
+      const url = `/administration/company/allowed-hospital-procedures?${queryString}`; 
 
       console.log('URL da requisição:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);

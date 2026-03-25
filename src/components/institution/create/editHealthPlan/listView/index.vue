@@ -51,6 +51,11 @@ const healthPlanId = computed(() => {
   return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
 });
 
+const getHealthPlanIdFromRoute = () => {
+  const id = route.params.id;
+  return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+};
+
 
 // Estado para posições
 const dialog = ref(false);
@@ -62,7 +67,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
+const searchProps = "companyHealthPlan.id";
 const loading = ref(false);
 
 // Computed properties
@@ -197,10 +202,11 @@ interface FetchParams {
 }
 
 const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  if (!healthPlanId.value) return;
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
 
   await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
-    healthPlanId.value,
+    planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
@@ -661,3 +667,4 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
   color: rgba(var(--v-theme-on-surface), 0.52);
 }
 </style>
+

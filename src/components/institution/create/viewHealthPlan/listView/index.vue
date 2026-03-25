@@ -56,7 +56,7 @@ const hospitalProcedureFormData = ref<HospitalProcedureInsertType | HospitalProc
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
+const searchProps = "companyHealthPlan.id,hospitalProcedureType.name,limitTypeDefinition";
 const loading = ref(false);
 
 // Computed properties
@@ -143,11 +143,17 @@ interface FetchParams {
   search: string;
 }
 
+const getHealthPlanIdFromRoute = () => {
+  const id = route.params.id;
+  return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+};
+
 const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  if (!healthPlanId.value) return;
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
 
   await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
-    healthPlanId.value,
+    planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
