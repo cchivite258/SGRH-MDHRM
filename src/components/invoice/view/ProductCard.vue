@@ -216,8 +216,8 @@ const loadProcedures = async () => {
     }
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value)
+      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
+      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
     ]);
 
     lastProceduresLoadKey.value = loadKey;
