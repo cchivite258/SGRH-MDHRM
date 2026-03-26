@@ -56,7 +56,7 @@ const hospitalProcedureFormData = ref<HospitalProcedureInsertType | HospitalProc
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const baseSearchProps = "hospitalProcedureType.name,limitTypeDefinition";
+const globalSearchProps = ["hospitalProcedureType.name"];
 const loading = ref(false);
 
 // Computed properties
@@ -157,7 +157,7 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
   const values: string[] = [planIdFromRoute];
 
   if (trimmedSearch) {
-    baseSearchProps.split(",").forEach((prop) => {
+    globalSearchProps.forEach((prop) => {
       props.push(prop);
       values.push(trimmedSearch);
     });
@@ -166,7 +166,7 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
   const query_props = props.join(",");
   const query_value = values.join(",");
 
-  await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
+  await hospitalProcedureStore.fetchHospitalProceduresOfPlanScoped(
     planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
@@ -413,8 +413,8 @@ const getSalaryComponentLabel = (value: string | undefined) => {
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
                 :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="hospitalProcedureStore.hospital_procedure_of_plan" :items-per-page="itemsPerPage"
-                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="baseSearchProps"
+                :items="hospitalProcedureStore.hospital_procedure_of_plan_scoped" :items-per-page="itemsPerPage"
+                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="globalSearchProps.join(',')"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
@@ -444,7 +444,7 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                   </tr>
                 </template>
 
-                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan.length === 0" #body>
+                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
                     <td :colspan="hospitalProcedureHeader.length" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">

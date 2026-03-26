@@ -305,16 +305,19 @@ const handleSaveSuccess = async (response: any) => {
  * Processa operações CRUD para itens da fatura
  */
 const processInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertType[]) => {
-  if (!items?.length) {
-    console.warn('No items to process');
-    return [];
-  }
-
   try {
     const existingItemsResponse = await invoiceItemService.getInvoiceItemByInvoice(invoiceId);
     const existingItems = existingItemsResponse.content || [];
     const existingIds = existingItems.map(item => item.id);
     const newIds = items.filter(item => item.id).map(item => item.id);
+
+    if (!items?.length) {
+      // Em edição, remover todos os itens existentes quando a lista enviada vier vazia.
+      if (existingItems.length > 0) {
+        await Promise.all(existingItems.map(item => invoiceItemService.deleteInvoiceItem(item.id)));
+      }
+      return [];
+    }
 
     // Classificação dos itens
     const itemsToCreate = items.filter(item => !item.id || !existingIds.includes(item.id));
@@ -330,6 +333,12 @@ const processInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertTy
         invoiceItemService.updateInvoiceItem(item.id!, { ...item, invoice: invoiceId })
       )
     ]);
+
+    const failedUpserts = upsertResults.filter((result: any) => result?.status === 'error');
+    if (failedUpserts.length > 0) {
+      const firstError = failedUpserts[0]?.error;
+      throw firstError || new Error('Failed to persist one or more invoice items');
+    }
 
     const deleteResults = await Promise.all(
       itemsToDelete.map(item => invoiceItemService.deleteInvoiceItem(item.id))

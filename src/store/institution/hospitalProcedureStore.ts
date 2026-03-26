@@ -9,6 +9,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
     all_hospital_procedures: [] as HospitalProcedureListingType[],
     hospital_procedure_for_dropdown: [] as HospitalProcedureListingType[],
     hospital_procedure_of_plan: [] as HospitalProcedureListingType[],
+    hospital_procedure_of_plan_scoped: [] as HospitalProcedureListingType[],
     activeHealthPlan: null as any,
     pagination: { 
       totalElements: 0,
@@ -198,7 +199,76 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       } finally {
         this.loading = false;
       }
-    }
+    },
+
+    async fetchHospitalProceduresOfPlanScoped(
+      id: string | null,
+      page?: number,
+      size?: number,
+      sortColumn: string = 'createdAt',
+      direction: string = 'asc',
+      query_value?: string,
+      query_props?: string
+    ) {
+      this.loading = true;
+      this.error = null;
+
+      const actualPage = page ?? this.pagination.currentPage;
+      const actualSize = size ?? this.pagination.itemsPerPage;
+
+      const fixedProp = 'companyHealthPlan.id';
+      const fixedValue = id ? String(id) : '';
+
+      const props = (query_props || '')
+        .split(',')
+        .map((prop) => prop.trim())
+        .filter(Boolean);
+
+      let values = (query_value || '')
+        .split(',')
+        .map((value) => value.trim());
+
+      if (values.length === 1 && props.length > 1) {
+        values = new Array(props.length).fill(values[0]);
+      }
+
+      const normalizedProps: string[] = [fixedProp];
+      const normalizedValues: string[] = [fixedValue];
+
+      props.forEach((prop, index) => {
+        if (prop === fixedProp) return;
+
+        normalizedProps.push(prop);
+        normalizedValues.push(values[index] ?? '');
+      });
+
+      try {
+        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
+          id,
+          actualPage,
+          actualSize,
+          sortColumn,
+          direction,
+          normalizedValues.join(','),
+          normalizedProps.join(',')
+        );
+
+        this.hospital_procedure_of_plan_scoped = content;
+        this.pagination = {
+          totalElements: meta.totalElements,
+          currentPage: meta.page,
+          itemsPerPage: meta.size,
+          totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
+        };
+      } catch (err: any) {
+        this.error = err.message || 'Erro ao buscar procedimentos hospitalares';
+        console.error("❌ Erro ao buscar procedimentos hospitalares:", err);
+        this.hospital_procedure_of_plan_scoped = [];
+        this.pagination.totalElements = 0;
+      } finally {
+        this.loading = false;
+      }
+    },
 
     
   }, 
