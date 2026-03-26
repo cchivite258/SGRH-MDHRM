@@ -43,6 +43,7 @@ export default class HospitalProcedureService extends HttpService {
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+        queryParams.push(`query_operator=OR`);
       }
 
       const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';

@@ -42,16 +42,20 @@ const institutionData = reactive<InstitutionInsertType>({
   enabled: true
 });
 
-const getRouteInstitutionId = (): string | undefined => {
-  const byParam = route.params.id;
-  if (typeof byParam === "string") return byParam;
-  if (Array.isArray(byParam)) return byParam[0];
-
-  const byQuery = route.query.institutionId;
-  if (typeof byQuery === "string") return byQuery;
-  if (Array.isArray(byQuery)) return byQuery[0];
-
+const toSingleString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString;
+  }
   return undefined;
+};
+
+const getRouteInstitutionId = (): string | undefined => {
+  const byParam = toSingleString(route.params.id);
+  if (byParam) return byParam;
+
+  return toSingleString(route.query.institutionId);
 };
 
 const clearApiFieldError = (field: string) => {

@@ -152,6 +152,7 @@ const filterableFields = ref<FilterableField[]>([
     { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },
     { text: t('t-employee-name') + ' (Nome)', value: 'employee.firstName', type: 'text' },
     { text: t('t-employee-name') + ' (Apelido)', value: 'employee.lastName', type: 'text' },
+    { text: t('t-company'), value: 'employee.company.name', type: 'text' },
     { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'text' },
     { text: t('t-currency'), value: 'currency.name', type: 'text' },
     { text: t('t-flag'), value: 'flag', type: 'enum', enumType: 'flagGroup' },
@@ -360,7 +361,7 @@ const onGlobalSearch = () => {
         invoiceStore.setLogicalOperator(logicalOperator.value);
         invoiceStore.setAdvancedFilters(filtersForStore);
         await syncStateToRoute(filtersForStore);
-        await invoiceStore.fetchInvoices();
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
     }, SEARCH_DEBOUNCE_MS);
 };
 
@@ -391,7 +392,7 @@ const clearAllFilters = async () => {
     advancedFilters.value = [];
     invoiceStore.clearFilters();
     await syncStateToRoute([]);
-    await invoiceStore.fetchInvoices();
+    await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
 };
 
 const applyAdvancedFilters = async () => {
@@ -407,7 +408,7 @@ const applyAdvancedFilters = async () => {
         invoiceStore.setLogicalOperator(logicalOperator.value);
         invoiceStore.setAdvancedFilters(filtersForStore);
         await syncStateToRoute(filtersForStore);
-        await invoiceStore.fetchInvoices();
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
     } finally {
         loading.value = false;
     }
@@ -429,7 +430,7 @@ watch(
         invoiceStore.setGlobalSearch(globalSearch.value);
         invoiceStore.setLogicalOperator(logicalOperator.value);
         invoiceStore.setAdvancedFilters(queryFilters);
-        await invoiceStore.fetchInvoices();
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
     },
     { immediate: true, deep: true }
 );
