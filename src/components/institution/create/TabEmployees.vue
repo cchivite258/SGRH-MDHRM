@@ -76,7 +76,7 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const periodId = ref<string | null>(null);
 // Computed properties
 const loading = computed(() => employeeStore.loading);
-const totalItems = computed(() => employeeStore.pagination.totalElements);
+const totalItems = computed(() => employeeStore.companyEmployeesPagination.totalElements);
 
 interface FetchParams {
   page: number;
