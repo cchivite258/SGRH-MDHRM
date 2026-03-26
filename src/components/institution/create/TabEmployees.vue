@@ -269,10 +269,10 @@ onBeforeUnmount(() => {
  <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteEmployee" :loading="deleteLoading" />
 
   <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 1)">
-      {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 6)">
+      {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
     </v-btn>
-    <v-btn color="success" variant="elevated" @click="$emit('onStepChange', 5)">
+    <v-btn color="success" variant="elevated" @click="$router.push('/institution/list')">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

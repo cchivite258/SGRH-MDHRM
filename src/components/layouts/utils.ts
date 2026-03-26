@@ -110,6 +110,13 @@ export const menuItems: MenuItemType[] = [
     ],
   },*/
   {
+    label: "entities",
+    icon: "ph ph-identification-card",
+    id: "sidebarEntities",
+    prefix: "/entities",
+    link: "/entities/list"
+  },
+  {
     label: "institutions",
     icon: "ph ph-buildings",
     id: "sidebarInstitution", 

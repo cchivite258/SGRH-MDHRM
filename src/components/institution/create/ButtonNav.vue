@@ -26,15 +26,9 @@ const step = computed({
   },
 });
 
-// Computed para determinar se uma tab deve estar desabilitada
 const isTabDisabled = (tabNumber: number) => {
-  // No modo edição (quando tem institutionId), todas tabs estão habilitadas
-  if (props.institutionId) return false;
-
-  // No modo criação:
-  // - Tab 1 sempre habilitada
-  // - Tabs 2-4 desabilitadas até basicDataValidated ser true
-  return tabNumber > 1 && !props.basicDataValidated;
+  if (props.institutionId || props.basicDataValidated) return false;
+  return tabNumber > 1;
 };
 </script>
 
@@ -44,7 +38,7 @@ const isTabDisabled = (tabNumber: number) => {
       <v-col cols="3">
         <v-btn rounded="0" color="primary" block :variant="step === 1 ? 'elevated' : 'tonal'" @click="step = 1"
           :disabled="isTabDisabled(1)">
-          {{ $t('t-general-information') }}
+          Informações Gerais do Contrato
         </v-btn>
       </v-col>
       <v-col cols="3">
@@ -55,31 +49,31 @@ const isTabDisabled = (tabNumber: number) => {
       </v-col>
       <v-col cols="3">
         <v-btn rounded="0" color="primary" block :variant="step === 3 ? 'elevated' : 'tonal'" @click="step = 3"
-          :disabled="isTabDisabled(2)">
+          :disabled="isTabDisabled(3)">
           {{ $t('t-health-plan') }}
         </v-btn>
       </v-col>
       <v-col cols="3">
         <v-btn rounded="0" color="primary" block :variant="step === 4 ? 'elevated' : 'tonal'" @click="step = 4"
-          :disabled="isTabDisabled(3)">
+          :disabled="isTabDisabled(4)">
           {{ $t('t-organizational-structure') }}
         </v-btn>
       </v-col>
       <v-col cols="4">
         <v-btn rounded="0" color="primary" block :variant="step === 5 ? 'elevated' : 'tonal'" @click="step = 5"
-          :disabled="isTabDisabled(4)">
+          :disabled="isTabDisabled(5)">
           {{ $t('t-contact') }}
         </v-btn>
       </v-col>
       <v-col cols="4">
         <v-btn rounded="0" color="primary" block :variant="step === 6 ? 'elevated' : 'tonal'" @click="step = 6"
-          :disabled="isTabDisabled(4)">
+          :disabled="isTabDisabled(6)">
           {{ $t('t-service-providers') }}
         </v-btn>
       </v-col>
       <v-col cols="4">
         <v-btn rounded="0" color="primary" block :variant="step === 7 ? 'elevated' : 'tonal'" @click="step = 7"
-          :disabled="isTabDisabled(4)">
+          :disabled="isTabDisabled(7)">
           {{ $t('t-employees') }}
         </v-btn>
       </v-col>

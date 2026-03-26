@@ -543,4 +543,3 @@ const getSalaryComponentLabel = (value: string | undefined) => {
   color: rgba(var(--v-theme-on-surface), 0.52);
 }
 </style>
-
