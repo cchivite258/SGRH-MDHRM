@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { HealthPlanInsertType, HospitalProcedureListingType, HospitalProcedureInsertType } from "@/components/institution/types";
 import { CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
@@ -16,10 +16,12 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
+import { useHospitalProcedureGroupStore } from "@/store/baseTables/hospitalProcedureGroupStore";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import Status from "@/app/common/components/Status.vue"; 
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import type { HospitalProcedureGroupListing } from "@/components/baseTables/hospitalProcedureGroup/types";
 
 //Options Enums
 import {
@@ -39,6 +41,7 @@ const route = useRoute();
 const healthPlanStore = useHealthPlanStore();
 const hospitalProcedureStore = useHospitalProcedureStore();
 const coveragePeriodStore = useCoveragePeriodStore();
+const hospitalProcedureGroupStore = useHospitalProcedureGroupStore();
 
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -67,7 +70,8 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "companyHealthPlan.id";
+const selectedGroupId = ref<string>("");
+const baseSearchProps = "hospitalProcedureType.name,limitTypeDefinition,hospitalProcedureGroup.name";
 const loading = ref(false);
 
 // Computed properties
@@ -147,6 +151,13 @@ const coveragePeriods = computed(() => {
     }));
 });
 
+const hospitalProcedureGroups = computed(() => {
+  return (hospitalProcedureGroupStore.hospital_procedure_groups_dropdown || []).map((item: HospitalProcedureGroupListing) => ({
+    value: item.id,
+    label: item.name
+  }));
+});
+
 
 
 // Buscar dados iniciais
@@ -162,6 +173,7 @@ onMounted(async () => {
 
         // Carrega períodos de cobertura
         await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, 10000000);
+        await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
 
         healthPlanFormData.value = {
           id: healthPlan.id,
@@ -205,16 +217,36 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
   const planIdFromRoute = getHealthPlanIdFromRoute();
   if (!planIdFromRoute) return;
 
+  const hasGroupFilter = !!selectedGroupId.value;
+  const hasSearchText = !!search;
+
+  const query_props = hasGroupFilter
+    ? (hasSearchText ? `hospitalProcedureGroup.id,${baseSearchProps}` : "hospitalProcedureGroup.id")
+    : baseSearchProps;
+
+  const query_value = hasGroupFilter
+    ? (hasSearchText ? `${selectedGroupId.value},${search}` : selectedGroupId.value)
+    : search;
+
   await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
     planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
     sortBy[0]?.order || 'asc',
-    search,
-    searchProps
+    query_value,
+    query_props
   );
 };
+
+watch(selectedGroupId, async () => {
+  await fetchHospitalProceduresOfPlan({
+    page: 1,
+    itemsPerPage: itemsPerPage.value,
+    sortBy: [],
+    search: searchQuery.value
+  });
+});
 
 const toggleSelection = (item: HospitalProcedureListingType) => {
   const index = selectedHospitalProcedures.value.findIndex(selected => selected.id === item.id);
@@ -548,15 +580,22 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
             <v-card-text>
               <v-card-text>
                 <v-row>
-                  <v-col cols="12" lg="12">
+                  <v-col cols="12" lg="8">
                     <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-hospital-procedure')" />
+                  </v-col>
+                  <v-col cols="12" lg="4">
+                    <MenuSelect
+                      v-model="selectedGroupId"
+                      :items="hospitalProcedureGroups"
+                      :placeholder="'Filtrar por grupo'"
+                    />
                   </v-col>
                 </v-row>
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
                 :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
                 :items="hospitalProcedureStore.hospital_procedure_of_plan" :items-per-page="itemsPerPage"
-                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
+                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="baseSearchProps"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
