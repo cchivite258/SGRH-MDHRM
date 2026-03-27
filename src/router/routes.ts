@@ -33,6 +33,7 @@ const baseTablePrefix = "/baseTable";
 const usersPrefix = "/users";
 const serviceProviderPrefix = "/service-provider";
 const reportsPrefix = "/reports";
+const entitiesPrefix = "/entities";
 
 
 const institutionRoutes = [
@@ -97,6 +98,32 @@ const institutionRoutes = [
     meta: { title: "ViewCoveragePeriod", authRequired: true },
   }
 
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+
+const entitiesRoutes = [
+  {
+    path: `${entitiesPrefix}/list`,
+    name: "EntitiesList",
+    component: () => import("@/views/entities/List.vue"),
+    meta: { title: "Entity List", authRequired: true },
+  },
+  {
+    path: `${entitiesPrefix}/create`,
+    name: "CreateEntity",
+    component: () => import("@/views/entities/Create.vue"),
+    meta: { title: "Create Entity", authRequired: true },
+  },
+  {
+    path: `${entitiesPrefix}/edit/:id`,
+    name: "EditEntity",
+    component: () => import("@/views/entities/Edit.vue"),
+    meta: { title: "Edit Entity", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,
@@ -1358,6 +1385,7 @@ export const routes = [
   ...advanceUIRoutes,
   ...customUIRoutes,
   ...institutionRoutes,
+  ...entitiesRoutes,
   ...employeeRoutes,
   ...baseTableRoutes,
   ...usersRoutes,

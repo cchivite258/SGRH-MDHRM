@@ -43,6 +43,7 @@ export default class HospitalProcedureService extends HttpService {
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+        queryParams.push(`query_operator=OR`);
       }
 
       const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
@@ -84,11 +85,6 @@ export default class HospitalProcedureService extends HttpService {
         `direction=${direction}`
       ];
 
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
-      }
-
       const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
@@ -119,28 +115,53 @@ export default class HospitalProcedureService extends HttpService {
     query_props?: string
   ): Promise<{ content: HospitalProcedureListingType[], meta: any }> {
     try {
+      const fixedQueryProp = 'companyHealthPlan.id';
+      const fixedQueryValue = id ? String(id) : '';
+
+      const propsList = (query_props || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+
+      let valuesList = (query_value || '')
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean);
+
+      // Compatibilidade para chamadas que enviam 1 valor para N props (busca global).
+      if (valuesList.length === 1 && propsList.length > 1) {
+        valuesList = new Array(propsList.length).fill(valuesList[0]);
+      }
+
+      // Garante que o filtro de plano ativo é sempre aplicado.
+      const fixedPropIndex = propsList.indexOf(fixedQueryProp);
+      if (fixedPropIndex >= 0) {
+        valuesList[fixedPropIndex] = fixedQueryValue;
+      } else {
+        propsList.unshift(fixedQueryProp);
+        valuesList.unshift(fixedQueryValue);
+      }
+
+      const effectiveQueryProps = propsList.join(',');
+      const effectiveQueryValue = valuesList.join(',');
+
       const queryParams = [
-        `id=${id}`,
         `page=${page}`,
         `size=${size}`,
         `sortColumn=${sortColumn}`,
-        `direction=${direction}`
+        `direction=${direction}`,
+        `query_props=${encodeURIComponent(effectiveQueryProps)}`,
+        `query_value=${encodeURIComponent(effectiveQueryValue)}`
       ];
-
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
-      }
 
       const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-health-plan?${queryString}`; 
+      const url = `/administration/company/allowed-hospital-procedures?${queryString}`; 
 
       console.log('URL da requisição:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
-
       return {
         content: response.data || [],
         meta: response.meta || []

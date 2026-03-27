@@ -241,7 +241,6 @@ const calculateLineTotal = (item: InvoiceItem) => {
 
 const loadProcedures = async () => {
   try {
-
     hospitalProcedureStore.hospital_procedure_of_plan = [];
     activeHealthPlanId.value = "";
 
@@ -300,7 +299,7 @@ const removeItem = (id: string) => {
 const prepareItemsForSubmission = (): InvoiceItemInsertType[] => {
   return invoiceItems.value.map(item => ({
     ...item,
-    id: props.isEditMode ? item.originalId : undefined,
+    id: props.isEditMode ? (item.originalId || item.id) : undefined,
     taxRate: item.taxRate || '',
     companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || '',
     description: item.description || '',
@@ -383,7 +382,10 @@ onMounted(() => {
   if (props.initialItems?.length) {
     invoiceItems.value = props.initialItems.map(item => ({
       ...item,
+      originalId: item.id,
       id: item.id || Date.now().toString(),
+      taxRate: item.taxRate || '',
+      companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || ''
     }));
   } else {
     addItem();

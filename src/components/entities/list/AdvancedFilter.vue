@@ -1,7 +1,7 @@
 <template>
     <v-card class="mb-4">
         <v-card-text class="pa-4">
-            <QuerySearch v-model="globalSearch" :placeholder="$t('t-invoice-search')"
+            <QuerySearch v-model="globalSearch" :placeholder="$t('t-institution-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
                 @update:model-value="onGlobalSearch" class="mb-2" />
 
@@ -42,18 +42,12 @@
                             </v-col>
 
                             <v-col cols="12" sm="4" class="py-1 px-1" v-if="isDateField(filter.prop)">
-                                <VueDatePicker v-model="filter.value" :teleport="true"
-                                    :placeholder="$t('t-enter-date')" :enable-time-picker="false"
-                                    format="dd/MM/yyyy" />
+                                <VueDatePicker v-model="filter.value" :teleport="true" :placeholder="$t('t-enter-date')"
+                                    :enable-time-picker="false" format="dd/MM/yyyy" />
                             </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
                                     item-title="text" item-value="value" density="compact" variant="outlined" />
-                            </v-col>
-                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isEnumField(filter.prop)">
-                                <MenuSelect v-model="filter.value" :items="getEnumOptions(filter.prop)"
-                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
-                                    density="compact" variant="outlined" />
                             </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else>
                                 <TextField v-model="filter.value" :placeholder="$t('t-value')" density="compact"
@@ -96,7 +90,7 @@
 <script lang="ts" setup>
 import { ref, computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useInvoiceStore } from '@/store/invoice/invoiceStore';
+import { useCompanyDetailsStore } from '@/store/institution/companyDetailsStore';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
@@ -107,7 +101,7 @@ const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
-const invoiceStore = useInvoiceStore();
+const companyDetailsStore = useCompanyDetailsStore();
 
 const QUERY_KEYS = {
     search: 'search',
@@ -116,13 +110,12 @@ const QUERY_KEYS = {
 } as const;
 
 type LogicalOperator = 'AND' | 'OR';
-type FilterType = 'text' | 'boolean' | 'date' | 'enum';
+type FilterType = 'text' | 'boolean' | 'date';
 
 interface FilterableField {
     text: string;
     value: string;
     type: FilterType;
-    enumType?: 'invoiceStatusGroup' | 'flagGroup';
 }
 
 interface AdvancedFilter {
@@ -145,23 +138,16 @@ let globalSearchDebounce: ReturnType<typeof setTimeout> | null = null;
 let routeSyncInProgress = false;
 
 const filterableFields = ref<FilterableField[]>([
-    { text: t('t-invoice-number'), value: 'invoiceNumber', type: 'text' },
-    { text: t('t-issue-date'), value: 'issueDate', type: 'date' },
-    { text: t('t-due-date'), value: 'dueDate', type: 'date' },
-    { text: t('t-total-amount'), value: 'totalAmount', type: 'text' },
-    { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },
-    { text: t('t-employee-name') + ' (Nome)', value: 'employee.firstName', type: 'text' },
-    { text: t('t-employee-name') + ' (Apelido)', value: 'employee.lastName', type: 'text' },
-    { text: t('t-company'), value: 'employee.company.name', type: 'text' },
-    { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'text' },
-    { text: t('t-currency'), value: 'currency.name', type: 'text' },
-    { text: t('t-flag'), value: 'flag', type: 'enum', enumType: 'flagGroup' },
-    { text: t('t-dependent'), value: 'dependent.firstName', type: 'text' },
-    { text: t('t-is-employee-invoice'), value: 'isEmployeeInvoice', type: 'boolean' },
-    { text: t('t-authorized-by'), value: 'authorizedBy', type: 'text' },
-    { text: t('t-invoice-reference-number'), value: 'invoiceReferenceNumber', type: 'text' },
-    { text: t('t-coverage-period'), value: 'coveragePeriod.name', type: 'text' },
-    { text: t('t-are-items-flagged'), value: 'areItemsFlagged', type: 'boolean' },
+    { text: t('t-name'), value: 'name', type: 'text' },
+    { text: t('t-institution-type'), value: 'institutionType.name', type: 'text' },
+    { text: t('t-address'), value: 'address', type: 'text' },
+    { text: t('t-phone'), value: 'phone', type: 'text' },
+    { text: t('t-email'), value: 'email', type: 'text' },
+    { text: t('t-website'), value: 'website', type: 'text' },
+    { text: t('t-income-tax-number'), value: 'incomeTaxNumber', type: 'text' },
+    { text: t('t-created-at'), value: 'createdAt', type: 'date' },
+    { text: t('t-description'), value: 'description', type: 'text' },
+    { text: t('t-enabled'), value: 'enabled', type: 'boolean' }
 ]);
 
 const textOperators = [
@@ -181,31 +167,10 @@ const dateOperators = [
     { text: t('t-before'), value: 'before' }
 ];
 
-const enumOperators = [
-    { text: t('t-equals'), value: 'equals' },
-    { text: t('t-not-equals'), value: 'notEquals' }
-];
-
 const booleanOptions = ref([
     { text: t('t-true'), value: true },
     { text: t('t-false'), value: false }
 ]);
-
-const enumOptions = {
-    invoiceStatusGroup: [
-        { text: t('t-draft'), value: 'DRAFT' },
-        { text: t('t-pending'), value: 'PENDING' },
-        { text: t('t-paid'), value: 'PAID' },
-        { text: t('t-posted'), value: 'POSTED' },
-        { text: t('t-cancelled'), value: 'CANCELLED' }
-    ],
-    flagGroup: [
-        { text: t('t-exceeds-global-limit'), value: 'EXCEEDS_GLOBAL_LIMIT' },
-        { text: t('t-insufficient-funds'), value: 'INSUFFICIENT_FUNDS' },
-        { text: t('t-unflagged'), value: 'UNFLAGGED' },
-        { text: t('t-items-flagged'), value: 'ITEMS_FLAGGED' }
-    ]
-};
 
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
@@ -218,14 +183,7 @@ const getFieldDefinition = (field: string): FilterableField | undefined =>
     filterableFields.value.find(f => f.value === field);
 
 const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
-const isEnumField = (field: string) => getFieldDefinition(field)?.type === 'enum';
 const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
-
-const getEnumOptions = (field: string) => {
-    const enumType = getFieldDefinition(field)?.enumType;
-    if (!enumType) return [];
-    return enumOptions[enumType] || [];
-};
 
 const getOperatorsForField = (field: string) => {
     const fieldDef = getFieldDefinition(field);
@@ -233,7 +191,6 @@ const getOperatorsForField = (field: string) => {
 
     if (fieldDef.type === 'boolean') return booleanOperators;
     if (fieldDef.type === 'date') return dateOperators;
-    if (fieldDef.type === 'enum') return enumOperators;
     return textOperators;
 };
 
@@ -290,9 +247,6 @@ const onFieldChange = (index: number) => {
 
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
-    } else if (isEnumField(field)) {
-        const options = getEnumOptions(field);
-        advancedFilters.value[index].value = options[0]?.value || '';
     } else if (isDateField(field)) {
         advancedFilters.value[index].value = new Date();
     } else {
@@ -357,11 +311,11 @@ const onGlobalSearch = () => {
 
     globalSearchDebounce = setTimeout(async () => {
         const filtersForStore = buildStoreFiltersFromUi();
-        invoiceStore.setGlobalSearch(globalSearch.value);
-        invoiceStore.setLogicalOperator(logicalOperator.value);
-        invoiceStore.setAdvancedFilters(filtersForStore);
+        companyDetailsStore.setGlobalSearch(globalSearch.value);
+        companyDetailsStore.setLogicalOperator(logicalOperator.value);
+        companyDetailsStore.setAdvancedFilters(filtersForStore);
         await syncStateToRoute(filtersForStore);
-        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+        await companyDetailsStore.fetchCompanyDetails();
     }, SEARCH_DEBOUNCE_MS);
 };
 
@@ -390,9 +344,9 @@ const clearAllFilters = async () => {
     globalSearch.value = '';
     logicalOperator.value = 'AND';
     advancedFilters.value = [];
-    invoiceStore.clearFilters();
+    companyDetailsStore.clearFilters();
     await syncStateToRoute([]);
-    await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+    await companyDetailsStore.fetchCompanyDetails();
 };
 
 const applyAdvancedFilters = async () => {
@@ -404,11 +358,11 @@ const applyAdvancedFilters = async () => {
     loading.value = true;
     try {
         const filtersForStore = buildStoreFiltersFromUi();
-        invoiceStore.setGlobalSearch(globalSearch.value);
-        invoiceStore.setLogicalOperator(logicalOperator.value);
-        invoiceStore.setAdvancedFilters(filtersForStore);
+        companyDetailsStore.setGlobalSearch(globalSearch.value);
+        companyDetailsStore.setLogicalOperator(logicalOperator.value);
+        companyDetailsStore.setAdvancedFilters(filtersForStore);
         await syncStateToRoute(filtersForStore);
-        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+        await companyDetailsStore.fetchCompanyDetails();
     } finally {
         loading.value = false;
     }
@@ -427,10 +381,10 @@ watch(
         logicalOperator.value = queryOperator as LogicalOperator;
         advancedFilters.value = mapStoreFiltersToUi(queryFilters);
 
-        invoiceStore.setGlobalSearch(globalSearch.value);
-        invoiceStore.setLogicalOperator(logicalOperator.value);
-        invoiceStore.setAdvancedFilters(queryFilters);
-        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+        companyDetailsStore.setGlobalSearch(globalSearch.value);
+        companyDetailsStore.setLogicalOperator(logicalOperator.value);
+        companyDetailsStore.setAdvancedFilters(queryFilters);
+        await companyDetailsStore.fetchCompanyDetails();
     },
     { immediate: true, deep: true }
 );
@@ -441,3 +395,4 @@ onBeforeUnmount(() => {
     }
 });
 </script>
+

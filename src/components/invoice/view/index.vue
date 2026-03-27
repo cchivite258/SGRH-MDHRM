@@ -115,7 +115,7 @@ const loadInvoiceData = async (id: string) => {
 const handleSaveSuccess = (response: any) => {
   // Atualiza o store e busca as faturas mais recentes
   invoiceStore.setDraftInvoice(invoiceData);
-  invoiceStore.fetchInvoices();
+  invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
 
   // Feedback visual
   toast.success(isEditMode.value

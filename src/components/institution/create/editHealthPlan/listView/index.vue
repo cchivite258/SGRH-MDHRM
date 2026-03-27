@@ -51,6 +51,11 @@ const healthPlanId = computed(() => {
   return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
 });
 
+const getHealthPlanIdFromRoute = () => {
+  const id = route.params.id;
+  return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+};
+
 
 // Estado para posições
 const dialog = ref(false);
@@ -62,7 +67,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,groupFixedAmount,groupPercentage,limitTypeDefinition,hospitalProcedureType.name,hospitalProcedureGroup.name";
+const globalSearchProps = ["hospitalProcedureType.name"];
 const loading = ref(false);
 
 // Computed properties
@@ -144,6 +149,7 @@ const coveragePeriods = computed(() => {
 
 
 
+
 // Buscar dados iniciais
 onMounted(async () => {
   if (healthPlanId.value) {
@@ -197,16 +203,31 @@ interface FetchParams {
 }
 
 const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  if (!healthPlanId.value) return;
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
 
-  await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
-    healthPlanId.value,
+  const trimmedSearch = search.trim();
+  const props: string[] = ["companyHealthPlan.id"];
+  const values: string[] = [planIdFromRoute];
+
+  if (trimmedSearch) {
+    globalSearchProps.forEach((prop) => {
+      props.push(prop);
+      values.push(trimmedSearch);
+    });
+  }
+
+  const query_props = props.join(",");
+  const query_value = values.join(",");
+
+  await hospitalProcedureStore.fetchHospitalProceduresOfPlanScoped(
+    planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
     sortBy[0]?.order || 'asc',
-    search,
-    searchProps
+    query_value,
+    query_props
   );
 };
 
@@ -549,8 +570,8 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
                 :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="hospitalProcedureStore.hospital_procedure_of_plan" :items-per-page="itemsPerPage"
-                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
+                :items="hospitalProcedureStore.hospital_procedure_of_plan_scoped" :items-per-page="itemsPerPage"
+                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="globalSearchProps.join(',')"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
@@ -581,7 +602,7 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
                   </tr>
                 </template>
 
-                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan.length === 0" #body>
+                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
                     <td :colspan="hospitalProcedureHeader.length" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">

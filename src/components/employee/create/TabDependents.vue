@@ -85,6 +85,16 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
 
+const showDependentApiErrors = (error: unknown, fallbackKey = "t-message-save-error") => {
+  const messages = getApiErrorMessages(error, t(fallbackKey));
+  if (messages.length > 0) {
+    messages.forEach((message) => toast.error(message));
+    return;
+  }
+
+  toast.error(t(fallbackKey));
+};
+
 interface FetchParams {
   page: number;
   itemsPerPage: number;
@@ -239,10 +249,7 @@ const onSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar dependentes:", error);
-    const messages = getApiErrorMessages(error, t("t-message-save-error"));
-    if (messages.length === 0) {
-      toast.error(t("t-message-save-error"));
-    }
+    showDependentApiErrors(error, "t-message-save-error");
     callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
@@ -294,7 +301,7 @@ const onConfirmDelete = async () => {
     }
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    showDependentApiErrors(error, "t-toast-message-deleted-erros");
     console.error("Delete error:", error);
   } finally {
     deleteLoading.value = false;

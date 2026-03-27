@@ -3,13 +3,15 @@ import { invoiceService } from "@/app/http/httpServiceProvider";
 import type { InvoiceListingType, InvoiceInsertType } from '@/components/invoice/types';
 
 export const useInvoiceStore = defineStore('invoices', {
+  // Keep list pagination predictable across components that call fetchInvoices without explicit size.
+  // Using a huge default here causes intermittent "all rows" loads when concurrent requests race.
   state: () => ({
     invoices: [] as InvoiceListingType[],
     invoices_list: [] as InvoiceListingType[],
     pagination: {
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10000000,
+      itemsPerPage: 10,
       totalPages: 0
     },
     loading: false,
@@ -35,8 +37,9 @@ export const useInvoiceStore = defineStore('invoices', {
       this.loading = true;
       this.error = null;
 
+      const safeSize = this.pagination.itemsPerPage > 0 ? this.pagination.itemsPerPage : 10;
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? safeSize;
 
       try {
         const { content, meta } = await invoiceService.getInvoices(

@@ -19,7 +19,7 @@ export default class InvoiceService extends HttpService {
   //get de todas instituicoes para o select box
   async getInvoices(
     page: number = 0,
-    size: number = 10000000,
+    size: number = 10,
     sortColumn: string = 'createdAt',
     direction: string = 'asc', // Valor padrão alterado para 'asc' conforme seu exemplo
     globalSearch?: string,

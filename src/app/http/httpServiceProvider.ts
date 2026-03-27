@@ -3,6 +3,7 @@ import AuthService from "@/app/http/services/authService";
 import UserService from "@/app/http/services/userService";
 import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
+import CompanyDetailsService from "@/app/http/services/institution/companyDetailsService";
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
@@ -47,6 +48,7 @@ const authService = new AuthService();
 const userService = new UserService();
 const employeeService = new EmployeeService();
 const institutionService = new InstitutionService();
+const companyDetailsService = new CompanyDetailsService();
 const departmentService = new DepartmentService();
 const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
@@ -101,6 +103,7 @@ export {
     leaveReasonService, 
     languageService, 
     institutionService, 
+    companyDetailsService,
     departmentService, 
     positionService, 
     serviceProviderService,

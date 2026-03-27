@@ -30,6 +30,7 @@ const institutionId = ref<string | null>(
 
 const institutionData = reactive<InstitutionInsertType & { institutionTypeName?: string }>({
   name: "",
+  companyDetailsId: undefined,
   address: "",
   phone: "",
   email: "",

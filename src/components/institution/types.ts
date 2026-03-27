@@ -7,6 +7,18 @@ export type InstitutionListingType = {
     website: string;
     description: string;
     incomeTaxNumber: string;
+    companyDetailsId?: string | number | null;
+    companyDetails?: {
+        id: string | number;
+        name: string;
+        description?: string | null;
+        address?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        incomeTaxNumber?: string | null;
+        institutionType?: { id: string | number; name: string } | null;
+    } | null;
     institutionType?: {
         id: number;
         name: string
@@ -37,6 +49,18 @@ export type InstitutionResponseType = {
     website?: string;
     description?: string;
     incomeTaxNumber: string;
+    companyDetailsId?: string | number | null;
+    companyDetails?: {
+        id: string | number;
+        name: string;
+        description?: string | null;
+        address?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        incomeTaxNumber?: string | null;
+        institutionType?: { id: string | number; name: string } | null;
+    } | null;
     institutionType: {
         id: string;
         name: string
@@ -60,20 +84,21 @@ export type InstitutionResponseType = {
 
 export type InstitutionInsertType = {
     name: string;
-    address: string | null;
-    phone: string;
-    email: string;
-    website: string | null;
     description: string | null;
-    incomeTaxNumber: string;
-    institutionType: string | undefined;
+    companyDetailsId: string | number | undefined;
+    address?: string | null;
+    phone?: string;
+    email?: string;
+    website: string | null;
+    incomeTaxNumber?: string;
+    institutionType?: string | undefined;
 
-    maxNumberOfDependents: number | null;
-    childrenMaxAge: number | null;
-    healthPlanLimit: string | undefined;
-    fixedAmount: number | null;
-    salaryComponent: string | undefined;
-    companyContributionPercentage: number | null;
+    maxNumberOfDependents?: number | null;
+    childrenMaxAge?: number | null;
+    healthPlanLimit?: string | undefined;
+    fixedAmount?: number | null;
+    salaryComponent?: string | undefined;
+    companyContributionPercentage?: number | null;
     enabled: boolean;
 }
 

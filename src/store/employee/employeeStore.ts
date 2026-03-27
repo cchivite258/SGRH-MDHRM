@@ -26,6 +26,18 @@ export const useEmployeeStore = defineStore('employees', {
       itemsPerPage: 10,
       totalPages: 0
     },
+    companyEmployeesPagination: {
+      totalElements: 0,
+      currentPage: 0,
+      itemsPerPage: 10,
+      totalPages: 0
+    },
+    employeesForDropdownPagination: {
+      totalElements: 0,
+      currentPage: 0,
+      itemsPerPage: 10,
+      totalPages: 0
+    },
     loading: false,
     error: null as string | null,
     draftEmployee: null as EmployeeInsertType | null,
@@ -61,8 +73,9 @@ export const useEmployeeStore = defineStore('employees', {
       this.loading = true;
       this.error = null;
 
+      const safeSize = this.pagination.itemsPerPage > 0 ? this.pagination.itemsPerPage : 10;
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? safeSize;
 
       try {
         const { content, meta } = await employeeService.getEmployees(
@@ -76,11 +89,17 @@ export const useEmployeeStore = defineStore('employees', {
         );
 
         this.employees = content;
+        const totalElements = Number(meta?.totalElements ?? content.length ?? 0);
+        const currentPage = Number(meta?.page ?? actualPage ?? 0);
+        const rawSize = Number(meta?.size ?? actualSize ?? 10);
+        const itemsPerPage = rawSize > 0 ? rawSize : 10;
+        const totalPages = Number(meta?.totalPages) || Math.ceil(totalElements / itemsPerPage);
+
         this.pagination = {
-          totalElements: meta.totalElements,
-          currentPage: meta.page,
-          itemsPerPage: meta.size,
-          totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
+          totalElements,
+          currentPage,
+          itemsPerPage,
+          totalPages
         };
         
         console.log('Colaboradores:', this.employees); 
@@ -198,8 +217,11 @@ export const useEmployeeStore = defineStore('employees', {
       this.loading = true;
       this.error = null;
 
-      const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const safeSize = this.employeesForDropdownPagination.itemsPerPage > 0
+        ? this.employeesForDropdownPagination.itemsPerPage
+        : 10;
+      const actualPage = page ?? this.employeesForDropdownPagination.currentPage;
+      const actualSize = size ?? safeSize;
 
       try {
         const { content, meta } = await employeeService.getEmployeesForDropdown(
@@ -213,20 +235,26 @@ export const useEmployeeStore = defineStore('employees', {
         );
 
         this.employeesForDropdown = content;
-        this.pagination = {
-          totalElements: meta.totalElements,
-          currentPage: meta.page,
-          itemsPerPage: meta.size,
-          totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
+        const totalElements = Number(meta?.totalElements ?? content.length ?? 0);
+        const currentPage = Number(meta?.page ?? actualPage ?? 0);
+        const rawSize = Number(meta?.size ?? actualSize ?? 10);
+        const itemsPerPage = rawSize > 0 ? rawSize : 10;
+        const totalPages = Number(meta?.totalPages) || Math.ceil(totalElements / itemsPerPage);
+
+        this.employeesForDropdownPagination = {
+          totalElements,
+          currentPage,
+          itemsPerPage,
+          totalPages
         };
         console.log('Colaboradores:', this.employeesForDropdown);
-        console.log('Meta:', this.pagination);
+        console.log('Meta:', this.employeesForDropdownPagination);
 
       } catch (err: any) {
         this.error = err.message || 'Erro ao buscar colaboradores';
         console.error("❌ Erro ao buscar colaboradores:", err);
         this.employeesForDropdown = [];
-        this.pagination.totalElements = 0;
+        this.employeesForDropdownPagination.totalElements = 0;
       } finally {
         this.loading = false;
       }
@@ -246,8 +274,11 @@ export const useEmployeeStore = defineStore('employees', {
       this.loading = true;
       this.error = null;
 
-      const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const safeSize = this.companyEmployeesPagination.itemsPerPage > 0
+        ? this.companyEmployeesPagination.itemsPerPage
+        : 10;
+      const actualPage = page ?? this.companyEmployeesPagination.currentPage;
+      const actualSize = size ?? safeSize;
 
       try {
         const { content, meta } = await employeeService.getCompanyEmployees(
@@ -261,20 +292,26 @@ export const useEmployeeStore = defineStore('employees', {
         );
 
         this.company_employees = content;
-        this.pagination = {
-          totalElements: meta.totalElements,
-          currentPage: meta.page,
-          itemsPerPage: meta.size,
-          totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
+        const totalElements = Number(meta?.totalElements ?? content.length ?? 0);
+        const currentPage = Number(meta?.page ?? actualPage ?? 0);
+        const rawSize = Number(meta?.size ?? actualSize ?? 10);
+        const itemsPerPage = rawSize > 0 ? rawSize : 10;
+        const totalPages = Number(meta?.totalPages) || Math.ceil(totalElements / itemsPerPage);
+
+        this.companyEmployeesPagination = {
+          totalElements,
+          currentPage,
+          itemsPerPage,
+          totalPages
         };
         console.log('Colaboradores:', this.company_employees);
-        console.log('Meta:', this.pagination);
+        console.log('Meta:', this.companyEmployeesPagination);
 
       } catch (err: any) {
         this.error = err.message || 'Erro ao buscar colaboradores';
         console.error("❌ Erro ao buscar colaboradores:", err);
         this.company_employees = [];
-        this.pagination.totalElements = 0;
+        this.companyEmployeesPagination.totalElements = 0;
       } finally {
         this.loading = false;
       }
