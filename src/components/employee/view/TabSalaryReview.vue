@@ -167,7 +167,7 @@ const submitSalaryUpdate = async () => {
     localLoading.value = true;
     const response = await employeeService.updateBaseSalary(props.employeeId, {
       newBaseSalary: Number(salaryForm.value.newBaseSalary),
-      starDate: salaryForm.value.starDate ? String(salaryForm.value.starDate).split("T")[0] : null
+      starDate: salaryForm.value.starDate ? String(salaryForm.value.starDate).split("T")[0] : undefined
     });
 
     if (response.status === "error") {

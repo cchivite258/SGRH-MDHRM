@@ -247,7 +247,7 @@ export default class InvoiceService extends HttpService {
         `/amm/invoices/${id}/reverse`,
         { notes }
       );
-      console.log('Resposta ao reverse da factura:------------------------', response);
+      //console.log('Resposta ao reverse da factura:------------------------', response);
 
       return {
         data: response.data

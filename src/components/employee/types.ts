@@ -195,7 +195,7 @@ export type EmployeeBaseSalaryTrackType = {
 
 export type EmployeeBaseSalaryUpdateType = {
   newBaseSalary: number | null;
-  starDate: string | null;
+  starDate?: string;
 };
 
 
