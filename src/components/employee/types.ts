@@ -133,6 +133,9 @@ export type EmployeeResponseType = {
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
   alertFlag: string | undefined;
+  baseSalary?: number | null;
+  grossSalary?: number | null;
+  employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
 
 };
 
@@ -177,6 +180,22 @@ export type EmployeeInsertType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
+};
+
+export type EmployeeBaseSalaryTrackType = {
+  id: string;
+  stardDate?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  baseSalary: number | null;
+  status?: string | undefined;
+  employeeId?: string | undefined;
+};
+
+export type EmployeeBaseSalaryUpdateType = {
+  newBaseSalary: number | null;
+  starDate: string | null;
 };
 
 
