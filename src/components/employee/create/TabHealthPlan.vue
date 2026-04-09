@@ -141,7 +141,7 @@ watch(dialog, (newVal: boolean) => {
 const onViewClick = (data: HealthPlanListingType) => {
  router.push({
   path: `/employee/healthPlan/edit/${data.id}`,
-  query: { employeeId: employeeId.value || undefined, tab: "4" }
+  query: { employeeId: employeeId.value || undefined, tab: "5" }
  });
 };
 
@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
 
 
   <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 4)">
       {{ $t('t-back-to-dependents') }} 
     </v-btn>
     

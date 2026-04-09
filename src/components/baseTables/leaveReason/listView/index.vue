@@ -15,6 +15,7 @@ import { leaveReasonService } from "@/app/http/httpServiceProvider";
 import { useLeaveReasonStore } from "@/store/baseTables/LeaveReasonStore";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { LeaveReasonOption } from "@/components/baseTables/leaveReason/types";
 
@@ -53,11 +54,7 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.error?.errors?.name?.[0] || // tenta capturar erro por campo
-    error?.error?.errors?.description?.[0]
-    error?.message ||                                  // erro genérico
-    t("t-message-save-error");                         // fallback traduzido
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
 
   errorMsg.value = message;
 
@@ -144,7 +141,7 @@ const onSubmit = async (data: LeaveReasonListing, callbacks?: {
     // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     // Callback para desativar o loading
@@ -198,7 +195,7 @@ const onConfirmDelete = async () => {
 
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     deleteLoading.value = false;
@@ -277,3 +274,4 @@ const onConfirmDelete = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
+

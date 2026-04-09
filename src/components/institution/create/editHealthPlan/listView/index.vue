@@ -19,6 +19,7 @@ import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore'
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import Status from "@/app/common/components/Status.vue"; 
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 //Options Enums
 import {
@@ -50,6 +51,11 @@ const healthPlanId = computed(() => {
   return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
 });
 
+const getHealthPlanIdFromRoute = () => {
+  const id = route.params.id;
+  return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+};
+
 
 // Estado para posições
 const dialog = ref(false);
@@ -61,7 +67,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,limitTypeDefinition,hospitalProcedureType.name";
+const globalSearchProps = ["hospitalProcedureType.name"];
 const loading = ref(false);
 
 // Computed properties
@@ -87,18 +93,21 @@ const healthPlanFormData = ref<HealthPlanInsertType>({
 /**
  * Regras de validação para os campos do formulário
  */
+const hasNumericValue = (v: number | string | null | undefined) =>
+  v !== null && v !== undefined && v !== "" && !Number.isNaN(Number(v));
+
 const requiredRules = {
   maxNumberOfDependents: [
-    (v: number) => !!v || t('t-please-enter-max-dependents'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-dependents'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-dependents')
   ],
   childrenInUniversityMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age-university'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age-university'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   childrenMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   coveragePeriod: [
     (v: string) => !!v || t('t-please-select-coverage-period')
@@ -137,6 +146,7 @@ const coveragePeriods = computed(() => {
       label: item.name,
     }));
 });
+
 
 
 
@@ -193,16 +203,31 @@ interface FetchParams {
 }
 
 const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  if (!healthPlanId.value) return;
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
 
-  await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
-    healthPlanId.value,
+  const trimmedSearch = search.trim();
+  const props: string[] = [];
+  const values: string[] = [];
+
+  if (trimmedSearch) {
+    globalSearchProps.forEach((prop) => {
+      props.push(prop);
+      values.push(trimmedSearch);
+    });
+  }
+
+  const query_props = props.join(",");
+  const query_value = values.join(",");
+
+  await hospitalProcedureStore.fetchHospitalProceduresOfPlanScoped(
+    planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
     sortBy[0]?.order || 'asc',
-    search,
-    searchProps
+    query_value,
+    query_props
   );
 };
 
@@ -220,13 +245,18 @@ const onCreateEditClick = (data: HospitalProcedureInsertType | HospitalProcedure
   hospitalProcedureFormData.value = {
     ...(data || {}),
     id: data?.id || undefined,
-    fixedAmount: data?.fixedAmount || 0,
-    percentage: data?.percentage || 0,
+    fixedAmount: data?.fixedAmount ?? 0,
+    percentage: data?.percentage ?? 0,
     limitTypeDefinition: data?.limitTypeDefinition || "",
+    hospitalProcedureGroup: data?.hospitalProcedureGroup ?? (data as any)?.hospitalProcedureGroupId ?? null,
+    groupFixedAmount: data?.groupFixedAmount ?? null,
+    groupPercentage: data?.groupPercentage ?? null,
+    hospitalProcedureGroupLimit: data?.hospitalProcedureGroupLimit ?? null,
+    belongsToGroup: data?.belongsToGroup ?? false,
     hospitalProcedureType: data?.hospitalProcedureType || undefined,
     companyHealthPlan: healthPlanId.value || undefined,
     company: healthPlanFormData.value.company || undefined,
-    enabled: data?.enabled || true
+    enabled: data?.enabled ?? true
   };
   dialog.value = true;
 };
@@ -234,6 +264,7 @@ const onSubmitHospitalProcedure = async (
   data: HospitalProcedureInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -250,21 +281,8 @@ const onSubmitHospitalProcedure = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -280,22 +298,8 @@ const onSubmitHospitalProcedure = async (
 
     callbacks?.onSuccess?.();
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -400,21 +404,7 @@ const handleSubmit = async () => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -424,22 +414,7 @@ const handleSubmit = async () => {
     await healthPlanStore.fetchHealthPlans(healthPlanFormData.value.company);
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }
@@ -451,6 +426,30 @@ const handleSubmit = async () => {
 const getLimitTypeLabel = (value: string) => {
   const option = limitTypeDefinitionOptions.find(opt => opt.value === value);
   return option ? option.label : value;
+};
+
+const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
+  if (!item.belongsToGroup) return "Sem grupo";
+
+  const group = item.hospitalProcedureGroup as string | { name?: string; id?: string | number } | null | undefined;
+  if (!group) return "Grupo sem nome";
+  if (typeof group === "string") return group;
+  return group.name || (group.id != null ? String(group.id) : "Grupo sem nome");
+};
+
+const getDisplayFixedAmount = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupFixedAmount : item.fixedAmount;
+  return value ?? "-";
+};
+
+const getDisplayPercentage = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupPercentage : item.percentage;
+  return value !== null && value !== undefined ? `${value}%` : "-";
+};
+
+const getDisplayLimitType = (item: HospitalProcedureListingType) => {
+  const limitType = item.belongsToGroup ? item.hospitalProcedureGroupLimit : item.limitTypeDefinition;
+  return getLimitTypeLabel(limitType || "");
 };
 
 </script>
@@ -571,8 +570,8 @@ const getLimitTypeLabel = (value: string) => {
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
                 :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="hospitalProcedureStore.hospital_procedure_of_plan" :items-per-page="itemsPerPage"
-                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
+                :items="hospitalProcedureStore.hospital_procedure_of_plan_scoped" :items-per-page="itemsPerPage"
+                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="globalSearchProps.join(',')"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
@@ -581,9 +580,18 @@ const getLimitTypeLabel = (value: string) => {
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
                     <td>{{ item.hospitalProcedureType.name }}</td>
-                    <td>{{ getLimitTypeLabel(item.limitTypeDefinition) }}</td>
-                    <td>{{ item.fixedAmount }}</td>
-                    <td>{{ item.percentage }}%</td>
+                    <td>
+                      <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
+                        <span class="group-dot" />
+                        <div class="group-text">
+                          <span class="group-name">{{ getHospitalProcedureGroupName(item) }}</span>
+                          <span class="group-state">{{ item.belongsToGroup ? 'Agrupado' : 'Individual' }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ getDisplayLimitType(item) }}</td>
+                    <td>{{ getDisplayFixedAmount(item) }}</td>
+                    <td>{{ getDisplayPercentage(item) }}</td>
                     <td>
                       <Status :status="item.enabled ? 'enabled' : 'disabled'" />
                     </td>
@@ -594,7 +602,7 @@ const getLimitTypeLabel = (value: string) => {
                   </tr>
                 </template>
 
-                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan.length === 0" #body>
+                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
                     <td :colspan="hospitalProcedureHeader.length" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">
@@ -634,3 +642,43 @@ const getLimitTypeLabel = (value: string) => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" :loading="deleteLoading"
     @onConfirm="onConfirmDelete" />
 </template>
+
+<style scoped>
+.group-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(var(--v-theme-on-surface), 0.35);
+  flex-shrink: 0;
+}
+
+.group-cell--grouped .group-dot {
+  background: rgb(var(--v-theme-info));
+}
+
+.group-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.02;
+}
+
+.group-name {
+  font-size: 0.78rem;
+  color: rgba(var(--v-theme-on-surface), 0.82);
+}
+
+.group-cell--grouped .group-name {
+  font-weight: 600;
+}
+
+.group-state {
+  font-size: 0.66rem;
+  color: rgba(var(--v-theme-on-surface), 0.52);
+}
+</style>

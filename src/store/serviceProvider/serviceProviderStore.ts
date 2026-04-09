@@ -143,6 +143,7 @@ export const useServiceProviderStore = defineStore('serviceProviders', {
     clearFilters() {
       this.globalSearch = '';
       this.advancedFilters = [];
+      this.logicalOperator = 'AND';
     },
 
     setDraftServiceProvider(data: ServiceProviderInsertType) {

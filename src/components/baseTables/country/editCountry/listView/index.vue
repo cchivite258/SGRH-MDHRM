@@ -18,6 +18,8 @@ import { useCountryStore } from "@/store/baseTables/countryStore";
 import { countryService } from "@/app/http/httpServiceProvider";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 import { useCountryStoreID } from "@/store/baseTables/countryStore";
 import { useProvinceByCountryStoreID } from "@/store/baseTables/countryStore";
 import { ProvinceListingType } from "@/components/baseTables/country/types";
@@ -269,20 +271,8 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.response?.data?.error?.errors?.name?.[0] ||
-    error?.response?.data?.error?.errors?.code?.[0] ||
-    error?.response?.data?.error?.errors?.currency?.[0] ||
-    error?.response?.data?.error?.errors?.currencyCode?.[0] ||
-    error?.response?.data?.error?.errors?.currencySymbol?.[0] ||
-    error?.response?.data?.error?.errors?.iso2Code?.[0] ||
-    error?.response?.data?.error?.errors?.iso3Code?.[0] ||
-    error?.response?.data?.error?.errors?.phoneCode?.[0] ||
-    error?.response?.data?.message ||
-    error?.message ||
-    t("t-message-save-error");
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
 
-  console.error("Erro:", message);
   errorMsg.value = message;
 
   alertTimeout = setTimeout(() => {
@@ -297,18 +287,7 @@ const handleCountryUpdateApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.response?.data?.error?.errors?.name?.[0] ||
-    error?.response?.data?.error?.errors?.code?.[0] ||
-    error?.response?.data?.error?.errors?.currency?.[0] ||
-    error?.response?.data?.error?.errors?.currencyCode?.[0] ||
-    error?.response?.data?.error?.errors?.currencySymbol?.[0] ||
-    error?.response?.data?.error?.errors?.iso2Code?.[0] ||
-    error?.response?.data?.error?.errors?.iso3Code?.[0] ||
-    error?.response?.data?.error?.errors?.phoneCode?.[0] ||
-    error?.response?.data?.message ||
-    error?.message ||
-    t("t-message-save-error");
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
 
   console.error("Erro:", message);
   countryUpdateErrorMsg.value = message;
@@ -339,7 +318,7 @@ const onSubmit = async (data: CountryListingType, callbacks?: {
     // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
 
   } finally {
@@ -391,7 +370,7 @@ const onConfirmDelete = async () => {
     toast.success(t('t-toast-message-deleted'));
     provinceByCountryStoreID.fetchProvincesByCountryID(countryId.value);
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -434,7 +413,19 @@ const handleSubmit = async () => {
   loading.value = true;
 
   try {
-    await countryService.updateCountry(form.value.id!, form.value as CountryInsertType);
+    const payload = { ...form.value } as Record<string, any>;
+    normalizeObjectStringFieldsInPlace(payload, {
+      name: "trimToEmpty",
+      code: "trimToEmpty",
+      iso2Code: "trimToEmpty",
+      iso3Code: "trimToEmpty",
+      phoneCode: "trimToEmpty",
+      currency: "trimToEmpty",
+      currencySymbol: "trimToEmpty",
+      currencyCode: "trimToEmpty"
+    });
+
+    await countryService.updateCountry(form.value.id!, payload as CountryInsertType);
 
     toast.success(t('t-toast-message-update'));
     await countryStore.fetchCountries();
@@ -604,3 +595,4 @@ const handleSubmit = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
+

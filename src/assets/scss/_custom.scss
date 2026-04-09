@@ -102,6 +102,17 @@ code {
     border: thin solid var(--#{$prefix}border-color);
   }
 
+  .v-field--disabled {
+    background-color: #e2e6ea !important;
+    opacity: 1 !important;
+
+    .v-field__input,
+    .v-label {
+      color: #6c757d !important;
+      opacity: 1 !important;
+    }
+  }
+
   &.is-invalid {
     .v-field {
       border-color: $danger !important;

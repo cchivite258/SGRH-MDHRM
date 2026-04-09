@@ -90,6 +90,7 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const errorMsg = ref("");
 const invoiceItems = ref<InvoiceItem[]>([]);
 const activeHealthPlanId = ref("");
+const lastProceduresLoadKey = ref("");
 
 // =============================================
 // COMPUTED PROPERTIES
@@ -181,34 +182,45 @@ const calculateLineTotal = (item: InvoiceItem) => {
   };
 };
 
+const resolveHealthPlanId = async (): Promise<string> => {
+  if (props.healthplanId) {
+    return props.healthplanId;
+  }
+
+  if (!props.institutionId) {
+    return "";
+  }
+
+  const activeHealthPlan = await healthPlanStore.fetchActiveHealthPlan(props.institutionId);
+  return activeHealthPlan?.id || "";
+};
+
 const loadProcedures = async () => {
   try {
-    hospitalProcedureStore.hospital_procedure_of_plan = [];
-    activeHealthPlanId.value = "";
-
-    // console.log('Loading procedures with:', {
-    //   healthplanId: props.healthplanId,
-    //   institutionId: props.institutionId
-    // });
-
-    if (!props.healthplanId || !props.institutionId) {
-      console.warn('Missing required IDs:', {
-        hasHealthplanId: !!props.healthplanId,
-        hasInstitutionId: !!props.institutionId
-      });
+    if (!props.institutionId) {
       return;
     }
 
-    activeHealthPlanId.value = props.healthplanId;
-    console.log("Active Health Plan ID:", activeHealthPlanId.value);
+    const resolvedHealthPlanId = await resolveHealthPlanId();
+    if (!resolvedHealthPlanId) {
+      console.warn('Missing health plan ID for invoice view procedures');
+      return;
+    }
+
+    const loadKey = `${props.institutionId}:${resolvedHealthPlanId}`;
+    const keyChanged = lastProceduresLoadKey.value !== loadKey;
+
+    activeHealthPlanId.value = resolvedHealthPlanId;
+    if (keyChanged) {
+      hospitalProcedureStore.hospital_procedure_of_plan = [];
+    }
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value)
+      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
+      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
     ]);
-    
-    console.log('Procedures loaded successfully');
-    
+
+    lastProceduresLoadKey.value = loadKey;
   } catch (error) {
     handleError('t-error-loading-procedures', error);
   }
@@ -288,12 +300,6 @@ defineExpose({ emitItemsReady });
 // =============================================
 // WATCHERS
 // =============================================
-watch(() => props.institutionId, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    loadProcedures();
-  }
-}, { immediate: true });
-
 watch(() => props.initialItems, (newItems) => {
   if (newItems?.length) {
     invoiceItems.value = newItems.map(item => ({
@@ -313,9 +319,8 @@ watch(invoiceItems, (newItems) => {
 }, { deep: true });
 
 
-watch([() => props.healthplanId, () => props.institutionId], ([newHealthplanId, newInstitutionId]) => {
-  if (newHealthplanId && newInstitutionId) {
-   // console.log('Both IDs available, loading procedures...');
+watch([() => props.institutionId, () => props.healthplanId], ([newInstitutionId]) => {
+  if (newInstitutionId) {
     loadProcedures();
   }
 }, { immediate: true });
@@ -324,8 +329,6 @@ watch([() => props.healthplanId, () => props.institutionId], ([newHealthplanId, 
 // LIFECYCLE HOOKS
 // =============================================
 onMounted(() => {
-  loadProcedures();
-
   if (props.initialItems?.length) {
     invoiceItems.value = props.initialItems.map(item => ({
       ...item,

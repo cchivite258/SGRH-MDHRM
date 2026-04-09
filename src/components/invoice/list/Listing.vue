@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue"
-import { useRouter } from "vue-router"
+import { ref, computed, watch, onBeforeMount } from "vue"
+import { useRouter, onBeforeRouteLeave } from "vue-router"
 import { useInvoiceStore } from "@/store/invoice/invoiceStore"
 import { invoiceService } from "@/app/http/httpServiceProvider"
 import { useToast } from 'vue-toastification'
@@ -12,6 +12,8 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue"
 import TableAction from "@/app/common/components/TableAction.vue"
 import PostInvoiceConfirmationDialog from "@/app/common/components/PostInvoiceConfirmationDialog.vue"
 import CancelInvoiceConfirmationDialog from "@/app/common/components/CancelInvoiceConfirmationDialog.vue"
+import ReverseInvoiceConfirmationDialog from "@/app/common/components/ReverseInvoiceConfirmationDialog.vue"
+import ReverseInvoiceNotesDialog from "@/app/common/components/ReverseInvoiceNotesDialog.vue"
 import { invoiceHeader, Options } from "@/components/invoice/list/utils"
 import Card from "@/app/common/components/Card.vue"
 import Status from "@/app/common/components/Status.vue";
@@ -37,8 +39,17 @@ const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
+const reverseDialog = ref(false)
+const reverseNotesDialog = ref(false)
+const reverseId = ref<string | null>(null)
+const reverseLoading = ref(false)
 const itemsPerPage = ref(10)
 const selectedInvoices = ref<any[]>([]) // Armazena os funcionários selecionados
+const resetListingFilters = () => {
+  invoiceStore.clearFilters()
+  searchQuery.value = ""
+  selectedInvoices.value = []
+}
 
 // Computed properties
 const loading = computed(() => invoiceStore.loading)
@@ -193,6 +204,49 @@ const cancelInvoice = async () => {
     cancelDialog.value = false;
   }
 };
+
+const openReverseDialog = (id: string) => {
+  reverseId.value = id
+  reverseDialog.value = true
+}
+
+const openReverseNotesDialog = () => {
+  reverseDialog.value = false
+  reverseNotesDialog.value = true
+}
+
+const reverseInvoice = async (notes: string) => {
+  if (!reverseId.value) return;
+
+  reverseLoading.value = true;
+  try {
+    await invoiceService.reverseInvoice(reverseId.value, notes);
+    toast.success(t('t-toast-message-reverse'));
+    await invoiceStore.fetchInvoices(0, itemsPerPage.value);
+  } catch (error: unknown) {
+    console.log('Erro completo:', error);
+
+    if (typeof error === 'object' && error !== null) {
+      const apiError = error as {
+        message?: string;
+        details?: any;
+        status?: number;
+      };
+
+      if (apiError.message) {
+        toast.error(apiError.message);
+      } else {
+        toast.error(t('t-toast-message-error'));
+      }
+    } else {
+      toast.error(t('t-toast-message-error'));
+    }
+  } finally {
+    reverseLoading.value = false;
+    reverseDialog.value = false;
+    reverseNotesDialog.value = false;
+  }
+};
 // Abre o diálogo de confirmação para exclusão
 /*
 const openDeleteDialog = (id: string) => {
@@ -257,14 +311,27 @@ const onCancel = (id: string) => {
   openCancelDialog(id);
 }
 
+const onReverse = (invoice: InvoiceListingType) => {
+  if (invoice.invoiceStatus !== 'POSTED') {
+    toast.error(t('t-invoice-reverse-only-posted'));
+    return;
+  }
+
+  openReverseDialog(invoice.id);
+}
+
 const getDynamicOptions = (invoice: InvoiceListingType) => {
   // Opções base
-  let availableOptions = [...Options];
+  let availableOptions = Options.filter(option => option.title !== 'reverse');
   
   // Filtrar opções com base no status
-  if (invoice.invoiceStatus === 'CANCELLED' || invoice.invoiceStatus === 'POSTED') {
+  if (invoice.invoiceStatus === 'CANCELLED' || invoice.invoiceStatus === 'REVERSED') {
     availableOptions = availableOptions.filter(option => 
       option.title === 'view'
+    );
+  } else if (invoice.invoiceStatus === 'POSTED') {
+    availableOptions = Options.filter(option =>
+      option.title === 'view' || option.title === 'reverse'
     );
   }
   
@@ -292,6 +359,9 @@ const onSelect = (option: string, data: InvoiceListingType) => {
     case "cancel":
       onCancel(data.id); 
       break;
+    case "reverse":
+      onReverse(data);
+      break;
   }
 };
 
@@ -306,10 +376,29 @@ const formatAmount = (amount: number | string) => {
   }).format(num);
 };
 
-const hasFlaggedItems = (invoice: InvoiceListingType) => invoice.areItemsFlagged === true;
+const getInvoiceAlerts = (invoice: InvoiceListingType) => {
+  const alerts: string[] = [];
+
+  if (invoice.flag === 'EXCEEDS_GLOBAL_LIMIT') alerts.push(t('t-exceeds-global-limit'));
+  if (invoice.flag === 'INSUFFICIENT_FUNDS') alerts.push(t('t-insufficient-funds'));
+
+  if (invoice.areItemsFlagged === true) {
+    alerts.push(t('t-exceeds-procedure-limit'));
+  }
+
+  return alerts;
+};
 
 const shouldHighlight = (invoice: InvoiceListingType) =>
-  invoice.flag !== 'UNFLAGGED' || hasFlaggedItems(invoice);
+  (!!invoice.flag && invoice.flag !== 'UNFLAGGED') || invoice.areItemsFlagged === true;
+
+onBeforeMount(() => {
+  resetListingFilters()
+})
+
+onBeforeRouteLeave(() => {
+  resetListingFilters()
+})
 </script>
 <template>
   <Card :title="$t('t-invoice-list')" class="mt-7">
@@ -346,11 +435,11 @@ const shouldHighlight = (invoice: InvoiceListingType) =>
             <td class="text-primary cursor-pointer" @click="onView(item.id)">
               <div class="d-flex align-center ga-2">
                 <span>{{ item.invoiceNumber || 'N/A' }}</span>
-                <v-tooltip v-if="hasFlaggedItems(item)" location="top">
+                <v-tooltip v-if="getInvoiceAlerts(item).length" location="top">
                   <template #activator="{ props }">
                     <i v-bind="props" class="ph ph-warning-circle text-danger" />
                   </template>
-                  <span>{{ $t('t-items-flagged') }}</span>
+                  <span>{{ getInvoiceAlerts(item).join(' | ') }}</span>
                 </v-tooltip>
               </div>
             </td>
@@ -385,4 +474,6 @@ const shouldHighlight = (invoice: InvoiceListingType) =>
   <PostInvoiceConfirmationDialog v-model="postDialog" @onConfirm="postInvoice" :loading="postLoading" />
   <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" @onConfirm="postFlaggedInvoice" :loading="postFlaggedLoading" />
   <CancelInvoiceConfirmationDialog v-model="cancelDialog" @onConfirm="cancelInvoice" :loading="cancelLoading" />
+  <ReverseInvoiceConfirmationDialog v-model="reverseDialog" @onConfirm="openReverseNotesDialog" :loading="reverseLoading" />
+  <ReverseInvoiceNotesDialog v-model="reverseNotesDialog" @onConfirm="reverseInvoice" :loading="reverseLoading" />
 </template>

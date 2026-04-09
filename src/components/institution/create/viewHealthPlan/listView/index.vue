@@ -15,6 +15,7 @@ import { useRoute } from 'vue-router';
 import DataTableServer from "@/app/common/components/DataTableServer.vue"; 
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import Status from "@/app/common/components/Status.vue";
 
 //Options Enums
@@ -55,7 +56,7 @@ const hospitalProcedureFormData = ref<HospitalProcedureInsertType | HospitalProc
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const searchProps = "fixedAmount,percentage,limitTypeDefinition,hospitalProcedureType.name";
+const globalSearchProps = ["hospitalProcedureType.name"];
 const loading = ref(false);
 
 // Computed properties
@@ -87,6 +88,7 @@ const coveragePeriods = computed(() => {
       label: item.name,
     }));
 });
+
 
 
 
@@ -142,17 +144,36 @@ interface FetchParams {
   search: string;
 }
 
-const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
-  if (!healthPlanId.value) return;
+const getHealthPlanIdFromRoute = () => {
+  const id = route.params.id;
+  return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
+};
 
-  await hospitalProcedureStore.fetchHospitalProceduresOfPlan(
-    healthPlanId.value,
+const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
+  const trimmedSearch = search.trim();
+  const props: string[] = [];
+  const values: string[] = [];
+
+  if (trimmedSearch) {
+    globalSearchProps.forEach((prop) => {
+      props.push(prop);
+      values.push(trimmedSearch);
+    });
+  }
+
+  const query_props = props.join(",");
+  const query_value = values.join(",");
+
+  await hospitalProcedureStore.fetchHospitalProceduresOfPlanScoped(
+    planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
     sortBy[0]?.key || 'createdAt',
     sortBy[0]?.order || 'asc',
-    search,
-    searchProps
+    query_value,
+    query_props
   );
 };
 
@@ -238,21 +259,7 @@ const handleSubmit = async () => {
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => {
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -262,22 +269,7 @@ const handleSubmit = async () => {
     await healthPlanStore.fetchHealthPlans(healthPlanFormData.value.company);
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }
@@ -294,6 +286,30 @@ const getHealthPlanLimitLabel = (value: string | undefined) => {
 const getLimitTypeLabel = (value: string | undefined) => {
   const option = limitTypeDefinitionOptions.find(opt => opt.value === value);
   return option ? option.label : value;
+};
+
+const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
+  if (!item.belongsToGroup) return "Sem grupo";
+
+  const group = item.hospitalProcedureGroup as string | { name?: string; id?: string | number } | null | undefined;
+  if (!group) return "Grupo sem nome";
+  if (typeof group === "string") return group;
+  return group.name || (group.id != null ? String(group.id) : "Grupo sem nome");
+};
+
+const getDisplayFixedAmount = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupFixedAmount : item.fixedAmount;
+  return value ?? "-";
+};
+
+const getDisplayPercentage = (item: HospitalProcedureListingType) => {
+  const value = item.belongsToGroup ? item.groupPercentage : item.percentage;
+  return value !== null && value !== undefined ? `${value}%` : "-";
+};
+
+const getDisplayLimitType = (item: HospitalProcedureListingType) => {
+  const limitType = item.belongsToGroup ? item.hospitalProcedureGroupLimit : item.limitTypeDefinition;
+  return getLimitTypeLabel(limitType || "");
 };
 
 const getSalaryComponentLabel = (value: string | undefined) => {
@@ -397,8 +413,8 @@ const getSalaryComponentLabel = (value: string | undefined) => {
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
                 :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-                :items="hospitalProcedureStore.hospital_procedure_of_plan" :items-per-page="itemsPerPage"
-                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
+                :items="hospitalProcedureStore.hospital_procedure_of_plan_scoped" :items-per-page="itemsPerPage"
+                :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="globalSearchProps.join(',')"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
@@ -407,9 +423,18 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
                     <td>{{ item.hospitalProcedureType.name }}</td>
-                    <td>{{ getLimitTypeLabel(item.limitTypeDefinition) }}</td>
-                    <td>{{ item.fixedAmount }}</td>
-                    <td>{{ item.percentage }}%</td>
+                    <td>
+                      <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
+                        <span class="group-dot" />
+                        <div class="group-text">
+                          <span class="group-name">{{ getHospitalProcedureGroupName(item) }}</span>
+                          <span class="group-state">{{ item.belongsToGroup ? 'Agrupado' : 'Individual' }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>{{ getDisplayLimitType(item) }}</td>
+                    <td>{{ getDisplayFixedAmount(item) }}</td>
+                    <td>{{ getDisplayPercentage(item) }}</td>
                     <td>
                       <Status :status="item.enabled ? 'enabled' : 'disabled'" />
                     </td>
@@ -419,7 +444,7 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                   </tr>
                 </template>
 
-                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan.length === 0" #body>
+                <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
                     <td :colspan="hospitalProcedureHeader.length" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">
@@ -452,3 +477,43 @@ const getSalaryComponentLabel = (value: string | undefined) => {
   <ViewHospitalProcedureDialog v-if="hospitalProcedureFormData" v-model="viewDialog"
     :data="hospitalProcedureFormData" />
 </template>
+
+<style scoped>
+.group-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.group-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(var(--v-theme-on-surface), 0.35);
+  flex-shrink: 0;
+}
+
+.group-cell--grouped .group-dot {
+  background: rgb(var(--v-theme-info));
+}
+
+.group-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.02;
+}
+
+.group-name {
+  font-size: 0.78rem;
+  color: rgba(var(--v-theme-on-surface), 0.82);
+}
+
+.group-cell--grouped .group-name {
+  font-weight: 600;
+}
+
+.group-state {
+  font-size: 0.66rem;
+  color: rgba(var(--v-theme-on-surface), 0.52);
+}
+</style>

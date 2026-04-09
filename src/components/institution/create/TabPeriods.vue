@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 /**
- * TabPeriods - Componente para  de pessoas de contato de instituições
+ * TabPeriods - Componente para  de pessoas de contato de contratos
  * 
  * Funcionalidades:
  * - Listagem de períodos de cobertura
@@ -31,6 +31,7 @@ import { formateDate } from "@/app/common/dateFormate";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { coveragePeriodsService } from "@/app/http/httpServiceProvider";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -53,6 +54,10 @@ const props = defineProps({
   institutionId: {
     type: String as PropType<string | null>,
     default: null
+  },
+  isViewMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -160,6 +165,7 @@ const onSubmit = async (
   data: CoveragePeriodInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: any) => void,
     onFinally?: () => void
   }
 ) => {
@@ -174,7 +180,8 @@ const onSubmit = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      toast.error(response.error?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
       return;
     }
 
@@ -190,7 +197,8 @@ const onSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar periodo de cobertura:", error);
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -200,6 +208,15 @@ const onSubmit = async (
 Opcoes da lista
 */
 const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
+  if (props.isViewMode) {
+    return Options
+      .filter((option) => option.title === "view")
+      .map((option) => ({
+        ...option,
+        title: t(`t-${option.title}`)
+      }));
+  }
+
   // Opções base
   let availableOptions = [...Options];
 
@@ -268,25 +285,7 @@ const onConfirmClose = async () => {
     await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
-
-    if (typeof error === 'object' && error !== null) {
-      const apiError = error as {
-        message?: string;
-        details?: any;
-        status?: number;
-      };
-
-      if (apiError.message) {
-        // Mostra a mensagem direta do erro
-        toast.error(apiError.message);
-      } else {
-        // Fallback para mensagem genérica
-        toast.error(t('t-toast-message-error'));
-      }
-    } else {
-      // Caso o erro não seja um objeto
-      toast.error(t('t-toast-message-error'));
-    }
+    getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
   } finally {
     periodCloseLoading.value = false;
     periodCloseDialog.value = false;
@@ -312,25 +311,7 @@ const onConfirmStart = async () => {
     await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
-
-    if (typeof error === 'object' && error !== null) {
-      const apiError = error as {
-        message?: string;
-        details?: any;
-        status?: number;
-      };
-
-      if (apiError.message) {
-        // Mostra a mensagem direta do erro
-        toast.error(apiError.message);
-      } else {
-        // Fallback para mensagem genérica
-        toast.error(t('t-toast-message-error'));
-      }
-    } else {
-      // Caso o erro não seja um objeto
-      toast.error(t('t-toast-message-error'));
-    }
+    getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
   } finally {
     periodStartLoading.value = false;
     periodStartDialog.value = false;
@@ -410,7 +391,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-coverage-period-list')" title-class="py-5">
-    <template #title-action>
+    <template v-if="!props.isViewMode" #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-coverage-period') }}
@@ -438,10 +419,10 @@ onBeforeUnmount(() => {
         :headers="coveragePeriodHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="coveragePeriodStore.coverage_periods" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-        @load-items="fetchCoveragePeriods" item-value="id" show-select>
+        @load-items="fetchCoveragePeriods" item-value="id" :show-select="!props.isViewMode">
         <template #body="{ items }">
           <tr v-for="item in items as CoveragePeriodListingType[]" :key="item.id" height="50">
-            <td>
+            <td v-if="!props.isViewMode">
               <v-checkbox :model-value="selectedCoveragePeriods.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -483,13 +464,16 @@ onBeforeUnmount(() => {
   <StartConfirmationDialog v-model="periodStartDialog" :loading="periodStartLoading" @onConfirm="onConfirmStart" />
   <CloseConfirmationDialog v-model="periodCloseDialog" :loading="periodCloseLoading" @onConfirm="onConfirmClose" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
+  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 1)">
-      {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+      {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
     </v-btn>
-    <v-btn color="success" variant="elevated" @click="$emit('onStepChange', 5)">
+    <v-btn color="success" variant="elevated" @click="$emit('onStepChange', 3)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 
   </v-card-actions>
 </template>
+
+
+

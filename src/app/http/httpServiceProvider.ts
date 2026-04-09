@@ -3,6 +3,7 @@ import AuthService from "@/app/http/services/authService";
 import UserService from "@/app/http/services/userService";
 import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
+import CompanyDetailsService from "@/app/http/services/institution/companyDetailsService";
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
@@ -20,6 +21,8 @@ import InvoiceItemService from "@/app/http/services/invoice/invoiceItemService";
 import CountryService from "@/app/http/services/baseTables/country/countryService";
 import CurrencyService from "@/app/http/services/baseTables/currency/currencyService";
 import HospitalProcedureTypeService from "@/app/http/services/baseTables/hospitalProcedureType/hospitalProcedureTypeService";
+import HospitalProcedureGroupService from "@/app/http/services/baseTables/hospitalProcedureGroup/hospitalProcedureGroupService";
+import HospitalProcedureGroupingService from "@/app/http/services/baseTables/hospitalProcedureGrouping/hospitalProcedureGroupingService";
 import InstitutionTypeService from "@/app/http/services/baseTables/institutionTypes/institutionTypeService";
 import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leaveReasonService";
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
@@ -45,6 +48,7 @@ const authService = new AuthService();
 const userService = new UserService();
 const employeeService = new EmployeeService();
 const institutionService = new InstitutionService();
+const companyDetailsService = new CompanyDetailsService();
 const departmentService = new DepartmentService();
 const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
@@ -74,6 +78,8 @@ const employeeExpenseStatementReportService = new EmployeeExpenseStatementReport
 const countryService = new CountryService();
 const currencyService = new CurrencyService();
 const hospitalProcedureTypeService = new HospitalProcedureTypeService();
+const hospitalProcedureGroupService = new HospitalProcedureGroupService();
+const hospitalProcedureGroupingService = new HospitalProcedureGroupingService();
 const institutionTypeService = new InstitutionTypeService();
 const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
@@ -91,10 +97,13 @@ export {
     countryService, 
     currencyService, 
     hospitalProcedureTypeService, 
+    hospitalProcedureGroupService,
+    hospitalProcedureGroupingService,
     institutionTypeService, 
     leaveReasonService, 
     languageService, 
     institutionService, 
+    companyDetailsService,
     departmentService, 
     positionService, 
     serviceProviderService,

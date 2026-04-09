@@ -19,7 +19,7 @@ export default class InvoiceService extends HttpService {
   //get de todas instituicoes para o select box
   async getInvoices(
     page: number = 0,
-    size: number = 10000000,
+    size: number = 10,
     sortColumn: string = 'createdAt',
     direction: string = 'asc', // Valor padrão alterado para 'asc' conforme seu exemplo
     globalSearch?: string,
@@ -232,6 +232,22 @@ export default class InvoiceService extends HttpService {
         `/amm/invoices/${id}/cancel`
       );
       console.log('Resposta ao cancel da factura:------------------------', response);
+
+      return {
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async reverseInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+    try {
+      const response = await this.post<{ data: InvoiceResponseType; meta: any }>(
+        `/amm/invoices/${id}/reverse`,
+        { notes }
+      );
+      //console.log('Resposta ao reverse da factura:------------------------', response);
 
       return {
         data: response.data

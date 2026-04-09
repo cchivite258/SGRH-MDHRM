@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem } from "@/components/employee/types";
+import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -229,13 +229,41 @@ export default class EmployeeService extends HttpService {
     try {
       console.log('ID recebido para busca:', id);
       const response = await this.get<{ data: EmployeeResponseType; meta: any }>
-        (`/human-resource/employees/${id}?includes=position,department,company,province,country`);
+        (`/human-resource/employees/${id}?includes=position,department,company,province,country,employeeBaseSalaryTracks`);
       console.log('Resposta da requisição id:------------------------', response);
       return {
         data: response.data
       };
     } catch (error) {
       throw this.handleError(error);
+    }
+  }
+
+  async getEmployeeSalaryTracks(id: string): Promise<EmployeeResponseType | null> {
+    try {
+      const params = new URLSearchParams({
+        page: "0",
+        size: "1",
+        sortColumn: "createdAt",
+        direction: "desc",
+        query_props: "id",
+        query_comparision: "equals",
+        query_value: id,
+        includes: "employeeBaseSalaryTrack"
+      });
+
+      const url = `/human-resource/employees?${params.toString()}`;
+      console.log("URL de busca do histórico salarial:", url);
+
+      const response = await this.get<ApiResponse<EmployeeResponseType[]>>(
+        url
+      );
+      console.log("getEmployeeSalaryTracks", response);
+
+      return response.data?.[0] || null;
+    } catch (error) {
+      console.error("Erro ao buscar histórico salarial do colaborador:", error);
+      return null;
     }
   }
 
@@ -283,6 +311,7 @@ export default class EmployeeService extends HttpService {
         idCardNumber: employeeData.idCardNumber,
         idCardIssuer: employeeData.idCardIssuer,
         idCardExpiryDate: employeeData.idCardExpiryDate,
+        isLifeTimeCard: employeeData.isLifeTimeCard,
         idCardIssuanceDate: employeeData.idCardIssuanceDate,
         passportNumber: employeeData.passportNumber,
         passportIssuer: employeeData.passportIssuer,
@@ -306,6 +335,32 @@ export default class EmployeeService extends HttpService {
     } catch (error) {
       console.error("❌ Erro ao actualizar colaborador:", error);
       throw error;
+    }
+  }
+
+  async updateBaseSalary(id: string, payload: EmployeeBaseSalaryUpdateType): Promise<ServiceResponse<EmployeeResponseType>> {
+    try {
+      const response = await this.post<ApiResponse<EmployeeResponseType>>(
+        `/human-resource/employees/${id}/update-base-salary`,
+        payload
+      );
+
+      return {
+        status: 'success',
+        data: response.data
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: 'error',
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: 'error',
+        error: this.createNetworkErrorResponse()
+      };
     }
   }
 

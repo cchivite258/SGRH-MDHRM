@@ -194,7 +194,7 @@ watch(() => invoiceData.value, (newValue) => {
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
   if (newInstitutionId) {
     try {
-      await employeeStore.fetchEmployeesForDropdown(newInstitutionId);
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, 10000000);
 
       if (invoiceData.value.employee) {
         const currentEmployee = employeeStore.employeesForDropdown.find(
@@ -211,12 +211,12 @@ watch(() => invoiceData.value.company, async (newInstitutionId) => {
     employeeStore.clearEmployeesForDropdown();
     invoiceData.value.employee = undefined;
   }
-});
+}, { immediate: true });
 
 watch(() => invoiceData.value.employee, async (newEmployeeId) => {
   if (newEmployeeId) {
     try {
-      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId);
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, 10000000);
 
       if (invoiceData.value.dependent) {
         const currentDependent = dependentStore.dependentsForDropdown.find(
@@ -233,7 +233,7 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
     dependentStore.clearDependentForDropdown();
     invoiceData.value.dependent = undefined;
   }
-});
+}, { immediate: true });
 
 const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
   if (!id) return;
@@ -264,9 +264,9 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutions(),
-      currencyStore.fetchCurrenciesForDropdown(),
-      serviceProviderStore.fetchServiceProvidersForDropdown()
+      institutionStore.fetchInstitutions(0, 1000000000),
+      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);
@@ -374,6 +374,18 @@ onMounted(async () => {
             <div class="font-weight-bold">{{ $t('t-authorized-by') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.authorizedBy" :placeholder="$t('t-enter-authorized-by')"
               :rules="requiredRules.authorizedBy" disabled />
+          </v-col>
+        </v-row>
+
+        <v-row v-if="invoiceData.notes" class="mt-n6 mb-2">
+          <v-col cols="12">
+            <div class="font-weight-bold">{{ $t('t-reverse-invoice-notes-label') }}</div>
+            <TextArea
+              v-model="invoiceData.notes"
+              :placeholder="$t('t-reverse-invoice-notes-placeholder')"
+              hide-details
+              disabled
+            />
           </v-col>
         </v-row>
 

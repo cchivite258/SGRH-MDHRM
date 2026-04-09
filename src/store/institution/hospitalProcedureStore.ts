@@ -9,11 +9,12 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
     all_hospital_procedures: [] as HospitalProcedureListingType[],
     hospital_procedure_for_dropdown: [] as HospitalProcedureListingType[],
     hospital_procedure_of_plan: [] as HospitalProcedureListingType[],
+    hospital_procedure_of_plan_scoped: [] as HospitalProcedureListingType[],
     activeHealthPlan: null as any,
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10, 
+      itemsPerPage: 9999999, 
       totalPages: 0
     },
     loading: false,
@@ -198,7 +199,50 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       } finally {
         this.loading = false;
       }
-    }
+    },
+
+    async fetchHospitalProceduresOfPlanScoped(
+      id: string | null,
+      page?: number,
+      size?: number,
+      sortColumn: string = 'createdAt',
+      direction: string = 'asc',
+      query_value?: string,
+      query_props?: string
+    ) {
+      this.loading = true;
+      this.error = null;
+
+      const actualPage = page ?? this.pagination.currentPage;
+      const actualSize = size ?? this.pagination.itemsPerPage;
+
+      try {
+        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
+          id,
+          actualPage,
+          actualSize,
+          sortColumn,
+          direction,
+          query_value,
+          query_props
+        );
+
+        this.hospital_procedure_of_plan_scoped = content;
+        this.pagination = {
+          totalElements: meta.totalElements,
+          currentPage: meta.page,
+          itemsPerPage: meta.size,
+          totalPages: meta.totalPages || Math.ceil(meta.totalElements / meta.size)
+        };
+      } catch (err: any) {
+        this.error = err.message || 'Erro ao buscar procedimentos hospitalares';
+        console.error("❌ Erro ao buscar procedimentos hospitalares:", err);
+        this.hospital_procedure_of_plan_scoped = [];
+        this.pagination.totalElements = 0;
+      } finally {
+        this.loading = false;
+      }
+    },
 
     
   }, 

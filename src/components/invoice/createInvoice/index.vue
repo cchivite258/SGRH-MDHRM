@@ -16,6 +16,8 @@ import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 import { InvoiceInsertType, InvoiceItemInsertType, InvoiceListingType, InvoiceResponseType } from "../types";
 import InvoiceForm from "@/components/invoice/createInvoice/InvoiceForm.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace, normalizeStringValue } from "@/app/common/normalizers";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -85,6 +87,120 @@ const resetInvoiceData = () => {
 
   invoiceItems.value = [];
   basicDataValidated.value = false;
+};
+
+const normalizeInvoicePayload = (payload: InvoiceInsertType): InvoiceInsertType => {
+  const normalized = { ...payload };
+
+  normalizeObjectStringFieldsInPlace(normalized as Record<string, any>, {
+    invoiceNumber: "trimToEmpty",
+    authorizedBy: "trimToEmpty",
+    invoiceReferenceNumber: "trimToNull"
+  });
+
+  const normalizeId = (value: unknown): string | undefined => {
+    if (!value) return undefined;
+
+    if (typeof value === "object" && value !== null) {
+      const record = value as Record<string, unknown>;
+      const nestedId = record.id ?? record.value;
+
+      if (typeof nestedId === "string") {
+        const trimmed = nestedId.trim();
+        return trimmed.length > 0 ? trimmed : undefined;
+      }
+
+      if (typeof nestedId === "number") {
+        return String(nestedId);
+      }
+    }
+
+    if (typeof value === "string") {
+      const normalizedValue = normalizeStringValue(value, "trimToNull");
+      return normalizedValue ?? undefined;
+    }
+
+    if (typeof value === "number") {
+      return String(value);
+    }
+
+    return undefined;
+  };
+
+  const normalizeNumericId = (value: unknown): number | undefined => {
+    if (!value) return undefined;
+
+    if (typeof value === "object" && value !== null) {
+      const record = value as Record<string, unknown>;
+      const nestedId = record.id ?? record.value;
+
+      if (typeof nestedId === "number" && Number.isFinite(nestedId)) {
+        return nestedId;
+      }
+
+      if (typeof nestedId === "string") {
+        const trimmed = nestedId.trim();
+        if (!trimmed) return undefined;
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      }
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string") {
+      const normalizedValue = normalizeStringValue(value, "trimToNull");
+      if (!normalizedValue) return undefined;
+      const parsed = Number(normalizedValue);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    return undefined;
+  };
+
+  normalized.company = normalizeId(normalized.company) || "";
+  normalized.serviceProvider = normalizeId(normalized.serviceProvider);
+  normalized.employee = normalizeId(normalized.employee);
+  normalized.currency = normalizeNumericId(normalized.currency);
+  normalized.coveragePeriod = normalizeId(normalized.coveragePeriod);
+  normalized.dependent = normalized.isEmployeeInvoice ? undefined : normalizeId(normalized.dependent);
+
+  return normalized;
+};
+
+const normalizeInvoiceItems = (items: InvoiceItemInsertType[]): InvoiceItemInsertType[] =>
+  items.map((item) => {
+    const normalized = { ...item };
+
+    normalizeObjectStringFieldsInPlace(normalized as Record<string, any>, {
+      description: "trimToEmpty"
+    });
+
+    return {
+      ...normalized,
+      taxRate: normalizeStringValue(normalized.taxRate, "trimToEmpty") || "",
+      companyAllowedHospitalProcedure:
+        normalizeStringValue(normalized.companyAllowedHospitalProcedure, "trimToEmpty") || "",
+    };
+  });
+
+const showInvoiceApiErrors = (error: unknown, fallbackKey = "t-message-save-error") => {
+  const validationErrors = getApiValidationErrors(error);
+  const validationMessages = Object.values(validationErrors).flat();
+
+  if (validationMessages.length > 0) {
+    validationMessages.forEach((message) => toast.error(message));
+    return;
+  }
+
+  const messages = getApiErrorMessages(error, t(fallbackKey));
+  if (messages.length > 0) {
+    messages.forEach((message) => toast.error(message));
+  } else {
+    toast.error(t(fallbackKey));
+  }
 };
 
 
@@ -189,34 +305,46 @@ const handleSaveSuccess = async (response: any) => {
  * Processa operações CRUD para itens da fatura
  */
 const processInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertType[]) => {
-  if (!items?.length) {
-    console.warn('No items to process');
-    return [];
-  }
-
   try {
     const existingItemsResponse = await invoiceItemService.getInvoiceItemByInvoice(invoiceId);
     const existingItems = existingItemsResponse.content || [];
     const existingIds = existingItems.map(item => item.id);
     const newIds = items.filter(item => item.id).map(item => item.id);
 
+    if (!items?.length) {
+      // Em edição, remover todos os itens existentes quando a lista enviada vier vazia.
+      if (existingItems.length > 0) {
+        await Promise.all(existingItems.map(item => invoiceItemService.deleteInvoiceItem(item.id)));
+      }
+      return [];
+    }
+
     // Classificação dos itens
     const itemsToCreate = items.filter(item => !item.id || !existingIds.includes(item.id));
     const itemsToUpdate = items.filter(item => item.id && existingIds.includes(item.id));
     const itemsToDelete = existingItems.filter(item => !newIds.includes(item.id));
 
-    // Execução em paralelo
-    return await Promise.all([
+    // Primeiro garante criação/atualização; só depois remove itens antigos.
+    const upsertResults = await Promise.all([
       ...itemsToCreate.map(item =>
         invoiceItemService.createInvoiceItem({ ...item, invoice: invoiceId })
       ),
       ...itemsToUpdate.map(item =>
         invoiceItemService.updateInvoiceItem(item.id!, { ...item, invoice: invoiceId })
-      ),
-      ...itemsToDelete.map(item =>
-        invoiceItemService.deleteInvoiceItem(item.id)
       )
     ]);
+
+    const failedUpserts = upsertResults.filter((result: any) => result?.status === 'error');
+    if (failedUpserts.length > 0) {
+      const firstError = failedUpserts[0]?.error;
+      throw firstError || new Error('Failed to persist one or more invoice items');
+    }
+
+    const deleteResults = await Promise.all(
+      itemsToDelete.map(item => invoiceItemService.deleteInvoiceItem(item.id))
+    );
+
+    return [...upsertResults, ...deleteResults];
   } catch (error) {
     console.error("Error processing invoice items:", error);
     throw error;
@@ -249,63 +377,49 @@ const saveInvoice = async (
       // Calcula o total amount
       const totalAmount = param.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
       invoiceData.totalAmount = totalAmount;
+      const normalizedInvoiceData = normalizeInvoicePayload(invoiceData);
+      const normalizedItems = normalizeInvoiceItems(param);
 
       if (isEditMode.value && invoiceId.value) {
         // Modo edição - atualiza fatura e itens
-        response = await invoiceService.updateInvoice(invoiceId.value, invoiceData);
+        response = await invoiceService.updateInvoice(invoiceId.value, normalizedInvoiceData);
 
         if (response?.status === "error") {
-          const validationErrors = response?.error?.error?.errors;
-
-          if (validationErrors && typeof validationErrors === "object") {
-            Object.values(validationErrors).forEach((messages: any) => {
-              if (Array.isArray(messages)) {
-                messages.forEach((msg) => toast.error(msg));
-              }
-            });
-            return;
-          }
-
-          toast.error(response.error?.message || t("t-message-save-error"));
+          showInvoiceApiErrors(response.error, "t-message-save-error");
           return;
         }
 
         if (response?.data) {
-          await processInvoiceItems(invoiceId.value, param);
+          await processInvoiceItems(invoiceId.value, normalizedItems);
           await handleSaveSuccess(response);
         }
       } else {
         // Modo criação - cria fatura primeiro, depois itens
-        response = await invoiceService.createInvoice(invoiceData);
+        response = await invoiceService.createInvoice(normalizedInvoiceData);
 
         if (response?.status === "error") {
-          const validationErrors = response?.error?.error?.errors;
-
-          if (validationErrors && typeof validationErrors === "object") {
-            Object.values(validationErrors).forEach((messages: any) => {
-              if (Array.isArray(messages)) {
-                messages.forEach((msg) => toast.error(msg));
-              }
-            });
-            return;
-          }
-
-          toast.error(response.error?.message || t("t-message-save-error"));
+          showInvoiceApiErrors(response.error, "t-message-save-error");
           return;
         }
 
         if (response?.data?.id) {
           const newInvoiceId = response.data.id;
-          await processInvoiceItems(newInvoiceId, param);
+          await processInvoiceItems(newInvoiceId, normalizedItems);
           await handleSaveSuccess(response);
         }
       }
     } else {
       // Apenas dados básicos da fatura
+      const normalizedParam = normalizeInvoicePayload(param);
       if (isEditMode.value && invoiceId.value) {
-        response = await invoiceService.updateInvoice(invoiceId.value, param);
+        response = await invoiceService.updateInvoice(invoiceId.value, normalizedParam);
       } else {
-        response = await invoiceService.createInvoice(param);
+        response = await invoiceService.createInvoice(normalizedParam);
+      }
+
+      if (response?.status === "error") {
+        showInvoiceApiErrors(response.error, "t-message-save-error");
+        return;
       }
 
       if (response?.data) {
@@ -317,23 +431,7 @@ const saveInvoice = async (
 
   } catch (error: any) {
     console.error("Erro ao salvar fatura:", error);
-
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    showInvoiceApiErrors(error, "t-message-save-error");
   } finally {
     loading.value = false;
     callbacks?.onFinally?.();

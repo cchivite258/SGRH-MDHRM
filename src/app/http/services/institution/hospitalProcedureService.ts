@@ -16,6 +16,12 @@ interface ServiceResponse<T> {
 }
 
 export default class HospitalProcedureService extends HttpService {
+  private removeNullUndefinedAndEmptyFields<T extends Record<string, any>>(obj: T): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([, value]) => value !== null && value !== undefined && value !== "")
+    ) as Partial<T>;
+  }
+
   async getHospitalProcedureByInstitution(
     id: string | null,
     page: number = 0,
@@ -37,15 +43,16 @@ export default class HospitalProcedureService extends HttpService {
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+        queryParams.push(`query_operator=OR`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
       const url = `/administration/company/allowed-hospital-procedures/in-company?${queryString}`;
 
-      console.log('URL da requisição:', url);
+      console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -54,7 +61,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("❌ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -78,18 +85,13 @@ export default class HospitalProcedureService extends HttpService {
         `direction=${direction}`
       ];
 
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
-      }
-
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
       const url = `/administration/company/allowed-hospital-procedures/in-company?${queryString}`;
 
-      console.log('URL da requisição:', url);
+      console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -98,7 +100,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("❌ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -124,24 +126,24 @@ export default class HospitalProcedureService extends HttpService {
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+        queryParams.push(`query_operator=OR`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-health-plan?${queryString}`; 
+      const url = `/administration/company/allowed-hospital-procedures/in-health-plan?${queryString}`;
 
-      console.log('URL da requisição:', url);
+      console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
-
       return {
         content: response.data || [],
         meta: response.meta || []
       };
 
     } catch (error) {
-      console.error("❌ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -167,13 +169,13 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType';
+      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures`; 
+      const url = `/administration/company/allowed-hospital-procedures`;
 
-      console.log('URL da requisição:', url);
+      console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -182,7 +184,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("❌ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -190,7 +192,8 @@ export default class HospitalProcedureService extends HttpService {
 
   async createHospitalProcedure(hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
-      const response = await this.post<ApiResponse<HospitalProcedureListingType>>('/administration/company/allowed-hospital-procedures', hospitalProcedureData);
+      const payload = this.removeNullUndefinedAndEmptyFields(hospitalProcedureData);
+      const response = await this.post<ApiResponse<HospitalProcedureListingType>>('/administration/company/allowed-hospital-procedures', payload);
       return {
         status: 'success',
         data: response.data
@@ -231,7 +234,7 @@ export default class HospitalProcedureService extends HttpService {
       const response = await this.get<{ data: HospitalProcedureListingType; meta: any }>(
         `/administration/company/allowed-hospital-procedures/${id}?includes=company`
       );
-      console.log('Resposta da requisição getHospitalProcedureById:------------------------', response);
+      console.log('Resposta da requisiÃ§Ã£o getHospitalProcedureById:------------------------', response);
 
       return {
         data: response.data
@@ -245,13 +248,13 @@ export default class HospitalProcedureService extends HttpService {
   handleError(error: any) {
     if (error.response) {
       return {
-        message: error.response.data?.message || 'Erro na requisição',
+        message: error.response.data?.message || 'Erro na requisiÃ§Ã£o',
         details: error.response.data?.errors || null,
         status: error.response.status
       };
     }
     return {
-      message: 'Erro de conexão',
+      message: 'Erro de conexÃ£o',
       details: null
     };
   }
@@ -260,7 +263,7 @@ export default class HospitalProcedureService extends HttpService {
     try {
       await this.delete(`/administration/company/allowed-hospital-procedures/${id}`);
     } catch (error) {
-      console.error("❌ Erro ao deletar procedimento hospitalar:", error);
+      console.error("âŒ Erro ao deletar procedimento hospitalar:", error);
       throw error;
     }
   }
@@ -269,15 +272,21 @@ export default class HospitalProcedureService extends HttpService {
   async updateHospitalProcedure(id: string, hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
 
-      // Corpo da requisição conforme especificado
-      const payload = {
+      // Corpo da requisiÃ§Ã£o conforme especificado
+      const rawPayload = {
         fixedAmount: hospitalProcedureData.fixedAmount,
         percentage: hospitalProcedureData.percentage,
         limitTypeDefinition: hospitalProcedureData.limitTypeDefinition,
+        hospitalProcedureGroup: hospitalProcedureData.hospitalProcedureGroup,
+        groupFixedAmount: hospitalProcedureData.groupFixedAmount,
+        groupPercentage: hospitalProcedureData.groupPercentage,
+        hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit,
+        belongsToGroup: !!hospitalProcedureData.belongsToGroup,
         //hospitalProcedureType: hospitalProcedureData.hospitalProcedureType,
         companyHealthPlan: hospitalProcedureData.companyHealthPlan,
         enabled: hospitalProcedureData.enabled
       };
+      const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
 
       const response = await this.put<ApiResponse<HospitalProcedureListingType>>(`/administration/company/allowed-hospital-procedures/${id}`, payload);
       return {
@@ -300,10 +309,4 @@ export default class HospitalProcedureService extends HttpService {
       };
     }
   }
-
-
-
-
 }
-
-

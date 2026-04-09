@@ -46,6 +46,8 @@ const emit = defineEmits<{
   (e: 'onStepChange', step: number): void;
   (e: 'save', payload: EmployeeInsertType): void;
   (e: 'update:modelValue', value: EmployeeInsertType): void;
+  (e: 'clear-server-error', field: string): void;
+  (e: 'validated'): void;
 }>();
 
 const props = defineProps({
@@ -56,6 +58,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  serverErrors: {
+    type: Object as () => Record<string, string[]>,
+    default: () => ({})
   }
 });
 
@@ -86,6 +92,44 @@ let employeeData = computed({
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(
+  () => props.serverErrors,
+  async (errors) => {
+    if (errors && Object.keys(errors).length > 0) {
+      await nextTick();
+      await form.value?.validate();
+    }
+  },
+  { deep: true }
+);
+
+watch(() => employeeData.value.employeeNumber, () => emit('clear-server-error', 'employeeNumber'));
+watch(() => employeeData.value.firstName, () => emit('clear-server-error', 'firstName'));
+watch(() => employeeData.value.lastName, () => emit('clear-server-error', 'lastName'));
+watch(() => employeeData.value.gender, () => emit('clear-server-error', 'gender'));
+watch(() => employeeData.value.birthDate, () => emit('clear-server-error', 'birthDate'));
+watch(() => employeeData.value.idCardNumber, () => emit('clear-server-error', 'idCardNumber'));
+watch(() => employeeData.value.idCardIssuer, () => emit('clear-server-error', 'idCardIssuer'));
+watch(() => employeeData.value.idCardExpiryDate, () => emit('clear-server-error', 'idCardExpiryDate'));
+watch(() => employeeData.value.idCardIssuanceDate, () => emit('clear-server-error', 'idCardIssuanceDate'));
+watch(() => employeeData.value.isLifeTimeCard, (isLifeTimeCard, previousValue) => {
+  emit('clear-server-error', 'isLifeTimeCard');
+  if (isLifeTimeCard && !previousValue) {
+    employeeData.value.idCardExpiryDate = undefined;
+    emit('clear-server-error', 'idCardExpiryDate');
+  }
+});
+watch(() => employeeData.value.email, () => emit('clear-server-error', 'email'));
 
 /**
  * Regras de validação para os campos do formulário
@@ -138,8 +182,9 @@ const requiredRules = {
     (v: string) => (v && v.length <= 50) || t('t-maximum-50-characters'),
   ],
   idCardExpiryDate: [
-    (v: Date | string) => !!v || t('t-please-enter-id-card-expiry-date'),
+    (v: Date | string) => employeeData.value.isLifeTimeCard || !!v || t('t-please-enter-id-card-expiry-date'),
     (v: Date | string) => {
+      if (employeeData.value.isLifeTimeCard) return true;
       if (!v) return true;
       const date = new Date(v);
       const minDate = new Date();
@@ -263,7 +308,9 @@ const submitForm = async () => {
     // Forçar validação dos date pickers
     await birthDatePicker.value?.validate();
     await idCardIssuanceDatePicker.value?.validate();
-    await idCardExpiryDatePicker.value?.validate();
+    if (!employeeData.value.isLifeTimeCard) {
+      await idCardExpiryDatePicker.value?.validate();
+    }
 
     // Resto da validação...
     const { valid } = await form.value.validate();
@@ -278,6 +325,7 @@ const submitForm = async () => {
       return;
     }
 
+    emit('validated');
     emit('onStepChange', 2);
 
   } catch (error) {
@@ -315,7 +363,7 @@ const submitForm = async () => {
               {{ $t('t-employeeNumber') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.employeeNumber" :placeholder="$t('t-enter-employee-number')"
-              :rules="requiredRules.employeeNumber" />
+              :rules="applyServerErrorsToRules('employeeNumber', requiredRules.employeeNumber)" />
           </v-col>
         </v-row>
         <!-- Nome completo -->
@@ -325,7 +373,7 @@ const submitForm = async () => {
               {{ $t('t-firstname') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.firstName" :placeholder="$t('t-enter-employee-number')"
-              :rules="requiredRules.firstName" />
+              :rules="applyServerErrorsToRules('firstName', requiredRules.firstName)" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
@@ -338,7 +386,7 @@ const submitForm = async () => {
               {{ $t('t-lastname') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.lastName" :placeholder="$t('t-enter-lastname')"
-              :rules="requiredRules.lastName" />
+              :rules="applyServerErrorsToRules('lastName', requiredRules.lastName)" />
           </v-col>
         </v-row>
 
@@ -348,7 +396,8 @@ const submitForm = async () => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-gender') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <MenuSelect v-model="employeeData.gender" :items="genderOptions" :rules="requiredRules.gender" />
+            <MenuSelect v-model="employeeData.gender" :items="genderOptions" :rules="requiredRules.gender"
+              :error-messages="getServerErrors('gender')" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
@@ -371,7 +420,8 @@ const submitForm = async () => {
               {{ $t('t-birth-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="birthDatePicker" v-model="employeeData.birthDate" :teleport="true"
-              :placeholder="$t('t-enter-birth-date')" :rules="requiredRules.birthDate" format="dd/MM/yyyy" />
+              :placeholder="$t('t-enter-birth-date')" :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)"
+              format="dd/MM/yyyy" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
@@ -440,7 +490,7 @@ const submitForm = async () => {
               {{ $t('t-email') }}
             </div>
             <TextField v-model="employeeData.email" :placeholder="$t('t-enter-email')" hide-details
-              :rules="requiredRules.email" />
+              :rules="applyServerErrorsToRules('email', requiredRules.email)" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
@@ -483,42 +533,57 @@ const submitForm = async () => {
               {{ $t('t-id-card-number') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.idCardNumber" :placeholder="$t('t-id-card-number')"
-              :rules="requiredRules.idCardNumber" />
+              :rules="applyServerErrorsToRules('idCardNumber', requiredRules.idCardNumber)" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-issuer') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.idCardIssuer" :placeholder="$t('t-enter-id-card-issuer')"
-              :rules="requiredRules.idCardIssuer" />
+              :rules="applyServerErrorsToRules('idCardIssuer', requiredRules.idCardIssuer)" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-id-card-expiry-date') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-is-lifetime-id-card') }}
             </div>
-            <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
-              :rules="requiredRules.idCardExpiryDate" :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy" />
+            <v-checkbox v-model="employeeData.isLifeTimeCard" density="compact" color="primary" hide-details>
+              <template #label>
+                <span>{{ $t('t-is-lifetime-id-card') }}</span>
+              </template>
+            </v-checkbox>
           </v-col>
         </v-row>
 
-        <!-- Datas de emissão de documentos -->
         <v-row class="mt-n6">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="employeeData.idCardIssuanceDate"
-              :teleport="true" :rules="requiredRules.idCardIssuanceDate"
+              :teleport="true" :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
               :placeholder="$t('t-enter-id-card-issuance-date')" format="dd/MM/yyyy" />
           </v-col>
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-id-card-expiry-date') }} <i v-if="!employeeData.isLifeTimeCard" class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
+              :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
+              :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy"
+              :disabled="employeeData.isLifeTimeCard" />
+          </v-col>
+        </v-row>
+
+        <!-- Datas de emissão de documentos -->
+        <v-row class="">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-number') }}
             </div>
             <TextField v-model="employeeData.passportNumber" :placeholder="$t('t-enter-passport-number')"
               hide-details />
           </v-col>
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-issuer') }}
             </div>

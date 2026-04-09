@@ -110,6 +110,13 @@ export const menuItems: MenuItemType[] = [
     ],
   },*/
   {
+    label: "entities",
+    icon: "ph ph-identification-card",
+    id: "sidebarEntities",
+    prefix: "/entities",
+    link: "/entities/list"
+  },
+  {
     label: "institutions",
     icon: "ph ph-buildings",
     id: "sidebarInstitution", 
@@ -221,6 +228,7 @@ export const menuItems: MenuItemType[] = [
       { label: "countries", link: "/baseTable/country/list" },
       { label: "currencies", link: "/baseTable/currency/list" },
       { label: "hospital_procedure_types", link: "/baseTable/hospitalproceduretype/list" },
+      { label: "hospital_procedure_groups", link: "/baseTable/hospitalproceduregroup/list" },
       { label: "institution-types", link: "/baseTable/institutiontype/list" },
       { label: "leave-reason", link: "/baseTable/leavereason/list" },
       { label: "languages", link: "/baseTable/languages/list" },

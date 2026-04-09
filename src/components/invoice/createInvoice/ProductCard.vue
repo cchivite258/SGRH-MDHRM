@@ -241,7 +241,6 @@ const calculateLineTotal = (item: InvoiceItem) => {
 
 const loadProcedures = async () => {
   try {
-
     hospitalProcedureStore.hospital_procedure_of_plan = [];
     activeHealthPlanId.value = "";
 
@@ -260,8 +259,8 @@ const loadProcedures = async () => {
     console.log("Active Health Plan ID:", activeHealthPlanId.value);
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value)
+      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
+      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
     ]);
   } catch (error) {
     handleError('t-error-loading-procedures', error);
@@ -300,7 +299,7 @@ const removeItem = (id: string) => {
 const prepareItemsForSubmission = (): InvoiceItemInsertType[] => {
   return invoiceItems.value.map(item => ({
     ...item,
-    id: props.isEditMode ? item.originalId : undefined,
+    id: props.isEditMode ? (item.originalId || item.id) : undefined,
     taxRate: item.taxRate || '',
     companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || '',
     description: item.description || '',
@@ -322,7 +321,15 @@ const validateItems = (items: InvoiceItemInsertType[]): boolean => {
   );
 };
 
-const emitItemsReady = (): boolean => {
+const emitItemsReady = async (): Promise<boolean> => {
+  if (form.value) {
+    const { valid } = await form.value.validate();
+    if (!valid) {
+      toast.error(t('t-validation-error'));
+      return false;
+    }
+  }
+
   const items = prepareItemsForSubmission();
 
   if (!validateItems(items)) {
@@ -375,7 +382,10 @@ onMounted(() => {
   if (props.initialItems?.length) {
     invoiceItems.value = props.initialItems.map(item => ({
       ...item,
+      originalId: item.id,
       id: item.id || Date.now().toString(),
+      taxRate: item.taxRate || '',
+      companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || ''
     }));
   } else {
     addItem();

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
@@ -17,11 +17,13 @@ const emit = defineEmits<{
   (e: 'onStepChange', step: number): void;
   (e: 'save'): void;
   (e: 'update:modelValue', value: ServiceProviderInsertType): void;
+  (e: 'clear-server-error', field: string): void;
 }>();
 
 const props = defineProps<{
   modelValue: ServiceProviderInsertType,
-  loading?: boolean
+  loading?: boolean,
+  serverErrors?: Record<string, string[]>
 }>();
 
 
@@ -41,6 +43,33 @@ console.log("Dados a enviar para API:", JSON.stringify(serviceProviderData.value
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+watch(
+  () => props.serverErrors,
+  async (errors) => {
+    if (errors && Object.keys(errors).length > 0) {
+      await nextTick();
+      await form2.value?.validate();
+    }
+  },
+  { deep: true }
+);
+
+watch(() => serviceProviderData.value.incomeTaxNumber, () => emit('clear-server-error', 'incomeTaxNumber'));
+watch(() => serviceProviderData.value.personOfContactFullname1, () => emit('clear-server-error', 'personOfContactFullname1'));
+watch(() => serviceProviderData.value.personOfContactPhone1, () => emit('clear-server-error', 'personOfContactPhone1'));
+watch(() => serviceProviderData.value.personOfContactEmail1, () => emit('clear-server-error', 'personOfContactEmail1'));
+watch(() => serviceProviderData.value.personOfContactFullname2, () => emit('clear-server-error', 'personOfContactFullname2'));
+watch(() => serviceProviderData.value.personOfContactPhone2, () => emit('clear-server-error', 'personOfContactPhone2'));
+watch(() => serviceProviderData.value.personOfContactEmail2, () => emit('clear-server-error', 'personOfContactEmail2'));
 
 /**
  * Regras de validação para os campos do formulário
@@ -51,28 +80,24 @@ const requiredRules = {
     (v: string) => /^\d{9}$/.test(v) || t('t-income-tax-number-must-have-9-digits'),
   ],
   personOfContactFullname1: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-full-name1'),
-    (v: string) => v.length <= 100 || t('t-maximum-100-characters'),
+    (v: string) => !v || v.length <= 512 || t('t-maximum-512-characters'),
   ],
   personOfContactPhone1: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-phone1'),
-    (v: string) => /^\+?\d{9,13}$/.test(v) || t('t-phone-must-have-between-9-and-13-digits'),
+    (v: string) => !v || v.length <= 20 || t('t-maximum-20-characters'),
   ],
   personOfContactEmail1: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-email1'),
-    (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email'),
+    (v: string) => !v || v.length <= 255 || t('t-maximum-255-characters'),
+    (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email'),
   ],
   personOfContactFullname2: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-full-name2'),
-    (v: string) => v.length <= 100 || t('t-maximum-100-characters'),
+    (v: string) => !v || v.length <= 512 || t('t-maximum-512-characters'),
   ],
   personOfContactPhone2: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-phone2'),
-    (v: string) => /^\+?\d{9,13}$/.test(v) || t('t-phone-must-have-between-9-and-13-digits'),
+    (v: string) => !v || v.length <= 20 || t('t-maximum-20-characters'),
   ],
   personOfContactEmail2: [
-    (v: string) => !!v || t('t-please-enter-person-of-contact-email2'),
-    (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email'),
+    (v: string) => !v || v.length <= 255 || t('t-maximum-255-characters'),
+    (v: string) => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('t-invalid-email'),
   ],
 }
 
@@ -112,16 +137,16 @@ const saveData = async () => {
               {{ $t('t-income-tax-number') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="serviceProviderData.incomeTaxNumber" :placeholder="t('t-enter-income-tax-number')"
-              :rules="requiredRules.incomeTaxNumber" />
+              :rules="applyServerErrorsToRules('incomeTaxNumber', requiredRules.incomeTaxNumber)" />
           </v-col>
 
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-full-name1') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-full-name1') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactFullname1"
               :placeholder="t('t-enter-person-of-contact-full-name1')"
-              :rules="requiredRules.personOfContactFullname1" />
+              :rules="applyServerErrorsToRules('personOfContactFullname1', requiredRules.personOfContactFullname1)" />
           </v-col>
         </v-row>
 
@@ -129,18 +154,18 @@ const saveData = async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-phone1') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-phone1') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactPhone1" :placeholder="t('t-enter-person-of-contact-phone1')"
-              :rules="requiredRules.personOfContactPhone1" />
+              :rules="applyServerErrorsToRules('personOfContactPhone1', requiredRules.personOfContactPhone1)" />
           </v-col>
 
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-email1') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-email1') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactEmail1" :placeholder="t('t-enter-person-of-contact-email1')"
-              :rules="requiredRules.personOfContactEmail1" />
+              :rules="applyServerErrorsToRules('personOfContactEmail1', requiredRules.personOfContactEmail1)" />
           </v-col>
         </v-row>
 
@@ -148,19 +173,19 @@ const saveData = async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-full-name2') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-full-name2') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactFullname2"
               :placeholder="t('t-enter-person-of-contact-full-name2')"
-              :rules="requiredRules.personOfContactFullname2" />
+              :rules="applyServerErrorsToRules('personOfContactFullname2', requiredRules.personOfContactFullname2)" />
           </v-col>
 
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-phone2') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-phone2') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactPhone2" :placeholder="t('t-enter-person-of-contact-phone2')"
-              :rules="requiredRules.personOfContactPhone2" />
+              :rules="applyServerErrorsToRules('personOfContactPhone2', requiredRules.personOfContactPhone2)" />
           </v-col>
         </v-row>
 
@@ -168,10 +193,10 @@ const saveData = async () => {
         <v-row class="mt-n6">
           <v-col cols="12">
             <div class="font-weight-bold mb-2">
-              {{ $t('t-person-of-contact-email2') }} <i class="ph-asterisk ph-xs text-danger" />
+              {{ $t('t-person-of-contact-email2') }}
             </div>
             <TextField v-model="serviceProviderData.personOfContactEmail2" :placeholder="t('t-enter-person-of-contact-email2')"
-              :rules="requiredRules.personOfContactEmail2" />
+              :rules="applyServerErrorsToRules('personOfContactEmail2', requiredRules.personOfContactEmail2)" />
           </v-col>
         </v-row>
       </v-card-text>

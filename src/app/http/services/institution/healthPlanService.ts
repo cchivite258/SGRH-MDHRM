@@ -229,5 +229,3 @@ export default class HealthPlanService extends HttpService {
 
 
 }
-
-

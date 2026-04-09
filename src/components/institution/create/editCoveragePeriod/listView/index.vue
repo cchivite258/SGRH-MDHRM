@@ -18,6 +18,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 
 const { t } = useI18n();
@@ -35,6 +36,8 @@ const coveragePeriodId = computed(() => {
 
 // Formulário do departamento
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const startDatePickerRef = ref<{ validate: () => boolean } | null>(null);
+const endDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const data = ref<CoveragePeriodInsertType>({
   id: coveragePeriodId.value || undefined,
   name: "",
@@ -56,6 +59,30 @@ const itemsPerPage = ref(10);
 const searchProps = "name,description";
 const loading = ref(false);
 const searchQuery = ref("");
+
+const toDate = (value: unknown): Date | null => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const requiredRules = {
+  name: [
+    (v: string) => !!v?.trim() || t('t-please-enter-name')
+  ],
+  startDate: [
+    (v: Date | string) => !!v || t('t-please-enter-start-date')
+  ],
+  endDate: [
+    (v: Date | string) => !!v || t('t-please-enter-end-date'),
+    (v: Date | string) => {
+      const start = toDate(data.value.startDate);
+      const end = toDate(v);
+      if (!start || !end) return true;
+      return end >= start || t('t-contract-end-date-must-be-after-start-date');
+    }
+  ]
+};
 
 // Computed properties
 const loadingList = computed(() => budgetStore.loading);
@@ -156,18 +183,7 @@ const onSubmitBudget = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
       return;
     }
 
@@ -183,22 +199,7 @@ const onSubmitBudget = async (
 
 
   } catch (error: any) {
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }
@@ -286,21 +287,7 @@ const handleSubmit = async (
 
     // Verifica se a resposta contém erro
     if (response.status === 'error') {
-      const apiError = response.error;
-
-      // Caso haja erros de validação
-      if (apiError?.error?.errors) {
-        const validationErrors = apiError.error.errors;
-
-        Object.values(validationErrors).forEach(errList => { 
-          errList.forEach(err => toast.error(err));
-        });
-
-        return;
-      }
-
-      // Erro normal
-      toast.error(apiError?.message || t('t-message-save-error'));
+      getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
       return;
     }
 
@@ -318,25 +305,25 @@ const handleSubmit = async (
 
   } catch (error: any) {
     console.error("Erro ao gravar periodo de cobertura:", error);
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     callbacks?.onFinally?.();
   }
+};
+
+const onSaveCoveragePeriod = async () => {
+  if (!form.value) return;
+
+  const { valid } = await form.value.validate();
+  const isStartDateValid = startDatePickerRef.value?.validate() ?? true;
+  const isEndDateValid = endDatePickerRef.value?.validate() ?? true;
+
+  if (!valid || !isStartDateValid || !isEndDateValid) {
+    toast.error(t('t-validation-error'));
+    return;
+  }
+
+  await handleSubmit(data.value);
 };
 
 const formatAmount = (amount: number | undefined) => {
@@ -354,15 +341,16 @@ const formatAmount = (amount: number | undefined) => {
 
 <template>
   <Card title="">
-    <v-card-text>
-      <v-card>
-        <v-card-text>
+    <v-form ref="form" @submit.prevent="onSaveCoveragePeriod">
+      <v-card-text>
+        <v-card>
+          <v-card-text>
           <v-row class="">
             <v-col cols="12" lg="12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="data.name" :placeholder="$t('t-enter-name')" />
+              <TextField v-model="data.name" :placeholder="$t('t-enter-name')" :rules="requiredRules.name" />
 
             </v-col>
           </v-row>
@@ -371,13 +359,15 @@ const formatAmount = (amount: number | undefined) => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker v-model="data.startDate" :placeholder="$t('t-enter-start-date')" :teleport="true" />
+              <ValidatedDatePicker v-model="data.startDate" :placeholder="$t('t-enter-start-date')" :teleport="true"
+                :rules="requiredRules.startDate" ref="startDatePickerRef" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker v-model="data.endDate" :placeholder="$t('t-enter-end-date')" :teleport="true" />
+              <ValidatedDatePicker v-model="data.endDate" :placeholder="$t('t-enter-end-date')" :teleport="true"
+                :rules="requiredRules.endDate" ref="endDatePickerRef" />
             </v-col>
           </v-row>
           <v-row class="">
@@ -390,9 +380,9 @@ const formatAmount = (amount: number | undefined) => {
               </v-checkbox>
             </v-col>
           </v-row>
-        </v-card-text>
-      </v-card>
-    </v-card-text>
+          </v-card-text>
+        </v-card>
+      </v-card-text>
 
     <v-card-text>
       <Card :title="$t('t-budget-list')" title-class="pt-0">
@@ -462,12 +452,13 @@ const formatAmount = (amount: number | undefined) => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn color="success" variant="elevated" :loading="loading"
-          :disabled="!data.name || !data.startDate || !data.endDate || loading" @click="handleSubmit(data)">
+        <v-btn color="success" variant="elevated" :loading="loading" :disabled="loading"
+          @click="onSaveCoveragePeriod">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>
     </v-card-text>
+    </v-form>
   </Card>
 
   <CreateEditBudgetDialog v-if="budgetFormData" v-model="dialog" :data="budgetFormData" @onSubmit="onSubmitBudget" />

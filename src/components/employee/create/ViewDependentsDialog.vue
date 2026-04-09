@@ -42,6 +42,7 @@ const props = defineProps({
       gender: "",
       birthDate: undefined,
       relationship: "",
+      isUnivesityStudent: false,
       employee: "",
       idCardNumber: "",
       idCardIssuer: "",
@@ -141,6 +142,15 @@ const formatDate = (date: Date | undefined) => {
           </v-col>
         </v-row>
         
+        <v-row class="mt-3">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">
+              {{ $t('t-university-student') }}
+            </div>
+            <div>{{ props.data?.isUnivesityStudent ? $t('t-yes') : $t('t-no') }}</div>
+          </v-col>
+        </v-row>
+
         <v-row class="mt-3">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">

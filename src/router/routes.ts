@@ -33,6 +33,7 @@ const baseTablePrefix = "/baseTable";
 const usersPrefix = "/users";
 const serviceProviderPrefix = "/service-provider";
 const reportsPrefix = "/reports";
+const entitiesPrefix = "/entities";
 
 
 const institutionRoutes = [
@@ -59,6 +60,12 @@ const institutionRoutes = [
     name: "EditInstitution",
     component: () => import("@/views/institution/Edit.vue"),
     meta: { title: "Edit Institution", authRequired: true },
+  },
+  {
+    path: `${institutionPrefix}/view/:id`,
+    name: "ViewInstitution",
+    component: () => import("@/views/institution/View.vue"),
+    meta: { title: "View Institution", authRequired: true },
   },
   {
     path: `${institutionPrefix}/department/:id`,
@@ -91,6 +98,38 @@ const institutionRoutes = [
     meta: { title: "ViewCoveragePeriod", authRequired: true },
   }
 
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+
+const entitiesRoutes = [
+  {
+    path: `${entitiesPrefix}/list`,
+    name: "EntitiesList",
+    component: () => import("@/views/entities/List.vue"),
+    meta: { title: "Entity List", authRequired: true },
+  },
+  {
+    path: `${entitiesPrefix}/create`,
+    name: "CreateEntity",
+    component: () => import("@/views/entities/Create.vue"),
+    meta: { title: "Create Entity", authRequired: true },
+  },
+  {
+    path: `${entitiesPrefix}/edit/:id`,
+    name: "EditEntity",
+    component: () => import("@/views/entities/Edit.vue"),
+    meta: { title: "Edit Entity", authRequired: true },
+  },
+  {
+    path: `${entitiesPrefix}/view/:id`,
+    name: "ViewEntity",
+    component: () => import("@/views/entities/View.vue"),
+    meta: { title: "View Entity", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,
@@ -292,6 +331,24 @@ const baseTableRoutes = [
     name: "HospitalProcedureTypeListView",
     component: () => import("@/views/baseTables/hospitalProcedureType/ListView.vue"),
     meta: { title: "HospitalProcedureTypeListView", authRequired: true },
+  },
+  {
+    path: `${baseTablePrefix}/hospitalproceduregroup/list`,
+    name: "HospitalProcedureGroupListView",
+    component: () => import("@/views/baseTables/hospitalProcedureGroup/ListView.vue"),
+    meta: { title: "HospitalProcedureGroupListView", authRequired: true },
+  },
+  {
+    path: `${baseTablePrefix}/edit-hospital-procedure-group/:id`,
+    name: "EditHospitalProcedureGroup",
+    component: () => import("@/views/baseTables/editHospitalProcedureGroup/ListView.vue"),
+    meta: { title: "EditHospitalProcedureGroup", authRequired: true },
+  },
+  {
+    path: `${baseTablePrefix}/view-hospital-procedure-group/:id`,
+    name: "ViewHospitalProcedureGroup",
+    component: () => import("@/views/baseTables/viewHospitalProcedureGroup/ListView.vue"),
+    meta: { title: "ViewHospitalProcedureGroup", authRequired: true },
   },
   {
     path: `${baseTablePrefix}/institutiontype/list`,
@@ -1334,6 +1391,7 @@ export const routes = [
   ...advanceUIRoutes,
   ...customUIRoutes,
   ...institutionRoutes,
+  ...entitiesRoutes,
   ...employeeRoutes,
   ...baseTableRoutes,
   ...usersRoutes,

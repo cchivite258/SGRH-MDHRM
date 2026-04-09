@@ -1,12 +1,10 @@
 <template>
     <v-card class="mb-4">
         <v-card-text class="pa-4">
-            <!-- 🔍 Pesquisa Global -->
             <QuerySearch v-model="globalSearch" :placeholder="$t('t-invoice-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
                 @update:model-value="onGlobalSearch" class="mb-2" />
 
-            <!-- 🎛️ Filtros Avançados -->
             <v-expansion-panels class="expansion-panels expansion-panel mt-5">
                 <v-expansion-panel>
                     <v-expansion-panel-title class="text-caption font-weight-medium px-2">
@@ -30,38 +28,32 @@
                             </v-radio>
                         </v-radio-group>
 
-                        <v-row v-for="(filter, index) in advancedFilters" :key="`filter-${index}`" class="mb-1 mx-0"
-                            dense>
+                        <v-row v-for="(filter, index) in advancedFilters" :key="`filter-${index}`" class="mb-1 mx-0" dense>
                             <v-col cols="12" sm="4" class="py-1 px-1">
                                 <MenuSelect v-model="filter.prop" :items="filterableFields" :label="$t('t-field')"
                                     item-title="text" item-value="value" density="compact" variant="outlined"
-                                    @update:model-value="onFieldChange(index)" return-object />
+                                    @update:model-value="onFieldChange(index)" />
                             </v-col>
 
                             <v-col cols="12" sm="3" class="py-1 px-1">
-                                <MenuSelect v-model="filter.comparison"
-                                    :items="getOperatorsForField(filter.prop?.value || filter.prop)"
+                                <MenuSelect v-model="filter.comparison" :items="getOperatorsForField(filter.prop)"
                                     :placeholder="$t('t-operator')" item-title="text" item-value="value"
                                     density="compact" variant="outlined" />
                             </v-col>
 
-                            <v-col cols="12" sm="4" class="py-1 px-1"
-                                v-if="isDateField(filter.prop?.value || filter.prop)">
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-if="isDateField(filter.prop)">
                                 <VueDatePicker v-model="filter.value" :teleport="true"
                                     :placeholder="$t('t-enter-date')" :enable-time-picker="false"
                                     format="dd/MM/yyyy" />
                             </v-col>
-                            <v-col cols="12" sm="4" class="py-1 px-1"
-                                v-else-if="isBooleanField(filter.prop?.value || filter.prop)">
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
                                     item-title="text" item-value="value" density="compact" variant="outlined" />
                             </v-col>
-                            <v-col cols="12" sm="4" class="py-1 px-1"
-                                v-else-if="isEnumField(filter.prop?.value || filter.prop)">
-                                <MenuSelect v-model="filter.value" 
-                                    :items="getEnumOptions(filter.prop?.value || filter.prop)" 
-                                    :placeholder="$t('t-value')"
-                                    item-title="text" item-value="value" density="compact" variant="outlined" />
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isEnumField(filter.prop)">
+                                <MenuSelect v-model="filter.value" :items="getEnumOptions(filter.prop)"
+                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
+                                    density="compact" variant="outlined" />
                             </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else>
                                 <TextField v-model="filter.value" :placeholder="$t('t-value')" density="compact"
@@ -82,9 +74,16 @@
                             </v-btn>
 
                             <v-btn color="secondary" variant="tonal" @click="applyAdvancedFilters"
-                                :disabled="advancedFilters.length === 0" :loading="loading" size="small">
+                                :disabled="advancedFilters.length === 0 || hasIncompleteFilters" :loading="loading"
+                                size="small" :title="hasIncompleteFilters ? 'Preencha todos os campos dos filtros' : ''">
                                 <i class="ph-funnel me-1"></i>
                                 {{ $t('t-apply-filters') }}
+                            </v-btn>
+
+                            <v-btn color="error" variant="tonal" @click="clearAllFilters" class="ml-2" size="small"
+                                :loading="loading">
+                                <i class="ph-x me-1"></i>
+                                Limpar
                             </v-btn>
                         </div>
                     </v-expansion-panel-text>
@@ -95,47 +94,76 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useInvoiceStore } from '@/store/invoice/invoiceStore';
 import { useI18n } from 'vue-i18n';
+import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
-import QuerySearch from "@/app/common/components/filters/QuerySearch.vue"
+import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
 
 const { t } = useI18n();
+const toast = useToast();
+const route = useRoute();
+const router = useRouter();
 const invoiceStore = useInvoiceStore();
+
+const QUERY_KEYS = {
+    search: 'search',
+    operator: 'operator',
+    filters: 'filters'
+} as const;
+
+type LogicalOperator = 'AND' | 'OR';
+type FilterType = 'text' | 'boolean' | 'date' | 'enum';
+
+interface FilterableField {
+    text: string;
+    value: string;
+    type: FilterType;
+    enumType?: 'invoiceStatusGroup' | 'flagGroup';
+}
+
+interface AdvancedFilter {
+    prop: string;
+    comparison: string;
+    value: string | boolean | Date;
+}
+
+interface StoreAdvancedFilter {
+    prop: string;
+    operator: string;
+    value: string | boolean | Date;
+}
 
 const globalSearch = ref('');
 const loading = ref(false);
-const logicalOperator = ref<'AND' | 'OR'>('AND');
+const logicalOperator = ref<LogicalOperator>('AND');
+const SEARCH_DEBOUNCE_MS = 400;
+let globalSearchDebounce: ReturnType<typeof setTimeout> | null = null;
+let routeSyncInProgress = false;
 
-// Definição dos campos filtráveis com tipos específicos
-const filterableFields = ref([
+const filterableFields = ref<FilterableField[]>([
     { text: t('t-invoice-number'), value: 'invoiceNumber', type: 'text' },
     { text: t('t-issue-date'), value: 'issueDate', type: 'date' },
     { text: t('t-due-date'), value: 'dueDate', type: 'date' },
     { text: t('t-total-amount'), value: 'totalAmount', type: 'text' },
     { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },
-    { text: t('t-employee-name'), value: 'employee.name', type: 'text' },
+    { text: t('t-employee-name') + ' (Nome)', value: 'employee.firstName', type: 'text' },
+    { text: t('t-employee-name') + ' (Apelido)', value: 'employee.lastName', type: 'text' },
+    { text: t('t-company'), value: 'employee.company.name', type: 'text' },
     { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'text' },
     { text: t('t-currency'), value: 'currency.name', type: 'text' },
     { text: t('t-flag'), value: 'flag', type: 'enum', enumType: 'flagGroup' },
-    { text: t('t-dependent'), value: 'dependent.name', type: 'text' },
+    { text: t('t-dependent'), value: 'dependent.firstName', type: 'text' },
     { text: t('t-is-employee-invoice'), value: 'isEmployeeInvoice', type: 'boolean' },
     { text: t('t-authorized-by'), value: 'authorizedBy', type: 'text' },
     { text: t('t-invoice-reference-number'), value: 'invoiceReferenceNumber', type: 'text' },
     { text: t('t-coverage-period'), value: 'coveragePeriod.name', type: 'text' },
     { text: t('t-are-items-flagged'), value: 'areItemsFlagged', type: 'boolean' },
-    { text: t('t-enabled'), value: 'enabled', type: 'boolean' },
-    { text: t('t-created-at'), value: 'createdAt', type: 'date' },
-    { text: t('t-updated-at'), value: 'updatedAt', type: 'date' },
-    { text: t('t-deleted-at'), value: 'deletedAt', type: 'date' },
-    { text: t('t-created-by'), value: 'createdBy', type: 'text' },
-    { text: t('t-updated-by'), value: 'updatedBy', type: 'text' },
-    { text: t('t-deleted-by'), value: 'deletedBy', type: 'text' },
 ]);
 
-// Operadores disponíveis
 const textOperators = [
     { text: t('t-contains'), value: 'contains' },
     { text: t('t-equals'), value: 'equals' },
@@ -163,13 +191,13 @@ const booleanOptions = ref([
     { text: t('t-false'), value: false }
 ]);
 
-// Definição das opções para cada enum
 const enumOptions = {
     invoiceStatusGroup: [
         { text: t('t-draft'), value: 'DRAFT' },
         { text: t('t-pending'), value: 'PENDING' },
         { text: t('t-paid'), value: 'PAID' },
         { text: t('t-posted'), value: 'POSTED' },
+        { text: t('t-reversed'), value: 'REVERSED' },
         { text: t('t-cancelled'), value: 'CANCELLED' }
     ],
     flagGroup: [
@@ -180,67 +208,87 @@ const enumOptions = {
     ]
 };
 
-interface AdvancedFilter {
-    prop: any;
-    comparison: string;
-    value: string | boolean | Date;
-}
-
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
-// Verifica se um campo é booleano
-const isBooleanField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'boolean';
+const normalizeRouteQueryValue = (value: unknown): string => {
+    if (Array.isArray(value)) return String(value[0] ?? '');
+    return typeof value === 'string' ? value : '';
 };
 
-// Verifica se um campo é enum
-const isEnumField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'enum';
-};
+const getFieldDefinition = (field: string): FilterableField | undefined =>
+    filterableFields.value.find(f => f.value === field);
 
-// Verifica se um campo é data
-const isDateField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    return fieldDef?.type === 'date';
-};
+const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
+const isEnumField = (field: string) => getFieldDefinition(field)?.type === 'enum';
+const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
 
-// Obtém as opções para um campo enum
 const getEnumOptions = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
-    if (fieldDef?.type === 'enum' && fieldDef.enumType) {
-        return enumOptions[fieldDef.enumType as keyof typeof enumOptions] || [];
-    }
-    return [];
+    const enumType = getFieldDefinition(field)?.enumType;
+    if (!enumType) return [];
+    return enumOptions[enumType] || [];
 };
 
-// Obtém operadores apropriados para cada tipo de campo
 const getOperatorsForField = (field: string) => {
-    const fieldDef = filterableFields.value.find(f => f.value === field);
+    const fieldDef = getFieldDefinition(field);
     if (!fieldDef) return textOperators;
 
-    switch (fieldDef.type) {
-        case 'boolean':
-            return booleanOperators;
-        case 'date':
-            return dateOperators;
-        case 'enum':
-            return enumOperators;
-        default:
-            return textOperators;
+    if (fieldDef.type === 'boolean') return booleanOperators;
+    if (fieldDef.type === 'date') return dateOperators;
+    if (fieldDef.type === 'enum') return enumOperators;
+    return textOperators;
+};
+
+const parseRouteFilters = (): StoreAdvancedFilter[] => {
+    const raw = normalizeRouteQueryValue(route.query[QUERY_KEYS.filters]);
+    if (!raw) return [];
+
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed
+            .filter((item) => item && typeof item.prop === 'string' && typeof item.operator === 'string')
+            .map((item) => ({
+                prop: item.prop,
+                operator: item.operator,
+                value: item.value as string | boolean | Date
+            }));
+    } catch {
+        return [];
     }
 };
 
-// Quando o campo de um filtro muda, resetamos o operador e valor
+const mapStoreFiltersToUi = (filters: StoreAdvancedFilter[]): AdvancedFilter[] => {
+    const mapped: AdvancedFilter[] = [];
+
+    for (const filter of filters) {
+        const fieldDef = getFieldDefinition(filter.prop);
+        if (!fieldDef) continue;
+
+        let parsedValue: string | boolean | Date = filter.value as string | boolean | Date;
+        if (fieldDef.type === 'boolean' && typeof parsedValue !== 'boolean') {
+            parsedValue = String(parsedValue).toLowerCase() === 'true';
+        }
+        if (fieldDef.type === 'date' && typeof parsedValue === 'string') {
+            const parsedDate = new Date(parsedValue);
+            parsedValue = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+        }
+
+        mapped.push({
+            prop: fieldDef.value,
+            comparison: filter.operator || getOperatorsForField(fieldDef.value)[0]?.value || 'equals',
+            value: parsedValue
+        });
+    }
+
+    return mapped;
+};
+
 const onFieldChange = (index: number) => {
-    const field = advancedFilters.value[index].prop?.value || advancedFilters.value[index].prop;
-    
-    // Resetar operador para o padrão do tipo de campo
+    const field = advancedFilters.value[index]?.prop || '';
     const operators = getOperatorsForField(field);
     advancedFilters.value[index].comparison = operators[0]?.value || '';
-    
-    // Resetar valor baseado no tipo de campo
+
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
     } else if (isEnumField(field)) {
@@ -253,57 +301,144 @@ const onFieldChange = (index: number) => {
     }
 };
 
-// Pesquisa global - atualiza automaticamente
-const onGlobalSearch = () => {
-    invoiceStore.setGlobalSearch(globalSearch.value);
-    invoiceStore.fetchInvoices();
+const isFilterValueFilled = (field: string, value: unknown) => {
+    if (isBooleanField(field)) return typeof value === 'boolean';
+    if (isDateField(field)) return value instanceof Date && !Number.isNaN(value.getTime());
+    return value !== undefined && value !== null && String(value).trim() !== '';
 };
 
-// Adiciona novo filtro
-const addFilter = () => {
-    advancedFilters.value.push({
-        prop: filterableFields.value[0],
-        comparison: 'contains',
-        value: isBooleanField(filterableFields.value[0].value) ? true : 
-               isEnumField(filterableFields.value[0].value) ? getEnumOptions(filterableFields.value[0].value)[0]?.value || '' : ''
-    });
+const isFilterComplete = (filter: AdvancedFilter) => {
+    const field = filter.prop;
+    return !!field && !!filter.comparison && isFilterValueFilled(field, filter.value);
 };
 
-// Remove filtro
-const removeFilter = (index: number) => {
-    advancedFilters.value.splice(index, 1);
-    if (advancedFilters.value.length === 0) {
-        applyAdvancedFilters();
+const hasIncompleteFilters = computed(() =>
+    advancedFilters.value.some(filter => !isFilterComplete(filter))
+);
+
+const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
+    return advancedFilters.value
+        .filter(isFilterComplete)
+        .map((filter) => {
+            const prop = filter.prop;
+            let value = filter.value;
+
+            if (isDateField(prop) && value instanceof Date) {
+                value = format(value, 'yyyy-MM-dd');
+            }
+
+            return {
+                prop,
+                operator: filter.comparison,
+                value
+            };
+        });
+};
+
+const syncStateToRoute = async (filtersForStore: StoreAdvancedFilter[]) => {
+    const nextQuery = {
+        ...route.query,
+        [QUERY_KEYS.search]: globalSearch.value || undefined,
+        [QUERY_KEYS.operator]: logicalOperator.value || undefined,
+        [QUERY_KEYS.filters]: filtersForStore.length ? JSON.stringify(filtersForStore) : undefined
+    };
+
+    routeSyncInProgress = true;
+    try {
+        await router.replace({ query: nextQuery });
+    } finally {
+        routeSyncInProgress = false;
     }
 };
 
-// Aplica os filtros avançados
+const onGlobalSearch = () => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+    }
+
+    globalSearchDebounce = setTimeout(async () => {
+        const filtersForStore = buildStoreFiltersFromUi();
+        invoiceStore.setGlobalSearch(globalSearch.value);
+        invoiceStore.setLogicalOperator(logicalOperator.value);
+        invoiceStore.setAdvancedFilters(filtersForStore);
+        await syncStateToRoute(filtersForStore);
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+    }, SEARCH_DEBOUNCE_MS);
+};
+
+const addFilter = () => {
+    const defaultField = filterableFields.value[0];
+    advancedFilters.value.push({
+        prop: defaultField.value,
+        comparison: getOperatorsForField(defaultField.value)[0]?.value || 'contains',
+        value: ''
+    });
+};
+
+const removeFilter = async (index: number) => {
+    advancedFilters.value.splice(index, 1);
+    if (advancedFilters.value.length === 0) {
+        await applyAdvancedFilters();
+    }
+};
+
+const clearAllFilters = async () => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+        globalSearchDebounce = null;
+    }
+
+    globalSearch.value = '';
+    logicalOperator.value = 'AND';
+    advancedFilters.value = [];
+    invoiceStore.clearFilters();
+    await syncStateToRoute([]);
+    await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+};
+
 const applyAdvancedFilters = async () => {
+    if (hasIncompleteFilters.value) {
+        toast.error('Preencha todos os campos dos filtros antes de aplicar.');
+        return;
+    }
+
     loading.value = true;
     try {
-        const filtersToSend = advancedFilters.value
-            .filter(f => f.prop && f.comparison && f.value !== '')
-            .map(f => {
-                const prop = typeof f.prop === 'object' ? f.prop.value : f.prop;
-                let value = f.value;
-                
-                // Formata datas para yyyy-MM-dd
-                if (isDateField(prop) && f.value instanceof Date) {
-                    value = format(f.value, 'yyyy-MM-dd');
-                }
-                
-                return {
-                    prop,
-                    operator: f.comparison,
-                    value: value
-                };
-            });
-
+        const filtersForStore = buildStoreFiltersFromUi();
+        invoiceStore.setGlobalSearch(globalSearch.value);
         invoiceStore.setLogicalOperator(logicalOperator.value);
-        invoiceStore.setAdvancedFilters(filtersToSend);
-        await invoiceStore.fetchInvoices();
+        invoiceStore.setAdvancedFilters(filtersForStore);
+        await syncStateToRoute(filtersForStore);
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
     } finally {
         loading.value = false;
     }
 };
+
+watch(
+    () => route.query,
+    async () => {
+        if (routeSyncInProgress) return;
+
+        const querySearch = normalizeRouteQueryValue(route.query[QUERY_KEYS.search]);
+        const queryOperator = normalizeRouteQueryValue(route.query[QUERY_KEYS.operator]) === 'OR' ? 'OR' : 'AND';
+        const queryFilters = parseRouteFilters();
+
+        globalSearch.value = querySearch;
+        logicalOperator.value = queryOperator as LogicalOperator;
+        advancedFilters.value = mapStoreFiltersToUi(queryFilters);
+
+        invoiceStore.setGlobalSearch(globalSearch.value);
+        invoiceStore.setLogicalOperator(logicalOperator.value);
+        invoiceStore.setAdvancedFilters(queryFilters);
+        await invoiceStore.fetchInvoices(0, invoiceStore.pagination.itemsPerPage || 10);
+    },
+    { immediate: true, deep: true }
+);
+
+onBeforeUnmount(() => {
+    if (globalSearchDebounce) {
+        clearTimeout(globalSearchDebounce);
+    }
+});
 </script>

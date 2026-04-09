@@ -9,7 +9,7 @@
  * - Salário
  */
 
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 
@@ -25,7 +25,6 @@ import { usePositionStore } from '@/store/institution/positionStore';
 // Types
 import { InstitutionListingType } from "@/components/institution/types";
 import { EmployeeInsertType } from "@/components/employee/types";
-import { email } from "@vuelidate/validators";
 
 // Configuração inicial
 const { t } = useI18n();
@@ -48,11 +47,14 @@ const emit = defineEmits<{
   (e: 'onStepChange', step: number): void;
   (e: 'save', payload: EmployeeInsertType): void;
   (e: 'update:modelValue', value: EmployeeInsertType): void;
+  (e: 'clear-server-error', field: string): void;
 }>();
 
 const props = defineProps<{
   modelValue: EmployeeInsertType,
-  loading?: boolean
+  loading?: boolean,
+  serverErrors?: Record<string, string[]>,
+  isEditMode?: boolean
 }>();
 
 // Dados computados do employee
@@ -68,6 +70,28 @@ let employeeData = computed({
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => {
+  return [
+    ...rules,
+    (value: any) => {
+      const hasFrontendError = rules.some((rule) => rule(value) !== true);
+      if (hasFrontendError) return true;
+      return getServerErrors(field)[0] || true;
+    }
+  ];
+};
+
+watch(
+  () => props.serverErrors,
+  async (errors) => {
+    if (errors && Object.keys(errors).length > 0) {
+      await nextTick();
+      await form2.value?.validate();
+    }
+  },
+  { deep: true }
+);
 
 /**
  * Regras de validação para os campos do formulário
@@ -174,6 +198,7 @@ onMounted(async () => {
  * Observa mudanças na instituição para carregar departamentos
  */
 watch(() => employeeData.value.company, (newInstitutionId) => {
+  emit('clear-server-error', 'company');
   if (newInstitutionId) {
     departmentStore.fetchDepartments(newInstitutionId);
     employeeData.value.department = undefined;
@@ -188,6 +213,7 @@ watch(() => employeeData.value.company, (newInstitutionId) => {
  * Observa mudanças no departamento para carregar cargos
  */
 watch(() => employeeData.value.department, (newDepartmentId) => {
+  emit('clear-server-error', 'department');
   if (newDepartmentId) {
     positionStore.fetchPositions(newDepartmentId);
     employeeData.value.position = undefined;
@@ -195,6 +221,13 @@ watch(() => employeeData.value.department, (newDepartmentId) => {
     positionStore.positions = [];
   }
 });
+
+watch(() => employeeData.value.position, () => emit('clear-server-error', 'position'));
+watch(() => employeeData.value.baseSalary, () => emit('clear-server-error', 'baseSalary'));
+watch(() => employeeData.value.contractDurationType, () => emit('clear-server-error', 'contractDurationType'));
+watch(() => employeeData.value.hireDate, () => emit('clear-server-error', 'hireDate'));
+watch(() => employeeData.value.terminationDate, () => emit('clear-server-error', 'terminationDate'));
+watch(() => employeeData.value.rehireDate, () => emit('clear-server-error', 'rehireDate'));
 
 /**
  * Carrega mais departamentos quando chega no final do scroll
@@ -279,7 +312,8 @@ const saveData = async () => {
               {{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.company" :items="institutions" :loading="institutionStore.loading"
-              :placeholder="t('t-select-institution')" clearable :rules="requiredRules.institution" />
+              :placeholder="t('t-select-institution')" clearable :rules="applyServerErrorsToRules('company', requiredRules.institution)"
+              :error-messages="getServerErrors('company')" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -287,7 +321,8 @@ const saveData = async () => {
             </div>
             <MenuSelect v-model="employeeData.department" :items="departments" :loading="departmentStore.loading"
               :placeholder="t('t-select-department')" :disabled="!employeeData.company"
-              :rules="requiredRules.department" @scroll-end="loadMoreDepartments" clearable />
+              :rules="applyServerErrorsToRules('department', requiredRules.department)" @scroll-end="loadMoreDepartments"
+              clearable :error-messages="getServerErrors('department')" />
           </v-col>
         </v-row>
 
@@ -298,15 +333,18 @@ const saveData = async () => {
               {{ $t('t-position') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.position" :items="positions" :loading="positionStore.loading"
-              :rules="requiredRules.position" :placeholder="t('t-select-position')" :disabled="!employeeData.department"
-              @scroll-end="loadMorePositions" clearable />
+              :rules="applyServerErrorsToRules('position', requiredRules.position)" :placeholder="t('t-select-position')"
+              :disabled="!employeeData.department" @scroll-end="loadMorePositions" clearable
+              :error-messages="getServerErrors('position')" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-base-salary') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.baseSalary" type="number"
-              :placeholder="t('t-enter-the-employee-base-salary')" :rules="requiredRules.baseSalary" class="mb-2" />
+              :placeholder="t('t-enter-the-employee-base-salary')"
+              :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2"
+              :disabled="!!isEditMode" />
           </v-col>
         </v-row>
 
@@ -316,7 +354,7 @@ const saveData = async () => {
               {{ $t('t-hire-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="hireDatePicker" v-model="employeeData.hireDate"
-              :placeholder="$t('t-enter-hire-date')" :rules="requiredRules.hireDate" :teleport="true"
+              :placeholder="$t('t-enter-hire-date')" :rules="applyServerErrorsToRules('hireDate', requiredRules.hireDate)" :teleport="true"
               format="dd/MM/yyyy" />
           </v-col>
           <v-col cols="12" lg="6">
@@ -324,7 +362,8 @@ const saveData = async () => {
               {{ $t('t-contract-duration') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.contractDurationType" :items="contractDurationTypeOptions"
-              :rules="requiredRules.contractDurationType" />
+              :rules="applyServerErrorsToRules('contractDurationType', requiredRules.contractDurationType)"
+              :error-messages="getServerErrors('contractDurationType')" />
           </v-col>
         </v-row>
 
@@ -336,14 +375,15 @@ const saveData = async () => {
             </div>
             <ValidatedDatePicker ref="terminationDatePicker" v-model="employeeData.terminationDate"
               :placeholder="$t('t-enter-termination-date')" :teleport="true" format="dd/MM/yyyy"
-              :rules="requiredRules.terminationDate" />
+              :rules="applyServerErrorsToRules('terminationDate', requiredRules.terminationDate)" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-rehire-date') }}
             </div>
             <ValidatedDatePicker ref="rehireDatePicker" v-model="employeeData.rehireDate" :teleport="true"
-              :placeholder="$t('t-enter-rehire-date')" format="dd/MM/yyyy" />
+              :placeholder="$t('t-enter-rehire-date')" format="dd/MM/yyyy"
+              :rules="applyServerErrorsToRules('rehireDate', [])" />
           </v-col>
         </v-row>
 

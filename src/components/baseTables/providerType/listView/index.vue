@@ -15,6 +15,7 @@ import { providerTypeService } from "@/app/http/httpServiceProvider";
 import { useProviderTypeStore } from "@/store/baseTables/providerTypeStore";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { ProviderTypeOption } from "@/components/baseTables/providerType/types";
 
@@ -54,11 +55,8 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  const message =
-    error?.error?.errors?.name?.[0] || 
-    error?.error?.errors?.description?.[0]
-    error?.message ||                                  
-    t("t-message-save-error");                         
+  const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
+
   errorMsg.value = message;
 
   alertTimeout = setTimeout(() => {
@@ -144,7 +142,7 @@ const onSubmit = async (data: ProviderTypeListing, callbacks?: {
     // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    toast.error(t('t-message-save-error'));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     // Callback para desativar o loading
@@ -199,7 +197,7 @@ const onConfirmDelete = async () => {
 
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
     handleApiError(error);
   } finally {
     deleteLoading.value = false;
@@ -278,3 +276,4 @@ const onConfirmDelete = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 </template>
+

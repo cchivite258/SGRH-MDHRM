@@ -49,6 +49,10 @@ const props = defineProps({
   institutionId: {
     type: String as PropType<string | undefined>,
     default: undefined
+  },
+  isViewMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -72,7 +76,7 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const periodId = ref<string | null>(null);
 // Computed properties
 const loading = computed(() => employeeStore.loading);
-const totalItems = computed(() => employeeStore.pagination.totalElements);
+const totalItems = computed(() => employeeStore.companyEmployeesPagination.totalElements);
 
 interface FetchParams {
   page: number;
@@ -182,7 +186,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-employee-list')" title-class="py-5">
-    <template #title-action>
+    <template v-if="!props.isViewMode" #title-action>
       <div>
         <v-btn color="primary" class="mx-1" @click="onCreateClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-employee') }}
@@ -209,10 +213,10 @@ onBeforeUnmount(() => {
       <DataTableServer v-model="selectedEmployees"
         :headers="employeeHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="employeeStore.company_employees" :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loading"
-        :search-query="searchQuery" @load-items="fetchCompanyEmployees" item-value="id" show-select>
+        :search-query="searchQuery" @load-items="fetchCompanyEmployees" item-value="id" :show-select="!props.isViewMode">
         <template #body="{ items }: { items: readonly unknown[] }">
           <tr v-for="item in items as EmployeeListingType[]" :key="item.id">
-            <td>
+            <td v-if="!props.isViewMode">
               <v-checkbox :model-value="selectedEmployees.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -224,8 +228,22 @@ onBeforeUnmount(() => {
             <td>{{ item.email || 'N/A' }}</td> 
             <td><Status :status="item.enabled ? 'enabled' : 'disabled'" /></td>
             <td>
-              <TableAction @on-view="() => router.push(`/employee/view/${item.id}`)" @onEdit="() => router.push(`/employee/edit/${item.id}`)" @onDelete="() => openDeleteDialog(item.id)"
-                />
+              <v-btn
+                v-if="props.isViewMode"
+                icon
+                size="small"
+                variant="tonal"
+                color="primary"
+                @click="router.push(`/employee/view/${item.id}`)"
+              >
+                <i class="ph-eye" />
+              </v-btn>
+              <TableAction
+                v-else
+                @on-view="() => router.push(`/employee/view/${item.id}`)"
+                @onEdit="() => router.push(`/employee/edit/${item.id}`)"
+                @onDelete="() => openDeleteDialog(item.id)"
+              />
             </td>
           </tr>
         </template>
@@ -250,11 +268,11 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
  <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteEmployee" :loading="deleteLoading" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 1)">
-      {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 6)">
+      {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
     </v-btn>
-    <v-btn color="success" variant="elevated" @click="$emit('onStepChange', 5)">
+    <v-btn color="success" variant="elevated" @click="$router.push('/institution/list')">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

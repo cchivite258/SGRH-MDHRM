@@ -27,7 +27,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import TableAction from "@/app/common/components/TableAction.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
-import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
+import { dependentEmployeeService, employeeService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
@@ -35,6 +35,7 @@ import type {
   DependentInsertType
 } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
@@ -76,12 +77,23 @@ const searchQuery = ref("");
 const searchProps = "firstName,middleName,lastName,gender,relationship,idCardNumber,idCardIssuer"; // Propriedades de busca
 const itemsPerPage = ref(10);
 const selectedDependentData = ref<DependentListingType[]>([]);
+const employeeAlertFlag = ref<string | undefined>(undefined);
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Computed properties
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
+
+const showDependentApiErrors = (error: unknown, fallbackKey = "t-message-save-error") => {
+  const messages = getApiErrorMessages(error, t(fallbackKey));
+  if (messages.length > 0) {
+    messages.forEach((message) => toast.error(message));
+    return;
+  }
+
+  toast.error(t(fallbackKey));
+};
 
 interface FetchParams {
   page: number;
@@ -105,6 +117,23 @@ const fetchContactPersons = async ({ page, itemsPerPage, sortBy, search }: Fetch
     search,
     searchProps
   );
+};
+
+const getEmployeeAlertMessage = () => {
+  if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+    return t('t-exceeds-number-of-dependents');
+  }
+  return '';
+};
+
+const fetchEmployeeAlertFlag = async () => {
+  if (!employeeId.value) return;
+  try {
+    const response = await employeeService.getEmployeeById(employeeId.value);
+    employeeAlertFlag.value = response?.data?.alertFlag;
+  } catch (error) {
+    console.error("Erro ao buscar alertFlag do colaborador:", error);
+  }
 };
 
 //get dos enums
@@ -155,6 +184,7 @@ const onCreateEditClick = (data: DependentInsertType | DependentListingType | nu
       gender: "",
       birthDate: undefined,
       relationship: "",
+      isUnivesityStudent: false,
       employee: employee,
       idCardNumber: "",
       idCardIssuer: "",
@@ -180,6 +210,7 @@ const onSubmit = async (
   data: DependentInsertType,
   callbacks?: {
     onSuccess?: () => void,
+    onError?: (error: unknown) => void,
     onFinally?: () => void
   }
 ) => {
@@ -193,18 +224,7 @@ const onSubmit = async (
     }
 
     if (response?.status === "error") {
-      const validationErrors = response?.error?.error?.errors;
-
-      if (validationErrors && typeof validationErrors === "object") {
-        Object.values(validationErrors).forEach((messages: any) => {
-          if (Array.isArray(messages)) {
-            messages.forEach((msg) => toast.error(msg));
-          }
-        });
-        return;
-      }
-
-      toast.error(response.error?.message || t("t-message-save-error"));
+      callbacks?.onError?.(response.error);
       return;
     }
 
@@ -219,28 +239,18 @@ const onSubmit = async (
       0,
       itemsPerPage.value
     );
+    await fetchEmployeeAlertFlag();
+
+    if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+      toast.warning(t('t-exceeds-number-of-dependents'));
+    }
 
     callbacks?.onSuccess?.();
 
   } catch (error: any) {
     console.error("Erro ao gravar dependentes:", error);
-
-    const validationErrors = error?.response?.data?.error?.errors;
-
-    if (validationErrors && typeof validationErrors === "object") {
-      Object.values(validationErrors).forEach((messages: any) => {
-        if (Array.isArray(messages)) {
-          messages.forEach((msg) => toast.error(msg));
-        }
-      });
-      return;
-    }
-
-    toast.error(
-      error?.response?.data?.message ||
-      error?.message ||
-      t("t-message-save-error")
-    );
+    showDependentApiErrors(error, "t-message-save-error");
+    callbacks?.onError?.(error);
   } finally {
     callbacks?.onFinally?.();
   }
@@ -285,9 +295,13 @@ const onConfirmDelete = async () => {
       0,
       itemsPerPage.value
     );
+    await fetchEmployeeAlertFlag();
+    if (employeeAlertFlag.value === 'EXCEEDS_NUMBER_OF_DEPENDENTS') {
+      toast.warning(t('t-exceeds-number-of-dependents'));
+    }
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
+    showDependentApiErrors(error, "t-toast-message-deleted-erros");
     console.error("Delete error:", error);
   } finally {
     deleteLoading.value = false;
@@ -303,6 +317,10 @@ onBeforeUnmount(() => {
     clearTimeout(alertTimeout);
     alertTimeout = null;
   }
+});
+
+onMounted(async () => {
+  await fetchEmployeeAlertFlag();
 });
 </script>
 
@@ -322,6 +340,9 @@ onBeforeUnmount(() => {
       </div>
     </template>
   </Card>
+  <v-alert v-if="getEmployeeAlertMessage()" type="warning" variant="tonal" class="mt-4">
+    {{ getEmployeeAlertMessage() }}
+  </v-alert>
 
   <v-row class="mt-5">
     <v-col cols="12" lg="12">
@@ -379,8 +400,8 @@ onBeforeUnmount(() => {
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
   <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
-      {{ $t('t-back-to-institution-and-classification') }}
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
+      {{ $t('t-salary-review') }}
     </v-btn>
 
   </v-card-actions>

@@ -45,9 +45,9 @@ const fieldValue = computed({
       // Se for um objeto (com value e isValid), retorna apenas o value
       return (props.modelValue && typeof props.modelValue === 'object' && 'value' in props.modelValue) 
         ? props.modelValue.value 
-        : props.modelValue || "";
+        : (props.modelValue ?? "");
     } else {
-      return props.modelValue || "";
+      return props.modelValue ?? "";
     }
   },
   set(newValue: string) {

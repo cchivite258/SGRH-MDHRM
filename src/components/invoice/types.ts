@@ -39,6 +39,7 @@ export type InvoiceListingType = {
     };
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    notes?: string;
     flag?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
@@ -89,6 +90,7 @@ export type InvoiceResponseType = {
     };
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    notes?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
     createdAt: Date ;
@@ -113,6 +115,7 @@ export type InvoiceInsertType = {
     company?: string;
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
+    notes?: string;
     coveragePeriod?: any;
     invoiceAttachment?: any;
 }

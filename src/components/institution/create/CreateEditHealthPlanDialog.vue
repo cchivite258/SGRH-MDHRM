@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { PropType, computed, ref, watch, onMounted } from "vue";
+import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
 import { HealthPlanInsertType, HospitalProcedureListingType, CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -47,6 +48,7 @@ const props = defineProps({
 
 const localLoading = ref(false);
 const errorMsg = ref("");
+const serverErrors = ref<Record<string, string[]>>({});
 
 // Form fields
 const id = ref("");
@@ -105,21 +107,24 @@ const dialogValue = computed({
   },
 });
 
+const hasNumericValue = (v: number | string | null | undefined) =>
+  v !== null && v !== undefined && v !== "" && !Number.isNaN(Number(v));
+
 /**
  * Regras de validação para os campos do formulário
  */
 const requiredRules = {
   maxNumberOfDependents: [
-    (v: number) => !!v || t('t-please-enter-max-dependents'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-dependents')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-dependents'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-dependents')
   ],
   childrenMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   childrenInUniversityMaxAge: [
-    (v: number) => !!v || t('t-please-enter-max-age'),
-    (v: number) => (v && v >= 0) || t('t-min-zero-age')
+    (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-age')
   ],
   coveragePeriod: [
     (v: string) => !!v || t('t-please-select-coverage-period')
@@ -162,9 +167,26 @@ const coveragePeriods = computed(() => {
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
+const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
+  ...rules,
+  (value: any) => {
+    const hasFrontendError = rules.some((rule) => rule(value) !== true);
+    if (hasFrontendError) return true;
+    return getServerErrors(field)[0] || true;
+  }
+];
+
+watch(serverErrors, async (errors) => {
+  if (Object.keys(errors).length > 0) {
+    await nextTick();
+    await form.value?.validate();
+  }
+}, { deep: true });
 
 const onSubmit = async () => {
   if (!form.value) return;
+  serverErrors.value = {};
 
   const { valid } = await form.value.validate();
 
@@ -197,8 +219,12 @@ const onSubmit = async () => {
   emit("onSubmit", payload, {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
-      // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      serverErrors.value = getApiValidationErrors(error);
+      if (Object.keys(serverErrors.value).length === 0) {
+        errorMsg.value = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
+      } else {
+        errorMsg.value = "";
+      }
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -277,14 +303,15 @@ onMounted(async () => {
                 {{ $t('t-coverage-period') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="coveragePeriod" :items="coveragePeriods" :loading="coveragePeriodStore.loading"
-                :rules="requiredRules.coveragePeriod" :disabled="!isCreate" />
+                :rules="requiredRules.coveragePeriod" :disabled="!isCreate"
+                :error-messages="getServerErrors('coveragePeriod')" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-maximum-number-of-dependents') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="maxNumberOfDependents" :placeholder="t('t-enter-maximum-number-of-dependents')"
-                :rules="requiredRules.maxNumberOfDependents" type="number" />
+                :rules="applyServerErrorsToRules('maxNumberOfDependents', requiredRules.maxNumberOfDependents)" type="number" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -293,7 +320,7 @@ onMounted(async () => {
                 {{ $t('t-maximum-age-of-dependents') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="childrenMaxAge" :placeholder="t('t-enter-maximum-age-of-dependents')"
-                type="number" :rules="requiredRules.childrenMaxAge" class="mb-2" />
+                type="number" :rules="applyServerErrorsToRules('childrenMaxAge', requiredRules.childrenMaxAge)" class="mb-2" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
@@ -301,7 +328,7 @@ onMounted(async () => {
               </div>
               <TextField v-model.number="childrenInUniversityMaxAge"
                 :placeholder="t('t-enter-maximum-age-of-dependents-in-university')" type="number"
-                :rules="requiredRules.childrenInUniversityMaxAge" class="mb-2" />
+                :rules="applyServerErrorsToRules('childrenInUniversityMaxAge', requiredRules.childrenInUniversityMaxAge)" class="mb-2" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -311,7 +338,7 @@ onMounted(async () => {
                 {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="healthPlanLimit" :items="healthPlanLimitOptions"
-                :rules="requiredRules.healthPlanLimit" />
+                :rules="requiredRules.healthPlanLimit" :error-messages="getServerErrors('healthPlanLimit')" />
             </v-col>
 
             <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
@@ -320,7 +347,7 @@ onMounted(async () => {
                 {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model.number="fixedAmount" type="number" :placeholder="t('t-enter-fixed-amount')"
-                :rules="requiredRules.fixedAmount" class="mb-2" />
+                :rules="applyServerErrorsToRules('fixedAmount', requiredRules.fixedAmount)" class="mb-2" />
             </v-col>
           </v-row>
 
@@ -331,7 +358,7 @@ onMounted(async () => {
                 {{ $t('t-salary-component') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="salaryComponent" :items="salaryComponentOptions"
-                :rules="requiredRules.salaryComponent" />
+                :rules="requiredRules.salaryComponent" :error-messages="getServerErrors('salaryComponent')" />
             </v-col>
 
             <!-- Campo Company Contribution - aparece apenas quando healthPlanLimit for ANUAL_SALARY -->
@@ -341,7 +368,7 @@ onMounted(async () => {
               </div>
               <TextField v-model="companyContributionPercentage"
                 :placeholder="t('t-enter-company-contribuition-percentage')" type="number" class="mb-2"
-                :rules="requiredRules.companyContributionPercentage" />
+                :rules="applyServerErrorsToRules('companyContributionPercentage', requiredRules.companyContributionPercentage)" />
             </v-col>
           </v-row>
           <v-row :class="healthPlanLimit === 'ANUAL_SALARY' ? 'mt-n6' : ''">

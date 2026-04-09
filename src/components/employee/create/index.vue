@@ -11,14 +11,17 @@ import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // Components
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
-import Step3 from "@/components/employee/create/TabDependents.vue";
-import Step4 from "@/components/employee/create/TabHealthPlan.vue";
-import Step5 from "@/components/employee/create/TabExpensesperProcedure.vue";
+import Step3 from "@/components/employee/view/TabSalaryReview.vue";
+import Step4 from "@/components/employee/create/TabDependents.vue";
+import Step5 from "@/components/employee/create/TabHealthPlan.vue";
+import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -52,20 +55,30 @@ const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
 
+const isEmployeeEditRoute = () => route.name === "EditEmployee";
+const isEmployeeCreateRoute = () => route.name === "CreateEmployee";
+const isEmployeeFormRoute = () => isEmployeeEditRoute() || isEmployeeCreateRoute();
+
+const getRouteEmployeeId = (): string | null => {
+  if (!isEmployeeEditRoute()) return null;
+  const rawId = route.params.id;
+  if (typeof rawId === 'string') return rawId;
+  if (Array.isArray(rawId)) return rawId[0] || null;
+  return null;
+};
+
 // Refs
 const step = ref(1);
-const employeeId = ref<string | null>(
-  typeof route.params.id === 'string' ? route.params.id : Array.isArray(route.params.id) ? route.params.id[0] : null
-);
+const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
 const errorMsg = ref("");
+const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
 
-// Dados reativos do formulário
-let employeeData = reactive<EmployeeInsertType>({
+const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
   employeeNumber: '',
   firstName: '',
@@ -91,6 +104,7 @@ let employeeData = reactive<EmployeeInsertType>({
   idCardNumber: null,
   idCardIssuer: '',
   idCardExpiryDate: undefined,
+  isLifeTimeCard: false,
   idCardIssuanceDate: undefined,
   passportNumber: null,
   passportIssuer: '',
@@ -109,6 +123,59 @@ let employeeData = reactive<EmployeeInsertType>({
   rehireDate: undefined
 });
 
+// Dados reativos do formulário
+let employeeData = reactive<EmployeeInsertType>(getDefaultEmployeeData());
+
+const resetEmployeeData = () => {
+  Object.assign(employeeData, getDefaultEmployeeData());
+};
+
+const loadEmployeeData = async (id: string) => {
+  try {
+    loading.value = true;
+    const response = await employeeService.getEmployeeById(id);
+
+    if (!response.data) {
+      throw new Error("Dados do funcionário não disponíveis.");
+    }
+
+    const data = response.data;
+    Object.assign(employeeData, data);
+
+    employeeData.country = data.country?.id;
+    employeeData.province = data.province?.id;
+    employeeData.company = data.company?.id;
+    employeeData.department = data.department?.id;
+    employeeData.position = data.position?.id;
+
+    if (employeeData.company) {
+      await departmentStore.fetchDepartments(employeeData.company);
+    }
+
+    if (employeeData.department) {
+      await positionStore.fetchPositions(employeeData.department);
+    }
+  } catch (error) {
+    toast.error(t('t-error-loading-employee'));
+    console.error('Error loading employee:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const applyCreateInstitutionContext = async () => {
+  if (!route.query.institutionId) return;
+
+  employeeData.company = Number(route.query.institutionId);
+  if (employeeData.company) {
+    await departmentStore.fetchDepartments(employeeData.company);
+  }
+
+  if (employeeData.department) {
+    await positionStore.fetchPositions(employeeData.department);
+  }
+};
+
 /**
  * Trata erros da API de forma consistente
  * @param error - Objeto de erro da API
@@ -120,29 +187,10 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  // Mensagem de erro padrão
-  let message = t('t-error-saving-employee');
-
-  // Tratamento específico para erros da API
-  if (error?.response?.data) {
-    if (error.response.data.error) {
-      // Erros de validação
-      errorMsg.value = error.response.data.message;
-      alertTimeout = setTimeout(() => {
-        errorMsg.value = "";
-        alertTimeout = null;
-      }, 5000);
-    }
-    message = error.response.data.message || message;
-  }
-  // Erros gerais
-  else if (error.message) {
-    message = error.message;
-  }
-
-  // Exibe erro no toast e no alert
-  toast.error(message);
-  errorMsg.value = message;
+  const messages = getApiErrorMessages(error, t('t-error-saving-employee'));
+  apiFieldErrors.value = getApiValidationErrors(error);
+  messages.forEach((message) => toast.error(message));
+  errorMsg.value = Object.keys(apiFieldErrors.value).length > 0 ? "" : messages.join("\n");
 
   // Configura timeout para limpar a mensagem
   alertTimeout = setTimeout(() => {
@@ -151,65 +199,64 @@ const handleApiError = (error: any) => {
   }, 5000);
 };
 
+const clearApiFieldError = (field: string) => {
+  if (!apiFieldErrors.value[field]) return;
+  const next = { ...apiFieldErrors.value };
+  delete next[field];
+  apiFieldErrors.value = next;
+};
+
 /**
  * Carrega dados do employee quando em modo de edição
  */
 onMounted(async () => {
-  if (employeeId.value) {
-    try {
-      loading.value = true;
-      const response = await employeeService.getEmployeeById(employeeId.value);
+  if (!isEmployeeFormRoute()) return;
 
-      if (!response.data) {
-        throw new Error("Dados do funcionário não disponíveis.");
-      }
+  const routeEmployeeId = getRouteEmployeeId();
 
-      const data = response.data;
-
-      // Atribui os dados básicos
-      Object.assign(employeeData, data);
-
-      // Atribui IDs para relacionamentos
-      employeeData.country = data.country?.id;
-      employeeData.province = data.province?.id;
-      employeeData.company = data.company?.id;
-      console.log('Dados do funcionário carregados:', employeeData);
-      employeeData.department = data.department?.id;
-      employeeData.position = data.position?.id;
-
-
-
-      // Carrega dados dependentes
-      if (employeeData.company) {
-        await departmentStore.fetchDepartments(employeeData.company);
-      }
-
-      if (employeeData.department) {
-        await positionStore.fetchPositions(employeeData.department);
-      }
-
-    } catch (error) {
-      toast.error(t('t-error-loading-employee'));
-      console.error('Error loading employee:', error);
-    } finally {
-      loading.value = false;
-    }
+  // Em modo edicao, o ID da rota e a fonte de verdade.
+  if (routeEmployeeId) {
+    employeeId.value = routeEmployeeId;
+    basicDataValidated.value = true;
+    await loadEmployeeData(routeEmployeeId);
+    return;
   }
-  else {
-    if (route.query.institutionId) {
-      // Se estiver criando um novo funcionário, preenche o company com o institutionId da rota
-      employeeData.company = Number(route.query.institutionId);
-      if (employeeData.company) {
-        await departmentStore.fetchDepartments(employeeData.company);
-      }
 
-      if (employeeData.department) {
-        await positionStore.fetchPositions(employeeData.department);
-      }
-      console.log('Criando novo funcionário para instituição:', employeeData.company);
-    }
-  }
+  // Em modo criação, iniciar sempre formulário limpo.
+  employeeStore.clearDraft();
+  employeeId.value = null;
+  basicDataValidated.value = false;
+  resetEmployeeData();
+  await applyCreateInstitutionContext();
 });
+
+watch(
+  () => route.params.id,
+  async () => {
+    if (!isEmployeeEditRoute()) {
+      if (isEmployeeCreateRoute()) {
+        employeeStore.clearDraft();
+        employeeId.value = null;
+        basicDataValidated.value = false;
+        resetEmployeeData();
+        await applyCreateInstitutionContext();
+      }
+      return;
+    }
+
+    const routeEmployeeId = getRouteEmployeeId();
+
+    if (!routeEmployeeId) {
+      employeeId.value = null;
+      return;
+    }
+
+    if (employeeId.value === routeEmployeeId) return;
+    employeeId.value = routeEmployeeId;
+    basicDataValidated.value = true;
+    await loadEmployeeData(routeEmployeeId);
+  }
+);
 
 /**
  * Muda entre as abas do formulário
@@ -224,16 +271,34 @@ const onStepChange = (value: number) => {
   }
 
   // No modo de edição ou quando dados básicos já foram validados, permite navegar livremente
-  if (employeeId.value || employeeId.value) {
+  if (employeeId.value || basicDataValidated.value) {
     step.value = value;
     return;
   }
 
   // No modo criação, só permite avançar para a próxima tab sequencialmente
-  if (value === step.value + 1) {
+  if (value === step.value + 1 && basicDataValidated.value) {
     step.value = value;
   }
 };
+
+const onBasicDataValidated = () => {
+  basicDataValidated.value = true;
+};
+
+const onSalaryUpdated = (value: number) => {
+  employeeData.baseSalary = value;
+};
+
+watch(
+  () => employeeData,
+  () => {
+    if (!employeeId.value && step.value === 1) {
+      basicDataValidated.value = false;
+    }
+  },
+  { deep: true }
+);
 
 
 // E o watcher deve ficar assim:
@@ -255,18 +320,42 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
   try {
     loading.value = true;
     errorMsg.value = "";
+    apiFieldErrors.value = {};
     console.log('EmployeeInsertType:', payload);
 
     // Usa os dados recebidos do payload
     Object.assign(employeeData, payload);
+    const normalizedPayload = { ...payload } as EmployeeInsertType;
+    normalizeObjectStringFieldsInPlace(normalizedPayload as Record<string, any>, {
+      employeeNumber: "trimToEmpty",
+      firstName: "trimToEmpty",
+      middleName: "trimToNull",
+      lastName: "trimToEmpty",
+      bloodGroup: "trimToNull",
+      placeOfBirth: "trimToNull",
+      nationality: "trimToNull",
+      incomeTaxNumber: "trimToNull",
+      socialSecurityNumber: "trimToNull",
+      address: "trimToNull",
+      postalCode: "trimToNull",
+      email: "trimToNull",
+      phone: "trimToNull",
+      mobile: "trimToNull",
+      emergencyContactName: "trimToNull",
+      emergencyContactPhone: "trimToNull",
+      idCardNumber: "trimToEmpty",
+      idCardIssuer: "trimToEmpty",
+      passportNumber: "trimToNull",
+      passportIssuer: "trimToNull",
+    });
 
     let response;
     if (employeeId.value) {
       // Modo edição
-      response = await employeeService.updateEmployee(employeeId.value, payload);
+      response = await employeeService.updateEmployee(employeeId.value, normalizedPayload);
     } else {
       // Modo criação
-      response = await employeeService.createEmployee(payload);
+      response = await employeeService.createEmployee(normalizedPayload);
 
       if (response?.data?.id) {
         employeeId.value = response.data.id;
@@ -277,8 +366,12 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
       }
     }
 
-    // Salvar draft na store
-    employeeStore.setDraftEmployee(employeeData);
+    // Salvar/limpar draft na store
+    if (isFinalStep) {
+      employeeStore.clearDraft();
+    } else {
+      employeeStore.setDraftEmployee(employeeData);
+    }
 
 
     // Feedback de sucesso
@@ -328,16 +421,22 @@ onBeforeUnmount(() => {
 
       <!-- Abas do formulário -->
       <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, false)" :loading="loading" />
+        @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
 
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, true)" :loading="loading" />
+        @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
+        @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
 
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
+        :allow-edit="true" :previous-step="2" previous-label-key="t-back-to-institution-and-classification"
+        :next-step="4" @salaryUpdated="onSalaryUpdated" />
 
       <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
       <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step6 v-if="step === 6" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>
@@ -412,3 +511,4 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+

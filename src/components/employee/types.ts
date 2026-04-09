@@ -51,6 +51,7 @@ export type EmployeeListingType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string;
   passportIssuer: string;
@@ -108,6 +109,7 @@ export type EmployeeResponseType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string;
   passportIssuer: string;
@@ -131,6 +133,9 @@ export type EmployeeResponseType = {
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
   alertFlag: string | undefined;
+  baseSalary?: number | null;
+  grossSalary?: number | null;
+  employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
 
 };
 
@@ -160,6 +165,7 @@ export type EmployeeInsertType = {
   idCardNumber: string | null;
   idCardIssuer: string;
   idCardExpiryDate: string | undefined;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string | undefined;
   passportNumber: string | null;
   passportIssuer: string;
@@ -174,6 +180,22 @@ export type EmployeeInsertType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
+};
+
+export type EmployeeBaseSalaryTrackType = {
+  id: string;
+  stardDate?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+  baseSalary: number | null;
+  status?: string | undefined;
+  employeeId?: string | undefined;
+};
+
+export type EmployeeBaseSalaryUpdateType = {
+  newBaseSalary: number | null;
+  starDate?: string;
 };
 
 
@@ -202,6 +224,7 @@ export type EmployeeUpdateType = {
   idCardNumber: string | null;
   idCardIssuer: string;
   idCardExpiryDate: string;
+  isLifeTimeCard: boolean;
   idCardIssuanceDate: string;
   passportNumber: string | null;
   passportIssuer: string;
@@ -226,6 +249,7 @@ export type DependentInsertType = {
   gender: string;
   birthDate: Date | undefined;
   relationship: string;
+  isUnivesityStudent: boolean;
   employee: string;
   idCardNumber: string;
   idCardIssuer: string;
@@ -242,6 +266,7 @@ export type DependentListingType = {
   gender: string;
   birthDate: Date | undefined;
   relationship: string;
+  isUnivesityStudent: boolean;
   employee: {
     id: string;
     employeeNumber: string;
@@ -292,6 +317,10 @@ export type ExpensePerProcedureType = {
  allocatedBalance: number;
  usedBalance: number;
  remainingBalance: number;
+ groupAllocatedBalance?: number | null;
+ groupUsedBalance?: number | null;
+ groupRemainingBalance?: number | null;
+ belongsToGroup?: boolean;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;

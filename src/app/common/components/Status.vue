@@ -21,6 +21,7 @@ const warningChips: { text: string; value: string }[] = [
 const infoChips: { text: string; value: string }[] = [
   { text: "Open", value: "open" },
   { text: "Medium", value: "medium" },
+  { value: "REVERSED", text: "reversed" },
 ];
 const successChips: { text: string; value: string }[] = [
   { value: "delivered", text: "Delivered" },
