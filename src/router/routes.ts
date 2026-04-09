@@ -124,6 +124,12 @@ const entitiesRoutes = [
     component: () => import("@/views/entities/Edit.vue"),
     meta: { title: "Edit Entity", authRequired: true },
   },
+  {
+    path: `${entitiesPrefix}/view/:id`,
+    name: "ViewEntity",
+    component: () => import("@/views/entities/View.vue"),
+    meta: { title: "View Entity", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,

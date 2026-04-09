@@ -273,6 +273,7 @@
   "t-entity-list": "Entity List",
   "t-add-entity": "Add Entity",
   "t-edit-entity": "Edit Entity",
+  "t-view-entity": "View Entity",
   "t-entity-created-success": "Entity created successfully!",
   "t-entity-updated-success": "Entity updated successfully!",
   "t-search-institution": "Search Contract",

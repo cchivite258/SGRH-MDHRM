@@ -8,6 +8,14 @@ const prop = defineProps({
     type: String,
     default: "",
   },
+  placeholder: {
+    type: String,
+    default: "",
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const fieldValue = computed({
@@ -20,5 +28,11 @@ const fieldValue = computed({
 });
 </script>
 <template>
-  <v-textarea class="text-area-component" v-model="fieldValue" variant="solo" />
+  <v-textarea
+    class="text-area-component"
+    v-model="fieldValue"
+    variant="solo"
+    :placeholder="prop.placeholder"
+    :disabled="prop.disabled"
+  />
 </template>

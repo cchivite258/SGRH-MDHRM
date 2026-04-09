@@ -59,7 +59,7 @@ const fetchEntities = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
 }
 
 const onView = (id: string) => {
-  router.push(`/entities/edit/${id}`)
+  router.push(`/entities/view/${id}`)
 }
 
 const openDeleteDialog = (id: string) => {
