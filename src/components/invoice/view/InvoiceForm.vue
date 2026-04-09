@@ -377,6 +377,18 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
+        <v-row v-if="invoiceData.notes" class="mt-n6 mb-2">
+          <v-col cols="12">
+            <div class="font-weight-bold">{{ $t('t-reverse-invoice-notes-label') }}</div>
+            <TextArea
+              v-model="invoiceData.notes"
+              :placeholder="$t('t-reverse-invoice-notes-placeholder')"
+              hide-details
+              disabled
+            />
+          </v-col>
+        </v-row>
+
         <div class="mb-12">
           <ProductCard ref="productCardRef" v-model="invoiceItemData"
             :healthplan-id="invoiceData.coveragePeriod?.companyHealthPlanId || ''"
