@@ -81,6 +81,11 @@ export const Options: OptionType[] = [
     value: "force-post",
   },
   {
+    title: "reverse",
+    icon: "ph-arrow-counter-clockwise",
+    value: "reverse",
+  },
+  {
     title: "cancel",
     icon: "ph-prohibit",
     value: "cancel",

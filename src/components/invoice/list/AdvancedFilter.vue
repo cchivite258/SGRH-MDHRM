@@ -197,6 +197,7 @@ const enumOptions = {
         { text: t('t-pending'), value: 'PENDING' },
         { text: t('t-paid'), value: 'PAID' },
         { text: t('t-posted'), value: 'POSTED' },
+        { text: t('t-reversed'), value: 'REVERSED' },
         { text: t('t-cancelled'), value: 'CANCELLED' }
     ],
     flagGroup: [

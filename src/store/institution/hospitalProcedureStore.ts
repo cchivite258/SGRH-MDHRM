@@ -216,32 +216,6 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       const actualPage = page ?? this.pagination.currentPage;
       const actualSize = size ?? this.pagination.itemsPerPage;
 
-      const fixedProp = 'companyHealthPlan.id';
-      const fixedValue = id ? String(id) : '';
-
-      const props = (query_props || '')
-        .split(',')
-        .map((prop) => prop.trim())
-        .filter(Boolean);
-
-      let values = (query_value || '')
-        .split(',')
-        .map((value) => value.trim());
-
-      if (values.length === 1 && props.length > 1) {
-        values = new Array(props.length).fill(values[0]);
-      }
-
-      const normalizedProps: string[] = [fixedProp];
-      const normalizedValues: string[] = [fixedValue];
-
-      props.forEach((prop, index) => {
-        if (prop === fixedProp) return;
-
-        normalizedProps.push(prop);
-        normalizedValues.push(values[index] ?? '');
-      });
-
       try {
         const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
           id,
@@ -249,8 +223,8 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
           actualSize,
           sortColumn,
           direction,
-          normalizedValues.join(','),
-          normalizedProps.join(',')
+          query_value,
+          query_props
         );
 
         this.hospital_procedure_of_plan_scoped = content;
