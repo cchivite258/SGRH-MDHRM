@@ -230,9 +230,9 @@ onBeforeUnmount(() => {
   <ViewDependentsDialog v-model="viewDialog" :data="dependentData" />
 
   <v-card-actions class="d-flex justify-space-between mt-5">
-     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
-      {{ $t('t-back-to-institution-and-classification') }} 
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
+      {{ $t('t-salary-review') }}
     </v-btn>
-    
+
   </v-card-actions>
 </template>

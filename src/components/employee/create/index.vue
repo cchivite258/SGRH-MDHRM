@@ -18,9 +18,10 @@ import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
-import Step3 from "@/components/employee/create/TabDependents.vue";
-import Step4 from "@/components/employee/create/TabHealthPlan.vue";
-import Step5 from "@/components/employee/create/TabExpensesperProcedure.vue";
+import Step3 from "@/components/employee/view/TabSalaryReview.vue";
+import Step4 from "@/components/employee/create/TabDependents.vue";
+import Step5 from "@/components/employee/create/TabHealthPlan.vue";
+import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -285,6 +286,10 @@ const onBasicDataValidated = () => {
   basicDataValidated.value = true;
 };
 
+const onSalaryUpdated = (value: number) => {
+  employeeData.baseSalary = value;
+};
+
 watch(
   () => employeeData,
   () => {
@@ -421,13 +426,17 @@ onBeforeUnmount(() => {
 
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData"
         @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" />
+        @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
 
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
+        :allow-edit="true" :previous-step="2" previous-label-key="t-back-to-institution-and-classification"
+        :next-step="4" @salaryUpdated="onSalaryUpdated" />
 
       <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
       <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step6 v-if="step === 6" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>

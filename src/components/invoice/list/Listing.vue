@@ -12,6 +12,8 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue"
 import TableAction from "@/app/common/components/TableAction.vue"
 import PostInvoiceConfirmationDialog from "@/app/common/components/PostInvoiceConfirmationDialog.vue"
 import CancelInvoiceConfirmationDialog from "@/app/common/components/CancelInvoiceConfirmationDialog.vue"
+import ReverseInvoiceConfirmationDialog from "@/app/common/components/ReverseInvoiceConfirmationDialog.vue"
+import ReverseInvoiceNotesDialog from "@/app/common/components/ReverseInvoiceNotesDialog.vue"
 import { invoiceHeader, Options } from "@/components/invoice/list/utils"
 import Card from "@/app/common/components/Card.vue"
 import Status from "@/app/common/components/Status.vue";
@@ -37,6 +39,10 @@ const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
+const reverseDialog = ref(false)
+const reverseNotesDialog = ref(false)
+const reverseId = ref<string | null>(null)
+const reverseLoading = ref(false)
 const itemsPerPage = ref(10)
 const selectedInvoices = ref<any[]>([]) // Armazena os funcionários selecionados
 const resetListingFilters = () => {
@@ -198,6 +204,49 @@ const cancelInvoice = async () => {
     cancelDialog.value = false;
   }
 };
+
+const openReverseDialog = (id: string) => {
+  reverseId.value = id
+  reverseDialog.value = true
+}
+
+const openReverseNotesDialog = () => {
+  reverseDialog.value = false
+  reverseNotesDialog.value = true
+}
+
+const reverseInvoice = async (notes: string) => {
+  if (!reverseId.value) return;
+
+  reverseLoading.value = true;
+  try {
+    await invoiceService.reverseInvoice(reverseId.value, notes);
+    toast.success(t('t-toast-message-reverse'));
+    await invoiceStore.fetchInvoices(0, itemsPerPage.value);
+  } catch (error: unknown) {
+    console.log('Erro completo:', error);
+
+    if (typeof error === 'object' && error !== null) {
+      const apiError = error as {
+        message?: string;
+        details?: any;
+        status?: number;
+      };
+
+      if (apiError.message) {
+        toast.error(apiError.message);
+      } else {
+        toast.error(t('t-toast-message-error'));
+      }
+    } else {
+      toast.error(t('t-toast-message-error'));
+    }
+  } finally {
+    reverseLoading.value = false;
+    reverseDialog.value = false;
+    reverseNotesDialog.value = false;
+  }
+};
 // Abre o diálogo de confirmação para exclusão
 /*
 const openDeleteDialog = (id: string) => {
@@ -262,14 +311,27 @@ const onCancel = (id: string) => {
   openCancelDialog(id);
 }
 
+const onReverse = (invoice: InvoiceListingType) => {
+  if (invoice.invoiceStatus !== 'POSTED') {
+    toast.error(t('t-invoice-reverse-only-posted'));
+    return;
+  }
+
+  openReverseDialog(invoice.id);
+}
+
 const getDynamicOptions = (invoice: InvoiceListingType) => {
   // Opções base
-  let availableOptions = [...Options];
+  let availableOptions = Options.filter(option => option.title !== 'reverse');
   
   // Filtrar opções com base no status
-  if (invoice.invoiceStatus === 'CANCELLED' || invoice.invoiceStatus === 'POSTED') {
+  if (invoice.invoiceStatus === 'CANCELLED' || invoice.invoiceStatus === 'REVERSED') {
     availableOptions = availableOptions.filter(option => 
       option.title === 'view'
+    );
+  } else if (invoice.invoiceStatus === 'POSTED') {
+    availableOptions = Options.filter(option =>
+      option.title === 'view' || option.title === 'reverse'
     );
   }
   
@@ -296,6 +358,9 @@ const onSelect = (option: string, data: InvoiceListingType) => {
       break;
     case "cancel":
       onCancel(data.id); 
+      break;
+    case "reverse":
+      onReverse(data);
       break;
   }
 };
@@ -409,4 +474,6 @@ onBeforeRouteLeave(() => {
   <PostInvoiceConfirmationDialog v-model="postDialog" @onConfirm="postInvoice" :loading="postLoading" />
   <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" @onConfirm="postFlaggedInvoice" :loading="postFlaggedLoading" />
   <CancelInvoiceConfirmationDialog v-model="cancelDialog" @onConfirm="cancelInvoice" :loading="cancelLoading" />
+  <ReverseInvoiceConfirmationDialog v-model="reverseDialog" @onConfirm="openReverseNotesDialog" :loading="reverseLoading" />
+  <ReverseInvoiceNotesDialog v-model="reverseNotesDialog" @onConfirm="reverseInvoice" :loading="reverseLoading" />
 </template>

@@ -42,6 +42,13 @@ export const healthPlanHeader: DataTableHeaderType[] = [
   { title: "action", sortable: false, align: "right" }
 ];
 
+export const salaryReviewHeader: DataTableHeaderType[] = [
+  { title: "base-salary", key: "baseSalary", sortable: true },
+  { title: "start-date", key: "startDate", sortable: true },
+  { title: "end-date", key: "endDate", sortable: true },
+  { title: "status", key: "status", sortable: true }
+];
+
 export const hospitalProcedureBalanceHeader: DataTableHeaderType[] = [
   { title: "hospital-procedure-type-name", key: "hospitalProcedureType.name", sortable: true },
   { title: "allocated-balance", key: "allocatedBalance", sortable: true },

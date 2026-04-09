@@ -207,8 +207,8 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
   if (!planIdFromRoute) return;
 
   const trimmedSearch = search.trim();
-  const props: string[] = ["companyHealthPlan.id"];
-  const values: string[] = [planIdFromRoute];
+  const props: string[] = [];
+  const values: string[] = [];
 
   if (trimmedSearch) {
     globalSearchProps.forEach((prop) => {

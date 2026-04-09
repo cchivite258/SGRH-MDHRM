@@ -16,6 +16,12 @@ const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const institutionTypeStore = useInstitutionTypeStore();
+const props = defineProps({
+  isViewMode: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const loading = ref(false);
@@ -29,6 +35,10 @@ const entityId = computed<string | undefined>(() => {
 });
 
 const isEditMode = computed(() => !!entityId.value);
+const cardTitle = computed(() => {
+  if (props.isViewMode) return "t-view-entity";
+  return isEditMode.value ? "t-edit-entity" : "t-add-entity";
+});
 
 const formData = reactive<EntityInsertType>({
   name: "",
@@ -115,6 +125,7 @@ const loadEntity = async (id: string) => {
 };
 
 const submit = async () => {
+  if (props.isViewMode) return;
   if (!form.value) return;
 
   const { valid } = await form.value.validate();
@@ -173,7 +184,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Card :title="$t(isEditMode ? 't-edit-entity' : 't-add-entity')">
+  <Card :title="$t(cardTitle)">
     <v-form ref="form" @submit.prevent="submit">
       <v-card-text class="pt-0">
         <transition name="fade">
@@ -193,7 +204,13 @@ onMounted(async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="12" class="text-right">
             <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-            <v-checkbox v-model="formData.enabled" density="compact" color="primary" class="d-inline-flex">
+            <v-checkbox
+              v-model="formData.enabled"
+              density="compact"
+              color="primary"
+              class="d-inline-flex"
+              :disabled="props.isViewMode"
+            >
               <template #label>
                 <span>{{ $t('t-is-enabled') }}</span>
               </template>
@@ -208,6 +225,7 @@ onMounted(async () => {
           v-model="formData.name"
           :placeholder="$t('t-enter-institution-name')"
           :rules="applyServerErrorsToRules('name', requiredRules.name)"
+          :disabled="props.isViewMode"
         />
 
         <v-row>
@@ -215,7 +233,13 @@ onMounted(async () => {
             <div class="font-weight-bold mb-2">
               {{ $t('t-institution-type') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
+            <TextField
+              v-if="props.isViewMode"
+              :model-value="institutionTypes.find((item) => item.value === formData.institutionType)?.label || ''"
+              :disabled="true"
+            />
             <MenuSelect
+              v-else
               v-model="formData.institutionType"
               :items="institutionTypes"
               :loading="institutionTypeStore.loading"
@@ -229,6 +253,7 @@ onMounted(async () => {
               v-model="formData.incomeTaxNumber"
               :placeholder="$t('t-enter-nuit')"
               :rules="applyServerErrorsToRules('incomeTaxNumber', requiredRules.incomeTaxNumber)"
+              :disabled="props.isViewMode"
             />
           </v-col>
         </v-row>
@@ -242,6 +267,7 @@ onMounted(async () => {
               v-model="formData.address"
               :placeholder="$t('t-enter-address')"
               :rules="applyServerErrorsToRules('address', requiredRules.address)"
+              :disabled="props.isViewMode"
             />
           </v-col>
           <v-col cols="12" lg="6">
@@ -252,6 +278,7 @@ onMounted(async () => {
               v-model="formData.phone"
               :placeholder="$t('t-enter-phone-number')"
               :rules="applyServerErrorsToRules('phone', requiredRules.phone)"
+              :disabled="props.isViewMode"
             />
           </v-col>
         </v-row>
@@ -265,6 +292,7 @@ onMounted(async () => {
               v-model="formData.email"
               :placeholder="$t('t-enter-email-address')"
               :rules="applyServerErrorsToRules('email', requiredRules.email)"
+              :disabled="props.isViewMode"
             />
           </v-col>
           <v-col cols="12" lg="6">
@@ -273,6 +301,7 @@ onMounted(async () => {
               v-model="formData.website"
               :placeholder="$t('t-enter-website')"
               :rules="applyServerErrorsToRules('website', [])"
+              :disabled="props.isViewMode"
             />
           </v-col>
         </v-row>
@@ -280,7 +309,11 @@ onMounted(async () => {
         <v-row class="mt-n6">
           <v-col cols="12" lg="12">
             <div class="font-weight-bold mb-2">{{ $t('t-description') }}</div>
-            <TextArea v-model="formData.description" :placeholder="$t('t-enter-description')" />
+            <TextArea
+              v-model="formData.description"
+              :placeholder="$t('t-enter-description')"
+              :disabled="props.isViewMode"
+            />
           </v-col>
         </v-row>
       </v-card-text>
@@ -289,7 +322,7 @@ onMounted(async () => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="router.push('/entities/list')">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn color="success" variant="elevated" type="submit" :loading="loading">
+        <v-btn v-if="!props.isViewMode" color="success" variant="elevated" type="submit" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

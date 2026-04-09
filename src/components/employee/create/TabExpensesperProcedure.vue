@@ -287,8 +287,8 @@ onBeforeUnmount(() => {
   </v-row>
 
   <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-      {{ $t('t-back-to-dependents') }} 
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
+      {{ $t('t-back-to-health-plan') }} 
     </v-btn>
   </v-card-actions>
 </template>

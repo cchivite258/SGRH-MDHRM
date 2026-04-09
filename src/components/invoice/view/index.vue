@@ -59,6 +59,7 @@ const invoiceData = reactive<InvoiceInsertType>({
   company: '',
   authorizedBy: '',
   invoiceReferenceNumber: '',
+  notes: '',
   coveragePeriod: undefined
 });
 

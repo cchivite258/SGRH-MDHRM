@@ -241,6 +241,22 @@ export default class InvoiceService extends HttpService {
     }
   }
 
+  async reverseInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+    try {
+      const response = await this.post<{ data: InvoiceResponseType; meta: any }>(
+        `/amm/invoices/${id}/reverse`,
+        { notes }
+      );
+      //console.log('Resposta ao reverse da factura:------------------------', response);
+
+      return {
+        data: response.data
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
 
   async deleteInvoice(id: string): Promise<void> {
     try {

@@ -53,7 +53,8 @@ const emit = defineEmits<{
 const props = defineProps<{
   modelValue: EmployeeInsertType,
   loading?: boolean,
-  serverErrors?: Record<string, string[]>
+  serverErrors?: Record<string, string[]>,
+  isEditMode?: boolean
 }>();
 
 // Dados computados do employee
@@ -342,7 +343,8 @@ const saveData = async () => {
             </div>
             <TextField v-model="employeeData.baseSalary" type="number"
               :placeholder="t('t-enter-the-employee-base-salary')"
-              :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2" />
+              :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2"
+              :disabled="!!isEditMode" />
           </v-col>
         </v-row>
 

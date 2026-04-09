@@ -16,8 +16,10 @@ import { useI18n } from 'vue-i18n';
 import ButtonNav from "@/components/employee/view/ButtonNav.vue";
 import Step1 from "@/components/employee/view/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/view/TabInstitution&Classification.vue";
-import Step3 from "@/components/employee/view/TabDependents.vue";
-import Step4 from "@/components/employee/view/TabHealthPlan.vue";
+import Step3 from "@/components/employee/view/TabSalaryReview.vue";
+import Step4 from "@/components/employee/view/TabDependents.vue";
+import Step5 from "@/components/employee/view/TabHealthPlan.vue";
+import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -297,9 +299,14 @@ onBeforeUnmount(() => {
       <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
         :loading="loading" />
 
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
+        :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" />
 
       <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+      <Step6 v-if="step === 6" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
     </v-card-text>
   </Card>
