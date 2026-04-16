@@ -136,7 +136,7 @@ export default class EmployeeHealthPlanService extends HttpService {
       direction: string = 'asc',
       query_value?: string,
       query_props?: string
-    ): Promise<{ content: ExpensePerProcedureType [], meta: any }> {
+    ): Promise<{ content: ExpensePerProcedureType [], meta: any }> { 
       try {
         const queryParams = [
           `id=${id}`,
