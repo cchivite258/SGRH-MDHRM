@@ -7,13 +7,15 @@
  * 2. Instituição & Classificação
  */
 
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
 
 // Components
 import ButtonNav from "@/components/employee/view/ButtonNav.vue";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/employee/view/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/view/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/view/TabSalaryReview.vue";
@@ -52,6 +54,11 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const headerTitle = computed(() => props.cardTitle || t('t-view-employee'));
+
+const goBackToList = () => {
+  router.push('/employee/list');
+};
 
 // Refs
 const step = ref(1); // Controla a aba atual (1 ou 2)
@@ -219,7 +226,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber);
+      onStepChange(tabNumber === 2 ? 1 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -278,11 +285,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card>
-    <v-card-text>
-      <!-- Navegação entre abas -->
-      <ButtonNav v-model="step" class="mb-2" />
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Consulte os dados do colaborador em blocos claros."
+    :loading="loading"
+    :show-save="false"
+    @back="goBackToList"
+  />
 
+  <ButtonNav v-model="step" class="employee-form-tabs" />
+
+  <FormCard v-if="step === 1" class="employee-form-section">
       <!-- Indicador de loading -->
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
@@ -293,26 +306,59 @@ onBeforeUnmount(() => {
       </transition>
 
       <!-- Abas do formulário -->
-      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(false)"
-        :loading="loading" />
+      <Step1 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(false)"
+        :loading="loading" :show-actions="false" />
 
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
-        :loading="loading" />
+  </FormCard>
 
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-        :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" />
+  <FormCard v-if="step === 1" class="employee-form-section">
+      <Step2 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
+        :loading="loading" :show-actions="false" />
 
-      <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  </FormCard>
 
-      <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 3" class="employee-form-section">
+      <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
+        :allow-edit="false"
+        :previous-step="1" previous-label-key="t-general-information" :next-step="4" />
 
-      <Step6 v-if="step === 6" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  </FormCard>
 
-    </v-card-text>
-  </Card>
+  <FormCard v-if="step === 4" class="employee-form-section">
+      <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+  </FormCard>
+
+  <FormCard v-if="step === 5" class="employee-form-section">
+      <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+  </FormCard>
+
+  <FormCard v-if="step === 6" class="employee-form-section">
+      <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+
+  </FormCard>
 </template>
 
 <style scoped>
+.employee-form-tabs {
+  margin-bottom: 24px;
+}
+
+.employee-form-section + .employee-form-section {
+  margin-top: 24px;
+}
+
+@media (max-width: 767px) {
+  .employee-form-tabs {
+    margin-bottom: 18px;
+  }
+
+  .employee-form-section + .employee-form-section {
+    margin-top: 18px;
+  }
+}
+
 /* Estilos para o date picker */
 :deep(.dp__input) {
   height: 2.63rem;

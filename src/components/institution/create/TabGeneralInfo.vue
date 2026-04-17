@@ -27,6 +27,10 @@ const props = defineProps({
   serverErrors: {
     type: Object as () => Record<string, string[]>,
     default: () => ({})
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -110,6 +114,8 @@ const submitGeneralInfo = async () => {
   emit("save", false);
 };
 
+defineExpose({ submitGeneralInfo });
+
 onMounted(async () => {
   try {
     const response = await companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc");
@@ -192,11 +198,11 @@ onMounted(async () => {
         </v-row>
       </v-card-text>
 
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
-        <v-btn color="success" variant="elevated" @click="submitGeneralInfo" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitGeneralInfo" :loading="loading">
           {{ $t('t-save-and-proceed') }}
         </v-btn>
       </v-card-actions>

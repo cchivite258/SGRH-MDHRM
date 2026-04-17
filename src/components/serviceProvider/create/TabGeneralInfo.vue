@@ -53,11 +53,16 @@ const emit = defineEmits<{
   (e: 'validated'): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: ServiceProviderInsertType,
   loading?: boolean,
-  serverErrors?: Record<string, string[]>
-}>();
+  serverErrors?: Record<string, string[]>,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  serverErrors: () => ({}),
+  showActions: true
+});
 
 // Stores
 const providerTypeStore = useProviderTypeStore();
@@ -276,8 +281,8 @@ const onBack = () => {
 /**
  * Valida e envia o formulário
  */
-const submitForm = async () => {
-  if (!form.value) return;
+const validateForm = async () => {
+  if (!form.value) return false;
   const isContractStartDateValid = await idContractStartDatePicker.value?.validate?.();
   const isContractEndDateValid = await idContractEndDatePicker.value?.validate?.();
 
@@ -288,13 +293,21 @@ const submitForm = async () => {
       errorMsg.value = "";
       alertTimeout = null;
     }, 5000);
-    return;
+    return false;
   }
+
+  return true;
+};
+
+const submitForm = async () => {
+  const valid = await validateForm();
+  if (!valid) return;
 
   emit('validated');
   emit('onStepChange', 2); // Avançar para o próximo passo (step 2)
 };
 
+defineExpose({ submitForm, validateForm });
 
 </script>
 
@@ -429,12 +442,12 @@ const submitForm = async () => {
       </v-card-text>
 
       <!-- Ações -->
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()" :disabled="loading">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="submitForm" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitForm" :loading="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
       </v-card-actions>

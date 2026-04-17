@@ -60,6 +60,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -503,9 +507,9 @@ const provinceName = computed(() => {
     </v-card-text>
 
     <!-- Ações do formulário -->
-    <v-card-actions class="d-flex justify-space-between mt-3">
+    <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
       <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()" :disabled="loading">
-        {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
       </v-btn>
 
       <v-btn 

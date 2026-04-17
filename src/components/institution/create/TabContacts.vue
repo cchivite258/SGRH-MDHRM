@@ -322,11 +322,11 @@ onBeforeUnmount(() => {
 
   <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 4)">
-      {{ $t('t-back-to-organizational-struture') }} <i class="ph-arrow-left ms-2" />
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-organizational-struture') }}
     </v-btn>
-    <v-btn color="success" variant="elevated" @click="$emit('onStepChange', 6)">
+    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 6)">
     {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
-  </v-btn>
+    </v-btn>
     
   </v-card-actions>
 </template>

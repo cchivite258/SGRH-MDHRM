@@ -688,5 +688,6 @@
   "t-contract-end-date-must-be-after-start-date": "The contract end date cannot be earlier than the start date.",
   "t-insufficient-funds": "Insufficient funds!",
   "t-exceeds-global-limit": "Exceeds Global Limit",
-  "t-exceeds-procedure-limit": "Exceeds procedure limit"
+  "t-exceeds-procedure-limit": "Exceeds procedure limit",
+  "t-back-to-salary-review": "Back to Salary Review"
 }

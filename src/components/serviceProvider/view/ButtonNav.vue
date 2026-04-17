@@ -1,39 +1,34 @@
 <script lang="ts" setup>
 import { computed } from "vue";
+import FormTabs from "@/app/common/components/FormTabs.vue";
 
 const emit = defineEmits(["update:modelValue"]);
-const prop = defineProps({
+const props = defineProps({
   modelValue: {
     type: Number,
-    default: 1,
-  },
+    default: 1
+  }
 });
 
 const step = computed({
   get() {
-    return prop.modelValue;
+    return props.modelValue;
   },
-  set(step: number) {
-    emit("update:modelValue", step);
-  },
+  set(step: string | number) {
+    emit("update:modelValue", Number(step));
+  }
 });
 
-
+const tabs = [
+  { value: 1, label: "t-general-information" },
+  { value: 2, label: "t-contacts-service-provider" }
+];
 </script>
 
 <template>
-  <div class="d-flex justify-space-between align-center">
-    <v-row no-gutters>
-      <v-col cols="6">
-        <v-btn rounded="0" color="primary" block :variant="step === 1 ? 'elevated' : 'tonal'" @click="step = 1">
-          {{ $t('t-general-information') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="6">
-        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2">
-          {{ $t('t-contacts-service-provider') }}
-        </v-btn>
-      </v-col>
-    </v-row>
-  </div>
+  <FormTabs
+    v-model="step"
+    :tabs="tabs"
+    aria-label="Navegação da consulta de provedor de serviço"
+  />
 </template>

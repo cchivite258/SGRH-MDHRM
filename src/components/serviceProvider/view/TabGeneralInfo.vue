@@ -51,10 +51,14 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: ServiceProviderInsertType): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: ServiceProviderInsertType,
-  loading?: boolean
-}>();
+  loading?: boolean,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  showActions: true
+});
 
 // Stores
 const serviceProviderStore = useServiceProviderStore();
@@ -237,7 +241,7 @@ const submitForm = async () => {
       </v-card-text>
 
       <!-- Ações -->
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn
           color="secondary"
           variant="outlined"
@@ -245,7 +249,7 @@ const submitForm = async () => {
           @click="onBack()"
           :disabled="loading"
         >
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
         <v-btn 
           color="secondary" 

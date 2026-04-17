@@ -59,6 +59,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  showActions: {
+    type: Boolean,
+    default: true
+  },
   serverErrors: {
     type: Object as () => Record<string, string[]>,
     default: () => ({})
@@ -300,9 +304,8 @@ const onBack = () => {
 /**
  * Valida e envia o formulário
  */
-// Atualize o submitForm para usar as refs
-const submitForm = async () => {
-  if (!form.value) return;
+const validateForm = async () => {
+  if (!form.value) return false;
 
   try {
     // Forçar validação dos date pickers
@@ -322,17 +325,30 @@ const submitForm = async () => {
         errorMsg.value = "";
         alertTimeout = null;
       }, 5000);
-      return;
+      return false;
     }
 
-    emit('validated');
-    emit('onStepChange', 2);
-
+    return true;
   } catch (error) {
     console.error("Validation error:", error);
     errorMsg.value = t('t-validation-error');
+    return false;
   }
 }
+
+// Atualize o submitForm para usar as refs
+const submitForm = async () => {
+  const valid = await validateForm();
+  if (!valid) return;
+
+  emit('validated');
+  emit('onStepChange', 2);
+}
+
+defineExpose({
+  submitForm,
+  validateForm
+});
 
 </script>
 
@@ -340,11 +356,7 @@ const submitForm = async () => {
   <v-form ref="form" @submit.prevent="submitForm">
     <Card :title="$t('t-general-information')" elevation="0" title-class="pb-0">
       <!-- Mensagem de erro -->
-      <transition name="fade">
-        <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
-          density="compact" @click="errorMsg = ''" style="cursor: pointer;" />
-      </transition>
-
+      
       <v-card-text class="pt-0">
         <v-row class="mt-n9">
           <v-col cols="12" lg="12" class="text-right">
@@ -356,6 +368,10 @@ const submitForm = async () => {
             </v-checkbox>
           </v-col>
         </v-row>
+        <transition name="fade">
+        <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-10 mx-5 mt-3" variant="tonal" color="danger"
+          density="compact" @click="errorMsg = ''" style="cursor: pointer;" />
+      </transition>
         <!-- Seção: Informações básicas -->
         <v-row class="mt-n12">
           <v-col cols="12" lg="12">
@@ -612,12 +628,12 @@ const submitForm = async () => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()" :disabled="loading">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="submitForm" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitForm" :loading="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
       </v-card-actions>

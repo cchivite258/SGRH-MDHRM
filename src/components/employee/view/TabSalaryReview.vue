@@ -233,7 +233,7 @@ onBeforeUnmount(() => {
     </v-card-text>
   </Card>
 
-  <v-row class="mt-5">
+  <v-row class="mt-2">
     <v-col cols="12">
       <Card :title="$t('t-salary-change-history')" title-class="py-5">
         <v-card-text>
@@ -289,7 +289,7 @@ onBeforeUnmount(() => {
 
   <v-card-actions class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
-      {{ $t(previousLabelKey) }}
+      <i class="ph-arrow-left me-2" /> {{ $t(previousLabelKey) }}
     </v-btn>
     <v-btn v-if="nextStep" color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />

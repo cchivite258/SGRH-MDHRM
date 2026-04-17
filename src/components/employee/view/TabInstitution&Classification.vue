@@ -50,10 +50,14 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: EmployeeInsertType): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: EmployeeInsertType,
-  loading?: boolean
-}>();
+  loading?: boolean,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  showActions: true
+});
 
 // Dados computados do employee
 let employeeData = computed({
@@ -308,12 +312,12 @@ const getContractDurationLabel = (value: string | undefined) => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-5">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-5">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
-          {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
 
-        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
+        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 3)" :disabled="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
 

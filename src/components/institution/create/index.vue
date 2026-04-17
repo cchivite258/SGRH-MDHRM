@@ -1,11 +1,13 @@
 <script lang="ts" setup>
-import { ref, reactive, onMounted, watch } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 
 import ButtonNav from "@/components/institution/create/ButtonNav.vue";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/institution/create/TabGeneralInfo.vue";
 import Step2 from "@/components/institution/create/TabPeriods.vue";
 import Step3 from "@/components/institution/create/TabHealthPlan.vue";
@@ -22,12 +24,32 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 
+const props = defineProps({
+  cardTitle: {
+    type: String,
+    default: ""
+  }
+});
+
 const step = ref(1);
+const step1Ref = ref<{ submitGeneralInfo: () => Promise<void> } | null>(null);
 const institutionId = ref<string | undefined>(undefined);
 const loading = ref(false);
 const errorMsg = ref("");
 const apiFieldErrors = ref<Record<string, string[]>>({});
 const basicDataValidated = ref(false);
+const headerTitle = computed(() => props.cardTitle || (institutionId.value ? t("t-edit-institution") : t("t-add-institution")));
+const canUseHeaderSave = computed(() => step.value === 1);
+const headerSaveLabel = computed(() => t("t-save-and-proceed"));
+
+const goBackToList = () => {
+  router.push("/institution/list");
+};
+
+const onHeaderSave = async () => {
+  if (step.value !== 1) return;
+  await step1Ref.value?.submitGeneralInfo();
+};
 
 const institutionData = reactive<InstitutionInsertType>({
   name: "",
@@ -152,45 +174,144 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Card title="">
-    <v-card-text>
-      <ButtonNav
-        v-model="step"
-        class="mb-2"
-        :institution-id="institutionId as string"
-        :basic-data-validated="basicDataValidated"
-      />
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Crie e organize os dados do contrato em blocos claros."
+    :save-label="headerSaveLabel"
+    :loading="loading"
+    :show-save="canUseHeaderSave"
+    @back="goBackToList"
+    @save="onHeaderSave"
+  />
 
-      <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
+  <ButtonNav
+    v-model="step"
+    class="institution-form-tabs"
+    :institution-id="institutionId as string"
+    :basic-data-validated="basicDataValidated"
+  />
 
-      <transition name="fade">
-        <v-alert
-          v-if="errorMsg"
-          :text="errorMsg"
-          type="error"
-          class="mb-4 mx-5 mt-3"
-          variant="tonal"
-          color="danger"
-          density="compact"
-          @click="errorMsg = ''"
-          style="cursor: pointer; white-space: pre-line"
-        />
-      </transition>
+  <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
-      <Step1
-        v-if="step === 1"
-        v-model="institutionData"
-        @save="saveInstitution"
-        :loading="loading"
-        :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError"
-      />
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" :institution-id="institutionId" />
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :institution-id="institutionId" />
-      <Step4 v-if="step === 4" @onStepChange="onStepChange" :institution-id="institutionId" />
-      <Step5 v-if="step === 5" @onStepChange="onStepChange" :institution-id="institutionId" />
-      <Step6 v-if="step === 6" @onStepChange="onStepChange" :institution-id="institutionId" />
-      <Step7 v-if="step === 7" @onStepChange="onStepChange" :institution-id="institutionId" />
-    </v-card-text>
-  </Card>
+  <transition name="fade">
+    <v-alert
+      v-if="errorMsg"
+      :text="errorMsg"
+      type="error"
+      class="mb-4 mx-5 mt-3"
+      variant="tonal"
+      color="danger"
+      density="compact"
+      @click="errorMsg = ''"
+      style="cursor: pointer; white-space: pre-line"
+    />
+  </transition>
+
+  <FormCard v-if="step === 1" class="institution-form-section">
+    <Step1
+      ref="step1Ref"
+      v-model="institutionData"
+      @save="saveInstitution"
+      :loading="loading"
+      :server-errors="apiFieldErrors"
+      :show-actions="false"
+      @clear-server-error="clearApiFieldError"
+    />
+  </FormCard>
+
+  <FormCard v-if="step === 2" class="institution-form-section">
+    <Step2 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <FormCard v-if="step === 3" class="institution-form-section">
+    <Step3 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <FormCard v-if="step === 4" class="institution-form-section">
+    <Step4 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <FormCard v-if="step === 5" class="institution-form-section">
+    <Step5 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <FormCard v-if="step === 6" class="institution-form-section">
+    <Step6 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <FormCard v-if="step === 7" class="institution-form-section">
+    <Step7 @onStepChange="onStepChange" :institution-id="institutionId" />
+  </FormCard>
+
+  <div v-if="step === 1" class="institution-form-footer-actions">
+    <v-btn
+      class="institution-form-footer-actions__save"
+      color="secondary"
+      variant="elevated"
+      :loading="loading"
+      @click="onHeaderSave"
+    >
+      <i class="ph-floppy-disk me-2" />
+      {{ headerSaveLabel }}
+    </v-btn>
+
+    <v-btn
+      class="institution-form-footer-actions__back"
+      color="secondary"
+      variant="outlined"
+      :disabled="loading"
+      @click="goBackToList"
+    >
+      <i class="ph-arrow-left me-2" />
+      {{ $t('t-back-to-list') }}
+    </v-btn>
+  </div>
 </template>
+
+<style scoped>
+.institution-form-tabs {
+  margin-bottom: 24px;
+}
+
+.institution-form-section + .institution-form-section {
+  margin-top: 24px;
+}
+
+.institution-form-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.institution-form-footer-actions__save,
+.institution-form-footer-actions__back {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  min-height: 36px;
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.institution-form-footer-actions__save {
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .institution-form-tabs {
+    margin-bottom: 18px;
+  }
+
+  .institution-form-section + .institution-form-section {
+    margin-top: 18px;
+  }
+
+  .institution-form-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+  }
+}
+</style>
