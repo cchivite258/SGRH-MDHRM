@@ -3,8 +3,10 @@ import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, Emp
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -12,6 +14,18 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const EMPLOYEES_ENDPOINT = '/human-resource/employees';
+const EMPLOYEES_BY_CONTRACT_ENDPOINT = `${EMPLOYEES_ENDPOINT}/in-contract`;
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta;
+
+const normalizeEmployee = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  company: item.company ?? item.contract,
+  companyId: item.companyId ?? item.contractId
+});
 
 
 
@@ -56,10 +70,10 @@ export default class EmployeeService extends HttpService {
         params.append('query_operator', logicalOperator);
       }
 
-      const includesToUse = 'position,department,company,province,country,dependents';
+      const includesToUse = 'position,department,contract,province,country,dependents';
       params.append(`includes`, includesToUse);
 
-      const url = `/human-resource/employees?${params.toString()}`;
+      const url = `${EMPLOYEES_ENDPOINT}?${params.toString()}`;
 
       console.log('URL de busca de colaboradores:', url); // Log da URL para depuração
 
@@ -68,8 +82,8 @@ export default class EmployeeService extends HttpService {
       console.log('Resposta da requisição:', response); // Para debug
 
       return {
-        content: response.data || [],
-        meta: response.meta || {
+        content: getContent(response).map((item: any) => normalizeEmployee(item)) as EmployeeListingType[],
+        meta: getMeta(response) || {
           totalElements: 0,
           page: 0,
           size: 10,
@@ -109,13 +123,13 @@ export default class EmployeeService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'position,department,company,province,country';
+      const includesToUse = 'position,department,contract,province,country';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
 
 
-      const url = `/human-resource/employees/in-company?${queryString}`;
+      const url = `${EMPLOYEES_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisição:', url); // Para debug
 
@@ -125,8 +139,8 @@ export default class EmployeeService extends HttpService {
       console.log('Resposta da requisição:', response); // Para debug
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeEmployee(item)) as EmployeeListingType[],
+        meta: getMeta(response) || []
       };
 
     } catch (error) {
@@ -161,13 +175,13 @@ export default class EmployeeService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'position,department,company,province,country';
+      const includesToUse = 'position,department,contract,province,country';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
 
 
-      const url = `/human-resource/employees/in-company?${queryString}`;
+      const url = `${EMPLOYEES_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisição:', url); // Para debug
 
@@ -177,8 +191,8 @@ export default class EmployeeService extends HttpService {
       console.log('Resposta da requisição:', response); // Para debug
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeEmployee(item)) as EmployeeListingType[],
+        meta: getMeta(response) || []
       };
 
     } catch (error) {
@@ -189,10 +203,14 @@ export default class EmployeeService extends HttpService {
 
   async createEmployee(employeeData: EmployeeInsertType): Promise<ServiceResponse<EmployeeResponseType>> {
     try {
-      const response = await this.post<ApiResponse<EmployeeResponseType>>('/human-resource/employees', employeeData);
+      const response = await this.post<ApiResponse<EmployeeResponseType>>(EMPLOYEES_ENDPOINT, {
+        ...employeeData,
+        contract: employeeData.company,
+        company: undefined
+      });
       return {
         status: 'success',
-        data: response.data
+        data: normalizeEmployee((response.data ?? response.content ?? response) as any) as EmployeeResponseType
       };
     } catch (error: any) {
       if (error.response) {
@@ -217,7 +235,7 @@ export default class EmployeeService extends HttpService {
         title: 'Network Error',
         status: 503,
         detail: 'Could not connect to server',
-        instance: '/human-resource/employees'
+        instance: EMPLOYEES_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()
@@ -229,10 +247,10 @@ export default class EmployeeService extends HttpService {
     try {
       console.log('ID recebido para busca:', id);
       const response = await this.get<{ data: EmployeeResponseType; meta: any }>
-        (`/human-resource/employees/${id}?includes=position,department,company,province,country,employeeBaseSalaryTracks`);
+        (`${EMPLOYEES_ENDPOINT}/${id}?includes=position,department,contract,province,country,employeeBaseSalaryTracks`);
       console.log('Resposta da requisição id:------------------------', response);
       return {
-        data: response.data
+        data: normalizeEmployee(((response as any).data ?? response) as any) as EmployeeResponseType
       };
     } catch (error) {
       throw this.handleError(error);
@@ -252,7 +270,7 @@ export default class EmployeeService extends HttpService {
         includes: "employeeBaseSalaryTrack"
       });
 
-      const url = `/human-resource/employees?${params.toString()}`;
+      const url = `${EMPLOYEES_ENDPOINT}?${params.toString()}`;
       console.log("URL de busca do histórico salarial:", url);
 
       const response = await this.get<ApiResponse<EmployeeResponseType[]>>(
@@ -260,7 +278,7 @@ export default class EmployeeService extends HttpService {
       );
       console.log("getEmployeeSalaryTracks", response);
 
-      return response.data?.[0] || null;
+      return getContent(response)[0] || null;
     } catch (error) {
       console.error("Erro ao buscar histórico salarial do colaborador:", error);
       return null;
@@ -318,7 +336,7 @@ export default class EmployeeService extends HttpService {
         passportExpiryDate: employeeData.passportExpiryDate,
         passportIssuanceDate: employeeData.passportIssuanceDate,
         baseSalary: employeeData.baseSalary,
-        company: employeeData.company,
+        contract: employeeData.company,
         department: employeeData.department,
         position: employeeData.position,
         contractDurationType: employeeData.contractDurationType,
@@ -328,7 +346,7 @@ export default class EmployeeService extends HttpService {
         enabled: employeeData.enabled
       };
 
-      const response = await this.put<EmployeeResponseType>(`/human-resource/employees/${id}`, payload);
+      const response = await this.put<EmployeeResponseType>(`${EMPLOYEES_ENDPOINT}/${id}`, payload);
       console.log('response update', response)
       return response;
 
@@ -341,13 +359,13 @@ export default class EmployeeService extends HttpService {
   async updateBaseSalary(id: string, payload: EmployeeBaseSalaryUpdateType): Promise<ServiceResponse<EmployeeResponseType>> {
     try {
       const response = await this.post<ApiResponse<EmployeeResponseType>>(
-        `/human-resource/employees/${id}/update-base-salary`,
+        `${EMPLOYEES_ENDPOINT}/${id}/update-base-salary`,
         payload
       );
 
       return {
         status: 'success',
-        data: response.data
+        data: normalizeEmployee((response.data ?? response.content ?? response) as any) as EmployeeResponseType
       };
     } catch (error: any) {
       if (error.response) {
@@ -366,7 +384,7 @@ export default class EmployeeService extends HttpService {
 
   async deleteEmployee(id: string): Promise<void> {
     try {
-      await this.delete(`/human-resource/employees/${id}`);
+      await this.delete(`${EMPLOYEES_ENDPOINT}/${id}`);
     } catch (error) {
       console.error("❌ Erro ao deletar colaborador:", error);
       throw error;
@@ -375,7 +393,7 @@ export default class EmployeeService extends HttpService {
 
   async getTotalEmployees(): Promise<ServiceResponse<number>> {
     try {
-      const response = await this.get<EmployeeCountResponse>('/human-resource/employees/count');
+      const response = await this.get<EmployeeCountResponse>(`${EMPLOYEES_ENDPOINT}/count`);
       return {
         status: 'success',
         data: response.data
@@ -387,7 +405,7 @@ export default class EmployeeService extends HttpService {
 
   async getEnabledEmployees(): Promise<ServiceResponse<number>> {
     try {
-      const response = await this.get<EmployeeCountResponse>('/human-resource/employees/count-enabled-true');
+      const response = await this.get<EmployeeCountResponse>(`${EMPLOYEES_ENDPOINT}/count-enabled-true`);
       return {
         status: 'success',
         data: response.data
@@ -399,7 +417,7 @@ export default class EmployeeService extends HttpService {
 
   async getDisabledEmployees(): Promise<ServiceResponse<number>> {
     try {
-      const response = await this.get<EmployeeCountResponse>('/human-resource/employees/count-enabled-false');
+      const response = await this.get<EmployeeCountResponse>(`${EMPLOYEES_ENDPOINT}/count-enabled-false`);
       return {
         status: 'success',
         data: response.data
@@ -411,7 +429,7 @@ export default class EmployeeService extends HttpService {
 
   async getEmployeesByGender(): Promise<ServiceResponse<{ male: number; female: number; other: number }>> {
     try {
-      const response = await this.get<GenderCountResponse>('/human-resource/employees/count-by-gender');
+      const response = await this.get<GenderCountResponse>(`${EMPLOYEES_ENDPOINT}/count-by-gender`);
 
       // Processa os dados de gênero para o formato esperado
       const genderData = {

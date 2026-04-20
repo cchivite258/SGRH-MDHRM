@@ -4,8 +4,10 @@ import type { ContactPersonListingType, ContactPersonInsertType } from "@/compon
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {  
@@ -13,6 +15,25 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const CONTACT_PERSON_ENDPOINT = '/administration/persons-of-contact';
+const CONTACT_PERSON_BY_CONTRACT_ENDPOINT = `${CONTACT_PERSON_ENDPOINT}/in-contract`;
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const toContactPersonPayload = (contactPersonData: ContactPersonInsertType) => ({
+  fullname: contactPersonData.fullname,
+  email: contactPersonData.email,
+  phone: contactPersonData.phone,
+  contract: contactPersonData.company,
+  enabled: contactPersonData.enabled
+});
+
+const normalizeContactPerson = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  company: item.company ?? item.contract
+});
 
 export default class ContactPersonService extends HttpService { 
   async getContactPersonByInstitution(
@@ -39,14 +60,14 @@ export default class ContactPersonService extends HttpService {
       }
 
       const queryString = queryParams.join('&');
-      const url = `/administration/persons-of-contact/in-company?${queryString}`;
+      const url = `${CONTACT_PERSON_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisição:', url);
       const response = await this.get<ApiResponse<ContactPersonListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeContactPerson(item)) as ContactPersonListingType[],
+        meta: getMeta(response)
       };
       
     } catch (error) {
@@ -57,10 +78,10 @@ export default class ContactPersonService extends HttpService {
 
    async createContactPerson(contactPersonData: ContactPersonInsertType): Promise<ServiceResponse<ContactPersonListingType>> {
       try {
-        const response = await this.post<ApiResponse<ContactPersonListingType>>('/administration/persons-of-contact', contactPersonData);
+        const response = await this.post<ApiResponse<ContactPersonListingType>>(CONTACT_PERSON_ENDPOINT, toContactPersonPayload(contactPersonData));
         return {
           status: 'success',
-          data: response.data
+          data: normalizeContactPerson((response.data ?? response.content ?? response) as any) as ContactPersonListingType
         };
       } catch (error: any) {
         if (error.response) {
@@ -85,7 +106,7 @@ export default class ContactPersonService extends HttpService {
           title: 'Network Error',
           status: 503,
           detail: 'Could not connect to server',
-          instance: '/administration/companies'
+          instance: CONTACT_PERSON_ENDPOINT
         },
         meta: {
           timestamp: new Date().toISOString()
@@ -96,12 +117,12 @@ export default class ContactPersonService extends HttpService {
      async getContactPersonById(id: string): Promise<{ data: ContactPersonListingType }> {
         try {
           const response = await this.get<{ data: ContactPersonListingType; meta: any }>(
-            `/administration/persons-of-contact/${id}?includes=company`
+            `${CONTACT_PERSON_ENDPOINT}/${id}?includes=contract`
           );
           console.log('Resposta da requisição getContactPersonById:------------------------', response); 
       
           return {
-            data: response.data
+            data: normalizeContactPerson(((response as any).data ?? response) as any) as ContactPersonListingType
           };
         } catch (error) {
           throw this.handleError(error);
@@ -125,7 +146,7 @@ export default class ContactPersonService extends HttpService {
 
       async deleteContactPerson(id: string): Promise<void> {
         try {
-          await this.delete(`/administration/persons-of-contact/${id}`);
+          await this.delete(`${CONTACT_PERSON_ENDPOINT}/${id}`);
         } catch (error) {
           console.error("❌ Erro ao deletar pessoa de contacto:", error);
           throw error;
@@ -137,17 +158,11 @@ export default class ContactPersonService extends HttpService {
             try {
         
               // Corpo da requisição conforme especificado
-              const payload = {
-                fullname: contactPersonData.fullname,
-                email: contactPersonData.email,
-                phone: contactPersonData.phone,
-                company: contactPersonData.company,
-                enabled: contactPersonData.enabled
-              };
+              const payload = toContactPersonPayload(contactPersonData);
         
-              const response = await this.put<ContactPersonListingType>(`/administration/persons-of-contact/${id}`, payload);
+              const response = await this.put<ContactPersonListingType>(`${CONTACT_PERSON_ENDPOINT}/${id}`, payload);
               console.log('response update institution', response)
-              return response;
+              return normalizeContactPerson(response as any) as ContactPersonListingType;
         
             } catch (error) {
               console.error("❌ Erro ao actualizar instituicao:", error);
@@ -157,5 +172,3 @@ export default class ContactPersonService extends HttpService {
 
 
 }
-
-

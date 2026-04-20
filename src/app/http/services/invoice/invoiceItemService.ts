@@ -4,8 +4,10 @@ import type { InvoiceItemInsertType, InvoiceItemListingType } from "@/components
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -13,6 +15,26 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const INVOICE_ITEMS_ENDPOINT = '/amm/invoice-items';
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const normalizeInvoiceItem = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure ?? item.contractAllowedHospitalProcedure,
+  companyAllowedHospitalProcedureId: item.companyAllowedHospitalProcedureId ?? item.contractAllowedHospitalProcedureId
+});
+
+const toInvoiceItemPayload = (invoiceData: InvoiceItemInsertType) => ({
+  unitPrice: invoiceData.unitPrice,
+  quantity: invoiceData.quantity,
+  taxRate: invoiceData.taxRate,
+  description: invoiceData.description,
+  contractAllowedHospitalProcedure: invoiceData.companyAllowedHospitalProcedure,
+  invoice: invoiceData.invoice
+});
 
 export default class InvoiceItemService extends HttpService {
   async getInvoiceItemByInvoice(
@@ -40,18 +62,18 @@ export default class InvoiceItemService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'taxRate,companyAllowedHospitalProcedure';
+      const includesToUse = 'taxRate,contractAllowedHospitalProcedure';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/amm/invoice-items/of-invoice?${queryString}`;
+      const url = `${INVOICE_ITEMS_ENDPOINT}/of-invoice?${queryString}`;
 
       console.log('URL da requisição:', url);
       const response = await this.get<ApiResponse<InvoiceItemListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeInvoiceItem(item)) as InvoiceItemListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -62,10 +84,10 @@ export default class InvoiceItemService extends HttpService {
 
   async createInvoiceItem(invoiceData: InvoiceItemInsertType): Promise<ServiceResponse<InvoiceItemListingType>> {
     try {
-      const response = await this.post<ApiResponse<InvoiceItemListingType>>('/amm/invoice-items', invoiceData);
+      const response = await this.post<ApiResponse<InvoiceItemListingType>>(INVOICE_ITEMS_ENDPOINT, toInvoiceItemPayload(invoiceData));
       return {
         status: 'success',
-        data: response.data
+        data: normalizeInvoiceItem((response.data ?? response.content ?? response) as any) as InvoiceItemListingType
       };
     } catch (error: any) {
       if (error.response) {
@@ -90,7 +112,7 @@ export default class InvoiceItemService extends HttpService {
         title: 'Network Error',
         status: 503,
         detail: 'Could not connect to server',
-        instance: '/administration/companies'
+        instance: INVOICE_ITEMS_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()
@@ -101,12 +123,12 @@ export default class InvoiceItemService extends HttpService {
   async getInvoiceItemById(id: string): Promise<{ data: InvoiceItemListingType }> {
     try {
       const response = await this.get<{ data: InvoiceItemListingType; meta: any }>(
-        `/amm/invoice-items/${id}?includes=invoice`
+        `${INVOICE_ITEMS_ENDPOINT}/${id}?includes=invoice,contractAllowedHospitalProcedure`
       );
       console.log('Resposta da requisição getInvoiceItemById:------------------------', response);
 
       return {
-        data: response.data
+        data: normalizeInvoiceItem(((response as any).data ?? response) as any) as InvoiceItemListingType
       };
     } catch (error) {
       throw this.handleError(error);
@@ -130,7 +152,7 @@ export default class InvoiceItemService extends HttpService {
 
   async deleteInvoiceItem(id: string): Promise<void> {
     try {
-      await this.delete(`/amm/invoice-items/${id}`);
+      await this.delete(`${INVOICE_ITEMS_ENDPOINT}/${id}`);
     } catch (error) {
       console.error("❌ Erro ao item da factura:", error);
       throw error;
@@ -142,19 +164,12 @@ export default class InvoiceItemService extends HttpService {
     try {
 
       // Corpo da requisição conforme especificado
-      const payload = {
-        unitPrice: invoiceData.unitPrice,
-        quantity: invoiceData.quantity,
-        taxRate: invoiceData.taxRate,
-        description: invoiceData.description,
-        companyAllowedHospitalProcedure: invoiceData.companyAllowedHospitalProcedure,
-        invoice: invoiceData.invoice,
-      };
+      const payload = toInvoiceItemPayload(invoiceData);
 
-      const response = await this.put<ApiResponse<InvoiceItemListingType>>(`/amm/invoice-items/${id}`, payload);
+      const response = await this.put<ApiResponse<InvoiceItemListingType>>(`${INVOICE_ITEMS_ENDPOINT}/${id}`, payload);
       return {
         status: 'success',
-        data: response.data
+        data: normalizeInvoiceItem((response.data ?? response.content ?? response) as any) as InvoiceItemListingType
       };
     } catch (error: any) {
       if (error.response) {
@@ -172,5 +187,3 @@ export default class InvoiceItemService extends HttpService {
 
 
 }
-
-

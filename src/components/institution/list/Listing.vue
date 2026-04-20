@@ -25,7 +25,7 @@ const institutionStore = useInstitutionStore()
 
 // Estado do componente
 const searchQuery = ref("")
-const searchProps = "name,description,address,phone,email,website,incomeTaxNumber,institutionType.name" 
+const searchProps = "name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name" 
 const itemsPerPage = ref(10)
 const selectedInstitutions = ref<any[]>([]) 
 

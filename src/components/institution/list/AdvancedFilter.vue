@@ -139,12 +139,12 @@ let routeSyncInProgress = false;
 
 const filterableFields = ref<FilterableField[]>([
     { text: t('t-name'), value: 'name', type: 'text' },
-    { text: t('t-institution-type'), value: 'institutionType.name', type: 'text' },
-    { text: t('t-address'), value: 'address', type: 'text' },
-    { text: t('t-phone'), value: 'phone', type: 'text' },
-    { text: t('t-email'), value: 'email', type: 'text' },
-    { text: t('t-website'), value: 'website', type: 'text' },
-    { text: t('t-income-tax-number'), value: 'incomeTaxNumber', type: 'text' },
+    { text: t('t-institution-type'), value: 'organization.institutionType.name', type: 'text' },
+    { text: t('t-address'), value: 'organization.address', type: 'text' },
+    { text: t('t-phone'), value: 'organization.phone', type: 'text' },
+    { text: t('t-email'), value: 'organization.email', type: 'text' },
+    { text: t('t-website'), value: 'organization.website', type: 'text' },
+    { text: t('t-income-tax-number'), value: 'organization.incomeTaxNumber', type: 'text' },
     { text: t('t-created-at'), value: 'createdAt', type: 'date' },
     { text: t('t-description'), value: 'description', type: 'text' },
     { text: t('t-enabled'), value: 'enabled', type: 'boolean' }
