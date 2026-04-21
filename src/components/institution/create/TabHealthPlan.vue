@@ -398,7 +398,7 @@ onBeforeUnmount(() => {
   <Card :title="$t('t-health-plan-list')" title-class="py-5">
     <template v-if="!props.isViewMode" #title-action>
       <div>
-        <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
+        <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-health-plan') }}
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">

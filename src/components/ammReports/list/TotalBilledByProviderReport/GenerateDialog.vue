@@ -1,4 +1,4 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
@@ -25,7 +25,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue"]);
-const companyId = ref("");
+const contractId = ref("");
 const filterType = ref("");
 const serviceProviderId = ref("");
 const coveragePeriodId = ref("");
@@ -63,7 +63,7 @@ const userName = computed(() => {
 
 const requiredRules = {
   serviceProviderId: [(v: string) => !!v || t("t-please-enter-service-provider")],
-  companyId: [(v: string) => !!v || t("t-please-enter-institution")],
+  contractId: [(v: string) => !!v || t("t-please-enter-institution")],
   filterType: [(v: string) => !!v || t("t-please-select-filter")],
   coveragePeriodId: [
     (v: string) => {
@@ -85,7 +85,7 @@ const requiredRules = {
   ],
 };
 
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   if (!value) return;
   filterType.value = "";
   coveragePeriodId.value = "";
@@ -98,7 +98,7 @@ const onSubmit = async (exportType: ExportType = "pdf") => {
   const filter = String(filterType.value || "");
   const isMissingRequired =
     !serviceProviderId.value ||
-    !companyId.value ||
+    !contractId.value ||
     !filter ||
     (filter === "1" && !coveragePeriodId.value) ||
     (filter === "2" && (!startDate.value || !endDate.value));
@@ -113,7 +113,7 @@ const onSubmit = async (exportType: ExportType = "pdf") => {
 
   try {
     const payload: TotalBilledByProviderFilterType = {
-      companyId: companyId.value,
+      contractId: contractId.value,
       serviceProviderId: serviceProviderId.value,
       coveragePeriodId: filter === "1" ? coveragePeriodId.value : undefined,
       startDate: filter === "2" ? startDate.value : undefined,
@@ -205,9 +205,9 @@ onMounted(async () => {
                 {{ $t('t-institution') }} <i class="ph-asterisk text-danger" />
               </div>
               <MenuSelect
-                v-model="companyId"
+                v-model="contractId"
                 :items="institutions"
-                :rules="requiredRules.companyId"
+                :rules="requiredRules.contractId"
                 :loading="institutionStore.loading"
               />
             </v-col>

@@ -47,7 +47,7 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByCompany = Number(report.totalByCompany || 0);
+    const totalByContract = Number(report.totalByContract || 0);
     const totalByEmployee = Number(report.totalByEmployee || 0);
     const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
@@ -167,7 +167,7 @@ export class EmployeeExpenseStatementReportExporter {
       margin + cardWidth + gap,
       currentY,
       this.tr("t-institution"),
-      report.companyName || "-",
+      report.contractName || "-",
       [
         `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`,
         `${this.tr("t-total-invoices")}: ${details.length}`,
@@ -183,7 +183,7 @@ export class EmployeeExpenseStatementReportExporter {
       this.tr("t-total-billed"),
       `${amountFormate(totalAmount)} MT`,
       [
-        `${this.tr("t-total-by-company")}: ${amountFormate(totalByCompany)} MT`,
+        `${this.tr("t-total-by-company")}: ${amountFormate(totalByContract)} MT`,
         `${this.tr("t-total-by-employee")}: ${amountFormate(totalByEmployee)} MT`,
         `${this.tr("t-total-to-be-discounted")}: ${amountFormate(totalToBeDesconted)} MT`,
       ],
@@ -277,7 +277,7 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByCompany = Number(report.totalByCompany || 0);
+    const totalByContract = Number(report.totalByContract || 0);
     const totalByEmployee = Number(report.totalByEmployee || 0);
     const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
@@ -286,9 +286,9 @@ export class EmployeeExpenseStatementReportExporter {
     const data: string[][] = [
       [this.tr("t-ees-report-title").toUpperCase(), "", "", "", "", ""],
       [`${this.tr("t-employee")}: ${employeeName}`, "", "", "", "", ""],
-      [`${this.tr("t-institution")}: ${report.companyName || "-"}`, "", "", "", "", ""],
+      [`${this.tr("t-institution")}: ${report.contractName || "-"}`, "", "", "", "", ""],
       [`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, "", "", "", "", ""],
-      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-by-company"), `${amountFormate(totalByCompany)} MT`, "", ""],
+      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-by-company"), `${amountFormate(totalByContract)} MT`, "", ""],
       [this.tr("t-total-by-employee"), `${amountFormate(totalByEmployee)} MT`, this.tr("t-total-to-be-discounted"), `${amountFormate(totalToBeDesconted)} MT`, "", ""],
       ["", "", "", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", "", "", ""],
@@ -386,7 +386,7 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByCompany = Number(report.totalByCompany || 0);
+    const totalByContract = Number(report.totalByContract || 0);
     const totalByEmployee = Number(report.totalByEmployee || 0);
     const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
@@ -395,10 +395,10 @@ export class EmployeeExpenseStatementReportExporter {
     csvContent += `${this.tr("t-employee")},${employeeName}\n`;
     csvContent += `${this.tr("t-position")},${report.employeePositionName || "-"}\n`;
     csvContent += `${this.tr("t-department")},${report.employeeDepartmentName || "-"}\n`;
-    csvContent += `${this.tr("t-institution")},${report.companyName || "-"}\n`;
+    csvContent += `${this.tr("t-institution")},${report.contractName || "-"}\n`;
     csvContent += `${this.tr("t-coverage-period")},${report.coveragePeriodName || "-"}\n`;
     csvContent += `${this.tr("t-total-billed")},${totalAmount}\n`;
-    csvContent += `${this.tr("t-total-by-company")},${totalByCompany}\n`;
+    csvContent += `${this.tr("t-total-by-company")},${totalByContract}\n`;
     csvContent += `${this.tr("t-total-by-employee")},${totalByEmployee}\n`;
     csvContent += `${this.tr("t-total-to-be-discounted")},${totalToBeDesconted}\n\n`;
 

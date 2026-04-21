@@ -151,7 +151,7 @@ export class TotalBilledByProviderReportExporter {
       report.serviceProviderName || "-",
       [
         `${this.tr("t-provider-type")}: ${report.serviceProviderTypeName || "-"}`,
-        `${this.tr("t-institution")}: ${report.companyName || "-"}`
+        `${this.tr("t-institution")}: ${report.contractName || "-"}`
       ]
     );
 
@@ -265,7 +265,7 @@ export class TotalBilledByProviderReportExporter {
       [`${this.tr("t-start-period")}: ${startPeriod} | ${this.tr("t-end-period")}: ${endPeriod}`, "", "", ""],
       [this.tr("t-tbbp-summary"), "", "", ""],
       [this.tr("t-service-provider"), report.serviceProviderName || "-", this.tr("t-provider-type"), report.serviceProviderTypeName || "-"],
-      [this.tr("t-institution"), report.companyName || "-", this.tr("t-total-employees"), String(totalEmployees)],
+      [this.tr("t-institution"), report.contractName || "-", this.tr("t-total-employees"), String(totalEmployees)],
       [this.tr("t-total-billed"), `${amountFormate(totalBilled)} MT`, "", ""],
       ["", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", ""],
@@ -353,7 +353,7 @@ export class TotalBilledByProviderReportExporter {
     let csvContent = `${this.tr("t-tbbp-report-title").toUpperCase()}\n${line}\n`;
     csvContent += `${this.tr("t-start-period")},${startPeriod}\n`;
     csvContent += `${this.tr("t-end-period")},${endPeriod}\n`;
-    csvContent += `${this.tr("t-institution")},${report.companyName || "-"}\n`;
+    csvContent += `${this.tr("t-institution")},${report.contractName || "-"}\n`;
     csvContent += `${this.tr("t-service-provider")},${report.serviceProviderName || "-"}\n`;
     csvContent += `${this.tr("t-provider-type")},${report.serviceProviderTypeName || "-"}\n\n`;
 

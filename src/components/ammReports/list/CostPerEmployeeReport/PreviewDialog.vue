@@ -30,7 +30,7 @@ const coveragePeriodStore = useCoveragePeriodStore();
 const institutionStore = useInstitutionStore();
 
 // Form fields
-const companyId = ref("");
+const contractId = ref("");
 const filterType = ref("");  // NEW FIELD (1 = período, 2 = datas)
 const fromDate = ref(new Date());
 const toDate = ref(new Date());
@@ -56,6 +56,26 @@ const institutions = computed(() => {
   }));
 });
 
+const selectedContract = computed(() => {
+  return (institutionStore.enabledInstitutions || []).find((item: any) => String(item.id) === String(contractId.value));
+});
+
+const selectedOrganization = computed(() => {
+  const contract = selectedContract.value as any;
+  if (!contract) return undefined;
+
+  return contract.organization ?? contract.companyDetails ?? {
+    id: contract.organizationId ?? contract.companyDetailsId,
+    name: contract.name,
+    description: contract.description,
+    address: contract.address,
+    phone: contract.phone,
+    email: contract.email,
+    website: contract.website,
+    incomeTaxNumber: contract.incomeTaxNumber
+  };
+});
+
 // Show dialog from parent
 const emit = defineEmits(["update:modelValue"]);
 
@@ -65,7 +85,7 @@ const emit = defineEmits(["update:modelValue"]);
 -------------------------- */
 
 const requiredRules = {
-  companyId: [(v: string) => !!v || t('t-please-enter-institution')],
+  contractId: [(v: string) => !!v || t('t-please-enter-institution')],
   filterType: [(v: string) => !!v || t('t-please-select-filter')],
   coveragePeriodId: [(v: string) => !!v || t('t-please-enter-coverage-period')],
   fromDate: [(v: Date) => !!v || t('t-please-enter-start-date')],
@@ -77,7 +97,7 @@ const requiredRules = {
 -------------------------- */
 
 // Quando selecionar a instituição → carregar os períodos dessa instituição
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   if (!value) return;
   filterType.value = "";           // limpa o filtro
   coveragePeriodId.value = "";     // limpa o período
@@ -109,7 +129,7 @@ const onSubmit = async () => {
   localLoading.value = true;
 
   const payload: CompanyCostPerEmployeeReportType = {
-    companyId: companyId.value,
+    contractId: contractId.value,
     fromDate: filterType.value === "2" ? fromDate.value : undefined,
     toDate: filterType.value === "2" ? toDate.value : undefined,
     coveragePeriodId: filterType.value === "1" ? coveragePeriodId.value : undefined,
@@ -124,7 +144,13 @@ const onSubmit = async () => {
     return;
   }
 
-  reportStore.setReport(response.data);
+  reportStore.setReport({
+    ...response.data,
+    contractId: contractId.value,
+    contract: response.data?.contract ?? selectedContract.value,
+    contractName: response.data?.contractName ?? selectedContract.value?.name,
+    organization: response.data?.organization ?? selectedOrganization.value
+  });
 
   emit("update:modelValue", false);
 
@@ -162,12 +188,12 @@ onMounted(async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-institution') }} <i class="ph-asterisk text-danger" />
               </div>
-              <MenuSelect v-model="companyId" :items="institutions" :rules="requiredRules.companyId"
+              <MenuSelect v-model="contractId" :items="institutions" :rules="requiredRules.contractId"
                 :loading="institutionStore.loading" />
             </v-col>
 
             <!-- FILTRAR POR -->
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-filter-by') }} <i class="ph-asterisk text-danger" />
               </div>

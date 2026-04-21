@@ -61,7 +61,7 @@ export class TotalBilledMedicalAssistanceReportExporter {
     const period = this.getPeriod(rows);
     const totalBilled = rows.reduce((sum, item) => sum + Number(item.totalBilled || 0), 0);
     const totalEmployees = rows.reduce((sum, item) => sum + Number(item.totalEmployees || 0), 0);
-    const companyName = rows?.[0]?.companyName || "-";
+    const contractName = rows?.[0]?.contractName || "-";
 
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -163,7 +163,7 @@ export class TotalBilledMedicalAssistanceReportExporter {
       this.tr("t-service-provider"),
       String(rows.length),
       [
-        `${this.tr("t-institution")}: ${companyName}`,
+        `${this.tr("t-institution")}: ${contractName}`,
         `${this.tr("t-total-employees")}: ${totalEmployees}`
       ]
     );
@@ -280,14 +280,14 @@ export class TotalBilledMedicalAssistanceReportExporter {
     const period = this.getPeriod(rows);
     const totalBilled = rows.reduce((sum, item) => sum + Number(item.totalBilled || 0), 0);
     const totalEmployees = rows.reduce((sum, item) => sum + Number(item.totalEmployees || 0), 0);
-    const companyName = rows?.[0]?.companyName || "-";
+    const contractName = rows?.[0]?.contractName || "-";
 
     const workbook = XLSX.utils.book_new();
     const data: string[][] = [
       [this.tr("t-tbma-report-title").toUpperCase(), "", "", ""],
       [`${this.tr("t-start-period")}: ${period.start} | ${this.tr("t-end-period")}: ${period.end}`, "", "", ""],
       [this.tr("t-tbma-summary"), "", "", ""],
-      [this.tr("t-institution"), companyName, this.tr("t-total-billed"), `${amountFormate(totalBilled)} MT`],
+      [this.tr("t-institution"), contractName, this.tr("t-total-billed"), `${amountFormate(totalBilled)} MT`],
       [this.tr("t-service-provider"), String(rows.length), this.tr("t-total-employees"), String(totalEmployees)],
       ["", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", ""],
@@ -377,11 +377,11 @@ export class TotalBilledMedicalAssistanceReportExporter {
     const period = this.getPeriod(rows);
     const totalBilled = rows.reduce((sum, item) => sum + Number(item.totalBilled || 0), 0);
     const totalEmployees = rows.reduce((sum, item) => sum + Number(item.totalEmployees || 0), 0);
-    const companyName = rows?.[0]?.companyName || "-";
+    const contractName = rows?.[0]?.contractName || "-";
     const line = "-".repeat(100);
 
     let csvContent = `${this.tr("t-tbma-report-title").toUpperCase()}\n${line}\n`;
-    csvContent += `${this.tr("t-institution")},${companyName}\n`;
+    csvContent += `${this.tr("t-institution")},${contractName}\n`;
     csvContent += `${this.tr("t-start-period")},${period.start}\n`;
     csvContent += `${this.tr("t-end-period")},${period.end}\n\n`;
     csvContent += `${this.tr("t-service-provider")},${this.tr("t-provider-type")},${this.tr("t-total-employees")},${this.tr("t-total-billed")}\n`;

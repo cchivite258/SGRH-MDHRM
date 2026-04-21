@@ -45,7 +45,7 @@ const currentDate = computed(() => {
 });
 
 const totalAmount = computed(() => Number(props.report?.totalAmount || 0));
-const totalByCompany = computed(() => Number(props.report?.totalByCompany || 0));
+const totalByContract = computed(() => Number(props.report?.totalByContract || 0));
 const totalByEmployee = computed(() => Number(props.report?.totalByEmployee || 0));
 const totalToBeDesconted = computed(() => Number(props.report?.totalToBeDesconted || 0));
 
@@ -165,7 +165,7 @@ const exportOptions = [
             </div>
             <div>
               <div class="text-caption text-grey">{{ $t("t-institution") }}</div>
-              <div class="text-body-1 font-weight-medium">{{ report.companyName || "-" }}</div>
+              <div class="text-body-1 font-weight-medium">{{ report.contractName || "-" }}</div>
             </div>
           </div>
           <v-divider class="my-2" />
@@ -197,7 +197,7 @@ const exportOptions = [
           <div class="text-caption text-grey">
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t("t-total-by-company") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(totalByCompany) }} MT</span>
+              <span class="font-weight-medium">{{ amountFormate(totalByContract) }} MT</span>
             </div>
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t("t-total-by-employee") }}:</span>

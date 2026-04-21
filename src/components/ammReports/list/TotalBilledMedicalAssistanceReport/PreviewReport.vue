@@ -43,7 +43,7 @@ const endPeriod = computed(() => {
 const totalAmount = computed(() => sortedRows.value.reduce((sum, item) => sum + Number(item.totalBilled || 0), 0));
 const totalProviders = computed(() => sortedRows.value.length);
 const totalEmployees = computed(() => sortedRows.value.reduce((sum, item) => sum + Number(item.totalEmployees || 0), 0));
-const companyName = computed(() => sortedRows.value?.[0]?.companyName || "-");
+const contractName = computed(() => sortedRows.value?.[0]?.contractName || "-");
 
 const currentDate = computed(() => {
   const uiLocale = locale.value === "en" ? "en-US" : "pt-PT";
@@ -169,7 +169,7 @@ const exportOptions = [
           <div class="text-caption text-grey">
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t("t-institution") }}:</span>
-              <span class="font-weight-medium">{{ companyName }}</span>
+              <span class="font-weight-medium">{{ contractName }}</span>
             </div>
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t("t-total-employees") }}:</span>

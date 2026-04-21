@@ -21,7 +21,7 @@ export default class CompanyHospitalProceduresBalancesService extends HttpServic
     async createReport(reportData: CompanyHospitalProceduresBalanceType): Promise<ServiceResponse<CompanyHospitalProceduresBalanceType>> {
         try {
             const response = await this.post<ApiResponse<CompanyHospitalProceduresBalanceType>>(CONTRACT_HOSPITAL_PROCEDURES_BALANCES_REPORT_ENDPOINT, reportData);
-            console.log("CompanyHospitalProceduresBalanceType",response)
+            //console.log("100001 report:",response)
             return {
                 status: 'success',
                 data: response.data ?? (response as unknown as CompanyHospitalProceduresBalanceType)

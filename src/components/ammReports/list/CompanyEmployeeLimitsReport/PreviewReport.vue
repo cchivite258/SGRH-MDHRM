@@ -82,7 +82,7 @@ const getAnnualSalaryMonthsCount = (employee: CompanyEmployeeLimitEmployeeType):
 const calcLimit = (employee: CompanyEmployeeLimitEmployeeType): number => {
   const limitType = String(employee.healthPlanLimit || "");
   const fixed = Number(employee.fixedAmount || 0);
-  const perc = Number(employee.companyContributionPercentage || 0);
+  const perc = Number(employee.contractContributionPercentage || 0);
   const component = String(employee.salaryComponent || "");
   const base = component === "GROSS_SALARY"
     ? Number(employee.employeeGrossSalary || 0)
@@ -105,7 +105,7 @@ const limitColumnTitle = computed(() => {
 
   const limitType = String(employee.healthPlanLimit || "");
   const component = String(employee.salaryComponent || "");
-  const percentage = Number(employee.companyContributionPercentage || 0);
+  const percentage = Number(employee.contractContributionPercentage || 0);
 
   if (limitType === "FIXED_AMOUNT") return t("t-cel-limit-fixed-amount");
 
@@ -262,7 +262,7 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
             <v-icon size="18" class="mr-2" color="primary">mdi-domain</v-icon>
             <div class="text-caption text-grey">{{ $t("t-institution") }}</div>
           </div>
-          <div class="text-body-1 font-weight-medium">{{ report.companyName || "-" }}</div>
+          <div class="text-body-1 font-weight-medium">{{ report.contractName || "-" }}</div>
           <v-divider class="my-2" />
           <div class="text-caption text-grey">{{ $t("t-coverage-period") }}</div>
           <div class="text-body-2">{{ report.coveragePeriodName || "-" }}</div>

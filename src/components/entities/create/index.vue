@@ -322,7 +322,7 @@ onMounted(async () => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="router.push('/entities/list')">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn v-if="!props.isViewMode" color="success" variant="elevated" type="submit" :loading="loading">
+        <v-btn v-if="!props.isViewMode" color="secondary" variant="elevated" type="submit" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

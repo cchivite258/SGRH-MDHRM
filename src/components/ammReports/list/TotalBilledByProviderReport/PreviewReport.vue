@@ -146,7 +146,7 @@ const exportOptions = [
             </div>
             <div class="d-flex justify-space-between my-1">
               <span>{{ $t("t-institution") }}:</span>
-              <span class="font-weight-medium">{{ report.companyName || "-" }}</span>
+              <span class="font-weight-medium">{{ report.contractName || "-" }}</span>
             </div>
           </div>
         </v-card>

@@ -16,9 +16,43 @@ interface ServiceResponse<T> {
 }
 
 const CONTRACTS_ENDPOINT = "/administration/contracts";
-const CONTRACTS_INCLUDES = "organization";
+const CONTRACTS_INCLUDES = "organization,departments,personsOfContacts,contractHealthPlans,coveragePeriods";
+const CONTRACTS_INCLUDE_QUERY = `includes=${CONTRACTS_INCLUDES}`;
 
 export default class InstitutionService extends HttpService {
+  private normalizeDepartment<T extends Record<string, any>>(department: T, contract: Record<string, any>): T {
+    return {
+      ...department,
+      company: department.company ?? contract
+    };
+  }
+
+  private normalizeContactPerson<T extends Record<string, any>>(person: T, contract: Record<string, any>): T {
+    return {
+      ...person,
+      company: person.company ?? contract
+    };
+  }
+
+  private normalizeHealthPlan<T extends Record<string, any>>(healthPlan: T, contract: Record<string, any>): T {
+    return {
+      ...healthPlan,
+      company: healthPlan.company ?? contract,
+      companyId: healthPlan.companyId ?? healthPlan.contractId ?? contract.id,
+      companyContributionPercentage: healthPlan.companyContributionPercentage ?? healthPlan.contractContributionPercentage,
+      companyHealthPlan: healthPlan.companyHealthPlan ?? healthPlan.contractHealthPlan
+    };
+  }
+
+  private normalizeCoveragePeriod<T extends Record<string, any>>(period: T, contract: Record<string, any>): T {
+    return {
+      ...period,
+      company: period.company ?? contract,
+      companyId: period.companyId ?? period.contractId ?? contract.id,
+      companyHealthPlanId: period.companyHealthPlanId ?? period.contractHealthPlanId
+    };
+  }
+
   private normalizeInstitution<T extends Record<string, any>>(item: T): T {
     const organization = item.organization ?? item.companyDetails;
 
@@ -35,7 +69,13 @@ export default class InstitutionService extends HttpService {
       email: item.email ?? organization.email,
       website: item.website ?? organization.website,
       incomeTaxNumber: item.incomeTaxNumber ?? organization.incomeTaxNumber,
-      institutionType: item.institutionType ?? organization.institutionType
+      institutionType: item.institutionType ?? organization.institutionType,
+      departments: (item.departments ?? []).map((department: any) => this.normalizeDepartment(department, item)),
+      personsOfContacts: (item.personsOfContacts ?? []).map((person: any) => this.normalizeContactPerson(person, item)),
+      contactPersons: (item.contactPersons ?? item.personsOfContacts ?? []).map((person: any) => this.normalizeContactPerson(person, item)),
+      contractHealthPlans: (item.contractHealthPlans ?? []).map((healthPlan: any) => this.normalizeHealthPlan(healthPlan, item)),
+      healthPlans: (item.healthPlans ?? item.contractHealthPlans ?? []).map((healthPlan: any) => this.normalizeHealthPlan(healthPlan, item)),
+      coveragePeriods: (item.coveragePeriods ?? []).map((period: any) => this.normalizeCoveragePeriod(period, item))
     };
   }
 
@@ -140,7 +180,10 @@ export default class InstitutionService extends HttpService {
       };
       console.log(" payload", payload);
 
-      const response = await this.post<ApiResponse<InstitutionResponseType>>(CONTRACTS_ENDPOINT, payload);
+      const response = await this.post<ApiResponse<InstitutionResponseType>>(
+        `${CONTRACTS_ENDPOINT}?${CONTRACTS_INCLUDE_QUERY}`,
+        payload
+      );
       console.log("Respeonse create", response)
       return {
         status: "success",
@@ -219,7 +262,10 @@ export default class InstitutionService extends HttpService {
      console.log("payload", payload);
 
 
-    const response = await this.put<InstitutionResponseType>(`${CONTRACTS_ENDPOINT}/${id}`, payload);
+    const response = await this.put<InstitutionResponseType>(
+      `${CONTRACTS_ENDPOINT}/${id}?${CONTRACTS_INCLUDE_QUERY}`,
+      payload
+    );
     return this.normalizeInstitution(response as any) as InstitutionResponseType;
   }
 }
