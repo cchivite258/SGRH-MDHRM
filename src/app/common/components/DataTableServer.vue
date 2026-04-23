@@ -16,7 +16,7 @@
               }}</b> {{ $t('t-of') }}
             <b>{{ totalItems }}</b> {{ $t('t-results') }}
           </div>
-          <v-pagination v-model="page" :length="totalPages" density="compact" color="primary" variant="text"
+          <v-pagination v-model="page" :length="totalPages" density="compact" :color="paginationColor" variant="text"
             total-visible="3" :prev-icon="prevIcon" :next-icon="nextIcon" class="table-pagination" />
         </div>
       </template>
@@ -65,6 +65,10 @@ const props = defineProps({
     type: Number,
     default: 10
   },
+  page: {
+    type: Number,
+    default: 1
+  },
   totalItems: {
     type: Number,
     default: 0
@@ -84,6 +88,10 @@ const props = defineProps({
   nextIcon: {
     type: String,
     default: 'ph-arrow-right'
+  },
+  paginationColor: {
+    type: String,
+    default: 'primary'
   },
   showPagination: {
     type: Boolean,
@@ -114,7 +122,7 @@ const emit = defineEmits([
   'update:modelValue'
 ])
 
-const page = ref(1)
+const page = ref(props.page)
 const itemsPerPage = ref(props.itemsPerPage)
 const serverItems = ref(props.items)
 const selectedItems = ref(props.modelValue)
@@ -168,8 +176,20 @@ watch(() => props.items, (newItems) => {
   serverItems.value = newItems
 }, { deep: true })
 
+watch(() => props.page, (newPage) => {
+  page.value = newPage
+})
+
 watch(() => props.modelValue, (newValue) => {
   selectedItems.value = newValue
+})
+
+watch(page, (newPage) => {
+  emit('update:page', newPage)
+})
+
+watch(itemsPerPage, (newItemsPerPage) => {
+  emit('update:itemsPerPage', newItemsPerPage)
 })
 
 watch(selectedItems, (newValue) => {

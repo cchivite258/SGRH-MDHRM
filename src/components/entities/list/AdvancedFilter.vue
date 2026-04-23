@@ -1,11 +1,11 @@
 <template>
-    <v-card class="mb-4">
-        <v-card-text class="pa-4">
+    <v-card class="entity-advanced-filter-card">
+        <v-card-text class="entity-advanced-filter-card__body">
             <QuerySearch v-model="globalSearch" :placeholder="$t('t-institution-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
-                @update:model-value="onGlobalSearch" class="mb-2" />
+                @update:model-value="onGlobalSearch" class="entity-advanced-filter-card__search" />
 
-            <v-expansion-panels class="expansion-panels expansion-panel mt-5">
+            <v-expansion-panels class="expansion-panels expansion-panel entity-advanced-filter-card__panels">
                 <v-expansion-panel>
                     <v-expansion-panel-title class="text-caption font-weight-medium px-2">
                         <i class="ph-faders-horizontal me-2"></i>
@@ -17,13 +17,13 @@
                             <v-radio :label="t('t-and-operator')" value="AND" class="text-caption mr-2"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-and-operator') }}</span>
+                                    <span class="entity-advanced-filter-card__radio-label">{{ t('t-and-operator') }}</span>
                                 </template>
                             </v-radio>
                             <v-radio :label="t('t-or-operator')" value="OR" class="text-caption"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-or-operator') }}</span>
+                                    <span class="entity-advanced-filter-card__radio-label">{{ t('t-or-operator') }}</span>
                                 </template>
                             </v-radio>
                         </v-radio-group>
@@ -395,4 +395,66 @@ onBeforeUnmount(() => {
     }
 });
 </script>
+
+<style scoped>
+.entity-advanced-filter-card {
+    border: 1px solid #e4eaf2;
+    border-radius: 16px !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05) !important;
+}
+
+.entity-advanced-filter-card__body {
+    padding: 18px 18px 16px;
+    font-family: inherit;
+}
+
+.entity-advanced-filter-card__search {
+    margin-bottom: 0;
+}
+
+.entity-advanced-filter-card__panels {
+    margin-top: 14px;
+}
+
+.entity-advanced-filter-card :deep(.v-expansion-panel) {
+    border: 1px solid #edf2f7;
+    border-radius: 12px !important;
+    box-shadow: none;
+}
+
+.entity-advanced-filter-card :deep(.v-expansion-panel-title) {
+    min-height: 46px;
+}
+
+.entity-advanced-filter-card :deep(.v-field__input),
+.entity-advanced-filter-card :deep(.v-label),
+.entity-advanced-filter-card :deep(.v-field__field),
+.entity-advanced-filter-card :deep(.v-select__selection),
+.entity-advanced-filter-card :deep(input),
+.entity-advanced-filter-card :deep(.v-btn),
+.entity-advanced-filter-card :deep(.v-expansion-panel-title__overlay),
+.entity-advanced-filter-card :deep(.v-expansion-panel-title__icon),
+.entity-advanced-filter-card :deep(.v-expansion-panel-text),
+.entity-advanced-filter-card :deep(.v-radio .v-label) {
+    font-family: inherit !important;
+    font-size: 0.76rem !important;
+}
+
+.entity-advanced-filter-card :deep(.v-expansion-panel-title) {
+    font-family: inherit !important;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.entity-advanced-filter-card__radio-label {
+    font-family: inherit;
+    font-size: 0.76rem;
+}
+
+@media (max-width: 767px) {
+    .entity-advanced-filter-card__body {
+        padding: 14px 14px 12px;
+    }
+}
+</style>
 
