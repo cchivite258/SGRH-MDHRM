@@ -318,7 +318,7 @@ onBeforeRouteLeave(() => {
 .entity-listing-page :deep(.v-data-table__tr td) {
   border-bottom: 1px solid #eef2f7;
   color: #334155;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
   vertical-align: middle;
@@ -376,14 +376,14 @@ onBeforeRouteLeave(() => {
 
 .entity-listing-table__identity-name {
   color: inherit;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: inherit;
   line-height: 1.3;
 }
 
 .entity-listing-table__contact-link {
   color: inherit;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: inherit;
   white-space: normal;
   text-decoration: none;
@@ -396,7 +396,7 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-page :deep(.v-chip) {
-  font-size: 0.76rem !important;
+  font-size: 0.8rem !important;
   font-weight: 500 !important;
 }
 

@@ -129,7 +129,7 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form" @submit.prevent="submitGeneralInfo">
-    <Card title="Informações Gerais do Contrato" elevation="0" title-class="pb-0">
+    <Card title="Informações Gerais do Contrato" elevation="0" title-class="pb-0"> 
       <v-card-text class="pt-0">
         <v-row class="mt-n3">
           <v-col cols="12" lg="12" class="text-right">
@@ -189,7 +189,7 @@ onMounted(async () => {
         <v-row class="">
           
           <v-col cols="12" lg="12" class="mt-n6">
-            <div class="font-weight-bold ">{{ $t('t-contract-description') }}</div>
+            <div class="font-weight-bold ">{{ $t('t-contract-description') }}</div> 
             <TextArea
               v-model="institutionData.description"
               :error-messages="getServerErrors('description')"

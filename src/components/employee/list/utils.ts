@@ -20,7 +20,7 @@ export const employeeHeader: DataTableHeaderType[] = [
   { title: "phone-number", key: "phone", sortable: true },
   { title: "email", key: "email", sortable: true }, 
   { title: "is-enabled", key: "enabled", sortable: true }, 
-  { title: "action", sortable: false },
+  { title: "action", sortable: false, align: "center" },
 ];
 
 export const dependentHeader: DataTableHeaderType[] = [

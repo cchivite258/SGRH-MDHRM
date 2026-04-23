@@ -52,6 +52,10 @@ const updatePage = (value: number) => {
       </v-btn>
     </div>
 
+    <div v-if="$slots.afterHeader" class="listing-page-shell__after-header">
+      <slot name="afterHeader" />
+    </div>
+
     <div v-if="$slots.filters" class="listing-page-shell__filters">
       <slot name="filters" />
     </div>
@@ -128,6 +132,10 @@ const updatePage = (value: number) => {
 }
 
 .listing-page-shell__filters {
+  margin-bottom: 18px;
+}
+
+.listing-page-shell__after-header {
   margin-bottom: 18px;
 }
 

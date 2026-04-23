@@ -275,6 +275,7 @@ onMounted(async () => {
 
 .institution-form-section + .institution-form-section {
   margin-top: 24px;
+  font-weight: 200px;
 }
 
 .institution-form-footer-actions {
