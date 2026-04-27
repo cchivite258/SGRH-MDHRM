@@ -26,10 +26,17 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: "update:page", value: number): void
+  (e: "action"): void
 }>()
 
 const updatePage = (value: number) => {
   emit("update:page", value)
+}
+
+const handleAction = () => {
+  if (!props.actionTo) {
+    emit("action")
+  }
 }
 </script>
 
@@ -46,6 +53,7 @@ const updatePage = (value: number) => {
         class="listing-page-shell__action"
         color="secondary"
         :to="actionTo || undefined"
+        @click="handleAction"
       >
         <i :class="[actionIcon, 'me-2']" />
         {{ actionLabel }}

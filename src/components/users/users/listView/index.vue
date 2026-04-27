@@ -1,65 +1,58 @@
 <script lang="ts" setup>
-import { ref, watch, computed, onMounted } from "vue";
-import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
-import { userHeader } from "@/components/users/users/listView/utils";
-import { UserListingType, UserInsertType } from "@/components/users/types";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useToast } from "vue-toastification";
+import { useI18n } from "vue-i18n";
+import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
 import Status from "@/app/common/components/Status.vue";
-import TableAction from "@/app/common/components/TableAction.vue";
 import CreateUpdateUserModal from "@/components/users/users/CreateUpdateUserModal.vue";
 import ViewUserModal from "@/components/users/users/ViewUserModal.vue";
-import { formateDate } from "@/app/common/dateFormate";
-import { useRouter } from "vue-router";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import { useUserStore } from "@/store/userStore";
 import { userService } from "@/app/http/httpServiceProvider";
-import { useToast } from 'vue-toastification';
-import { useI18n } from "vue-i18n";
-import DataTableServer from "@/app/common/components/DataTableServer.vue"
-import CreateEditDialog from "@/components/realEstate/CreateEditDialog.vue"; import { Options } from "@/components/users/users/listView/utils";
+import { UserListingType } from "@/components/users/types";
+import { userHeader, Options } from "@/components/users/users/listView/utils";
 import ChangePasswordModal from "@/components/users/users/ChangePasswordModal.vue";
-import { changePasswordType } from "@/components/users/types";
-import { onBeforeUnmount } from "vue";
-import { changePasswordListingType } from "@/components/users/types";
+import { changePasswordType, changePasswordListingType } from "@/components/users/types";
 import EnableAccountConfirmationDialog from "@/components/users/users/EnableAccountConfirmationDialog.vue";
 import AdvancedFilter from "@/components/users/users/listView/AdvancedFilter.vue";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
-//criacao da mensagem toast
 const toast = useToast();
-
 const userStore = useUserStore();
 
-const lockerAction = ref<"enable" | "disable">("enable"); // ou string se preferir
+const lockerAction = ref<"enable" | "disable">("enable");
 const dialog = ref(false);
 const viewDialog = ref(false);
 const userData = ref<UserListingType | null>(null);
 const passwordDialog = ref(false);
-
 const deleteDialog = ref(false);
 const deleteId = ref<number | null>(null);
 const deleteLoading = ref(false);
 const changePasswordUserId = ref<number | null>(null);
-// Junto com as outras refs
 const changePasswordUser = ref<changePasswordListingType | null>(null);
 const lockerDialog = ref(false);
 const lockerId = ref<number | null>(null);
 const lockerLoading = ref(false);
-
-
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const onEnable = (id: number) => {
-  const user = userStore.users.find((u) => u.id === id);
-  if (!user) return;
+const searchQuery = ref("");
+const searchProps = "firstName,lastName,email";
+const itemsPerPage = ref(10);
+const currentPage = ref(1);
+const selectedUsers = ref<any[]>([]);
 
-  lockerId.value = id;
-  lockerAction.value = user.enabled ? "disable" : "enable";
-  lockerDialog.value = true;
+const loadingList = computed(() => userStore.loading);
+const totalItems = computed(() => userStore.pagination.totalElements);
+const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+
+const resetListingFilters = () => {
+  userStore.clearFilters();
+  searchQuery.value = "";
+  selectedUsers.value = [];
 };
-
-
 
 const handleApiError = (error: any) => {
   if (alertTimeout) {
@@ -67,7 +60,6 @@ const handleApiError = (error: any) => {
     alertTimeout = null;
   }
 
-  // Se o erro vier em formato de resposta do backend
   const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
   errorMsg.value = message;
 
@@ -84,37 +76,24 @@ onBeforeUnmount(() => {
   }
 });
 
-// Estado do componente
-const searchQuery = ref("")
-const searchProps = "firstName,lastName,email" // Campos de pesquisa
-const itemsPerPage = ref(10)
-const selectedUsers = ref<any[]>([]) /// Armazena os funcionários selecionados
-
-
-// Computed properties
-const loadingList = computed(() => userStore.loading)
-const totalItems = computed(() => userStore.pagination.totalElements)
-
-// Observa mudanças nos funcionários selecionados
-watch(selectedUsers, (newSelection) => {
-  console.log('Funcionários selecionados:', newSelection)
-}, { deep: true })
-
+watch(selectedUsers, newSelection => {
+  console.log("Utilizadores selecionados:", newSelection);
+}, { deep: true });
 
 interface FetchParams {
   page: number;
   itemsPerPage: number;
-  sortBy: Array<{ key: string; order: 'asc' | 'desc' }>;
+  sortBy: Array<{ key: string; order: "asc" | "desc" }>;
 }
 
 const fetchUsers = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
   await userStore.fetchUsers(
-    page - 1, // Ajuste para API que começa em 0
+    page - 1,
     itemsPerPage,
-    sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc'
-  )
-}
+    sortBy[0]?.key || "createdAt",
+    sortBy[0]?.order || "asc"
+  );
+};
 
 const toggleSelection = (item: UserListingType) => {
   const index = selectedUsers.value.findIndex(selected => selected.id === item.id);
@@ -125,8 +104,6 @@ const toggleSelection = (item: UserListingType) => {
   }
 };
 
-
-//Editar ou Criar utilizador
 watch(dialog, (newVal: boolean) => {
   if (!newVal) {
     userData.value = null;
@@ -152,11 +129,9 @@ const onCreateEditClick = (data: UserListingType | null) => {
     };
   } else {
     userData.value = data;
-    //console.log('userData.value', userData.value);
   }
   dialog.value = true;
 };
-
 
 const onSubmit = async (data: UserListingType, callbacks?: {
   onSuccess?: () => void,
@@ -164,30 +139,21 @@ const onSubmit = async (data: UserListingType, callbacks?: {
 }) => {
   try {
     if (!data.id) {
-      //console.log('insert');
       await userService.createUser(data);
       toast.success(t('t-toast-message-created'));
     } else {
-      //console.log('update');
       await userService.updateUser(data.id, data);
       toast.success(t('t-toast-message-update'));
     }
 
-    // Recarrega os dados
-    await userStore.fetchUsers(0, itemsPerPage.value)
-
-    // Callback de sucesso (fecha a modal)
+    await userStore.fetchUsers(0, itemsPerPage.value);
     callbacks?.onSuccess?.();
   } catch (error) {
-    console.error("Erro ao salvar usuário:", error);
-    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
-
+    getApiErrorMessages(error, t('t-message-save-error')).forEach(message => toast.error(message));
   } finally {
-    // Callback para desativar o loading
     callbacks?.onFinally?.();
   }
 };
-
 
 const onSubmitChangePassword = async (data: changePasswordType, callbacks?: {
   onSuccess?: () => void,
@@ -203,15 +169,13 @@ const onSubmitChangePassword = async (data: changePasswordType, callbacks?: {
     toast.success(t('t-toast-message-created'));
     callbacks?.onSuccess?.();
   } catch (error) {
-    console.error("Erro ao alterar senha:", error);
-    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach(message => toast.error(message));
     handleApiError(error);
   } finally {
     callbacks?.onFinally?.();
   }
 };
 
-//Consulta do utilizador
 watch(viewDialog, (newVal: boolean) => {
   if (!newVal) {
     userData.value = null;
@@ -236,24 +200,21 @@ const onViewClick = (data: UserListingType | null) => {
       passwordExpirationDate: ""
     };
   } else {
-    //console.log('data userdata', data);
     userData.value = data;
-    console.log('userData.value', userData.value);
   }
   viewDialog.value = true;
 };
 
-watch(passwordDialog, (val) => {
+watch(passwordDialog, val => {
   if (!val) {
     changePasswordUser.value = null;
-    errorMsg.value = ""; // limpa o erro ao fechar
+    errorMsg.value = "";
   }
 });
 
 const onChangePassword = (data: UserListingType | null) => {
   if (!data) return;
 
-  // Transforma o UserListingType num objeto do tipo changePasswordListingType
   changePasswordUser.value = {
     id: data.id,
     newPassword: "",
@@ -265,34 +226,36 @@ const onChangePassword = (data: UserListingType | null) => {
   passwordDialog.value = true;
 };
 
+const onEnable = (id: number) => {
+  const user = userStore.users.find(u => u.id === id);
+  if (!user) return;
+
+  lockerId.value = id;
+  lockerAction.value = user.enabled ? "disable" : "enable";
+  lockerDialog.value = true;
+};
+
 const onConfirmEnableAccount = async () => {
   lockerLoading.value = true;
 
   try {
-    const user = userStore.users.find((u) => u.id === lockerId.value);
+    const user = userStore.users.find(u => u.id === lockerId.value);
     if (!user) {
       toast.error(t("t-message-user-not-found"));
       return;
     }
 
     const wasEnabled = user.enabled;
-
-    // Chamada da API
     await userService.enableUser(lockerId.value!);
-
-    // Atualiza a lista de utilizadores
     await userStore.fetchUsers();
 
-    // Toast com base no estado anterior
     if (wasEnabled) {
       toast.success(t("t-toast-message-user-disabled"));
-
     } else {
       toast.success(t("t-toast-message-user-enabled"));
     }
   } catch (error) {
-    getApiErrorMessages(error, t("t-message-enable-error")).forEach((message) => toast.error(message));
-    console.error("Erro ao alterar estado da conta:", error);
+    getApiErrorMessages(error, t("t-message-enable-error")).forEach(message => toast.error(message));
   } finally {
     lockerLoading.value = false;
     lockerDialog.value = false;
@@ -300,15 +263,14 @@ const onConfirmEnableAccount = async () => {
   }
 };
 
-//Delete do utilizador
 watch(deleteDialog, (newVal: boolean) => {
   if (!newVal) {
     deleteId.value = null;
   }
 });
+
 const onDelete = (id: number) => {
   deleteId.value = id;
-  console.log('delete id', deleteId.value);
   deleteDialog.value = true;
 };
 
@@ -317,24 +279,15 @@ const onConfirmDelete = async () => {
 
   try {
     await userService.deleteUser(deleteId.value!);
-
-    // 1. Remove o usuário deletado da seleção se estiver selecionado
     selectedUsers.value = selectedUsers.value.filter(user => user.id !== deleteId.value);
-
-    // 2. Recarrega os dados mantendo a paginação atual
     await userStore.fetchUsers(0, itemsPerPage.value);
-
-    // 3. Feedback visual
     toast.success(t('t-toast-message-deleted'));
-
   } catch (error) {
-    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
-    console.error("Delete error:", error);
-
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach(message => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
-    deleteId.value = null; // Limpa o ID após a operação
+    deleteId.value = null;
   }
 };
 
@@ -353,7 +306,7 @@ const onSelect = (option: string, data: UserListingType) => {
       onChangePassword(data);
       break;
     case "enable":
-      onEnable(data.id); // <- agora usa a modal
+      onEnable(data.id);
       break;
   }
 };
@@ -363,7 +316,7 @@ const getDynamicOptions = (user: UserListingType) => {
     if (option.value === "enable") {
       return {
         ...option,
-        title: user.enabled ? t("t-disable") : t("t-enable")  // Traduções devem existir
+        title: user.enabled ? t("t-disable") : t("t-enable")
       };
     }
     return {
@@ -373,79 +326,79 @@ const getDynamicOptions = (user: UserListingType) => {
   });
 };
 
-
+onMounted(() => {
+  resetListingFilters();
+});
 </script>
+
 <template>
-  <v-card>
-    <v-card-title class="mt-2">
-      <v-row justify="space-between">
-        <v-col lg="12">
-          <AdvancedFilter />
-        </v-col>
-      </v-row>
-      <v-row justify="space-between" class="mt-n6">
-        <v-col lg="8">
-        </v-col>
-        <v-col lg="auto">
-          <v-btn color="secondary" @click="onCreateEditClick(null)">
-            <i class="ph-user-plus me-1" /> {{ $t('t-add-user') }}
-          </v-btn>
-        </v-col>
-      </v-row>
-    </v-card-title>
-    <v-card-text class="mt-2">
-      <DataTableServer v-model="selectedUsers"
-        :headers="userHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" :items="userStore.users"
-        :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loadingList" :search-query="searchQuery"
-        :search-props="searchProps" @load-items="fetchUsers" item-value="id" show-select>
-        <template #body="{ items }">
-          <tr v-for="item in items as UserListingType[]" :key="item.id" height="50">
-            <td>
-              <v-checkbox :model-value="selectedUsers.some(selected => selected.id === item.id)"
-                @update:model-value="toggleSelection(item)" hide-details density="compact" />
-            </td>
-            <td>
-              {{ item.firstName }} {{ item.lastName }}
-            </td>
-            <td>{{ item.email }}</td>
-            <td>
-              <Status :status="item.enabled ? 'active' : 'unactive'" />
-            </td>
-            <td>
-              <Status :status="item.accountLocked ? 'block' : 'unblock'" />
-            </td>
-            <td>
-              <ListMenuWithIcon :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
-            </td>
-          </tr>
-        </template>
+  <ListingPageShell
+    class="user-listing-page"
+    :title="$t('t-users-list')"
+    subtitle="Consulte, pesquise e faça a gestão dos utilizadores registados."
+    :action-label="$t('t-add-user')"
+    :page="currentPage"
+    :items-per-page="itemsPerPage"
+    :total-items="totalItems"
+    :total-pages="totalPages"
+    @update:page="currentPage = $event"
+    @action="onCreateEditClick(null)"
+  >
+    <template #filters>
+      <AdvancedFilter />
+    </template>
 
-        <template v-if="userStore.users.length === 0" #body>
-          <tr>
-            <td :colspan="userHeader.length" class="text-center py-10">
-              <v-avatar size="80" color="primary" variant="tonal">
-                <i class="ph-magnifying-glass" style="font-size: 30px" />
-              </v-avatar>
-              <div class="text-subtitle-1 font-weight-bold mt-3">
-                {{ $t('t-search-not-found-message') }}
-              </div>
-            </td>
-          </tr>
-        </template>
-      </DataTableServer>
+    <template #pagination-summary>
+      {{ $t("t-showing") }}
+      <b>{{ (currentPage - 1) * itemsPerPage + 1 }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }}</b>
+      {{ $t("t-of") }}
+      <b>{{ totalItems }}</b>
+      {{ $t("t-results") }}
+    </template>
 
-      <div v-if="!fetchUsers.length" class="text-center pa-7">
-        <div class="mb-3">
-          <v-avatar color="primary" variant="tonal" size="x-large">
-            <i class="ph-magnifying-glass ph-lg"></i>
-          </v-avatar>
-        </div>
-        <div class="text-subtitle-1 font-weight-bold">
-          {{ $t('t-search-not-found-message') }}
-        </div>
-      </div>
-    </v-card-text>
-  </v-card>
+    <DataTableServer v-model="selectedUsers" v-model:page="currentPage"
+      :headers="userHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" :items="userStore.users"
+      :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loadingList" :search-query="searchQuery"
+      :search-props="searchProps" @load-items="fetchUsers" item-value="id" :show-pagination="false" show-select>
+      <template #body="{ items }">
+        <tr v-for="item in items as UserListingType[]" :key="item.id" class="user-listing-table__row">
+          <td data-label="">
+            <v-checkbox :model-value="selectedUsers.some(selected => selected.id === item.id)"
+              @update:model-value="toggleSelection(item)" hide-details density="compact" />
+          </td>
+          <td data-label="Nome" class="user-listing-table__primary-cell">
+            {{ item.firstName }} {{ item.lastName }}
+          </td>
+          <td data-label="Email">{{ item.email }}</td>
+          <td data-label="Estado">
+            <Status :status="item.enabled ? 'active' : 'unactive'" />
+          </td>
+          <td data-label="Bloqueado?">
+            <Status :status="item.accountLocked ? 'block' : 'unblock'" />
+          </td>
+          <td data-label="Acção" class="user-listing-table__actions-cell">
+            <ListMenuWithIcon :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+          </td>
+        </tr>
+      </template>
+
+      <template v-if="userStore.users.length === 0" #body>
+        <tr>
+          <td :colspan="userHeader.length + 1" class="user-listing-table__empty-state text-center py-10">
+            <v-avatar size="72" color="secondary" variant="tonal" class="user-listing-table__empty-avatar">
+              <i class="ph-magnifying-glass" style="font-size: 30px" />
+            </v-avatar>
+            <div class="user-listing-table__empty-title mt-3">
+              {{ $t('t-search-not-found-message') }}
+            </div>
+            <div class="user-listing-table__empty-subtitle mt-1">
+              Ajuste os filtros ou faça uma nova pesquisa.
+            </div>
+          </td>
+        </tr>
+      </template>
+    </DataTableServer>
+  </ListingPageShell>
 
   <ChangePasswordModal v-if="changePasswordUser" v-model="passwordDialog" :data="changePasswordUser" :error="errorMsg"
     @onSubmit="onSubmitChangePassword" />
@@ -459,5 +412,231 @@ const getDynamicOptions = (user: UserListingType) => {
 
   <EnableAccountConfirmationDialog v-if="lockerId" v-model="lockerDialog" :action="lockerAction"
     @onConfirm="onConfirmEnableAccount" :loading="lockerLoading" />
-
 </template>
+
+<style scoped>
+.user-listing-page :deep(.data-table-server-wrapper) {
+  background: #ffffff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.user-listing-page :deep(.v-table),
+.user-listing-page :deep(.v-data-table) {
+  border-radius: 14px;
+}
+
+.user-listing-page :deep(.v-table__wrapper) {
+  overflow-x: hidden !important;
+}
+
+.user-listing-page :deep(.v-table__wrapper > table > thead),
+.user-listing-page :deep(.v-data-table thead) {
+  background: #f3f6fa;
+}
+
+.user-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
+.user-listing-page :deep(.v-data-table-header th),
+.user-listing-page :deep(.v-data-table__th) {
+  background-color: #f3f6fa !important;
+  border-bottom: 1px solid #d8e1ec;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  text-transform: none;
+}
+
+.user-listing-page :deep(.v-table__wrapper > table) {
+  table-layout: auto;
+  width: 100%;
+}
+
+.user-listing-page :deep(.v-data-table__th .v-data-table-header__content) {
+  align-items: center;
+  color: inherit;
+  font-weight: 700;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.user-listing-page :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.user-listing-page :deep(.v-data-table-header th:last-child),
+.user-listing-page :deep(.v-data-table__th:last-child) {
+  text-align: center !important;
+}
+
+.user-listing-page :deep(.v-table__wrapper > table > thead > tr > th:last-child .v-data-table-header__content),
+.user-listing-page :deep(.v-data-table-header th:last-child .v-data-table-header__content),
+.user-listing-page :deep(.v-data-table__th:last-child .v-data-table-header__content) {
+  justify-content: center;
+}
+
+.user-listing-page :deep(.v-data-table-header__sort-icon) {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  opacity: 1;
+}
+
+.user-listing-page :deep(.v-data-table__td) {
+  background: #ffffff;
+}
+
+.user-listing-page :deep(.v-data-table__tr td) {
+  border-bottom: 1px solid #eef2f7;
+  color: #334155;
+  font-size: 0.8rem;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  vertical-align: middle;
+}
+
+.user-listing-page :deep(.v-data-table__tr:hover) {
+  background: #fcfdff !important;
+}
+
+.user-listing-page :deep(.v-data-table__tr:hover td:first-child) {
+  box-shadow: inset 2px 0 0 #cbd5e1;
+}
+
+.user-listing-page :deep(.v-data-table__td--select),
+.user-listing-page :deep(.v-data-table__th--select) {
+  width: 48px;
+}
+
+.user-listing-page :deep(.v-selection-control) {
+  min-height: auto;
+}
+
+.user-listing-page :deep(.v-checkbox .v-selection-control) {
+  justify-content: center;
+}
+
+.user-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
+  color: #64748b;
+}
+
+.user-listing-table__primary-cell {
+  color: #334155;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.user-listing-page :deep(.v-chip) {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+}
+
+.user-listing-page :deep(.v-chip .status-chip),
+.user-listing-page :deep(.v-chip .v-chip__content) {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.user-listing-table__actions-cell {
+  white-space: nowrap;
+}
+
+.user-listing-page :deep(.user-listing-table__actions-cell .v-btn) {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: none;
+}
+
+.user-listing-table__empty-state {
+  padding-top: 52px !important;
+  padding-bottom: 52px !important;
+}
+
+.user-listing-table__empty-avatar {
+  border: 1px solid #e2e8f0;
+}
+
+.user-listing-table__empty-title {
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.user-listing-table__empty-subtitle {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+@media (min-width: 768px) {
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:first-child),
+  .user-listing-page :deep(.v-table__wrapper > table > thead > tr > th:first-child) {
+    padding-left: 24px;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:last-child),
+  .user-listing-page :deep(.v-table__wrapper > table > thead > tr > th:last-child) {
+    padding-right: 24px;
+  }
+}
+
+@media (max-width: 767px) {
+  .user-listing-page :deep(.v-table__wrapper > table > thead) {
+    display: none;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody) {
+    display: grid;
+    gap: 12px;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
+    background: #ffffff;
+    border: 1px solid #e5edf6;
+    border-radius: 14px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    display: block;
+    overflow: hidden;
+    padding: 12px 12px 8px;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
+    align-items: flex-start;
+    border-bottom: 1px solid #eef2f7;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
+    padding: 12px 0;
+    width: 100%;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:last-child) {
+    border-bottom: 0;
+    padding-bottom: 2px;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
+    color: #64748b;
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:first-child) {
+    border-bottom: 0;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0;
+    padding-bottom: 2px;
+  }
+
+  .user-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:first-child::before) {
+    content: "";
+    display: none;
+  }
+
+  .user-listing-table__actions-cell {
+    display: block !important;
+  }
+}
+</style>

@@ -3,6 +3,6 @@ import { breadcrumb } from "@/components/baseTables/hospitalProcedureType/listVi
 import ListView from "@/components/baseTables/hospitalProcedureType/listView/index.vue";
 </script>
 <template>
-  <Breadcrumb title="hospital-procedure-type-list" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <ListView />
 </template>

@@ -69,6 +69,15 @@ const getRouteEmployeeId = (): string | null => {
   return null;
 };
 
+const resolveRelationId = (value: unknown): string | number | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === "string" || typeof value === "number") return value;
+  if (typeof value === "object" && "id" in (value as Record<string, unknown>)) {
+    return (value as Record<string, unknown>).id as string | number | undefined;
+  }
+  return undefined;
+};
+
 // Refs
 const step = ref(1);
 const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
@@ -149,11 +158,11 @@ const loadEmployeeData = async (id: string) => {
     const data = response.data;
     Object.assign(employeeData, data);
 
-    employeeData.country = data.country?.id;
-    employeeData.province = data.province?.id;
-    employeeData.company = data.company?.id;
-    employeeData.department = data.department?.id;
-    employeeData.position = data.position?.id;
+    employeeData.country = resolveRelationId(data.country) as string | undefined;
+    employeeData.province = resolveRelationId(data.province) as string | undefined;
+    employeeData.company = resolveRelationId(data.company);
+    employeeData.department = resolveRelationId(data.department) as string | undefined;
+    employeeData.position = resolveRelationId(data.position) as string | undefined;
 
     if (employeeData.company) {
       await departmentStore.fetchDepartments(employeeData.company);

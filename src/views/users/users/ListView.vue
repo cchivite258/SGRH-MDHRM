@@ -3,6 +3,6 @@ import { breadcrumb } from "@/components/users/users/listView/utils";
 import ListView from "@/components/users/users/listView/index.vue";
 </script>
 <template>
-  <Breadcrumb title="users-list" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <ListView />
 </template>

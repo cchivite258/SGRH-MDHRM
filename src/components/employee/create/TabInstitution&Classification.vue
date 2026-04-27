@@ -99,6 +99,7 @@ watch(
   { deep: true }
 );
 
+
 /**
  * Regras de validação para os campos do formulário
  */
@@ -203,28 +204,35 @@ onMounted(async () => {
 /**
  * Observa mudanças na instituição para carregar departamentos
  */
-watch(() => employeeData.value.company, (newInstitutionId) => {
+watch(() => employeeData.value.company, (newInstitutionId, oldInstitutionId) => {
   emit('clear-server-error', 'company');
   if (newInstitutionId) {
     departmentStore.fetchDepartments(newInstitutionId);
-    employeeData.value.department = undefined;
-    employeeData.value.position = undefined;
+    if (oldInstitutionId !== undefined && oldInstitutionId !== null && oldInstitutionId !== newInstitutionId) {
+      employeeData.value.department = undefined;
+      employeeData.value.position = undefined;
+    }
   } else {
     departmentStore.departments = [];
     positionStore.positions = [];
+    employeeData.value.department = undefined;
+    employeeData.value.position = undefined;
   }
 });
 
 /**
  * Observa mudanças no departamento para carregar cargos
  */
-watch(() => employeeData.value.department, (newDepartmentId) => {
+watch(() => employeeData.value.department, (newDepartmentId, oldDepartmentId) => {
   emit('clear-server-error', 'department');
   if (newDepartmentId) {
     positionStore.fetchPositions(newDepartmentId);
-    employeeData.value.position = undefined;
+    if (oldDepartmentId !== undefined && oldDepartmentId !== null && oldDepartmentId !== newDepartmentId) {
+      employeeData.value.position = undefined;
+    }
   } else {
     positionStore.positions = [];
+    employeeData.value.position = undefined;
   }
 });
 
