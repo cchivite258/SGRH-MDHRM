@@ -24,7 +24,7 @@ const props = defineProps({
   },
   ariaLabel: {
     type: String,
-    default: "Navegação do formulário"
+    default: "NavegaÃ§Ã£o do formulÃ¡rio"
   }
 });
 
