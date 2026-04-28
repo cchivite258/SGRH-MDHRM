@@ -50,6 +50,12 @@
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
                                     item-title="text" item-value="value" density="compact" variant="outlined" />
                             </v-col>
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isSelectField(filter.prop)">
+                                <MenuSelect v-model="filter.value" :items="getSelectOptions(filter.prop)"
+                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
+                                    density="compact" variant="outlined"
+                                    :loading="institutionStore.loading || serviceProviderStore.loading || currencyStore.loading || coveragePeriodStore.loading" />
+                            </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isEnumField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="getEnumOptions(filter.prop)"
                                     :placeholder="$t('t-value')" item-title="text" item-value="value"
@@ -94,20 +100,31 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInvoiceStore } from '@/store/invoice/invoiceStore';
+import { useInstitutionStore } from '@/store/institution/institutionStore';
+import { useServiceProviderStore } from '@/store/serviceProvider/serviceProviderStore';
+import { useCurrencyStore } from '@/store/baseTables/currencyStore';
+import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
+import type { InstitutionListingType, CoveragePeriodListingType } from '@/components/institution/types';
+import type { ServiceProviderListingType } from '@/components/serviceProvider/types';
+import type { CurrencyListingType } from '@/components/baseTables/currency/types';
 
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const invoiceStore = useInvoiceStore();
+const institutionStore = useInstitutionStore();
+const serviceProviderStore = useServiceProviderStore();
+const currencyStore = useCurrencyStore();
+const coveragePeriodStore = useCoveragePeriodStore();
 
 const QUERY_KEYS = {
     search: 'search',
@@ -116,13 +133,19 @@ const QUERY_KEYS = {
 } as const;
 
 type LogicalOperator = 'AND' | 'OR';
-type FilterType = 'text' | 'boolean' | 'date' | 'enum';
+type FilterType = 'text' | 'boolean' | 'date' | 'enum' | 'select';
+
+interface SelectOption {
+    text: string;
+    value: string;
+}
 
 interface FilterableField {
     text: string;
     value: string;
     type: FilterType;
     enumType?: 'invoiceStatusGroup' | 'flagGroup';
+    options?: SelectOption[];
 }
 
 interface AdvancedFilter {
@@ -152,15 +175,15 @@ const filterableFields = ref<FilterableField[]>([
     { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },
     { text: t('t-employee-name') + ' (Nome)', value: 'employee.firstName', type: 'text' },
     { text: t('t-employee-name') + ' (Apelido)', value: 'employee.lastName', type: 'text' },
-    { text: t('t-company'), value: 'employee.company.name', type: 'text' },
-    { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'text' },
-    { text: t('t-currency'), value: 'currency.name', type: 'text' },
+    { text: t('t-company'), value: 'employee.contract.name', type: 'select', options: [] },
+    { text: t('t-service-provider-name'), value: 'serviceProvider.name', type: 'select', options: [] },
+    { text: t('t-currency'), value: 'currency.name', type: 'select', options: [] },
     { text: t('t-flag'), value: 'flag', type: 'enum', enumType: 'flagGroup' },
     { text: t('t-dependent'), value: 'dependent.firstName', type: 'text' },
     { text: t('t-is-employee-invoice'), value: 'isEmployeeInvoice', type: 'boolean' },
     { text: t('t-authorized-by'), value: 'authorizedBy', type: 'text' },
     { text: t('t-invoice-reference-number'), value: 'invoiceReferenceNumber', type: 'text' },
-    { text: t('t-coverage-period'), value: 'coveragePeriod.name', type: 'text' },
+    { text: t('t-coverage-period'), value: 'coveragePeriod.name', type: 'select', options: [] },
     { text: t('t-are-items-flagged'), value: 'areItemsFlagged', type: 'boolean' },
 ]);
 
@@ -210,6 +233,34 @@ const enumOptions = {
 
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
+const companyOptions = computed<SelectOption[]>(() =>
+    (institutionStore.enabledInstitutions as InstitutionListingType[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
+const serviceProviderOptions = computed<SelectOption[]>(() =>
+    (serviceProviderStore.enabledServiceProviders as ServiceProviderListingType[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
+const currencyOptions = computed<SelectOption[]>(() =>
+    (currencyStore.enabledCurrencies as CurrencyListingType[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
+const coveragePeriodOptions = computed<SelectOption[]>(() =>
+    (coveragePeriodStore.enabledCoveragePeriods as CoveragePeriodListingType[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
 const normalizeRouteQueryValue = (value: unknown): string => {
     if (Array.isArray(value)) return String(value[0] ?? '');
     return typeof value === 'string' ? value : '';
@@ -221,6 +272,14 @@ const getFieldDefinition = (field: string): FilterableField | undefined =>
 const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
 const isEnumField = (field: string) => getFieldDefinition(field)?.type === 'enum';
 const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
+const isSelectField = (field: string) => getFieldDefinition(field)?.type === 'select';
+const getSelectOptions = (field: string) => getFieldDefinition(field)?.options ?? [];
+
+const getFilterValue = (field: string) =>
+    advancedFilters.value.find((filter) => filter.prop === field)?.value;
+
+const findCompanyIdByName = (name: string) =>
+    (institutionStore.enabledInstitutions as InstitutionListingType[]).find((item) => item.name === name)?.id;
 
 const getEnumOptions = (field: string) => {
     const enumType = getFieldDefinition(field)?.enumType;
@@ -235,6 +294,7 @@ const getOperatorsForField = (field: string) => {
     if (fieldDef.type === 'boolean') return booleanOperators;
     if (fieldDef.type === 'date') return dateOperators;
     if (fieldDef.type === 'enum') return enumOperators;
+    if (fieldDef.type === 'select') return booleanOperators;
     return textOperators;
 };
 
@@ -294,6 +354,9 @@ const onFieldChange = (index: number) => {
     } else if (isEnumField(field)) {
         const options = getEnumOptions(field);
         advancedFilters.value[index].value = options[0]?.value || '';
+    } else if (isSelectField(field)) {
+        const options = getSelectOptions(field);
+        advancedFilters.value[index].value = options[0]?.value || '';
     } else if (isDateField(field)) {
         advancedFilters.value[index].value = new Date();
     } else {
@@ -316,6 +379,9 @@ const hasIncompleteFilters = computed(() =>
     advancedFilters.value.some(filter => !isFilterComplete(filter))
 );
 
+const sanitizeFilterTextValue = (value: string) =>
+    value.split(',')[0]?.trim() ?? '';
+
 const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
     return advancedFilters.value
         .filter(isFilterComplete)
@@ -325,6 +391,8 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
 
             if (isDateField(prop) && value instanceof Date) {
                 value = format(value, 'yyyy-MM-dd');
+            } else if (typeof value === 'string') {
+                value = sanitizeFilterTextValue(value);
             }
 
             return {
@@ -333,6 +401,40 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
                 value
             };
         });
+};
+
+const updateFieldOptions = (fieldName: string, options: SelectOption[]) => {
+    filterableFields.value = filterableFields.value.map((field) =>
+        field.value === fieldName ? { ...field, options } : field
+    );
+
+    advancedFilters.value = advancedFilters.value.map((filter) => {
+        if (filter.prop !== fieldName) return filter;
+        if (typeof filter.value === 'string' && options.some((option) => option.value === filter.value)) {
+            return filter;
+        }
+
+        return {
+            ...filter,
+            value: options[0]?.value || ''
+        };
+    });
+};
+
+const syncSelectFieldOptions = () => {
+    updateFieldOptions('employee.contract.name', companyOptions.value);
+    updateFieldOptions('serviceProvider.name', serviceProviderOptions.value);
+    updateFieldOptions('currency.name', currencyOptions.value);
+    updateFieldOptions('coveragePeriod.name', coveragePeriodOptions.value);
+};
+
+const loadCoveragePeriodOptions = async () => {
+    const companyName = getFilterValue('employee.contract.name');
+    const companyId = typeof companyName === 'string' && companyName
+        ? findCompanyIdByName(companyName)
+        : undefined;
+
+    await coveragePeriodStore.fetchCoveragePeriodsForDropdown(companyId, 0, 10000000);
 };
 
 const syncStateToRoute = async (filtersForStore: StoreAdvancedFilter[]) => {
@@ -435,6 +537,33 @@ watch(
     },
     { immediate: true, deep: true }
 );
+
+watch(
+    [companyOptions, serviceProviderOptions, currencyOptions, coveragePeriodOptions],
+    () => {
+        syncSelectFieldOptions();
+    },
+    { immediate: true }
+);
+
+watch(
+    () => getFilterValue('employee.contract.name'),
+    async () => {
+        await loadCoveragePeriodOptions();
+        syncSelectFieldOptions();
+    }
+);
+
+onMounted(async () => {
+    await Promise.all([
+        institutionStore.fetchInstitutionsforListing(0, 10000000),
+        serviceProviderStore.fetchServiceProvidersForDropdown(0, 10000000),
+        currencyStore.fetchCurrenciesForDropdown(0, 10000000)
+    ]);
+
+    await loadCoveragePeriodOptions();
+    syncSelectFieldOptions();
+});
 
 onBeforeUnmount(() => {
     if (globalSearchDebounce) {

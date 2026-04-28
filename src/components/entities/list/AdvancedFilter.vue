@@ -45,6 +45,12 @@
                                 <VueDatePicker v-model="filter.value" :teleport="true" :placeholder="$t('t-enter-date')"
                                     :enable-time-picker="false" format="dd/MM/yyyy" />
                             </v-col>
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isSelectField(filter.prop)">
+                                <MenuSelect v-model="filter.value" :items="getSelectOptionsForField(filter.prop)"
+                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
+                                    density="compact" variant="outlined"
+                                    :loading="institutionTypeStore.loading" />
+                            </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
                                     item-title="text" item-value="value" density="compact" variant="outlined" />
@@ -88,20 +94,23 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useCompanyDetailsStore } from '@/store/institution/companyDetailsStore';
+import { useInstitutionTypeStore } from '@/store/baseTables/institutionTypeStore';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
+import type { InstitutionTypeListing } from '@/components/baseTables/institutionTypes/types';
 
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const companyDetailsStore = useCompanyDetailsStore();
+const institutionTypeStore = useInstitutionTypeStore();
 
 const QUERY_KEYS = {
     search: 'search',
@@ -110,12 +119,18 @@ const QUERY_KEYS = {
 } as const;
 
 type LogicalOperator = 'AND' | 'OR';
-type FilterType = 'text' | 'boolean' | 'date';
+type FilterType = 'text' | 'boolean' | 'date' | 'select';
+
+interface SelectOption {
+    text: string;
+    value: string;
+}
 
 interface FilterableField {
     text: string;
     value: string;
     type: FilterType;
+    options?: SelectOption[];
 }
 
 interface AdvancedFilter {
@@ -139,7 +154,7 @@ let routeSyncInProgress = false;
 
 const filterableFields = ref<FilterableField[]>([
     { text: t('t-name'), value: 'name', type: 'text' },
-    { text: t('t-institution-type'), value: 'institutionType.name', type: 'text' },
+    { text: t('t-institution-type'), value: 'institutionType.name', type: 'select', options: [] },
     { text: t('t-address'), value: 'address', type: 'text' },
     { text: t('t-phone'), value: 'phone', type: 'text' },
     { text: t('t-email'), value: 'email', type: 'text' },
@@ -174,6 +189,13 @@ const booleanOptions = ref([
 
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
+const institutionTypeOptions = computed<SelectOption[]>(() =>
+    (institutionTypeStore.enabledInstitutionTypes as InstitutionTypeListing[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
 const normalizeRouteQueryValue = (value: unknown): string => {
     if (Array.isArray(value)) return String(value[0] ?? '');
     return typeof value === 'string' ? value : '';
@@ -184,6 +206,8 @@ const getFieldDefinition = (field: string): FilterableField | undefined =>
 
 const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
 const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
+const isSelectField = (field: string) => getFieldDefinition(field)?.type === 'select';
+const getSelectOptionsForField = (field: string) => getFieldDefinition(field)?.options ?? [];
 
 const getOperatorsForField = (field: string) => {
     const fieldDef = getFieldDefinition(field);
@@ -191,6 +215,7 @@ const getOperatorsForField = (field: string) => {
 
     if (fieldDef.type === 'boolean') return booleanOperators;
     if (fieldDef.type === 'date') return dateOperators;
+    if (fieldDef.type === 'select') return booleanOperators;
     return textOperators;
 };
 
@@ -247,6 +272,8 @@ const onFieldChange = (index: number) => {
 
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
+    } else if (isSelectField(field)) {
+        advancedFilters.value[index].value = getSelectOptionsForField(field)[0]?.value || '';
     } else if (isDateField(field)) {
         advancedFilters.value[index].value = new Date();
     } else {
@@ -269,6 +296,9 @@ const hasIncompleteFilters = computed(() =>
     advancedFilters.value.some(filter => !isFilterComplete(filter))
 );
 
+const sanitizeFilterTextValue = (value: string) =>
+    value.split(',')[0]?.trim() ?? '';
+
 const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
     return advancedFilters.value
         .filter(isFilterComplete)
@@ -278,6 +308,8 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
 
             if (isDateField(prop) && value instanceof Date) {
                 value = format(value, 'yyyy-MM-dd');
+            } else if (typeof value === 'string') {
+                value = sanitizeFilterTextValue(value);
             }
 
             return {
@@ -369,6 +401,30 @@ const applyAdvancedFilters = async () => {
 };
 
 watch(
+    institutionTypeOptions,
+    (options) => {
+        filterableFields.value = filterableFields.value.map((field) =>
+            field.value === 'institutionType.name'
+                ? { ...field, options }
+                : field
+        );
+
+        advancedFilters.value = advancedFilters.value.map((filter) => {
+            if (filter.prop !== 'institutionType.name') return filter;
+            if (typeof filter.value === 'string' && options.some((option) => option.value === filter.value)) {
+                return filter;
+            }
+
+            return {
+                ...filter,
+                value: options[0]?.value || ''
+            };
+        });
+    },
+    { immediate: true }
+);
+
+watch(
     () => route.query,
     async () => {
         if (routeSyncInProgress) return;
@@ -388,6 +444,12 @@ watch(
     },
     { immediate: true, deep: true }
 );
+
+onMounted(async () => {
+    if (!institutionTypeStore.institutiontypes.length) {
+        await institutionTypeStore.fetchInstitutionTypes();
+    }
+});
 
 onBeforeUnmount(() => {
     if (globalSearchDebounce) {
