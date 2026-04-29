@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, type PropType } from "vue";
+import { useLayoutStore } from "@/store/app";
 
 type FormTabValue = string | number;
 
@@ -28,6 +29,9 @@ const props = defineProps({
   }
 });
 
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
+
 const activeValue = computed({
   get() {
     return props.modelValue;
@@ -39,7 +43,7 @@ const activeValue = computed({
 </script>
 
 <template>
-  <div class="form-tabs" role="tablist" :aria-label="ariaLabel">
+  <div class="form-tabs" :class="{ 'form-tabs--dark': isDarkMode }" role="tablist" :aria-label="ariaLabel">
     <button
       v-for="tab in tabs"
       :key="tab.value"
@@ -58,12 +62,19 @@ const activeValue = computed({
 
 <style scoped>
 .form-tabs {
+  --form-tabs-border: #dbe4ef;
+  --form-tabs-text: #475467;
+  --form-tabs-text-active: #6f9fcb;
+  --form-tabs-text-hover: #3478b7;
+  --form-tabs-text-disabled: #98a2b3;
+  --form-tabs-indicator: #6f9fcb;
+  --form-tabs-outline: rgba(111, 159, 203, 0.35);
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 8px 18px;
   overflow: visible;
-  border-bottom: 1px solid #dbe4ef;
+  border-bottom: 1px solid var(--form-tabs-border);
   padding: 0 2px;
 }
 
@@ -74,7 +85,7 @@ const activeValue = computed({
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #475467;
+  color: var(--form-tabs-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
@@ -92,7 +103,7 @@ const activeValue = computed({
   left: 0;
   height: 2px;
   border-radius: 999px 999px 0 0;
-  background: #6f9fcb;
+  background: var(--form-tabs-indicator);
   content: "";
   opacity: 0;
   transform: scaleX(0.75);
@@ -100,7 +111,7 @@ const activeValue = computed({
 }
 
 .form-tabs__item.is-active {
-  color: #6f9fcb;
+  color: var(--form-tabs-text-active);
 }
 
 .form-tabs__item.is-active::after {
@@ -110,18 +121,28 @@ const activeValue = computed({
 
 .form-tabs__item:hover:not(:disabled),
 .form-tabs__item:focus-visible:not(:disabled) {
-  color: #3478b7;
+  color: var(--form-tabs-text-hover);
 }
 
 .form-tabs__item:focus-visible {
-  outline: 2px solid rgba(111, 159, 203, 0.35);
+  outline: 2px solid var(--form-tabs-outline);
   outline-offset: 3px;
 }
 
 .form-tabs__item:disabled {
-  color: #98a2b3;
+  color: var(--form-tabs-text-disabled);
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.form-tabs--dark {
+  --form-tabs-border: #334155;
+  --form-tabs-text: #94a3b8;
+  --form-tabs-text-active: #93c5fd;
+  --form-tabs-text-hover: #bfdbfe;
+  --form-tabs-text-disabled: #64748b;
+  --form-tabs-indicator: #93c5fd;
+  --form-tabs-outline: rgba(147, 197, 253, 0.3);
 }
 
 @media (max-width: 767px) {

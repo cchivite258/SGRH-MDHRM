@@ -284,6 +284,7 @@ const filteredMenuItems = computed(() => {
   gap: 1px;
   background: transparent;
   color: #dbe7f5;
+  padding-bottom: 20px;
 }
 
 .vertical-menu-component :deep(.v-list-item) {

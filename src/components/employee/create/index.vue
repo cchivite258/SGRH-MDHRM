@@ -514,6 +514,12 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.employee-form-section {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+}
+
 .employee-form-tabs {
   margin-bottom: 24px;
 }
@@ -567,11 +573,11 @@ onBeforeUnmount(() => {
 
 /* Estilos para inputs de telefone */
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 /* Ajustes para inputs com label */
@@ -584,7 +590,7 @@ onBeforeUnmount(() => {
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 /* Placeholder */
@@ -626,6 +632,13 @@ onBeforeUnmount(() => {
   to {
     transform: scaleX(1);
   }
+}
+
+.employee-form-section :deep(.form-card--dark),
+.employee-form-section :deep(.form-card--dark .form-card__body) {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #cbd5e1;
 }
 </style>
 

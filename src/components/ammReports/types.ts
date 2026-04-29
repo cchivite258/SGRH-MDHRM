@@ -229,4 +229,7 @@ export type EmployeeExpenseStatementReportType = {
   totalByContract?: number;
   totalByEmployee?: number;
   totalToBeDesconted?: number;
+  employeeUsedBalance?: number;
+  employeeRemaingBalance?: number;
+  employeeAllocatedBalance?: number;
 };

@@ -13,6 +13,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue"
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { useLayoutStore } from "@/store/app";
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -40,6 +41,8 @@ import {
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 // Emits e Props
 const emit = defineEmits<{
@@ -354,7 +357,13 @@ defineExpose({
 
 <template>
   <v-form ref="form" @submit.prevent="submitForm">
-    <Card :title="$t('t-general-information')" elevation="0" title-class="pb-0">
+    <Card
+      class="employee-general-info-tab"
+      :class="{ 'employee-general-info-tab--dark': isDarkMode }"
+      :title="$t('t-general-information')"
+      elevation="0"
+      title-class="pb-0"
+    >
       <!-- Mensagem de erro -->
       
       <v-card-text class="pt-0">
@@ -642,17 +651,31 @@ defineExpose({
 </template>
 
 <style scoped>
+.employee-general-info-tab {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+  --employee-custom-input-muted: #94a3b8;
+}
+
+.employee-general-info-tab--dark {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #e2e8f0;
+  --employee-custom-input-muted: #94a3b8;
+}
+
 /* Estilos consistentes com o index.vue */
 :deep(.dp__input) {
   height: 2.63rem;
 }
 
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input.--has-label .m-input-input) {
@@ -661,14 +684,30 @@ defineExpose({
   padding-top: 0.8rem !important;
 }
 
+:deep(.custom-phone-input .m-input),
+:deep(.custom-phone-input .m-input-wrapper),
+:deep(.custom-phone-input .m-select-input),
+:deep(.custom-phone-input .m-select-list-button) {
+  background-color: var(--employee-custom-input-bg) !important;
+  border-color: var(--employee-custom-input-border) !important;
+}
+
+:deep(.custom-phone-input .m-input-input),
+:deep(.custom-phone-input .m-input-label),
+:deep(.custom-phone-input .m-select-input),
+:deep(.custom-phone-input .m-select-list-button) {
+  color: var(--employee-custom-input-text) !important;
+}
+
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input-input::placeholder) {
   font-size: 0.75rem !important;
+  color: var(--employee-custom-input-muted) !important;
 }
 
 .fade-enter-active,

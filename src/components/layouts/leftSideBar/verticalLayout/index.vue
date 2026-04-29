@@ -219,7 +219,13 @@ watch(sideBarSize, () => {
 .vertical-layout-sidebar,
 .mobile-navigation-drawer {
   padding-inline: 14px;
-  padding-bottom: 16px;
+  padding-bottom: 28px;
+}
+
+.vertical-layout-sidebar :deep(.simplebar-content),
+.mobile-navigation-drawer :deep(.simplebar-content),
+#rail-scrollbar :deep(.simplebar-content) {
+  padding-bottom: 28px;
 }
 
 .sidebar-search-box {

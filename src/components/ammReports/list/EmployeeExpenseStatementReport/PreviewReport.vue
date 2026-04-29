@@ -45,9 +45,9 @@ const currentDate = computed(() => {
 });
 
 const totalAmount = computed(() => Number(props.report?.totalAmount || 0));
-const totalByContract = computed(() => Number(props.report?.totalByContract || 0));
-const totalByEmployee = computed(() => Number(props.report?.totalByEmployee || 0));
-const totalToBeDesconted = computed(() => Number(props.report?.totalToBeDesconted || 0));
+const employeeUsedBalance = computed(() => Number(props.report?.employeeUsedBalance || 0));
+const employeeRemaingBalance = computed(() => Number(props.report?.employeeRemaingBalance || 0));
+const employeeAllocatedBalance = computed(() => Number(props.report?.employeeAllocatedBalance || 0));
 
 const onBack = () => router.push({ path: "/reports/list" });
 const handlePrint = async () => handleExport("pdf");
@@ -196,16 +196,16 @@ const exportOptions = [
           <v-divider class="my-2" />
           <div class="text-caption text-grey">
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-by-company") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(totalByContract) }} MT</span>
+              <span>{{ $t("t-total-paid-by-company") }}:</span>
+              <span class="font-weight-medium">{{ amountFormate(employeeUsedBalance) }} MT</span>
             </div>
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-by-employee") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(totalByEmployee) }} MT</span>
+              <span>{{ $t("t-remaining-balance") }}:</span>
+              <span class="font-weight-medium">{{ amountFormate(employeeRemaingBalance) }} MT</span>
             </div>
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-to-be-discounted") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(totalToBeDesconted) }} MT</span>
+              <span>{{ $t("t-total-allocated") }}:</span>
+              <span class="font-weight-medium">{{ amountFormate(employeeAllocatedBalance) }} MT</span>
             </div>
           </div>
         </v-card>

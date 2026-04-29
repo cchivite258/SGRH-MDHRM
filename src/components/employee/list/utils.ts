@@ -1,6 +1,6 @@
 import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
+import type { OptionType } from "@/app/common/types/option.type";
 import { DataTableHeaderType } from "@/app/common/types/table.types";
-import { ke } from "@/assets/images/flags/utils";
 
 export const breadcrumb: BreadcrumbType[] = [
   {
@@ -21,6 +21,29 @@ export const employeeHeader: DataTableHeaderType[] = [
   { title: "email", key: "email", sortable: true }, 
   { title: "is-enabled", key: "enabled", sortable: true }, 
   { title: "action", sortable: false, align: "center" },
+];
+
+export const Options: OptionType[] = [
+  {
+    title: "view",
+    icon: "ph-eye",
+    value: "view",
+  },
+  {
+    title: "edit",
+    icon: "ph-pencil",
+    value: "edit",
+  },
+  {
+    title: "send-employee-extract-notification",
+    icon: "ph-paper-plane-tilt",
+    value: "send-notification",
+  },
+  {
+    title: "delete",
+    icon: "ph-trash",
+    value: "delete",
+  },
 ];
 
 export const dependentHeader: DataTableHeaderType[] = [

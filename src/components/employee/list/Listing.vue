@@ -4,15 +4,16 @@ import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useToast } from "vue-toastification"
 import { useLayoutStore } from "@/store/app"
-import { employeeService } from "@/app/http/httpServiceProvider"
+import EmployeeExtractNotificationConfirmationDialog from "@/app/common/components/EmployeeExtractNotificationConfirmationDialog.vue"
+import { employeeExpenseStatementReportService, employeeService } from "@/app/http/httpServiceProvider"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
+import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
 import Status from "@/app/common/components/Status.vue"
-import TableAction from "@/app/common/components/TableAction.vue"
 import AdvancedFilter from "@/components/employee/list/AdvancedFilter.vue"
 import Overview from "@/components/employee/list/Overview.vue"
-import { employeeHeader } from "@/components/employee/list/utils"
+import { employeeHeader, Options } from "@/components/employee/list/utils"
 import type { EmployeeListingType } from "@/components/employee/types"
 import { useEmployeeStore } from "@/store/employee/employeeStore"
 
@@ -28,6 +29,9 @@ const searchProps = "firstName,lastName,email,employeeNumber,phone"
 const deleteDialog = ref(false)
 const deleteId = ref<string | null>(null)
 const deleteLoading = ref(false)
+const notificationDialog = ref(false)
+const notificationEmployeeId = ref<string | null>(null)
+const notificationLoading = ref(false)
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedEmployees = ref<any[]>([])
@@ -70,6 +74,11 @@ const openDeleteDialog = (id: string) => {
   deleteDialog.value = true
 }
 
+const openNotificationDialog = (id: string) => {
+  notificationEmployeeId.value = id
+  notificationDialog.value = true
+}
+
 const deleteEmployee = async () => {
   if (!deleteId.value) return
 
@@ -83,6 +92,30 @@ const deleteEmployee = async () => {
   } finally {
     deleteLoading.value = false
     deleteDialog.value = false
+  }
+}
+
+const sendEmployeeExtractNotification = async () => {
+  if (!notificationEmployeeId.value) return
+
+  notificationLoading.value = true
+  try {
+    const response = await employeeExpenseStatementReportService.sendNotificationByEmployee(
+      notificationEmployeeId.value
+    )
+
+    if (response.status === "error") {
+      throw response.error
+    }
+
+    toast.success(t("t-toast-message-employee-extract-notification-sent"))
+    await employeeStore.fetchEmployees(0, itemsPerPage.value)
+  } catch {
+    toast.error(t("t-toast-message-employee-extract-notification-error"))
+  } finally {
+    notificationLoading.value = false
+    notificationDialog.value = false
+    notificationEmployeeId.value = null
   }
 }
 
@@ -107,6 +140,34 @@ const getAlertMessage = (employee: EmployeeListingType) => {
       return t("t-exceeds-number-of-dependents")
     default:
       return "Problemas identificados no cadastro"
+  }
+}
+
+const onEdit = (id: string) => {
+  router.push(`/employee/edit/${id}`)
+}
+
+const getDynamicOptions = () => {
+  return Options.map(option => ({
+    ...option,
+    title: t(`t-${option.title}`)
+  }))
+}
+
+const onSelect = (option: string, data: EmployeeListingType) => {
+  switch (option) {
+    case "view":
+      onView(data.id)
+      break
+    case "edit":
+      onEdit(data.id)
+      break
+    case "send-notification":
+      openNotificationDialog(data.id)
+      break
+    case "delete":
+      openDeleteDialog(data.id)
+      break
   }
 }
 
@@ -260,11 +321,7 @@ onBeforeRouteLeave(() => {
           </td>
 
           <td data-label="Acção" class="employee-listing-table__actions-cell">
-            <TableAction
-              @on-view="() => router.push(`/employee/view/${item.id}`)"
-              @onEdit="() => router.push(`/employee/edit/${item.id}`)"
-              @onDelete="() => openDeleteDialog(item.id)"
-            />
+            <ListMenuWithIcon :menuItems="getDynamicOptions()" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -288,6 +345,11 @@ onBeforeRouteLeave(() => {
   </ListingPageShell>
 
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="deleteEmployee" />
+  <EmployeeExtractNotificationConfirmationDialog
+    v-model="notificationDialog"
+    :loading="notificationLoading"
+    @onConfirm="sendEmployeeExtractNotification"
+  />
 </template>
 
 <style scoped>
@@ -433,10 +495,6 @@ onBeforeRouteLeave(() => {
   white-space: nowrap;
 }
 
-.employee-listing-page :deep(.employee-listing-table__actions-cell .d-flex) {
-  gap: 6px;
-}
-
 .employee-listing-page :deep(.employee-listing-table__actions-cell .v-btn) {
   border: 1px solid rgba(148, 163, 184, 0.15);
   box-shadow: none;
@@ -549,10 +607,6 @@ onBeforeRouteLeave(() => {
 
   .employee-listing-table__actions-cell {
     display: block !important;
-  }
-
-  .employee-listing-page :deep(.employee-listing-table__actions-cell .d-flex) {
-    justify-content: flex-start !important;
   }
 }
 </style>

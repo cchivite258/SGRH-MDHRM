@@ -47,9 +47,9 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByContract = Number(report.totalByContract || 0);
-    const totalByEmployee = Number(report.totalByEmployee || 0);
-    const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
+    const employeeUsedBalance = Number(report.employeeUsedBalance || 0);
+    const employeeRemaingBalance = Number(report.employeeRemaingBalance || 0);
+    const employeeAllocatedBalance = Number(report.employeeAllocatedBalance || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
 
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
@@ -77,7 +77,7 @@ export class EmployeeExpenseStatementReportExporter {
 
     const gap = 4;
     const cardWidth = (contentWidth - gap * 2) / 3;
-    const cardHeight = 30;
+    const cardHeight = 34;
 
     const drawCard = (
       x: number,
@@ -183,9 +183,9 @@ export class EmployeeExpenseStatementReportExporter {
       this.tr("t-total-billed"),
       `${amountFormate(totalAmount)} MT`,
       [
-        `${this.tr("t-total-by-company")}: ${amountFormate(totalByContract)} MT`,
-        `${this.tr("t-total-by-employee")}: ${amountFormate(totalByEmployee)} MT`,
-        `${this.tr("t-total-to-be-discounted")}: ${amountFormate(totalToBeDesconted)} MT`,
+        `${this.tr("t-total-paid-by-company")}: ${amountFormate(employeeUsedBalance)} MT`,
+        `${this.tr("t-remaining-balance")}: ${amountFormate(employeeRemaingBalance)} MT`,
+        `${this.tr("t-total-allocated")}: ${amountFormate(employeeAllocatedBalance)} MT`,
       ],
       [183, 28, 28],
       [255, 235, 238],
@@ -277,9 +277,9 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByContract = Number(report.totalByContract || 0);
-    const totalByEmployee = Number(report.totalByEmployee || 0);
-    const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
+    const employeeUsedBalance = Number(report.employeeUsedBalance || 0);
+    const employeeRemaingBalance = Number(report.employeeRemaingBalance || 0);
+    const employeeAllocatedBalance = Number(report.employeeAllocatedBalance || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
 
     const workbook = XLSX.utils.book_new();
@@ -288,8 +288,8 @@ export class EmployeeExpenseStatementReportExporter {
       [`${this.tr("t-employee")}: ${employeeName}`, "", "", "", "", ""],
       [`${this.tr("t-institution")}: ${report.contractName || "-"}`, "", "", "", "", ""],
       [`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, "", "", "", "", ""],
-      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-by-company"), `${amountFormate(totalByContract)} MT`, "", ""],
-      [this.tr("t-total-by-employee"), `${amountFormate(totalByEmployee)} MT`, this.tr("t-total-to-be-discounted"), `${amountFormate(totalToBeDesconted)} MT`, "", ""],
+      [this.tr("t-total-billed"), `${amountFormate(totalAmount)} MT`, this.tr("t-total-paid-by-company"), `${amountFormate(employeeUsedBalance)} MT`, "", ""],
+      [this.tr("t-remaining-balance"), `${amountFormate(employeeRemaingBalance)} MT`, this.tr("t-total-allocated"), `${amountFormate(employeeAllocatedBalance)} MT`, "", ""],
       ["", "", "", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", "", "", ""],
       [this.tr("t-issue-date"), this.tr("t-invoice-number"), this.tr("t-service-provider"), this.tr("t-patient"), this.tr("t-procedures"), `${this.tr("t-total-billed")} (MT)`],
@@ -386,9 +386,9 @@ export class EmployeeExpenseStatementReportExporter {
   ): Promise<void> {
     const details = report.details || [];
     const totalAmount = Number(report.totalAmount || 0);
-    const totalByContract = Number(report.totalByContract || 0);
-    const totalByEmployee = Number(report.totalByEmployee || 0);
-    const totalToBeDesconted = Number(report.totalToBeDesconted || 0);
+    const employeeUsedBalance = Number(report.employeeUsedBalance || 0);
+    const employeeRemaingBalance = Number(report.employeeRemaingBalance || 0);
+    const employeeAllocatedBalance = Number(report.employeeAllocatedBalance || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
 
     let csvContent = `${this.tr("t-ees-report-title").toUpperCase()}\n`;
@@ -398,9 +398,9 @@ export class EmployeeExpenseStatementReportExporter {
     csvContent += `${this.tr("t-institution")},${report.contractName || "-"}\n`;
     csvContent += `${this.tr("t-coverage-period")},${report.coveragePeriodName || "-"}\n`;
     csvContent += `${this.tr("t-total-billed")},${totalAmount}\n`;
-    csvContent += `${this.tr("t-total-by-company")},${totalByContract}\n`;
-    csvContent += `${this.tr("t-total-by-employee")},${totalByEmployee}\n`;
-    csvContent += `${this.tr("t-total-to-be-discounted")},${totalToBeDesconted}\n\n`;
+    csvContent += `${this.tr("t-total-paid-by-company")},${employeeUsedBalance}\n`;
+    csvContent += `${this.tr("t-remaining-balance")},${employeeRemaingBalance}\n`;
+    csvContent += `${this.tr("t-total-allocated")},${employeeAllocatedBalance}\n\n`;
 
     csvContent += `${this.tr("t-issue-date")},${this.tr("t-invoice-number")},${this.tr("t-service-provider")},${this.tr("t-patient")},${this.tr("t-procedures")},${this.tr("t-total-billed")}\n`;
 

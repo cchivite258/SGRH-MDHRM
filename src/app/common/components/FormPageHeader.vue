@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import { computed } from "vue";
+import { useLayoutStore } from "@/store/app";
+
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
+
 defineProps({
   title: {
     type: String,
@@ -41,7 +47,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="form-page-header">
+  <div class="form-page-header" :class="{ 'form-page-header--dark': isDarkMode }">
     <div>
       <h1 class="form-page-header__title">
         {{ title }}
@@ -84,6 +90,8 @@ defineEmits<{
 
 <style scoped>
 .form-page-header {
+  --form-page-header-title: #0f172a;
+  --form-page-header-subtitle: #526071;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -93,7 +101,7 @@ defineEmits<{
 }
 
 .form-page-header__title {
-  color: #0f172a;
+  color: var(--form-page-header-title);
   font-size: 1.22rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -102,7 +110,7 @@ defineEmits<{
 }
 
 .form-page-header__subtitle {
-  color: #526071;
+  color: var(--form-page-header-subtitle);
   font-size: 0.82rem;
   line-height: 1.45;
   margin: 0;
@@ -133,6 +141,11 @@ defineEmits<{
 .form-page-header__save :deep(.v-btn__content),
 .form-page-header__back :deep(.v-btn__content) {
   color: inherit;
+}
+
+.form-page-header--dark {
+  --form-page-header-title: #e2e8f0;
+  --form-page-header-subtitle: #94a3b8;
 }
 
 @media (max-width: 767px) {

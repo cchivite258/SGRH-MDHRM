@@ -12,6 +12,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { useLayoutStore } from "@/store/app";
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -29,6 +30,8 @@ import { formateDate } from "@/app/common/dateFormate";
 // Configuração inicial
 const { t } = useI18n();
 const toast = useToast();
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 // Stores
 const institutionStore = useInstitutionStore();
@@ -244,7 +247,13 @@ const getContractDurationLabel = (value: string | undefined) => {
 
 <template>
   <v-form ref="form2" @submit.prevent="saveData">
-    <Card :title="$t('t-institution-and-classification')" elevation="0" title-class="pb-0">
+    <Card
+      class="employee-institution-tab"
+      :class="{ 'employee-institution-tab--dark': isDarkMode }"
+      :title="$t('t-institution-and-classification')"
+      elevation="0"
+      title-class="pb-0"
+    >
       <!-- Mensagem de erro -->
       <transition name="fade">
         <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
@@ -335,17 +344,31 @@ const getContractDurationLabel = (value: string | undefined) => {
 </template>
 
 <style scoped>
+.employee-institution-tab {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+  --employee-custom-input-muted: #94a3b8;
+}
+
+.employee-institution-tab--dark {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #e2e8f0;
+  --employee-custom-input-muted: #94a3b8;
+}
+
 /* Estilos consistentes com os outros componentes */
 :deep(.dp__input) {
   height: 2.63rem;
 }
 
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input.--has-label .m-input-input) {
@@ -357,11 +380,12 @@ const getContractDurationLabel = (value: string | undefined) => {
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input-input::placeholder) {
   font-size: 0.75rem !important;
+  color: var(--employee-custom-input-muted) !important;
 }
 
 .fade-enter-active,

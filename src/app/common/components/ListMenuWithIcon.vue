@@ -37,12 +37,40 @@ const onOptionClick = (value: string) => {
       </div>
 
     </template>
-    <v-list v-model="selectedOption" density="compact" width="150" :lines="false">
-      <v-list-item v-for="option in menuItems" :key="'menu-item-' + option.value" class="d-flex align-center"
-        :to="option.to" height="28" min-height="28" @click="onOptionClick(option.value)">
-        <i class="text-muted mx-2" :class="option.icon"></i>
-        <span>{{ option.title }} </span>
+    <v-list v-model="selectedOption" density="compact" width="190" :lines="false">
+      <v-list-item v-for="option in menuItems" :key="'menu-item-' + option.value" class="list-menu-with-icon__item"
+        :to="option.to" height="32" min-height="32" @click="onOptionClick(option.value)">
+        <div class="list-menu-with-icon__content">
+          <i class="text-muted list-menu-with-icon__item-icon" :class="option.icon"></i>
+          <span class="list-menu-with-icon__item-title">{{ option.title }}</span>
+        </div>
       </v-list-item>
     </v-list>
   </v-menu>
 </template>
+
+<style scoped>
+.list-menu-with-icon__item {
+  min-height: 32px !important;
+  padding-inline: 12px;
+}
+
+.list-menu-with-icon__content {
+  align-items: center;
+  column-gap: 10px;
+  display: flex;
+  min-width: 0;
+}
+
+.list-menu-with-icon__item-icon {
+  font-size: 14px;
+  flex: 0 0 14px;
+  line-height: 1;
+}
+
+.list-menu-with-icon__item-title {
+  display: block;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+</style>
