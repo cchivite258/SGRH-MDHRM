@@ -3,6 +3,7 @@ import { computed, onBeforeMount, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useToast } from "vue-toastification"
+import { useLayoutStore } from "@/store/app"
 import { employeeService } from "@/app/http/httpServiceProvider"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
@@ -18,7 +19,9 @@ import { useEmployeeStore } from "@/store/employee/employeeStore"
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
+const layoutStore = useLayoutStore()
 const employeeStore = useEmployeeStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
 const searchProps = "firstName,lastName,email,employeeNumber,phone"
@@ -119,6 +122,7 @@ onBeforeRouteLeave(() => {
 <template>
   <ListingPageShell
     class="employee-listing-page"
+    :class="{ 'employee-listing-page--dark': isDarkMode }"
     :title="$t('t-employee-list')"
     subtitle="Consulte, pesquise e faça a gestão dos colaboradores registados."
     :action-label="$t('t-add-employee')"
@@ -288,8 +292,20 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .employee-listing-page :deep(.data-table-server-wrapper) {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
+  --employee-listing-surface: #ffffff;
+  --employee-listing-surface-strong: #f3f6fa;
+  --employee-listing-surface-hover: #fcfdff;
+  --employee-listing-surface-mobile: #ffffff;
+  --employee-listing-border: #e8edf3;
+  --employee-listing-border-soft: #eef2f7;
+  --employee-listing-border-strong: #d8e1ec;
+  --employee-listing-text: #334155;
+  --employee-listing-text-strong: #0f172a;
+  --employee-listing-text-muted: #64748b;
+  --employee-listing-shadow-accent: #cbd5e1;
+  --employee-listing-mobile-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  background: var(--employee-listing-surface);
+  border: 1px solid var(--employee-listing-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -305,15 +321,15 @@ onBeforeRouteLeave(() => {
 
 .employee-listing-page :deep(.v-table__wrapper > table > thead),
 .employee-listing-page :deep(.v-data-table thead) {
-  background: #f3f6fa;
+  background: var(--employee-listing-surface-strong);
 }
 
 .employee-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
 .employee-listing-page :deep(.v-data-table-header th),
 .employee-listing-page :deep(.v-data-table__th) {
-  background-color: #f3f6fa !important;
-  border-bottom: 1px solid #d8e1ec;
-  color: #334155;
+  background-color: var(--employee-listing-surface-strong) !important;
+  border-bottom: 1px solid var(--employee-listing-border-strong);
+  color: var(--employee-listing-text);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -348,18 +364,18 @@ onBeforeRouteLeave(() => {
 }
 
 .employee-listing-page :deep(.v-data-table-header__sort-icon) {
-  color: #94a3b8;
+  color: var(--employee-listing-text-muted);
   font-size: 0.82rem;
   opacity: 1;
 }
 
 .employee-listing-page :deep(.v-data-table__td) {
-  background: #ffffff;
+  background: var(--employee-listing-surface);
 }
 
 .employee-listing-page :deep(.v-data-table__tr td) {
-  border-bottom: 1px solid #eef2f7;
-  color: #334155;
+  border-bottom: 1px solid var(--employee-listing-border-soft);
+  color: var(--employee-listing-text);
   font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -367,11 +383,11 @@ onBeforeRouteLeave(() => {
 }
 
 .employee-listing-page :deep(.v-data-table__tr:hover) {
-  background: #fcfdff !important;
+  background: var(--employee-listing-surface-hover) !important;
 }
 
 .employee-listing-page :deep(.v-data-table__tr:hover td:first-child) {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--employee-listing-shadow-accent);
 }
 
 .employee-listing-page :deep(.v-data-table__td--select),
@@ -388,18 +404,18 @@ onBeforeRouteLeave(() => {
 }
 
 .employee-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
-  color: #64748b;
+  color: var(--employee-listing-text-muted);
 }
 
 .employee-listing-table__primary-cell {
-  color: #334155;
+  color: var(--employee-listing-text);
   font-weight: 500;
   line-height: 1.45;
   transition: color 0.18s ease;
 }
 
 .employee-listing-table__primary-cell:hover {
-  color: #0f172a;
+  color: var(--employee-listing-text-strong);
 }
 
 .employee-listing-page :deep(.v-chip) {
@@ -432,18 +448,33 @@ onBeforeRouteLeave(() => {
 }
 
 .employee-listing-table__empty-avatar {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--employee-listing-border);
 }
 
 .employee-listing-table__empty-title {
-  color: #0f172a;
+  color: var(--employee-listing-text-strong);
   font-size: 0.98rem;
   font-weight: 700;
 }
 
 .employee-listing-table__empty-subtitle {
-  color: #64748b;
+  color: var(--employee-listing-text-muted);
   font-size: 0.82rem;
+}
+
+.employee-listing-page--dark :deep(.data-table-server-wrapper) {
+  --employee-listing-surface: #151b26;
+  --employee-listing-surface-strong: #232a36;
+  --employee-listing-surface-hover: #1d2633;
+  --employee-listing-surface-mobile: #18202c;
+  --employee-listing-border: #2a3442;
+  --employee-listing-border-soft: #273243;
+  --employee-listing-border-strong: #334155;
+  --employee-listing-text: #cbd5e1;
+  --employee-listing-text-strong: #f8fafc;
+  --employee-listing-text-muted: #94a3b8;
+  --employee-listing-shadow-accent: #475569;
+  --employee-listing-mobile-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
 }
 
 @media (min-width: 768px) {
@@ -469,10 +500,10 @@ onBeforeRouteLeave(() => {
   }
 
   .employee-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
-    background: #ffffff;
-    border: 1px solid #e5edf6;
+    background: var(--employee-listing-surface-mobile);
+    border: 1px solid var(--employee-listing-border);
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--employee-listing-mobile-shadow);
     display: block;
     overflow: hidden;
     padding: 12px 12px 8px;
@@ -480,7 +511,7 @@ onBeforeRouteLeave(() => {
 
   .employee-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
     align-items: flex-start;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--employee-listing-border-soft);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
@@ -494,7 +525,7 @@ onBeforeRouteLeave(() => {
   }
 
   .employee-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
-    color: #64748b;
+    color: var(--employee-listing-text-muted);
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;

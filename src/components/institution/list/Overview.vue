@@ -1,8 +1,11 @@
 <script lang="ts" setup>
 import { computed, onMounted } from "vue"
+import { useLayoutStore } from "@/store/app"
 import { useInstitutionStore } from "@/store/institution/institutionStore"
 
+const layoutStore = useLayoutStore()
 const institutionStore = useInstitutionStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 onMounted(async () => {
   await institutionStore.fetchInstitutions()
@@ -38,7 +41,10 @@ const contractStats = computed(() => {
 </script>
 
 <template>
-  <div class="institution-overview">
+  <div
+    class="institution-overview"
+    :class="{ 'institution-overview--dark': isDarkMode }"
+  >
     <div class="institution-overview__grid">
       <v-card
         v-for="(item, index) in contractStats"
@@ -73,6 +79,12 @@ const contractStats = computed(() => {
 <style scoped>
 .institution-overview {
   margin-bottom: 2px;
+  --institution-overview-card-bg: #ffffff;
+  --institution-overview-card-border: #e6edf5;
+  --institution-overview-card-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  --institution-overview-title: #334155;
+  --institution-overview-value: #0f172a;
+  --institution-overview-icon-border: rgba(148, 163, 184, 0.16);
 }
 
 .institution-overview__grid {
@@ -82,10 +94,10 @@ const contractStats = computed(() => {
 }
 
 .institution-overview__card {
-  background: #ffffff;
-  border: 1px solid #e6edf5;
+  background: var(--institution-overview-card-bg);
+  border: 1px solid var(--institution-overview-card-border);
   border-radius: 16px !important;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: var(--institution-overview-card-shadow) !important;
   overflow: hidden;
 }
 
@@ -100,7 +112,7 @@ const contractStats = computed(() => {
 }
 
 .institution-overview__icon {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--institution-overview-icon-border);
   flex: 0 0 auto;
   height: 42px !important;
   width: 42px !important;
@@ -111,7 +123,7 @@ const contractStats = computed(() => {
 }
 
 .institution-overview__title {
-  color: #334155;
+  color: var(--institution-overview-title);
   font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.35;
@@ -123,12 +135,21 @@ const contractStats = computed(() => {
 }
 
 .institution-overview__value {
-  color: #0f172a;
+  color: var(--institution-overview-value);
   display: inline-block;
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+.institution-overview--dark {
+  --institution-overview-card-bg: #1a202c;
+  --institution-overview-card-border: #2b3442;
+  --institution-overview-card-shadow: 0 12px 24px rgba(2, 6, 23, 0.24);
+  --institution-overview-title: #cbd5e1;
+  --institution-overview-value: #f8fafc;
+  --institution-overview-icon-border: rgba(148, 163, 184, 0.22);
 }
 
 @media (max-width: 959px) {

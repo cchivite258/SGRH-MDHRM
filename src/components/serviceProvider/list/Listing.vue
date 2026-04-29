@@ -3,6 +3,7 @@ import { computed, onBeforeMount, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useToast } from "vue-toastification"
+import { useLayoutStore } from "@/store/app"
 import { serviceProviderService } from "@/app/http/httpServiceProvider"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
@@ -17,7 +18,9 @@ import { useServiceProviderStore } from "@/store/serviceProvider/serviceProvider
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
+const layoutStore = useLayoutStore()
 const serviceProviderStore = useServiceProviderStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
 const searchProps = "name,description,address,phone,email,website"
@@ -108,6 +111,7 @@ onBeforeRouteLeave(() => {
 <template>
   <ListingPageShell
     class="service-provider-listing-page"
+    :class="{ 'service-provider-listing-page--dark': isDarkMode }"
     :title="$t('t-service-provider-list')"
     subtitle="Consulte, pesquise e faça a gestão dos provedores de serviço registados."
     :action-label="$t('t-add-service-provider')"
@@ -210,8 +214,20 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .service-provider-listing-page :deep(.data-table-server-wrapper) {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
+  --service-provider-listing-surface: #ffffff;
+  --service-provider-listing-surface-strong: #f3f6fa;
+  --service-provider-listing-surface-hover: #fcfdff;
+  --service-provider-listing-surface-mobile: #ffffff;
+  --service-provider-listing-border: #e8edf3;
+  --service-provider-listing-border-soft: #eef2f7;
+  --service-provider-listing-border-strong: #d8e1ec;
+  --service-provider-listing-text: #334155;
+  --service-provider-listing-text-strong: #0f172a;
+  --service-provider-listing-text-muted: #64748b;
+  --service-provider-listing-shadow-accent: #cbd5e1;
+  --service-provider-listing-mobile-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  background: var(--service-provider-listing-surface);
+  border: 1px solid var(--service-provider-listing-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -227,15 +243,15 @@ onBeforeRouteLeave(() => {
 
 .service-provider-listing-page :deep(.v-table__wrapper > table > thead),
 .service-provider-listing-page :deep(.v-data-table thead) {
-  background: #f3f6fa;
+  background: var(--service-provider-listing-surface-strong);
 }
 
 .service-provider-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
 .service-provider-listing-page :deep(.v-data-table-header th),
 .service-provider-listing-page :deep(.v-data-table__th) {
-  background-color: #f3f6fa !important;
-  border-bottom: 1px solid #d8e1ec;
-  color: #334155;
+  background-color: var(--service-provider-listing-surface-strong) !important;
+  border-bottom: 1px solid var(--service-provider-listing-border-strong);
+  color: var(--service-provider-listing-text);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -270,18 +286,18 @@ onBeforeRouteLeave(() => {
 }
 
 .service-provider-listing-page :deep(.v-data-table-header__sort-icon) {
-  color: #94a3b8;
+  color: var(--service-provider-listing-text-muted);
   font-size: 0.82rem;
   opacity: 1;
 }
 
 .service-provider-listing-page :deep(.v-data-table__td) {
-  background: #ffffff;
+  background: var(--service-provider-listing-surface);
 }
 
 .service-provider-listing-page :deep(.v-data-table__tr td) {
-  border-bottom: 1px solid #eef2f7;
-  color: #334155;
+  border-bottom: 1px solid var(--service-provider-listing-border-soft);
+  color: var(--service-provider-listing-text);
   font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -289,11 +305,11 @@ onBeforeRouteLeave(() => {
 }
 
 .service-provider-listing-page :deep(.v-data-table__tr:hover) {
-  background: #fcfdff !important;
+  background: var(--service-provider-listing-surface-hover) !important;
 }
 
 .service-provider-listing-page :deep(.v-data-table__tr:hover td:first-child) {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--service-provider-listing-shadow-accent);
 }
 
 .service-provider-listing-page :deep(.v-data-table__td--select),
@@ -310,18 +326,18 @@ onBeforeRouteLeave(() => {
 }
 
 .service-provider-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
-  color: #64748b;
+  color: var(--service-provider-listing-text-muted);
 }
 
 .service-provider-listing-table__primary-cell {
-  color: #334155;
+  color: var(--service-provider-listing-text);
   font-weight: 500;
   line-height: 1.45;
   transition: color 0.18s ease;
 }
 
 .service-provider-listing-table__primary-cell:hover {
-  color: #0f172a;
+  color: var(--service-provider-listing-text-strong);
 }
 
 .service-provider-listing-page :deep(.v-chip) {
@@ -354,18 +370,33 @@ onBeforeRouteLeave(() => {
 }
 
 .service-provider-listing-table__empty-avatar {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--service-provider-listing-border);
 }
 
 .service-provider-listing-table__empty-title {
-  color: #0f172a;
+  color: var(--service-provider-listing-text-strong);
   font-size: 0.98rem;
   font-weight: 700;
 }
 
 .service-provider-listing-table__empty-subtitle {
-  color: #64748b;
+  color: var(--service-provider-listing-text-muted);
   font-size: 0.82rem;
+}
+
+.service-provider-listing-page--dark :deep(.data-table-server-wrapper) {
+  --service-provider-listing-surface: #151b26;
+  --service-provider-listing-surface-strong: #232a36;
+  --service-provider-listing-surface-hover: #1d2633;
+  --service-provider-listing-surface-mobile: #18202c;
+  --service-provider-listing-border: #2a3442;
+  --service-provider-listing-border-soft: #273243;
+  --service-provider-listing-border-strong: #334155;
+  --service-provider-listing-text: #cbd5e1;
+  --service-provider-listing-text-strong: #f8fafc;
+  --service-provider-listing-text-muted: #94a3b8;
+  --service-provider-listing-shadow-accent: #475569;
+  --service-provider-listing-mobile-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
 }
 
 @media (min-width: 768px) {
@@ -391,10 +422,10 @@ onBeforeRouteLeave(() => {
   }
 
   .service-provider-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
-    background: #ffffff;
-    border: 1px solid #e5edf6;
+    background: var(--service-provider-listing-surface-mobile);
+    border: 1px solid var(--service-provider-listing-border);
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--service-provider-listing-mobile-shadow);
     display: block;
     overflow: hidden;
     padding: 12px 12px 8px;
@@ -402,7 +433,7 @@ onBeforeRouteLeave(() => {
 
   .service-provider-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
     align-items: flex-start;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--service-provider-listing-border-soft);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
@@ -416,7 +447,7 @@ onBeforeRouteLeave(() => {
   }
 
   .service-provider-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
-    color: #64748b;
+    color: var(--service-provider-listing-text-muted);
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;

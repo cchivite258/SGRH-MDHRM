@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, computed, watch, onBeforeMount } from "vue"
 import { useRouter, onBeforeRouteLeave } from "vue-router"
+import { useLayoutStore } from "@/store/app"
 import { useInstitutionStore } from "@/store/institution/institutionStore"
 import { institutionService } from "@/app/http/httpServiceProvider"
 import { useToast } from "vue-toastification"
@@ -20,7 +21,9 @@ import AdvancedFilter from "@/components/institution/list/AdvancedFilter.vue"
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
+const layoutStore = useLayoutStore()
 const institutionStore = useInstitutionStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
 const searchProps = "name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name"
@@ -120,6 +123,7 @@ onBeforeRouteLeave(() => {
 <template>
   <ListingPageShell
     class="institution-listing-page"
+    :class="{ 'institution-listing-page--dark': isDarkMode }"
     :title="$t('t-institution-list')"
     subtitle="Consulte, pesquise e faça a gestão dos contratos registados."
     :action-label="$t('t-add-institution')"
@@ -251,8 +255,21 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .institution-listing-page :deep(.data-table-server-wrapper) {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
+  --institution-listing-surface: #ffffff;
+  --institution-listing-surface-strong: #f3f6fa;
+  --institution-listing-surface-hover: #fcfdff;
+  --institution-listing-surface-mobile: #ffffff;
+  --institution-listing-border: #e8edf3;
+  --institution-listing-border-soft: #eef2f7;
+  --institution-listing-border-strong: #d8e1ec;
+  --institution-listing-text: #334155;
+  --institution-listing-text-strong: #0f172a;
+  --institution-listing-text-muted: #64748b;
+  --institution-listing-link-hover: #2563eb;
+  --institution-listing-shadow-accent: #cbd5e1;
+  --institution-listing-mobile-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  background: var(--institution-listing-surface);
+  border: 1px solid var(--institution-listing-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -268,15 +285,15 @@ onBeforeRouteLeave(() => {
 
 .institution-listing-page :deep(.v-table__wrapper > table > thead),
 .institution-listing-page :deep(.v-data-table thead) {
-  background: #f3f6fa;
+  background: var(--institution-listing-surface-strong);
 }
 
 .institution-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
 .institution-listing-page :deep(.v-data-table-header th),
 .institution-listing-page :deep(.v-data-table__th) {
-  background-color: #f3f6fa !important;
-  border-bottom: 1px solid #d8e1ec;
-  color: #334155;
+  background-color: var(--institution-listing-surface-strong) !important;
+  border-bottom: 1px solid var(--institution-listing-border-strong);
+  color: var(--institution-listing-text);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -311,13 +328,13 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-page :deep(.v-data-table-header__sort-icon) {
-  color: #94a3b8;
+  color: var(--institution-listing-text-muted);
   font-size: 0.82rem;
   opacity: 1;
 }
 
 .institution-listing-page :deep(.v-data-table__td) {
-  background: #ffffff;
+  background: var(--institution-listing-surface);
 }
 
 .institution-listing-page :deep(.v-data-table__tr) {
@@ -325,8 +342,8 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-page :deep(.v-data-table__tr td) {
-  border-bottom: 1px solid #eef2f7;
-  color: #334155;
+  border-bottom: 1px solid var(--institution-listing-border-soft);
+  color: var(--institution-listing-text);
   font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -334,11 +351,11 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-page :deep(.v-data-table__tr:hover) {
-  background: #fcfdff !important;
+  background: var(--institution-listing-surface-hover) !important;
 }
 
 .institution-listing-page :deep(.v-data-table__tr:hover td:first-child) {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--institution-listing-shadow-accent);
 }
 
 .institution-listing-page :deep(.v-data-table__td--select),
@@ -355,7 +372,7 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
-  color: #64748b;
+  color: var(--institution-listing-text-muted);
 }
 
 .institution-listing-table__row {
@@ -363,14 +380,14 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-table__primary-cell {
-  color: #334155;
+  color: var(--institution-listing-text);
   font-weight: 500;
   line-height: 1.45;
   transition: color 0.18s ease;
 }
 
 .institution-listing-table__primary-cell:hover {
-  color: #0f172a;
+  color: var(--institution-listing-text-strong);
 }
 
 .institution-listing-table__identity {
@@ -401,7 +418,7 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-table__contact-link:hover {
-  color: #2563eb;
+  color: var(--institution-listing-link-hover);
 }
 
 .institution-listing-page :deep(.v-chip) {
@@ -434,18 +451,34 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-table__empty-avatar {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--institution-listing-border);
 }
 
 .institution-listing-table__empty-title {
-  color: #0f172a;
+  color: var(--institution-listing-text-strong);
   font-size: 0.98rem;
   font-weight: 700;
 }
 
 .institution-listing-table__empty-subtitle {
-  color: #64748b;
+  color: var(--institution-listing-text-muted);
   font-size: 0.82rem;
+}
+
+.institution-listing-page--dark :deep(.data-table-server-wrapper) {
+  --institution-listing-surface: #151b26;
+  --institution-listing-surface-strong: #232a36;
+  --institution-listing-surface-hover: #1d2633;
+  --institution-listing-surface-mobile: #18202c;
+  --institution-listing-border: #2a3442;
+  --institution-listing-border-soft: #273243;
+  --institution-listing-border-strong: #334155;
+  --institution-listing-text: #cbd5e1;
+  --institution-listing-text-strong: #f8fafc;
+  --institution-listing-text-muted: #94a3b8;
+  --institution-listing-link-hover: #60a5fa;
+  --institution-listing-shadow-accent: #475569;
+  --institution-listing-mobile-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
 }
 
 @media (min-width: 768px) {
@@ -471,10 +504,10 @@ onBeforeRouteLeave(() => {
   }
 
   .institution-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
-    background: #ffffff;
-    border: 1px solid #e5edf6;
+    background: var(--institution-listing-surface-mobile);
+    border: 1px solid var(--institution-listing-border);
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--institution-listing-mobile-shadow);
     display: block;
     overflow: hidden;
     padding: 12px 12px 8px;
@@ -482,7 +515,7 @@ onBeforeRouteLeave(() => {
 
   .institution-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
     align-items: flex-start;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--institution-listing-border-soft);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
@@ -501,7 +534,7 @@ onBeforeRouteLeave(() => {
   }
 
   .institution-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
-    color: #64748b;
+    color: var(--institution-listing-text-muted);
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;

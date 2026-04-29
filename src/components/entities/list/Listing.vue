@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref, computed, watch, onBeforeMount } from "vue"
 import { useRouter, onBeforeRouteLeave } from "vue-router"
+import { useLayoutStore } from "@/store/app"
 import { useCompanyDetailsStore } from "@/store/institution/companyDetailsStore"
 import { companyDetailsService } from "@/app/http/httpServiceProvider"
 import { useToast } from "vue-toastification"
@@ -18,7 +19,9 @@ import AdvancedFilter from "@/components/entities/list/AdvancedFilter.vue"
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
+const layoutStore = useLayoutStore()
 const companyDetailsStore = useCompanyDetailsStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
 const searchProps = "name,description,address,phone,email,website,incomeTaxNumber,institutionType.name"
@@ -118,6 +121,7 @@ onBeforeRouteLeave(() => {
 <template>
   <ListingPageShell
     class="entity-listing-page"
+    :class="{ 'entity-listing-page--dark': isDarkMode }"
     :title="$t('t-entity-list')"
     subtitle="Consulte, pesquise e faça a gestão das entidades registadas."
     :action-label="$t('t-add-entity')"
@@ -242,8 +246,21 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .entity-listing-page :deep(.data-table-server-wrapper) {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
+  --entity-listing-surface: #ffffff;
+  --entity-listing-surface-strong: #f3f6fa;
+  --entity-listing-surface-hover: #fcfdff;
+  --entity-listing-surface-mobile: #ffffff;
+  --entity-listing-border: #e8edf3;
+  --entity-listing-border-soft: #eef2f7;
+  --entity-listing-border-strong: #d8e1ec;
+  --entity-listing-text: #334155;
+  --entity-listing-text-strong: #0f172a;
+  --entity-listing-text-muted: #64748b;
+  --entity-listing-link-hover: #2563eb;
+  --entity-listing-shadow-accent: #cbd5e1;
+  --entity-listing-mobile-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  background: var(--entity-listing-surface);
+  border: 1px solid var(--entity-listing-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -259,15 +276,15 @@ onBeforeRouteLeave(() => {
 
 .entity-listing-page :deep(.v-table__wrapper > table > thead),
 .entity-listing-page :deep(.v-data-table thead) {
-  background: #f3f6fa;
+  background: var(--entity-listing-surface-strong);
 }
 
 .entity-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
 .entity-listing-page :deep(.v-data-table-header th),
 .entity-listing-page :deep(.v-data-table__th) {
-  background-color: #f3f6fa !important;
-  border-bottom: 1px solid #d8e1ec;
-  color: #334155;
+  background-color: var(--entity-listing-surface-strong) !important;
+  border-bottom: 1px solid var(--entity-listing-border-strong);
+  color: var(--entity-listing-text);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -302,13 +319,13 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-page :deep(.v-data-table-header__sort-icon) {
-  color: #94a3b8;
+  color: var(--entity-listing-text-muted);
   font-size: 0.82rem;
   opacity: 1;
 }
 
 .entity-listing-page :deep(.v-data-table__td) {
-  background: #ffffff;
+  background: var(--entity-listing-surface);
 }
 
 .entity-listing-page :deep(.v-data-table__tr) {
@@ -316,8 +333,8 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-page :deep(.v-data-table__tr td) {
-  border-bottom: 1px solid #eef2f7;
-  color: #334155;
+  border-bottom: 1px solid var(--entity-listing-border-soft);
+  color: var(--entity-listing-text);
   font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -325,11 +342,11 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-page :deep(.v-data-table__tr:hover) {
-  background: #fcfdff !important;
+  background: var(--entity-listing-surface-hover) !important;
 }
 
 .entity-listing-page :deep(.v-data-table__tr:hover td:first-child) {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--entity-listing-shadow-accent);
 }
 
 .entity-listing-page :deep(.v-data-table__td--select),
@@ -346,7 +363,7 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
-  color: #64748b;
+  color: var(--entity-listing-text-muted);
 }
 
 .entity-listing-table__row {
@@ -354,14 +371,14 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-table__primary-cell {
-  color: #334155;
+  color: var(--entity-listing-text);
   font-weight: 500;
   line-height: 1.45;
   transition: color 0.18s ease;
 }
 
 .entity-listing-table__primary-cell:hover {
-  color: #0f172a;
+  color: var(--entity-listing-text-strong);
 }
 
 .entity-listing-table__identity {
@@ -392,7 +409,7 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-table__contact-link:hover {
-  color: #2563eb;
+  color: var(--entity-listing-link-hover);
 }
 
 .entity-listing-page :deep(.v-chip) {
@@ -425,18 +442,34 @@ onBeforeRouteLeave(() => {
 }
 
 .entity-listing-table__empty-avatar {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--entity-listing-border);
 }
 
 .entity-listing-table__empty-title {
-  color: #0f172a;
+  color: var(--entity-listing-text-strong);
   font-size: 0.98rem;
   font-weight: 700;
 }
 
 .entity-listing-table__empty-subtitle {
-  color: #64748b;
+  color: var(--entity-listing-text-muted);
   font-size: 0.82rem;
+}
+
+.entity-listing-page--dark :deep(.data-table-server-wrapper) {
+  --entity-listing-surface: #151b26;
+  --entity-listing-surface-strong: #232a36;
+  --entity-listing-surface-hover: #1d2633;
+  --entity-listing-surface-mobile: #18202c;
+  --entity-listing-border: #2a3442;
+  --entity-listing-border-soft: #273243;
+  --entity-listing-border-strong: #334155;
+  --entity-listing-text: #cbd5e1;
+  --entity-listing-text-strong: #f8fafc;
+  --entity-listing-text-muted: #94a3b8;
+  --entity-listing-link-hover: #60a5fa;
+  --entity-listing-shadow-accent: #475569;
+  --entity-listing-mobile-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
 }
 
 @media (min-width: 768px) {
@@ -462,10 +495,10 @@ onBeforeRouteLeave(() => {
   }
 
   .entity-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
-    background: #ffffff;
-    border: 1px solid #e5edf6;
+    background: var(--entity-listing-surface-mobile);
+    border: 1px solid var(--entity-listing-border);
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--entity-listing-mobile-shadow);
     display: block;
     overflow: hidden;
     padding: 12px 12px 8px;
@@ -473,7 +506,7 @@ onBeforeRouteLeave(() => {
 
   .entity-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
     align-items: flex-start;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--entity-listing-border-soft);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
@@ -492,7 +525,7 @@ onBeforeRouteLeave(() => {
   }
 
   .entity-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
-    color: #64748b;
+    color: var(--entity-listing-text-muted);
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;

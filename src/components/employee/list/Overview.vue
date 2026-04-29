@@ -1,8 +1,11 @@
 <script lang="ts" setup>
 import { computed, onMounted } from "vue"
+import { useLayoutStore } from "@/store/app"
 import { useEmployeeStore } from "@/store/employee/employeeStore"
 
+const layoutStore = useLayoutStore()
 const employeeStore = useEmployeeStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 onMounted(async () => {
   await employeeStore.fetchEmployeeStats()
@@ -12,7 +15,10 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 </script>
 
 <template>
-  <div class="employee-overview">
+  <div
+    class="employee-overview"
+    :class="{ 'employee-overview--dark': isDarkMode }"
+  >
     <div class="employee-overview__grid">
       <v-card
         v-for="(item, index) in employeeStats"
@@ -47,6 +53,12 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 <style scoped>
 .employee-overview {
   margin-bottom: 2px;
+  --employee-overview-card-bg: #ffffff;
+  --employee-overview-card-border: #e6edf5;
+  --employee-overview-card-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+  --employee-overview-title: #334155;
+  --employee-overview-value: #0f172a;
+  --employee-overview-icon-border: rgba(148, 163, 184, 0.16);
 }
 
 .employee-overview__grid {
@@ -56,10 +68,10 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 }
 
 .employee-overview__card {
-  background: #ffffff;
-  border: 1px solid #e6edf5;
+  background: var(--employee-overview-card-bg);
+  border: 1px solid var(--employee-overview-card-border);
   border-radius: 16px !important;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+  box-shadow: var(--employee-overview-card-shadow) !important;
   overflow: hidden;
 }
 
@@ -74,7 +86,7 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 }
 
 .employee-overview__icon {
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  border: 1px solid var(--employee-overview-icon-border);
   flex: 0 0 auto;
   height: 42px !important;
   width: 42px !important;
@@ -85,7 +97,7 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 }
 
 .employee-overview__title {
-  color: #334155;
+  color: var(--employee-overview-title);
   font-size: 0.84rem;
   font-weight: 600;
   line-height: 1.35;
@@ -97,12 +109,21 @@ const employeeStats = computed(() => employeeStore.employeeStatsForOverview)
 }
 
 .employee-overview__value {
-  color: #0f172a;
+  color: var(--employee-overview-value);
   display: inline-block;
   font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
+}
+
+.employee-overview--dark {
+  --employee-overview-card-bg: #1a202c;
+  --employee-overview-card-border: #2b3442;
+  --employee-overview-card-shadow: 0 12px 24px rgba(2, 6, 23, 0.24);
+  --employee-overview-title: #cbd5e1;
+  --employee-overview-value: #f8fafc;
+  --employee-overview-icon-border: rgba(148, 163, 184, 0.22);
 }
 
 @media (max-width: 1260px) {

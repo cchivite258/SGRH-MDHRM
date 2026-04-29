@@ -3,6 +3,7 @@ import { computed, onBeforeMount, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useToast } from "vue-toastification"
+import { useLayoutStore } from "@/store/app"
 import CancelInvoiceConfirmationDialog from "@/app/common/components/CancelInvoiceConfirmationDialog.vue"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
@@ -20,7 +21,9 @@ import { useInvoiceStore } from "@/store/invoice/invoiceStore"
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
+const layoutStore = useLayoutStore()
 const invoiceStore = useInvoiceStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
 const searchProps = "invoiceNumber,issueDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
@@ -293,6 +296,7 @@ onBeforeRouteLeave(() => {
 <template>
   <ListingPageShell
     class="invoice-listing-page"
+    :class="{ 'invoice-listing-page--dark': isDarkMode }"
     :title="$t('t-invoice-list')"
     subtitle="Consulte, pesquise e faça a gestão das facturas registadas."
     :action-label="$t('t-add-invoice')"
@@ -403,8 +407,20 @@ onBeforeRouteLeave(() => {
 
 <style scoped>
 .invoice-listing-page :deep(.data-table-server-wrapper) {
-  background: #ffffff;
-  border: 1px solid #e8edf3;
+  --invoice-listing-surface: #ffffff;
+  --invoice-listing-surface-strong: #f3f6fa;
+  --invoice-listing-surface-hover: #fcfdff;
+  --invoice-listing-surface-mobile: #ffffff;
+  --invoice-listing-border: #e8edf3;
+  --invoice-listing-border-soft: #eef2f7;
+  --invoice-listing-border-strong: #d8e1ec;
+  --invoice-listing-text: #334155;
+  --invoice-listing-text-strong: #0f172a;
+  --invoice-listing-text-muted: #64748b;
+  --invoice-listing-shadow-accent: #cbd5e1;
+  --invoice-listing-mobile-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+  background: var(--invoice-listing-surface);
+  border: 1px solid var(--invoice-listing-border);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -420,15 +436,15 @@ onBeforeRouteLeave(() => {
 
 .invoice-listing-page :deep(.v-table__wrapper > table > thead),
 .invoice-listing-page :deep(.v-data-table thead) {
-  background: #f3f6fa;
+  background: var(--invoice-listing-surface-strong);
 }
 
 .invoice-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
 .invoice-listing-page :deep(.v-data-table-header th),
 .invoice-listing-page :deep(.v-data-table__th) {
-  background-color: #f3f6fa !important;
-  border-bottom: 1px solid #d8e1ec;
-  color: #334155;
+  background-color: var(--invoice-listing-surface-strong) !important;
+  border-bottom: 1px solid var(--invoice-listing-border-strong);
+  color: var(--invoice-listing-text);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -463,18 +479,18 @@ onBeforeRouteLeave(() => {
 }
 
 .invoice-listing-page :deep(.v-data-table-header__sort-icon) {
-  color: #94a3b8;
+  color: var(--invoice-listing-text-muted);
   font-size: 0.82rem;
   opacity: 1;
 }
 
 .invoice-listing-page :deep(.v-data-table__td) {
-  background: #ffffff;
+  background: var(--invoice-listing-surface);
 }
 
 .invoice-listing-page :deep(.v-data-table__tr td) {
-  border-bottom: 1px solid #eef2f7;
-  color: #334155;
+  border-bottom: 1px solid var(--invoice-listing-border-soft);
+  color: var(--invoice-listing-text);
   font-size: 0.8rem;
   padding-top: 20px;
   padding-bottom: 20px;
@@ -482,11 +498,11 @@ onBeforeRouteLeave(() => {
 }
 
 .invoice-listing-page :deep(.v-data-table__tr:hover) {
-  background: #fcfdff !important;
+  background: var(--invoice-listing-surface-hover) !important;
 }
 
 .invoice-listing-page :deep(.v-data-table__tr:hover td:first-child) {
-  box-shadow: inset 2px 0 0 #cbd5e1;
+  box-shadow: inset 2px 0 0 var(--invoice-listing-shadow-accent);
 }
 
 .invoice-listing-page :deep(.v-data-table__td--select),
@@ -503,18 +519,18 @@ onBeforeRouteLeave(() => {
 }
 
 .invoice-listing-page :deep(.v-checkbox .v-selection-control__wrapper) {
-  color: #64748b;
+  color: var(--invoice-listing-text-muted);
 }
 
 .invoice-listing-table__primary-cell {
-  color: #334155;
+  color: var(--invoice-listing-text);
   font-weight: 500;
   line-height: 1.45;
   transition: color 0.18s ease;
 }
 
 .invoice-listing-table__primary-cell:hover {
-  color: #0f172a;
+  color: var(--invoice-listing-text-strong);
 }
 
 .invoice-listing-table__amount-cell {
@@ -547,18 +563,33 @@ onBeforeRouteLeave(() => {
 }
 
 .invoice-listing-table__empty-avatar {
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--invoice-listing-border);
 }
 
 .invoice-listing-table__empty-title {
-  color: #0f172a;
+  color: var(--invoice-listing-text-strong);
   font-size: 0.98rem;
   font-weight: 700;
 }
 
 .invoice-listing-table__empty-subtitle {
-  color: #64748b;
+  color: var(--invoice-listing-text-muted);
   font-size: 0.82rem;
+}
+
+.invoice-listing-page--dark :deep(.data-table-server-wrapper) {
+  --invoice-listing-surface: #151b26;
+  --invoice-listing-surface-strong: #232a36;
+  --invoice-listing-surface-hover: #1d2633;
+  --invoice-listing-surface-mobile: #18202c;
+  --invoice-listing-border: #2a3442;
+  --invoice-listing-border-soft: #273243;
+  --invoice-listing-border-strong: #334155;
+  --invoice-listing-text: #cbd5e1;
+  --invoice-listing-text-strong: #f8fafc;
+  --invoice-listing-text-muted: #94a3b8;
+  --invoice-listing-shadow-accent: #475569;
+  --invoice-listing-mobile-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
 }
 
 @media (min-width: 768px) {
@@ -584,10 +615,10 @@ onBeforeRouteLeave(() => {
   }
 
   .invoice-listing-page :deep(.v-table__wrapper > table > tbody > tr) {
-    background: #ffffff;
-    border: 1px solid #e5edf6;
+    background: var(--invoice-listing-surface-mobile);
+    border: 1px solid var(--invoice-listing-border);
     border-radius: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+    box-shadow: var(--invoice-listing-mobile-shadow);
     display: block;
     overflow: hidden;
     padding: 12px 12px 8px;
@@ -595,7 +626,7 @@ onBeforeRouteLeave(() => {
 
   .invoice-listing-page :deep(.v-table__wrapper > table > tbody > tr > td) {
     align-items: flex-start;
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--invoice-listing-border-soft);
     display: grid;
     gap: 10px;
     grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
@@ -609,7 +640,7 @@ onBeforeRouteLeave(() => {
   }
 
   .invoice-listing-page :deep(.v-table__wrapper > table > tbody > tr > td::before) {
-    color: #64748b;
+    color: var(--invoice-listing-text-muted);
     content: attr(data-label);
     font-size: 0.72rem;
     font-weight: 700;

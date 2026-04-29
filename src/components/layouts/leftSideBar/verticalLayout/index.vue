@@ -21,8 +21,13 @@ const isDesktopDrawerVisible = computed(() => {
   return state.layoutType === LAYOUTS.VERTICAL && !isSmallSideBar.value;
 });
 
-const isSmallSideBar = computed(() => {
-  return state.sideBarSize === SIDEBAR_SIZE.SMALL;
+const isSmallSideBar = computed({
+  get() {
+    return state.sideBarSize === SIDEBAR_SIZE.SMALL;
+  },
+  set(value: boolean) {
+    state.changeSideBarSize(value ? SIDEBAR_SIZE.SMALL : SIDEBAR_SIZE.DEFAULT);
+  }
 });
 
 const isCompactSideBar = computed(() => {
@@ -104,7 +109,7 @@ watch(sideBarSize, () => {
   </v-navigation-drawer>
 
   <v-navigation-drawer
-    v-else
+    v-if="$vuetify.display.xs"
     v-model="mobileNavigationDrawer"
     :width="280"
     temporary
@@ -150,7 +155,6 @@ watch(sideBarSize, () => {
 
   <v-navigation-drawer
     v-if="$vuetify.display.smAndUp && !isDesktopDrawerVisible"
-    v-model="isSmallSideBar"
     :rail-width="72"
     :location="isRtl ? 'end' : 'start'"
     rail

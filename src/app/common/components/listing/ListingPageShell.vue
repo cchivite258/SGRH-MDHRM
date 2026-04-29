@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import { computed } from "vue"
+import { useLayoutStore } from "@/store/app"
+
+const layoutStore = useLayoutStore()
+const isDarkMode = computed(() => layoutStore.mode === "dark")
+
 const props = withDefaults(defineProps<{
   title: string
   subtitle?: string
@@ -41,7 +47,10 @@ const handleAction = () => {
 </script>
 
 <template>
-  <div class="listing-page-shell">
+  <div
+    class="listing-page-shell"
+    :class="{ 'listing-page-shell--dark': isDarkMode }"
+  >
     <div class="listing-page-shell__header">
       <div>
         <h1 class="listing-page-shell__title">{{ title }}</h1>
@@ -103,6 +112,16 @@ const handleAction = () => {
 <style scoped>
 .listing-page-shell {
   margin-top: 12px;
+  --listing-shell-title-color: #0f172a;
+  --listing-shell-subtitle-color: #526071;
+  --listing-shell-card-bg: #ffffff;
+  --listing-shell-card-border: #e7edf5;
+  --listing-shell-card-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  --listing-shell-pagination-text: #64748b;
+  --listing-shell-pagination-strong: #111827;
+  --listing-shell-pagination-btn: #111827;
+  --listing-shell-pagination-active-bg: #0f172a;
+  --listing-shell-pagination-active-text: #ffffff;
 }
 
 .listing-page-shell__header {
@@ -114,7 +133,7 @@ const handleAction = () => {
 }
 
 .listing-page-shell__title {
-  color: #0f172a;
+  color: var(--listing-shell-title-color);
   font-size: 1.22rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -123,7 +142,7 @@ const handleAction = () => {
 }
 
 .listing-page-shell__subtitle {
-  color: #526071;
+  color: var(--listing-shell-subtitle-color);
   font-size: 0.82rem;
   line-height: 1.45;
   margin: 0;
@@ -148,10 +167,10 @@ const handleAction = () => {
 }
 
 .listing-page-shell__table-card {
-  background: #ffffff;
-  border: 1px solid #e7edf5;
+  background: var(--listing-shell-card-bg);
+  border: 1px solid var(--listing-shell-card-border);
   border-radius: 18px !important;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05) !important;
+  box-shadow: var(--listing-shell-card-shadow) !important;
   overflow: hidden;
 }
 
@@ -168,12 +187,12 @@ const handleAction = () => {
 }
 
 .listing-page-shell__pagination-summary {
-  color: #64748b;
+  color: var(--listing-shell-pagination-text);
   font-size: 0.85rem;
 }
 
 .listing-page-shell__pagination-summary :deep(b) {
-  color: #111827;
+  color: var(--listing-shell-pagination-strong);
 }
 
 .listing-page-shell__pagination-control {
@@ -189,28 +208,78 @@ const handleAction = () => {
 .listing-page-shell__pagination :deep(.v-pagination .v-btn) {
   border: 1px solid transparent;
   border-radius: 8px;
-  color: #111827 !important;
+  color: var(--listing-shell-pagination-btn) !important;
 }
 
 .listing-page-shell__pagination :deep(.v-pagination__item--is-active .v-btn),
 .listing-page-shell__pagination :deep(.v-pagination .v-btn--active) {
-  background-color: #0f172a !important;
-  border-color: #0f172a !important;
-  color: #ffffff !important;
+  background-color: var(--listing-shell-pagination-active-bg) !important;
+  border-color: var(--listing-shell-pagination-active-bg) !important;
+  color: var(--listing-shell-pagination-active-text) !important;
   opacity: 1 !important;
 }
 
 .listing-page-shell__pagination :deep(.v-pagination__item--is-active .v-btn .v-btn__content),
 .listing-page-shell__pagination :deep(.v-pagination .v-btn--active .v-btn__content) {
-  color: #ffffff !important;
+  color: var(--listing-shell-pagination-active-text) !important;
 }
 
 .listing-page-shell__pagination :deep(.v-pagination__item--is-active .v-btn.v-btn--disabled),
 .listing-page-shell__pagination :deep(.v-pagination .v-btn--active.v-btn--disabled) {
-  background-color: #0f172a !important;
-  border-color: #0f172a !important;
-  color: #ffffff !important;
+  background-color: var(--listing-shell-pagination-active-bg) !important;
+  border-color: var(--listing-shell-pagination-active-bg) !important;
+  color: var(--listing-shell-pagination-active-text) !important;
   opacity: 1 !important;
+}
+
+.listing-page-shell--dark {
+  --listing-shell-title-color: #e2e8f0;
+  --listing-shell-subtitle-color: #94a3b8;
+  --listing-shell-card-bg: #1a202c;
+  --listing-shell-card-border: #2b3442;
+  --listing-shell-card-shadow: 0 12px 30px rgba(2, 6, 23, 0.28);
+  --listing-shell-pagination-text: #94a3b8;
+  --listing-shell-pagination-strong: #e2e8f0;
+  --listing-shell-pagination-btn: #cbd5e1;
+  --listing-shell-pagination-active-bg: #334155;
+  --listing-shell-pagination-active-text: #f8fafc;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.data-table-server-wrapper) {
+  background: #151b26 !important;
+  border-color: #2a3442 !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.v-table__wrapper > table > thead),
+.listing-page-shell--dark.base-table-listing-page :deep(.v-data-table thead),
+.listing-page-shell--dark.base-table-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
+.listing-page-shell--dark.base-table-listing-page :deep(.v-data-table-header th),
+.listing-page-shell--dark.base-table-listing-page :deep(.v-data-table__th) {
+  background: #232a36 !important;
+  border-bottom-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.v-data-table__tr td),
+.listing-page-shell--dark.base-table-listing-page :deep(.base-table-listing-page__primary-cell) {
+  border-bottom-color: #273243 !important;
+  color: #cbd5e1 !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.v-data-table__tr:hover) {
+  background: #1d2633 !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.base-table-listing-page__empty-avatar) {
+  border-color: #2a3442 !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.base-table-listing-page__empty-title) {
+  color: #f8fafc !important;
+}
+
+.listing-page-shell--dark.base-table-listing-page :deep(.base-table-listing-page__empty-subtitle) {
+  color: #94a3b8 !important;
 }
 
 @media (max-width: 767px) {
