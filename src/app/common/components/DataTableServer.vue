@@ -1,5 +1,8 @@
 <template>
-  <div class="data-table-server-wrapper">
+  <div
+    class="data-table-server-wrapper"
+    :class="{ 'data-table-server-wrapper--dark': isDarkMode }"
+  >
     <v-data-table-server v-model:items-per-page="itemsPerPage" v-model:page="page" v-model="selectedItems"
       :headers="processedHeadersWithSelect" :items-length="totalItems" :items="serverItems" :loading="loading"
       :search="searchQuery" @update:options="loadItems" class="table-component" density="compact"
@@ -16,7 +19,7 @@
               }}</b> {{ $t('t-of') }}
             <b>{{ totalItems }}</b> {{ $t('t-results') }}
           </div>
-          <v-pagination v-model="page" :length="totalPages" density="compact" color="primary" variant="text"
+          <v-pagination v-model="page" :length="totalPages" density="compact" :color="paginationColor" variant="text"
             total-visible="3" :prev-icon="prevIcon" :next-icon="nextIcon" class="table-pagination" />
         </div>
       </template>
@@ -29,6 +32,10 @@
 import { computed, ref, watch } from 'vue'
 import type { PropType } from 'vue'
 import type { TableHeaderType } from '@/app/common/types/table.types'
+import { useLayoutStore } from '@/store/app'
+
+const layoutStore = useLayoutStore()
+const isDarkMode = computed(() => layoutStore.mode === 'dark')
 
 
 // Defina manualmente o tipo para os headers
@@ -65,6 +72,10 @@ const props = defineProps({
     type: Number,
     default: 10
   },
+  page: {
+    type: Number,
+    default: 1
+  },
   totalItems: {
     type: Number,
     default: 0
@@ -84,6 +95,10 @@ const props = defineProps({
   nextIcon: {
     type: String,
     default: 'ph-arrow-right'
+  },
+  paginationColor: {
+    type: String,
+    default: 'primary'
   },
   showPagination: {
     type: Boolean,
@@ -114,7 +129,7 @@ const emit = defineEmits([
   'update:modelValue'
 ])
 
-const page = ref(1)
+const page = ref(props.page)
 const itemsPerPage = ref(props.itemsPerPage)
 const serverItems = ref(props.items)
 const selectedItems = ref(props.modelValue)
@@ -168,8 +183,20 @@ watch(() => props.items, (newItems) => {
   serverItems.value = newItems
 }, { deep: true })
 
+watch(() => props.page, (newPage) => {
+  page.value = newPage
+})
+
 watch(() => props.modelValue, (newValue) => {
   selectedItems.value = newValue
+})
+
+watch(page, (newPage) => {
+  emit('update:page', newPage)
+})
+
+watch(itemsPerPage, (newItemsPerPage) => {
+  emit('update:itemsPerPage', newItemsPerPage)
 })
 
 watch(selectedItems, (newValue) => {
@@ -211,15 +238,23 @@ const loadItems = async ({
 
 .data-table-server-wrapper {
   position: relative;
+  --data-table-header-bg: #eef0f7;
+  --data-table-row-even-bg: #fafafa;
+  --data-table-row-hover-bg: #f5f5f5;
+  --data-table-text-muted: #64748b;
 }
 
 .table-pagination {
   margin-top: 0;
 }
 
+.data-table-server-wrapper :deep(.text-muted) {
+  color: var(--data-table-text-muted);
+}
+
 /* Estilos para alinhar os checkboxes */
 :deep(.v-data-table__thead) {
-  background-color: #EEF0F7;
+  background-color: var(--data-table-header-bg);
 }
 
 :deep(.v-data-table__th) {
@@ -232,11 +267,11 @@ const loadItems = async ({
 }
 
 :deep(.v-data-table__tr:nth-of-type(even)) {
-  background-color: #fafafa;
+  background-color: var(--data-table-row-even-bg);
 }
 
 :deep(.v-data-table__tr:hover) {
-  background-color: #f5f5f5 !important;
+  background-color: var(--data-table-row-hover-bg) !important;
 }
 
 /* Alinhamento do checkbox no cabeçalho */
@@ -255,5 +290,12 @@ const loadItems = async ({
 
 :deep(.v-selection-control) {
   opacity: 1 !important;
+}
+
+.data-table-server-wrapper--dark {
+  --data-table-header-bg: #232a36;
+  --data-table-row-even-bg: rgba(148, 163, 184, 0.05);
+  --data-table-row-hover-bg: rgba(148, 163, 184, 0.1);
+  --data-table-text-muted: #94a3b8;
 }
 </style>

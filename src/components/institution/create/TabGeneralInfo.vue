@@ -27,6 +27,10 @@ const props = defineProps({
   serverErrors: {
     type: Object as () => Record<string, string[]>,
     default: () => ({})
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -110,6 +114,8 @@ const submitGeneralInfo = async () => {
   emit("save", false);
 };
 
+defineExpose({ submitGeneralInfo });
+
 onMounted(async () => {
   try {
     const response = await companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc");
@@ -123,7 +129,7 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form" @submit.prevent="submitGeneralInfo">
-    <Card title="Informações Gerais do Contrato" elevation="0" title-class="pb-0">
+    <Card title="Informações Gerais do Contrato" elevation="0" title-class="pb-0"> 
       <v-card-text class="pt-0">
         <v-row class="mt-n3">
           <v-col cols="12" lg="12" class="text-right">
@@ -183,7 +189,7 @@ onMounted(async () => {
         <v-row class="">
           
           <v-col cols="12" lg="12" class="mt-n6">
-            <div class="font-weight-bold ">{{ $t('t-contract-description') }}</div>
+            <div class="font-weight-bold ">{{ $t('t-contract-description') }}</div> 
             <TextArea
               v-model="institutionData.description"
               :error-messages="getServerErrors('description')"
@@ -192,11 +198,11 @@ onMounted(async () => {
         </v-row>
       </v-card-text>
 
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
-        <v-btn color="success" variant="elevated" @click="submitGeneralInfo" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitGeneralInfo" :loading="loading">
           {{ $t('t-save-and-proceed') }}
         </v-btn>
       </v-card-actions>

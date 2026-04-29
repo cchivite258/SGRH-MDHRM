@@ -6,6 +6,10 @@ const prop = defineProps({
     type: String,
     default: "pending",
   },
+  label: {
+    type: String,
+    default: "",
+  },
   variant: {
     type: String as PropType<"tonal" | "elevated">,
     default: "tonal",
@@ -16,12 +20,14 @@ const warningChips: { text: string; value: string }[] = [
   { text: "Pending", value: "pending" },
   { text: "pending", value: "PENDING" },
   { text: "closed", value: "CLOSED" },
+  { text: "Private", value: "entity-private" },
 
 ];
 const infoChips: { text: string; value: string }[] = [
   { text: "Open", value: "open" },
   { text: "Medium", value: "medium" },
   { value: "REVERSED", text: "reversed" },
+  { value: "entity-public", text: "Public" },
 ];
 const successChips: { text: string; value: string }[] = [
   { value: "delivered", text: "Delivered" },
@@ -56,6 +62,7 @@ const primaryChips: { text: string; value: string }[] = [
   { value: "shipping", text: "Shipping" },
   { value: "new", text: "New" },
   { value: "DRAFT", text: "draft" },
+  { value: "entity-neutral", text: "Unknown" },
 
 ];
 </script>
@@ -73,7 +80,7 @@ const primaryChips: { text: string; value: string }[] = [
       density="compact"
     >
       <span class="status-chip">
-        {{ $t('t-' + dangerChip.text) }}
+        {{ prop.label || $t('t-' + dangerChip.text) }}
       </span>
     </v-chip>
   </span>
@@ -87,7 +94,7 @@ const primaryChips: { text: string; value: string }[] = [
       elevation="0"
       density="compact"
     >
-      <span class="status-chip"> {{ $t('t-' + primary.text) }} </span>
+      <span class="status-chip"> {{ prop.label || $t('t-' + primary.text) }} </span>
     </v-chip>
   </span>
 
@@ -100,7 +107,7 @@ const primaryChips: { text: string; value: string }[] = [
       elevation="0"
       density="compact"
     >
-      <span class="status-chip"> {{ $t('t-' + warning.text) }} </span>
+      <span class="status-chip"> {{ prop.label || $t('t-' + warning.text) }} </span>
     </v-chip>
   </span>
 
@@ -113,7 +120,7 @@ const primaryChips: { text: string; value: string }[] = [
       elevation="0"
       density="compact"
     >
-    <span class="status-chip">{{ $t('t-' + success.text) }}</span>
+    <span class="status-chip">{{ prop.label || $t('t-' + success.text) }}</span>
 
     </v-chip>
   </span>
@@ -127,7 +134,7 @@ const primaryChips: { text: string; value: string }[] = [
       elevation="0"
       density="compact"
     >
-      <span class="status-chip"> {{ $t('t-' + info.text) }} </span>
+      <span class="status-chip"> {{ prop.label || $t('t-' + info.text) }} </span>
     </v-chip>
   </span>
 </template>

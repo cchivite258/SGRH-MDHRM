@@ -2,11 +2,12 @@
 import HttpService from "@/app/http/httpService";
 import type { HospitalProcedureListingType, HospitalProcedureInsertType } from "@/components/institution/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
-import EnableAccountConfirmationDialog from "@/components/users/users/EnableAccountConfirmationDialog.vue";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -14,6 +15,29 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT = '/administration/contract/allowed-hospital-procedures';
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const normalizeHospitalProcedure = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  companyHealthPlan: item.companyHealthPlan ?? item.contractHealthPlan,
+  company: item.company ?? item.contractHealthPlan?.contract ?? item.contract
+});
+
+const appendContractFilter = (queryParams: string[], id: string | null, query_value?: string, query_props?: string) => {
+  if (query_value && query_props) {
+    queryParams.push(`query_props=${encodeURIComponent(`${query_props},contractHealthPlan.contract.id`)}`);
+    queryParams.push(`query_value=${encodeURIComponent(`${query_value},${id}`)}`);
+    queryParams.push(`query_operator=AND`);
+    return;
+  }
+
+  queryParams.push(`query_props=contractHealthPlan.contract.id`);
+  queryParams.push(`query_value=${id}`);
+};
 
 export default class HospitalProcedureService extends HttpService {
   private removeNullUndefinedAndEmptyFields<T extends Record<string, any>>(obj: T): Partial<T> {
@@ -40,24 +64,19 @@ export default class HospitalProcedureService extends HttpService {
         `direction=${direction}`
       ];
 
-      if (query_value && query_props) {
-        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
-        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
-        queryParams.push(`query_operator=OR`);
-      }
-
-      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
+      const includesToUse = 'contractHealthPlan,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
+      appendContractFilter(queryParams, id, query_value, query_props);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-company?${queryString}`;
+      const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeHospitalProcedure(item)) as HospitalProcedureListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -85,18 +104,19 @@ export default class HospitalProcedureService extends HttpService {
         `direction=${direction}`
       ];
 
-      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
+      const includesToUse = 'contractHealthPlan,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
+      appendContractFilter(queryParams, id, query_value, query_props);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-company?${queryString}`;
+      const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeHospitalProcedure(item)) as HospitalProcedureListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -129,17 +149,17 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_operator=OR`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
+      const includesToUse = 'contractHealthPlan,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures/in-health-plan?${queryString}`;
+      const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/in-health-plan?${queryString}`;
 
       console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeHospitalProcedure(item)) as HospitalProcedureListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -169,18 +189,18 @@ export default class HospitalProcedureService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company,hospitalProcedureType,hospitalProcedureGroup';
+      const includesToUse = 'contractHealthPlan,hospitalProcedureType,hospitalProcedureGroup';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
-      const url = `/administration/company/allowed-hospital-procedures`;
+      const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisiÃ§Ã£o:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeHospitalProcedure(item)) as HospitalProcedureListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -192,11 +212,16 @@ export default class HospitalProcedureService extends HttpService {
 
   async createHospitalProcedure(hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
-      const payload = this.removeNullUndefinedAndEmptyFields(hospitalProcedureData);
-      const response = await this.post<ApiResponse<HospitalProcedureListingType>>('/administration/company/allowed-hospital-procedures', payload);
+      const payload = this.removeNullUndefinedAndEmptyFields({
+        ...hospitalProcedureData,
+        contractHealthPlan: hospitalProcedureData.companyHealthPlan,
+        companyHealthPlan: undefined,
+        company: undefined
+      });
+      const response = await this.post<ApiResponse<HospitalProcedureListingType>>(CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT, payload);
       return {
         status: 'success',
-        data: response.data
+        data: normalizeHospitalProcedure((response.data ?? response.content ?? response) as any) as HospitalProcedureListingType
       };
     } catch (error: any) {
       if (error.response) {
@@ -221,7 +246,7 @@ export default class HospitalProcedureService extends HttpService {
         title: 'Network Error',
         status: 503,
         detail: 'Could not connect to server',
-        instance: 'administration/company/allowed-hospital-procedures'
+        instance: CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()
@@ -232,12 +257,12 @@ export default class HospitalProcedureService extends HttpService {
   async getHospitalProcedureById(id: string): Promise<{ data: HospitalProcedureListingType }> {
     try {
       const response = await this.get<{ data: HospitalProcedureListingType; meta: any }>(
-        `/administration/company/allowed-hospital-procedures/${id}?includes=company`
+        `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/${id}?includes=contractHealthPlan`
       );
       console.log('Resposta da requisiÃ§Ã£o getHospitalProcedureById:------------------------', response);
 
       return {
-        data: response.data
+        data: normalizeHospitalProcedure(((response as any).data ?? response) as any) as HospitalProcedureListingType
       };
     } catch (error) {
       throw this.handleError(error);
@@ -261,7 +286,7 @@ export default class HospitalProcedureService extends HttpService {
 
   async deleteHospitalProcedure(id: string): Promise<void> {
     try {
-      await this.delete(`/administration/company/allowed-hospital-procedures/${id}`);
+      await this.delete(`${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/${id}`);
     } catch (error) {
       console.error("âŒ Erro ao deletar procedimento hospitalar:", error);
       throw error;
@@ -282,16 +307,14 @@ export default class HospitalProcedureService extends HttpService {
         groupPercentage: hospitalProcedureData.groupPercentage,
         hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit,
         belongsToGroup: !!hospitalProcedureData.belongsToGroup,
-        //hospitalProcedureType: hospitalProcedureData.hospitalProcedureType,
-        companyHealthPlan: hospitalProcedureData.companyHealthPlan,
         enabled: hospitalProcedureData.enabled
       };
       const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
 
-      const response = await this.put<ApiResponse<HospitalProcedureListingType>>(`/administration/company/allowed-hospital-procedures/${id}`, payload);
+      const response = await this.put<ApiResponse<HospitalProcedureListingType>>(`${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/${id}`, payload);
       return {
         status: 'success',
-        data: response.data
+        data: normalizeHospitalProcedure((response.data ?? response.content ?? response) as any) as HospitalProcedureListingType
       };
     } catch (error: any) {
       if (error.response) {

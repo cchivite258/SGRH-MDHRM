@@ -1,14 +1,15 @@
 <script lang="ts" setup>
 import { computed } from "vue";
+import FormTabs from "@/app/common/components/FormTabs.vue";
 
 const emit = defineEmits(["update:modelValue"]);
 const props = defineProps({
   modelValue: {
     type: Number,
-    default: 1,
+    default: 1
   },
   institutionId: {
-    type: [String],
+    type: String,
     default: null
   },
   basicDataValidated: {
@@ -21,62 +22,31 @@ const step = computed({
   get() {
     return props.modelValue;
   },
-  set(step: number) {
-    emit("update:modelValue", step);
-  },
+  set(step: string | number) {
+    emit("update:modelValue", Number(step));
+  }
 });
 
 const isTabDisabled = (tabNumber: number) => {
   if (props.institutionId || props.basicDataValidated) return false;
   return tabNumber > 1;
 };
+
+const tabs = computed(() => [
+  { value: 1, label: "t-institution-information", disabled: isTabDisabled(1) },
+  { value: 2, label: "t-periods", disabled: isTabDisabled(2) },
+  { value: 3, label: "t-health-plan", disabled: isTabDisabled(3) },
+  { value: 4, label: "t-organizational-structure", disabled: isTabDisabled(4) },
+  { value: 5, label: "t-contact", disabled: isTabDisabled(5) },
+  { value: 6, label: "t-service-providers", disabled: isTabDisabled(6) },
+  { value: 7, label: "t-employees", disabled: isTabDisabled(7) }
+]);
 </script>
 
 <template>
-  <div class="d-flex justify-space-between align-center">
-    <v-row no-gutters>
-      <v-col cols="3">
-        <v-btn rounded="0" color="primary" block :variant="step === 1 ? 'elevated' : 'tonal'" @click="step = 1"
-          :disabled="isTabDisabled(1)">
-          Informações Gerais do Contrato
-        </v-btn>
-      </v-col>
-      <v-col cols="3">
-        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2"
-          :disabled="isTabDisabled(2)">
-          {{ $t('t-periods') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="3">
-        <v-btn rounded="0" color="primary" block :variant="step === 3 ? 'elevated' : 'tonal'" @click="step = 3"
-          :disabled="isTabDisabled(3)">
-          {{ $t('t-health-plan') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="3">
-        <v-btn rounded="0" color="primary" block :variant="step === 4 ? 'elevated' : 'tonal'" @click="step = 4"
-          :disabled="isTabDisabled(4)">
-          {{ $t('t-organizational-structure') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 5 ? 'elevated' : 'tonal'" @click="step = 5"
-          :disabled="isTabDisabled(5)">
-          {{ $t('t-contact') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 6 ? 'elevated' : 'tonal'" @click="step = 6"
-          :disabled="isTabDisabled(6)">
-          {{ $t('t-service-providers') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 7 ? 'elevated' : 'tonal'" @click="step = 7"
-          :disabled="isTabDisabled(7)">
-          {{ $t('t-employees') }}
-        </v-btn>
-      </v-col>
-    </v-row>
-  </div>
+  <FormTabs
+    v-model="step"
+    :tabs="tabs"
+    aria-label="Navegação do formulário de contrato"
+  />
 </template>

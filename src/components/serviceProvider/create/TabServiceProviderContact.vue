@@ -20,11 +20,16 @@ const emit = defineEmits<{
   (e: 'clear-server-error', field: string): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: ServiceProviderInsertType,
   loading?: boolean,
-  serverErrors?: Record<string, string[]>
-}>();
+  serverErrors?: Record<string, string[]>,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  serverErrors: () => ({}),
+  showActions: true
+});
 
 
 // Dados computados do employee
@@ -104,8 +109,8 @@ const requiredRules = {
 /**
  * Valida e envia o formulário
  */
-const saveData = async () => {
-  if (!form2.value) return;
+const validateForm = async () => {
+  if (!form2.value) return false;
 
   const { valid } = await form2.value.validate();
   if (!valid) {
@@ -114,10 +119,20 @@ const saveData = async () => {
       errorMsg.value = "";
       alertTimeout = null;
     }, 5000);
-    return;
+    return false;
   }
+
+  return true;
+};
+
+const saveData = async () => {
+  const valid = await validateForm();
+  if (!valid) return;
+
   emit('save');
 };
+
+defineExpose({ saveData, validateForm });
 </script>
 
 <template>
@@ -202,12 +217,12 @@ const saveData = async () => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-5">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-5">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
-          {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="saveData" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="saveData" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { useRoute } from "vue-router";
 import { computed } from "vue";
-import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
+import { useRoute } from "vue-router";
 import Create from "@/components/employee/create/index.vue";
+import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -24,6 +24,6 @@ const breadcrumb = computed<BreadcrumbType[]>(() => [
 </script>
 
 <template>
-  <Breadcrumb :title="t('edit-employee')" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <Create :card-title="t('t-edit-employee')" />
 </template>

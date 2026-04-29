@@ -57,4 +57,3 @@ export default class CostPerEmployeeService extends HttpService {
 
  
 }
-

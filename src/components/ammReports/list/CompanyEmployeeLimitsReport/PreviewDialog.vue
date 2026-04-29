@@ -23,7 +23,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue"]);
-const companyId = ref("");
+const contractId = ref("");
 const coveragePeriodId = ref("");
 const localLoading = ref(false);
 
@@ -44,11 +44,11 @@ const coveragePeriods = computed(() => {
 });
 
 const requiredRules = {
-  companyId: [(v: string) => !!v || t("t-please-enter-institution")],
+  contractId: [(v: string) => !!v || t("t-please-enter-institution")],
   coveragePeriodId: [(v: string) => !!v || t("t-please-enter-coverage-period")],
 };
 
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   if (!value) return;
   coveragePeriodId.value = "";
   await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, 10000000);
@@ -64,7 +64,7 @@ const onSubmit = async () => {
 
   localLoading.value = true;
   const payload: CompanyEmployeeLimitsFilterType = {
-    companyId: companyId.value,
+    contractId: contractId.value,
     coveragePeriodId: coveragePeriodId.value,
   };
 
@@ -99,10 +99,10 @@ onMounted(async () => {
           <v-row>
             <v-col cols="12" class="mt-1">
               <div class="font-weight-bold text-caption mb-1">{{ $t("t-institution") }} <i class="ph-asterisk text-danger" /></div>
-              <MenuSelect v-model="companyId" :items="institutions" :rules="requiredRules.companyId" :loading="institutionStore.loading" />
+              <MenuSelect v-model="contractId" :items="institutions" :rules="requiredRules.contractId" :loading="institutionStore.loading" />
             </v-col>
 
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">{{ $t("t-coverage-period") }} <i class="ph-asterisk text-danger" /></div>
               <MenuSelect v-model="coveragePeriodId" :items="coveragePeriods" :rules="requiredRules.coveragePeriodId" :loading="coveragePeriodStore.loading" />
             </v-col>

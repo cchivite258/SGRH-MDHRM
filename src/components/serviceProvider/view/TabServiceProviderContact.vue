@@ -19,10 +19,14 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: ServiceProviderInsertType): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: ServiceProviderInsertType,
-  loading?: boolean
-}>();
+  loading?: boolean,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  showActions: true
+});
 
 
 // Dados computados do employee
@@ -168,9 +172,9 @@ const saveData = async () => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-5">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-5">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
-          {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
         
       </v-card-actions>

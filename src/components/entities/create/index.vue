@@ -4,6 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
@@ -35,9 +37,13 @@ const entityId = computed<string | undefined>(() => {
 });
 
 const isEditMode = computed(() => !!entityId.value);
-const cardTitle = computed(() => {
+const headerTitle = computed(() => {
   if (props.isViewMode) return "t-view-entity";
   return isEditMode.value ? "t-edit-entity" : "t-add-entity";
+});
+const headerSubtitle = computed(() => {
+  if (props.isViewMode) return "Consulte os dados institucionais e de contacto da entidade.";
+  return "Preencha os dados institucionais e de contacto da entidade.";
 });
 
 const formData = reactive<EntityInsertType>({
@@ -174,6 +180,10 @@ const submit = async () => {
   }
 };
 
+const goBackToList = () => {
+  router.push("/entities/list");
+};
+
 onMounted(async () => {
   await institutionTypeStore.fetchInstitutionTypes();
 
@@ -184,7 +194,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Card :title="$t(cardTitle)">
+  <FormPageHeader
+    :title="$t(headerTitle)"
+    :subtitle="headerSubtitle"
+    :loading="loading"
+    :show-save="!props.isViewMode"
+    @back="goBackToList"
+    @save="submit"
+  />
+
+  <FormCard class="entity-form-section">
     <v-form ref="form" @submit.prevent="submit">
       <v-card-text class="pt-0">
         <transition name="fade">
@@ -317,20 +336,45 @@ onMounted(async () => {
           </v-col>
         </v-row>
       </v-card-text>
-
-      <v-card-actions class="d-flex justify-space-between mt-3">
-        <v-btn color="secondary" variant="outlined" class="me-2" @click="router.push('/entities/list')">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
-        </v-btn>
-        <v-btn v-if="!props.isViewMode" color="success" variant="elevated" type="submit" :loading="loading">
-          {{ $t('t-save') }}
-        </v-btn>
-      </v-card-actions>
     </v-form>
-  </Card>
+  </FormCard>
+
+  <div v-if="!props.isViewMode" class="entity-form-footer-actions">
+    <v-btn class="entity-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading" @click="goBackToList">
+      <i class="ph-arrow-left me-2" />
+      {{ $t("t-back-to-list") }}
+    </v-btn>
+
+    <v-btn class="entity-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading" @click="submit">
+      <i class="ph-floppy-disk me-2" />
+      {{ $t("t-save") }}
+    </v-btn>
+  </div>
 </template>
 
 <style scoped>
+.entity-form-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.entity-form-footer-actions__save,
+.entity-form-footer-actions__back {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  min-height: 36px;
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.entity-form-footer-actions__save {
+  box-shadow: none;
+}
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.5s ease;
@@ -339,6 +383,14 @@ onMounted(async () => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 767px) {
+  .entity-form-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+  }
 }
 </style>
 

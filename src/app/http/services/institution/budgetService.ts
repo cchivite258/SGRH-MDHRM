@@ -4,8 +4,10 @@ import type { BudgetInsertType, BudgetListingType } from "@/components/instituti
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-    data: T;
+    data?: T;
+    content?: T;
     meta?: any;
+    metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -13,6 +15,11 @@ interface ServiceResponse<T> {
     data?: T;
     error?: ApiErrorResponse;
 }
+
+const BUDGETS_ENDPOINT = '/administration/contract/coverage-period-budgets';
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
 
 export default class BudgetService extends HttpService {
     async getBudgetByCoveragePeriod(
@@ -39,14 +46,14 @@ export default class BudgetService extends HttpService {
             }
 
             const queryString = queryParams.join('&');
-            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}/${queryString}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
+            const url = `${BUDGETS_ENDPOINT}/by-coverage-period-id/${id}?${queryString}&includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<BudgetListingType[]>>(url);
 
             return {
-                content: response.data || [],
-                meta: response.meta || []
+                content: getContent(response),
+                meta: getMeta(response)
             };
 
         } catch (error) {
@@ -79,14 +86,14 @@ export default class BudgetService extends HttpService {
             }
 
             const queryString = queryParams.join('&');
-            const url = `/administration/company/coverage-period-budgets/by-coverage-period-id/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
+            const url = `${BUDGETS_ENDPOINT}/by-coverage-period-id/${id}?${queryString}&includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<BudgetListingType[]>>(url);
 
             return {
-                content: response.data || [],
-                meta: response.meta || []
+                content: getContent(response),
+                meta: getMeta(response)
             };
 
         } catch (error) {
@@ -97,10 +104,10 @@ export default class BudgetService extends HttpService {
 
     async createBudget(budgetData: BudgetInsertType): Promise<ServiceResponse<BudgetListingType>> {
         try {
-            const response = await this.post<ApiResponse<BudgetListingType>>('/administration/company/coverage-period-budgets', budgetData);
+            const response = await this.post<ApiResponse<BudgetListingType>>(BUDGETS_ENDPOINT, budgetData);
             return {
                 status: 'success',
-                data: response.data
+                data: response.data ?? response.content ?? (response as BudgetListingType)
             };
         } catch (error: any) {
             if (error.response) {
@@ -125,7 +132,7 @@ export default class BudgetService extends HttpService {
                 title: 'Network Error',
                 status: 503,
                 detail: 'Could not connect to server',
-                instance: '/administration/company/coverage-period-budgets',
+                instance: BUDGETS_ENDPOINT,
             },
             meta: {
                 timestamp: new Date().toISOString()
@@ -136,12 +143,12 @@ export default class BudgetService extends HttpService {
     async getBudgetById(id: string): Promise<{ data: BudgetListingType }> {
         try {
             const response = await this.get<{ data: BudgetListingType; meta: any }>(
-                `/administration/company/coverage-period-budgets/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`
+                `${BUDGETS_ENDPOINT}/${id}?includes=coveragePeriod,coveragePeriodBudgetTransaction,invoice`
             );
             console.log('Resposta da requisição getBudgetById:------------------------', response);
 
             return {
-                data: response.data
+                data: ((response as any).data ?? response) as BudgetListingType
             };
         } catch (error) {
             throw this.handleError(error);
@@ -165,7 +172,7 @@ export default class BudgetService extends HttpService {
 
     async deleteBudget(id: string): Promise<void> {
         try {
-            await this.delete(`/administration/company/coverage-period-budgets/${id}`);
+            await this.delete(`${BUDGETS_ENDPOINT}/${id}`);
         } catch (error) {
             console.error("❌ Erro ao deletar orcamento:", error);
             throw error;
@@ -179,15 +186,13 @@ export default class BudgetService extends HttpService {
             // Corpo da requisição conforme especificado
             const payload = {
                 name: budgetData.name,
-                coveragePeriod: budgetData.coveragePeriod,
-                budgetAmount: budgetData.budgetAmount,
-                enabled: budgetData.enabled
+                budgetAmount: budgetData.budgetAmount
             };
 
-            const response = await this.put<ServiceResponse<BudgetListingType>>(`/administration/company/coverage-period-budgets/${id}`, payload);
+            const response = await this.put<ServiceResponse<BudgetListingType>>(`${BUDGETS_ENDPOINT}/${id}`, payload);
             return {
                 status: 'success',
-                data: response.data
+                data: ((response as any).data ?? response) as BudgetListingType
             };
         } catch (error: any) {
             if (error.response) {

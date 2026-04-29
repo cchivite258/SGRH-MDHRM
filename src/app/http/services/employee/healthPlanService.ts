@@ -4,8 +4,10 @@ import type { HealthPlanListingType, ExpensePerProcedureType } from "@/component
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -13,6 +15,15 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const normalizeEmployeeHealthPlan = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  companyHealthPlan: item.companyHealthPlan ?? item.contractHealthPlan,
+  companyHealthPlanId: item.companyHealthPlanId ?? item.contractHealthPlanId
+});
 
 export default class EmployeeHealthPlanService extends HttpService {
   async getHealthPlansByEmployee(
@@ -48,7 +59,7 @@ export default class EmployeeHealthPlanService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'usages,companyHealthPlan';
+      const includesToUse = 'usages,contractHealthPlan';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -59,8 +70,8 @@ export default class EmployeeHealthPlanService extends HttpService {
       const response = await this.get<ApiResponse<HealthPlanListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeEmployeeHealthPlan(item)) as HealthPlanListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -92,7 +103,7 @@ export default class EmployeeHealthPlanService extends HttpService {
             queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
           }
     
-        const includesToUse = 'usages,companyHealthPlan';
+        const includesToUse = 'usages,contractHealthPlan';
         queryParams.push(`includes=${includesToUse}`);
   
         const queryString = queryParams.join('&');
@@ -103,8 +114,8 @@ export default class EmployeeHealthPlanService extends HttpService {
         const response = await this.get<ApiResponse<HealthPlanListingType>>(url);
   
         return {
-          content: response.data ,
-          meta: response.meta || []
+          content: normalizeEmployeeHealthPlan((response.data ?? response.content ?? response) as any) as HealthPlanListingType,
+          meta: getMeta(response)
         };
         
       } catch (error) {
@@ -136,7 +147,7 @@ export default class EmployeeHealthPlanService extends HttpService {
       direction: string = 'asc',
       query_value?: string,
       query_props?: string
-    ): Promise<{ content: ExpensePerProcedureType [], meta: any }> {
+    ): Promise<{ content: ExpensePerProcedureType [], meta: any }> { 
       try {
         const queryParams = [
           `id=${id}`,
@@ -162,8 +173,8 @@ export default class EmployeeHealthPlanService extends HttpService {
         const response = await this.get<ApiResponse<ExpensePerProcedureType[]>>(url);
   
         return {
-          content: response.data || [],
-          meta: response.meta || []
+          content: getContent(response),
+          meta: getMeta(response)
         };
         
       } catch (error) {
@@ -175,5 +186,3 @@ export default class EmployeeHealthPlanService extends HttpService {
 
 
 }
-
-

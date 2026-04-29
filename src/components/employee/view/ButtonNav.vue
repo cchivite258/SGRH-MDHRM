@@ -1,19 +1,12 @@
 <script lang="ts" setup>
 import { computed } from "vue";
+import FormTabs from "@/app/common/components/FormTabs.vue";
 
 const emit = defineEmits(["update:modelValue"]);
 const prop = defineProps({
   modelValue: {
     type: Number,
     default: 1,
-  },
-  employeeId: {
-    type: [String],
-    default: null
-  },
-  basicDataValidated: {
-    type: Boolean,
-    default: false
   }
 });
 
@@ -21,57 +14,24 @@ const step = computed({
   get() {
     return prop.modelValue;
   },
-  set(step: number) {
-    emit("update:modelValue", step);
+  set(step: string | number) {
+    emit("update:modelValue", Number(step));
   },
 });
 
-// Computed para determinar se uma tab deve estar desabilitada
-const isTabDisabled = (tabNumber: number) => {
-  // No modo edição (quando tem institutionId), todas tabs estão habilitadas
-  if (prop.employeeId) return false;
-
-  // No modo criação:
-  // - Tab 1 sempre habilitada
-  // - Tabs 2-4 desabilitadas até basicDataValidated ser true
-  return tabNumber > 1 && !prop.basicDataValidated;
-};
-
+const tabs = [
+  { value: 1, label: 't-general-information' },
+  { value: 3, label: 't-salary-review' },
+  { value: 4, label: 't-dependents' },
+  { value: 5, label: 't-health-plan' },
+  { value: 6, label: 't-expenses-per-procedure' }
+];
 </script>
 
 <template>
-  <div class="d-flex justify-space-between align-center">
-    <v-row no-gutters>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 1 ? 'elevated' : 'tonal'" @click="step = 1" >
-          {{ $t('t-general-information') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2" >
-          {{ $t('t-institution-and-classification') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 3 ? 'elevated' : 'tonal'" @click="step = 3" >
-          {{ $t('t-salary-review') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 4 ? 'elevated' : 'tonal'" @click="step = 4" >
-          {{ $t('t-dependents') }}
-        </v-btn>
-      </v-col>
-       <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 5 ? 'elevated' : 'tonal'" @click="step = 5" >
-          {{ $t('t-health-plan') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="4">
-        <v-btn rounded="0" color="primary" block :variant="step === 6 ? 'elevated' : 'tonal'" @click="step = 6" >
-          {{ $t('t-expenses-per-procedure') }}
-        </v-btn>
-      </v-col>
-    </v-row>
-  </div>
+  <FormTabs
+    v-model="step"
+    :tabs="tabs"
+    aria-label="Navegação do formulário do colaborador"
+  />
 </template>

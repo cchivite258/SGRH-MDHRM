@@ -231,8 +231,11 @@ onBeforeUnmount(() => {
 
   <v-card-actions class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-      {{ $t('t-salary-review') }}
+      <i class="ph-arrow-left me-2" /> {{ $t('t-salary-review') }}
     </v-btn>
 
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
+      {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
+    </v-btn>
   </v-card-actions>
 </template>

@@ -10,6 +10,6 @@ const employeeId = route.params.id;
 </script>
 
 <template>
-  <Breadcrumb :title="t('view-service-provider')" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <View :card-title="t('t-view-service-provider')" />
 </template>

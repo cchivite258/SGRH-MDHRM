@@ -22,16 +22,21 @@ export class CostPerEmployeeReportExporter {
     return locale === 'en' ? 'en-US' : 'pt-PT';
   }
 
+  private static organization(report: CompanyCostPerEmployeeReportType): any {
+    return report.organization;
+  }
+
   private static buildDefaultFileName(
     report: CompanyCostPerEmployeeReportType,
     extension: 'pdf' | 'xlsx' | 'csv'
   ): string {
-    const companyName = (report.company?.name || this.tr('t-cpe-company-fallback'))
+    const organization = this.organization(report);
+    const organizationName = (organization?.name || this.tr('t-cpe-company-fallback'))
       .replace(/\s+/g, '-')
       .toLowerCase();
     const date = new Date().toISOString().split('T')[0];
     const prefix = this.tr('t-cpe-file-prefix');
-    return `${prefix}-${companyName}-${date}.${extension}`;
+    return `${prefix}-${organizationName}-${date}.${extension}`;
   }
 
   private static getCurrentDateTime(): string {
@@ -130,8 +135,9 @@ export class CostPerEmployeeReportExporter {
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    const companyName = report.company?.name || this.tr('t-cpe-company-fallback');
-    pdf.text(companyName, margin, currentY + 14);
+    const organization = this.organization(report);
+    const organizationName = organization?.name || this.tr('t-cpe-company-fallback');
+    pdf.text(organizationName, margin, currentY + 14);
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
@@ -154,6 +160,7 @@ export class CostPerEmployeeReportExporter {
     const summaries = report.invoiceEmployeeSummaries || [];
     const totalEmployees = summaries.length;
     const totalAmount = summaries.reduce((sum, item) => sum + item.totalAmount, 0);
+    const organization = this.organization(report);
 
     const drawCard = (
       x: number,
@@ -235,10 +242,10 @@ export class CostPerEmployeeReportExporter {
       currentY,
       [227, 242, 253],
       this.tr('t-institution'),
-      report.company?.name || this.tr('t-cpe-na'),
+      organization?.name || this.tr('t-cpe-na'),
       [
-        `${this.tr('t-cpe-email')}: ${report.company?.email || this.tr('t-cpe-na')}`,
-        `${this.tr('t-cpe-phone-short')}: ${report.company?.phone || this.tr('t-cpe-na')}`
+        `${this.tr('t-cpe-email')}: ${organization?.email || this.tr('t-cpe-na')}`,
+        `${this.tr('t-cpe-phone-short')}: ${organization?.phone || this.tr('t-cpe-na')}`
       ]
     );
 
@@ -452,14 +459,15 @@ export class CostPerEmployeeReportExporter {
       const workbook = XLSX.utils.book_new();
       const currentDate = this.getCurrentDate();
       const totals = this.calculateTotals(report);
+      const organization = this.organization(report);
 
       const summaryData = [
         [this.tr('t-cpe-report-title').toUpperCase()],
         [''],
-        [`${this.tr('t-cpe-company')}:`, report.company?.name || this.tr('t-cpe-na')],
-        [`${this.tr('t-cpe-email')}:`, report.company?.email || this.tr('t-cpe-na')],
-        [`${this.tr('t-cpe-phone')}:`, report.company?.phone || this.tr('t-cpe-na')],
-        [`${this.tr('t-cpe-address')}:`, report.company?.address || this.tr('t-cpe-na')],
+        [`${this.tr('t-cpe-company')}:`, organization?.name || this.tr('t-cpe-na')],
+        [`${this.tr('t-cpe-email')}:`, organization?.email || this.tr('t-cpe-na')],
+        [`${this.tr('t-cpe-phone')}:`, organization?.phone || this.tr('t-cpe-na')],
+        [`${this.tr('t-cpe-address')}:`, organization?.address || this.tr('t-cpe-na')],
         [''],
         [this.tr('t-cpe-period-section')],
         [`${this.tr('t-cpe-type')}:`, report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')],
@@ -665,14 +673,15 @@ export class CostPerEmployeeReportExporter {
     try {
       const currentDate = this.getCurrentDate();
       const totals = this.calculateTotals(report);
+      const organization = this.organization(report);
 
       const sectionLine = '-'.repeat(80);
       let csvContent = `${this.tr('t-cpe-report-title').toUpperCase()}\n${sectionLine}\n\n`;
       csvContent += `${this.tr('t-cpe-company-information').toUpperCase()}\n${sectionLine}\n`;
-      csvContent += `${this.tr('t-cpe-company')},${report.company?.name || this.tr('t-cpe-na')}\n`;
-      csvContent += `${this.tr('t-cpe-email')},${report.company?.email || this.tr('t-cpe-na')}\n`;
-      csvContent += `${this.tr('t-cpe-phone')},${report.company?.phone || this.tr('t-cpe-na')}\n`;
-      csvContent += `${this.tr('t-cpe-address')},${report.company?.address || this.tr('t-cpe-na')}\n\n`;
+      csvContent += `${this.tr('t-cpe-company')},${organization?.name || this.tr('t-cpe-na')}\n`;
+      csvContent += `${this.tr('t-cpe-email')},${organization?.email || this.tr('t-cpe-na')}\n`;
+      csvContent += `${this.tr('t-cpe-phone')},${organization?.phone || this.tr('t-cpe-na')}\n`;
+      csvContent += `${this.tr('t-cpe-address')},${organization?.address || this.tr('t-cpe-na')}\n\n`;
 
       csvContent += `${this.tr('t-cpe-period-section')}\n${sectionLine}\n`;
       csvContent += `${this.tr('t-cpe-type')},${report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')}\n`;

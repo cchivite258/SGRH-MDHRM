@@ -13,6 +13,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue"
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { useLayoutStore } from "@/store/app";
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -40,6 +41,8 @@ import {
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 // Emits e Props
 const emit = defineEmits<{
@@ -58,6 +61,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   },
   serverErrors: {
     type: Object as () => Record<string, string[]>,
@@ -300,9 +307,8 @@ const onBack = () => {
 /**
  * Valida e envia o formulário
  */
-// Atualize o submitForm para usar as refs
-const submitForm = async () => {
-  if (!form.value) return;
+const validateForm = async () => {
+  if (!form.value) return false;
 
   try {
     // Forçar validação dos date pickers
@@ -322,29 +328,44 @@ const submitForm = async () => {
         errorMsg.value = "";
         alertTimeout = null;
       }, 5000);
-      return;
+      return false;
     }
 
-    emit('validated');
-    emit('onStepChange', 2);
-
+    return true;
   } catch (error) {
     console.error("Validation error:", error);
     errorMsg.value = t('t-validation-error');
+    return false;
   }
 }
+
+// Atualize o submitForm para usar as refs
+const submitForm = async () => {
+  const valid = await validateForm();
+  if (!valid) return;
+
+  emit('validated');
+  emit('onStepChange', 2);
+}
+
+defineExpose({
+  submitForm,
+  validateForm
+});
 
 </script>
 
 <template>
   <v-form ref="form" @submit.prevent="submitForm">
-    <Card :title="$t('t-general-information')" elevation="0" title-class="pb-0">
+    <Card
+      class="employee-general-info-tab"
+      :class="{ 'employee-general-info-tab--dark': isDarkMode }"
+      :title="$t('t-general-information')"
+      elevation="0"
+      title-class="pb-0"
+    >
       <!-- Mensagem de erro -->
-      <transition name="fade">
-        <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
-          density="compact" @click="errorMsg = ''" style="cursor: pointer;" />
-      </transition>
-
+      
       <v-card-text class="pt-0">
         <v-row class="mt-n9">
           <v-col cols="12" lg="12" class="text-right">
@@ -356,6 +377,10 @@ const submitForm = async () => {
             </v-checkbox>
           </v-col>
         </v-row>
+        <transition name="fade">
+        <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-10 mx-5 mt-3" variant="tonal" color="danger"
+          density="compact" @click="errorMsg = ''" style="cursor: pointer;" />
+      </transition>
         <!-- Seção: Informações básicas -->
         <v-row class="mt-n12">
           <v-col cols="12" lg="12">
@@ -612,12 +637,12 @@ const submitForm = async () => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-3">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()" :disabled="loading">
-          {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="submitForm" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitForm" :loading="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
       </v-card-actions>
@@ -626,17 +651,31 @@ const submitForm = async () => {
 </template>
 
 <style scoped>
+.employee-general-info-tab {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+  --employee-custom-input-muted: #94a3b8;
+}
+
+.employee-general-info-tab--dark {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #e2e8f0;
+  --employee-custom-input-muted: #94a3b8;
+}
+
 /* Estilos consistentes com o index.vue */
 :deep(.dp__input) {
   height: 2.63rem;
 }
 
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input.--has-label .m-input-input) {
@@ -645,14 +684,30 @@ const submitForm = async () => {
   padding-top: 0.8rem !important;
 }
 
+:deep(.custom-phone-input .m-input),
+:deep(.custom-phone-input .m-input-wrapper),
+:deep(.custom-phone-input .m-select-input),
+:deep(.custom-phone-input .m-select-list-button) {
+  background-color: var(--employee-custom-input-bg) !important;
+  border-color: var(--employee-custom-input-border) !important;
+}
+
+:deep(.custom-phone-input .m-input-input),
+:deep(.custom-phone-input .m-input-label),
+:deep(.custom-phone-input .m-select-input),
+:deep(.custom-phone-input .m-select-list-button) {
+  color: var(--employee-custom-input-text) !important;
+}
+
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input-input::placeholder) {
   font-size: 0.75rem !important;
+  color: var(--employee-custom-input-muted) !important;
 }
 
 .fade-enter-active,

@@ -13,6 +13,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { useLayoutStore } from "@/store/app";
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -44,6 +45,8 @@ import {
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 // Emits e Props
 const emit = defineEmits<{
@@ -60,6 +63,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  showActions: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -265,7 +272,13 @@ const provinceName = computed(() => {
 </script>
 
 <template>
-  <Card :title="$t('t-general-information')" elevation="0" title-class="pb-0">
+  <Card
+    class="employee-general-info-tab"
+    :class="{ 'employee-general-info-tab--dark': isDarkMode }"
+    :title="$t('t-general-information')"
+    elevation="0"
+    title-class="pb-0"
+  >
     <!-- Mensagem de erro -->
     <transition name="fade">
       <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
@@ -503,9 +516,9 @@ const provinceName = computed(() => {
     </v-card-text>
 
     <!-- Ações do formulário -->
-    <v-card-actions class="d-flex justify-space-between mt-3">
+    <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-3">
       <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()" :disabled="loading">
-        {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
       </v-btn>
 
       <v-btn 
@@ -523,17 +536,31 @@ const provinceName = computed(() => {
 </template>
 
 <style scoped>
+.employee-general-info-tab {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+  --employee-custom-input-muted: #94a3b8;
+}
+
+.employee-general-info-tab--dark {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #e2e8f0;
+  --employee-custom-input-muted: #94a3b8;
+}
+
 /* Estilos consistentes com o index.vue */
 :deep(.dp__input) {
   height: 2.63rem;
 }
 
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input.--has-label .m-input-input) {
@@ -545,11 +572,12 @@ const provinceName = computed(() => {
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input-input::placeholder) {
   font-size: 0.75rem !important;
+  color: var(--employee-custom-input-muted) !important;
 }
 
 .fade-enter-active,

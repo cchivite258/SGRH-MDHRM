@@ -5,22 +5,44 @@ export type ReportType = {
   isChecked?: boolean;
 };
 
+export type ReportOrganizationType = {
+  id?: string | number | null;
+  name: string;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  incomeTaxNumber?: string | null;
+};
+
+export type ReportContractType = ReportOrganizationType & {
+  healthPlanLimit?: string | null;
+  organizationId?: string | number | null;
+  companyDetailsId?: string | number | null;
+  organization?: ReportOrganizationType | null;
+  companyDetails?: ReportOrganizationType | null;
+};
+
 export type CompanyHospitalProceduresBalanceType = {
-  companyId: string | undefined;
+  contractId?: string | number;
   issueDateFrom?: Date;
   issueDateTo?: Date;
   coveragePeriodId?: string | undefined;
-  company?: any;
+  contractName?: string;
+  contract?: ReportContractType;
+  organization?: ReportOrganizationType;
   coveragePeriod?: any;
   procedureExpenses?: any;
   totalAmount?: number;
 };
 
 export type CostPerEmployeeType = {
-  companyId?: string | undefined;
-  company?: any;
+  contractId?: string | number;
+  contract?: any;
   coveragePeriodId?: string | undefined;
   coveragePeriod?: any;
+  organization?: any;
   fromDate?: Date;
   toDate?: Date;
   invoiceEmployeeSummaries?: any;
@@ -35,28 +57,20 @@ export type InvoiceEmployeeSummaryType = {
 }
 
 export type CompanyCostPerEmployeeReportType = {
-  companyId?: string | undefined;
+  contractId?: string | number;
   coveragePeriodId?: string | undefined;
-  company?: {
-    id: number;
-    name: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-    incomeTaxNumber?: string;
-    healthPlanLimit?: string;
-  };
+  contractName?: string;
+  contract?: ReportContractType;
+  organization?: ReportOrganizationType;
   coveragePeriod?: {
     id: number;
     name: string;
     startDate: string;
     endDate: string;
     status?: string;
-    companyId?: number;
+    contractId?: number;
     closingDate?: string;
-    companyHealthPlanId?: string;
+    contractHealthPlanId?: string;
   };
   fromDate?: Date| string;
   toDate?: Date | string;
@@ -64,9 +78,10 @@ export type CompanyCostPerEmployeeReportType = {
 }
 
 export type ServiceProviderReportType = {
-  companyId?: string | number;
+  contractId?: string | number;
   serviceProviderId?: string | number;
   coveragePeriodId?: string | number;
+  contractName?: string;
   serviceProviderName?: string;
   serviceProviderTypeName?: string;
   totalEmployees?: number;
@@ -83,7 +98,7 @@ export type ServiceProviderReportType = {
 };
 
 export type TotalBilledByProviderFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   serviceProviderId?: string | number;
   coveragePeriodId?: string | number;
   startDate?: Date | string;
@@ -94,8 +109,8 @@ export type TotalBilledByProviderReportType = {
   serviceProviderId?: string | number;
   serviceProviderName?: string;
   serviceProviderTypeName?: string;
-  companyId?: string | number;
-  companyName?: string;
+  contractId?: string | number;
+  contractName?: string;
   totalBilled?: number;
   totalEmployees?: number;
   startDate?: Date | string;
@@ -103,7 +118,7 @@ export type TotalBilledByProviderReportType = {
 };
 
 export type TopServiceTypesByClinicFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   startDate?: Date | string;
   endDate?: Date | string;
 };
@@ -111,7 +126,7 @@ export type TopServiceTypesByClinicFilterType = {
 export type TopServiceTypesByClinicReportType = ServiceProviderReportType[];
 
 export type TotalBilledMedicalAssistanceFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   startDate?: Date | string;
   endDate?: Date | string;
 };
@@ -120,8 +135,8 @@ export type TotalBilledMedicalAssistanceItemType = {
   serviceProviderId?: string | number;
   serviceProviderName?: string;
   serviceProviderTypeName?: string;
-  companyId?: string | number;
-  companyName?: string;
+  contractId?: string | number;
+  contractName?: string;
   totalBilled?: number;
   totalEmployees?: number;
   startDate?: Date | string;
@@ -131,7 +146,7 @@ export type TotalBilledMedicalAssistanceItemType = {
 export type TotalBilledMedicalAssistanceReportType = TotalBilledMedicalAssistanceItemType[];
 
 export type ServiceProviderComparisonFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   serviceProvider1Id?: string | number;
   serviceProvider2Id?: string | number;
   coveragePeriodId?: string | number;
@@ -142,7 +157,7 @@ export type ServiceProviderComparisonFilterType = {
 export type ServiceProviderComparisonReportType = ServiceProviderReportType[];
 
 export type CompanyEmployeeLimitsFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   coveragePeriodId?: string | number;
 };
 
@@ -160,11 +175,11 @@ export type CompanyEmployeeLimitEmployeeType = {
   positionName?: string;
   employeeBaseSalary?: number;
   employeeGrossSalary?: number;
-  companyHealthPlanId?: string;
+  contractHealthPlanId?: string;
   healthPlanLimit?: string;
   fixedAmount?: number;
   salaryComponent?: string;
-  companyContributionPercentage?: number;
+  contractContributionPercentage?: number;
   employeeHireDate?: string;
   employeeContractDurationType?: string;
   employeeTerminateDate?: string;
@@ -172,8 +187,8 @@ export type CompanyEmployeeLimitEmployeeType = {
 };
 
 export type CompanyEmployeeLimitsReportType = {
-  companyId?: number | string;
-  companyName?: string;
+  contractId?: number | string;
+  contractName?: string;
   coveragePeriodId?: number | string;
   coveragePeriodName?: string;
   coveragePeriodStartDate?: string;
@@ -182,7 +197,7 @@ export type CompanyEmployeeLimitsReportType = {
 };
 
 export type EmployeeExpenseStatementFilterType = {
-  companyId?: string | number;
+  contractId?: string | number;
   coveragePeriodId?: string | number;
   employeeId?: string;
 };
@@ -207,13 +222,16 @@ export type EmployeeExpenseStatementReportType = {
   employeePositionName?: string;
   employeeDepartmentId?: string | number;
   employeeDepartmentName?: string;
-  companyId?: string | number;
-  companyName?: string;
+  contractId?: string | number;
+  contractName?: string;
   coveragePeriodId?: string | number;
   coveragePeriodName?: string;
   details?: EmployeeExpenseStatementDetailType[];
   totalAmount?: number;
-  totalByCompany?: number;
+  totalByContract?: number;
   totalByEmployee?: number;
   totalToBeDesconted?: number;
+  employeeUsedBalance?: number;
+  employeeRemaingBalance?: number;
+  employeeAllocatedBalance?: number;
 };

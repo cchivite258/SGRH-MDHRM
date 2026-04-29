@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import type { CompanyHospitalProceduresBalanceType } from "@/components/ammReports/types";
 import { formateDate } from "@/app/common/dateFormate";
 import { amountFormate } from '@/app/common/amountFormate';
@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/store/authStore';
 import { ReportExporter } from '@/components/ammReports/list/HospitalProceduresReport/exportUtils'; 
 import { useI18n } from "vue-i18n";
+import { institutionService } from '@/app/http/httpServiceProvider';
 
 const props = defineProps<{
   report: CompanyHospitalProceduresBalanceType
@@ -14,7 +15,13 @@ const props = defineProps<{
 
 const { t, locale } = useI18n();
 const authStore = useAuthStore();
-const company = computed(() => props.report?.company);
+const organizationData = ref<any>(
+  props.report?.organization
+  ?? props.report?.contract?.organization
+  ?? props.report?.contract?.companyDetails
+  ?? undefined
+);
+const organization = computed(() => organizationData.value);
 const coverage = computed(() => props.report?.coveragePeriod);
 const procedures = computed(() => props.report?.procedureExpenses || []);
 const hasCoveragePeriod = computed(() => coverage.value !== null && coverage.value !== undefined);
@@ -55,8 +62,8 @@ const handlePrint = async () => {
     const fileNamePrefix = locale.value === 'en'
       ? 'hospital-expenses-report'
       : 'relatorio-gastos-hospitalares';
-    const companyName = company.value?.name || (locale.value === 'en' ? 'company' : 'empresa');
-    const fileName = `${fileNamePrefix}-${companyName}-${new Date().toISOString().split('T')[0]}`;
+    const organizationName = organization.value?.name || (locale.value === 'en' ? 'organization' : 'organizacao');
+    const fileName = `${fileNamePrefix}-${organizationName}-${new Date().toISOString().split('T')[0]}`;
     
     // Exporta para PDF em vez de abrir a caixa de diálogo de impressão
     await ReportExporter.exportToPDF(props.report, userName.value, {
@@ -81,8 +88,8 @@ const handleExport = async (type: 'pdf' | 'excel' | 'csv') => {
     const fileNamePrefix = locale.value === 'en'
       ? 'hospital-expenses-report'
       : 'relatorio-gastos-hospitalares';
-    const companyName = company.value?.name || (locale.value === 'en' ? 'company' : 'empresa');
-    const fileName = `${fileNamePrefix}-${companyName}-${new Date().toISOString().split('T')[0]}`;
+    const organizationName = organization.value?.name || (locale.value === 'en' ? 'organization' : 'organizacao');
+    const fileName = `${fileNamePrefix}-${organizationName}-${new Date().toISOString().split('T')[0]}`;
     
     switch (type) {
       case 'pdf':
@@ -120,6 +127,32 @@ const exportOptions = [
   { title: 'Excel', icon: 'mdi-file-excel', color: 'green', action: () => handleExport('excel') },
   { title: 'CSV', icon: 'mdi-file-delimited', color: 'blue', action: () => handleExport('csv') },
 ];
+
+onMounted(async () => {
+  if (organizationData.value || !props.report?.contractId) {
+    return;
+  }
+
+  try {
+    const response = await institutionService.getInstitutionById(String(props.report.contractId));
+    const contract = response?.data as any;
+
+    organizationData.value = contract?.organization
+      ?? contract?.companyDetails
+      ?? {
+        id: contract?.organizationId ?? contract?.companyDetailsId,
+        name: contract?.name,
+        description: contract?.description,
+        address: contract?.address,
+        phone: contract?.phone,
+        email: contract?.email,
+        website: contract?.website,
+        incomeTaxNumber: contract?.incomeTaxNumber
+      };
+  } catch (error) {
+    console.error('Erro ao carregar organização do contrato para o preview:', error);
+  }
+});
 </script>
 
 <template>
@@ -196,18 +229,18 @@ const exportOptions = [
             </div>
             <div>
               <div class="text-caption text-grey">{{ $t('t-institution') }}</div>
-              <div class="text-body-1 font-weight-medium">{{ company?.name }}</div>
+              <div class="text-body-1 font-weight-medium">{{ organization?.name }}</div>
             </div>
           </div>
           <v-divider class="my-2"></v-divider>
           <div class="text-caption text-grey">
             <div class="d-flex align-center my-1">
               <v-icon size="small" class="mr-2">mdi-email</v-icon>
-              {{ company?.email }}
+              {{ organization?.email }}
             </div>
             <div class="d-flex align-center my-1">
               <v-icon size="small" class="mr-2">mdi-phone</v-icon>
-              {{ company?.phone }}
+              {{ organization?.phone }}
             </div>
           </div>
         </v-card>

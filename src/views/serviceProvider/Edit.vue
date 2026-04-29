@@ -10,6 +10,6 @@ const serviceProviderId = route.params.id;
 </script>
 
 <template>
-  <Breadcrumb :title="t('edit-service-provider')" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <Create :card-title="t('t-edit-service-provider')" />
 </template>

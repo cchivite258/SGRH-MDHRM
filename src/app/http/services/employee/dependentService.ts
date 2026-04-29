@@ -14,7 +14,7 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
-export default class DependentEmployeeService extends HttpService {
+export default class DependentEmployeeService extends HttpService { 
   async getDependentbyEmployee(
     id: string | null,
     page: number = 0,

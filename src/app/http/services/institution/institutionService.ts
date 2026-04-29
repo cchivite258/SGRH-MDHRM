@@ -15,10 +15,73 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+const CONTRACTS_ENDPOINT = "/administration/contracts";
+const CONTRACTS_INCLUDES = "organization,departments,personsOfContacts,contractHealthPlans,coveragePeriods";
+const CONTRACTS_INCLUDE_QUERY = `includes=${CONTRACTS_INCLUDES}`;
+
 export default class InstitutionService extends HttpService {
+  private normalizeDepartment<T extends Record<string, any>>(department: T, contract: Record<string, any>): T {
+    return {
+      ...department,
+      company: department.company ?? contract
+    };
+  }
+
+  private normalizeContactPerson<T extends Record<string, any>>(person: T, contract: Record<string, any>): T {
+    return {
+      ...person,
+      company: person.company ?? contract
+    };
+  }
+
+  private normalizeHealthPlan<T extends Record<string, any>>(healthPlan: T, contract: Record<string, any>): T {
+    return {
+      ...healthPlan,
+      company: healthPlan.company ?? contract,
+      companyId: healthPlan.companyId ?? healthPlan.contractId ?? contract.id,
+      companyContributionPercentage: healthPlan.companyContributionPercentage ?? healthPlan.contractContributionPercentage,
+      companyHealthPlan: healthPlan.companyHealthPlan ?? healthPlan.contractHealthPlan
+    };
+  }
+
+  private normalizeCoveragePeriod<T extends Record<string, any>>(period: T, contract: Record<string, any>): T {
+    return {
+      ...period,
+      company: period.company ?? contract,
+      companyId: period.companyId ?? period.contractId ?? contract.id,
+      companyHealthPlanId: period.companyHealthPlanId ?? period.contractHealthPlanId
+    };
+  }
+
+  private normalizeInstitution<T extends Record<string, any>>(item: T): T {
+    const organization = item.organization ?? item.companyDetails;
+
+    if (!organization) {
+      return item;
+    }
+
+    return {
+      ...item,
+      companyDetails: item.companyDetails ?? organization,
+      companyDetailsId: item.companyDetailsId ?? item.organizationId ?? organization.id,
+      address: item.address ?? organization.address,
+      phone: item.phone ?? organization.phone,
+      email: item.email ?? organization.email,
+      website: item.website ?? organization.website,
+      incomeTaxNumber: item.incomeTaxNumber ?? organization.incomeTaxNumber,
+      institutionType: item.institutionType ?? organization.institutionType,
+      departments: (item.departments ?? []).map((department: any) => this.normalizeDepartment(department, item)),
+      personsOfContacts: (item.personsOfContacts ?? []).map((person: any) => this.normalizeContactPerson(person, item)),
+      contactPersons: (item.contactPersons ?? item.personsOfContacts ?? []).map((person: any) => this.normalizeContactPerson(person, item)),
+      contractHealthPlans: (item.contractHealthPlans ?? []).map((healthPlan: any) => this.normalizeHealthPlan(healthPlan, item)),
+      healthPlans: (item.healthPlans ?? item.contractHealthPlans ?? []).map((healthPlan: any) => this.normalizeHealthPlan(healthPlan, item)),
+      coveragePeriods: (item.coveragePeriods ?? []).map((period: any) => this.normalizeCoveragePeriod(period, item))
+    };
+  }
+
   private normalizeListResponse<T>(response: ApiResponse<T[]>): { content: T[]; meta: any } {
     return {
-      content: response.content ?? response.data ?? [],
+      content: (response.content ?? response.data ?? []).map((item: any) => this.normalizeInstitution(item)) as T[],
       meta: response.metadata ?? response.meta ?? {
         totalElements: 0,
         page: 0,
@@ -50,7 +113,7 @@ export default class InstitutionService extends HttpService {
       });
 
       if (globalSearch) {
-        params.append("query_props", "name,address,description,phone,email,website,incomeTaxNumber,createdAt");
+        params.append("query_props", "name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,createdAt");
         params.append("query_operator", "OR");
         params.append("query_value", globalSearch);
       }
@@ -62,10 +125,10 @@ export default class InstitutionService extends HttpService {
         params.append("query_operator", logicalOperator);
       }
 
-      params.append("includes", "institutionType,companyDetails");
+      params.append("includes", CONTRACTS_INCLUDES);
 
       const response = await this.get<ApiResponse<InstitutionListingType[]>>(
-        `/administration/companies?${params.toString()}`
+        `${CONTRACTS_ENDPOINT}?${params.toString()}`
       );
 
       return this.normalizeListResponse(response);
@@ -95,10 +158,10 @@ export default class InstitutionService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      queryParams.push("includes=institutionType,companyDetails");
+      queryParams.push(`includes=${CONTRACTS_INCLUDES}`);
 
       const response = await this.get<ApiResponse<InstitutionListingType[]>>(
-        `/administration/companies?${queryParams.join("&")}`
+        `${CONTRACTS_ENDPOINT}?${queryParams.join("&")}`
       );
 
       return this.normalizeListResponse(response);
@@ -112,16 +175,19 @@ export default class InstitutionService extends HttpService {
       const payload = {
         name: institutionData.name,
         description: institutionData.description,
-        companyDetailsId: institutionData.companyDetailsId,
+        organizationId: institutionData.companyDetailsId,
         enabled: institutionData.enabled
       };
       console.log(" payload", payload);
 
-      const response = await this.post<ApiResponse<InstitutionResponseType>>("/administration/companies", payload);
+      const response = await this.post<ApiResponse<InstitutionResponseType>>(
+        `${CONTRACTS_ENDPOINT}?${CONTRACTS_INCLUDE_QUERY}`,
+        payload
+      );
       console.log("Respeonse create", response)
       return {
         status: "success",
-        data: response.data ?? response.content
+        data: this.normalizeInstitution((response.data ?? response.content ?? response) as any) as InstitutionResponseType
       };
     } catch (error: any) {
       if (error.response) {
@@ -146,7 +212,7 @@ export default class InstitutionService extends HttpService {
         title: "Network Error",
         status: 503,
         detail: "Could not connect to server",
-        instance: "/administration/companies"
+        instance: CONTRACTS_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()
@@ -156,7 +222,7 @@ export default class InstitutionService extends HttpService {
 
   async getInstitutionById(id: string): Promise<{ data: InstitutionResponseType }> {
     const response = await this.get<ApiResponse<InstitutionResponseType> | InstitutionResponseType>(
-      `/administration/companies/${id}?includes=companyDetails,institutionType`
+      `${CONTRACTS_ENDPOINT}/${id}?includes=${CONTRACTS_INCLUDES}`
     );
 
     const normalized = (response as ApiResponse<InstitutionResponseType>)?.data
@@ -164,7 +230,7 @@ export default class InstitutionService extends HttpService {
       ?? (response as InstitutionResponseType);
 
     return {
-      data: normalized
+      data: this.normalizeInstitution(normalized as any) as InstitutionResponseType
     };
   }
 
@@ -183,20 +249,23 @@ export default class InstitutionService extends HttpService {
   }
 
   async deleteInstitution(id: string): Promise<void> {
-    await this.delete(`/administration/companies/${id}`);
+    await this.delete(`${CONTRACTS_ENDPOINT}/${id}`);
   }
 
   async updateInstitution(id: string, institutionData: InstitutionInsertType): Promise<InstitutionResponseType> {
     const payload = {
       name: institutionData.name,
       description: institutionData.description,
-      companyDetailsId: institutionData.companyDetailsId,
+      organizationId: institutionData.companyDetailsId,
       enabled: institutionData.enabled
     };
      console.log("payload", payload);
 
 
-    return await this.put<InstitutionResponseType>(`/administration/companies/${id}`, payload);
+    const response = await this.put<InstitutionResponseType>(
+      `${CONTRACTS_ENDPOINT}/${id}?${CONTRACTS_INCLUDE_QUERY}`,
+      payload
+    );
+    return this.normalizeInstitution(response as any) as InstitutionResponseType;
   }
 }
-

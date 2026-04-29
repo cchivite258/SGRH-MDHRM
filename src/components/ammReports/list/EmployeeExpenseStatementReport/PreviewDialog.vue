@@ -1,4 +1,4 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
@@ -30,7 +30,7 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
-const companyId = ref("");
+const contractId = ref("");
 const coveragePeriodId = ref("");
 const employeeId = ref("");
 const localLoading = ref(false);
@@ -61,12 +61,12 @@ const employees = computed(() => {
 });
 
 const requiredRules = {
-  companyId: [(v: string) => !!v || t("t-please-enter-institution")],
+  contractId: [(v: string) => !!v || t("t-please-enter-institution")],
   coveragePeriodId: [(v: string) => !!v || t("t-please-enter-coverage-period")],
   employeeId: [(v: string) => !!v || t("t-please-enter-employee")],
 };
 
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   coveragePeriodId.value = "";
   employeeId.value = "";
   employeeStore.clearEmployeesForDropdown();
@@ -80,7 +80,7 @@ watch(companyId, async (value) => {
 });
 
 const onSubmit = async () => {
-  if (!companyId.value || !coveragePeriodId.value || !employeeId.value) {
+  if (!contractId.value || !coveragePeriodId.value || !employeeId.value) {
     toast.error(t("t-validation-error"));
     return;
   }
@@ -88,7 +88,7 @@ const onSubmit = async () => {
   localLoading.value = true;
 
   const payload: EmployeeExpenseStatementFilterType = {
-    companyId: companyId.value,
+    contractId: contractId.value,
     coveragePeriodId: coveragePeriodId.value,
     employeeId: employeeId.value,
   };
@@ -143,14 +143,14 @@ onMounted(async () => {
                 {{ $t("t-institution") }} <i class="ph-asterisk text-danger" />
               </div>
               <MenuSelect
-                v-model="companyId"
+                v-model="contractId"
                 :items="institutions"
-                :rules="requiredRules.companyId"
+                :rules="requiredRules.contractId"
                 :loading="institutionStore.loading"
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-coverage-period") }} <i class="ph-asterisk text-danger" />
               </div>
@@ -162,7 +162,7 @@ onMounted(async () => {
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-employee") }} <i class="ph-asterisk text-danger" />
               </div>

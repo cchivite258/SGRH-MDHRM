@@ -479,7 +479,7 @@ onMounted(() => {
     </Table>
 
     <!-- Botão para Adicionar Item -->
-    <v-btn color="light" @click="addItem" class="mt-2">
+    <v-btn color="secondary" @click="addItem" class="mt-2">
       <i class="ph-plus me-2"></i> {{ $t("t-add-invoice-item") }}
     </v-btn>
 

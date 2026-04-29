@@ -40,6 +40,7 @@ const getRedirectPath = () => {
 
 const onSignIn = async () => {
   try {
+    
     loading.value = true;
     errorMsg.value = "";
     isSubmitted.value = true;

@@ -23,8 +23,8 @@ const onBreadcrumbClick = (item: Pick<BreadcrumbType, "disabled" | "to">) => {
 };
 </script>
 <template>
-  <div class="d-flex justify-space-between align-center">
-    <h2 class="text-subtitle-1 text-uppercase font-weight-bold">
+  <div class="d-flex align-center" :class="title ? 'justify-space-between' : 'justify-end'">
+    <h2 v-if="title" class="text-subtitle-1 text-uppercase font-weight-bold">
       {{ $t(`t-${title}`) }}
     </h2>
     <v-breadcrumbs :items="items" class="breadcrumb-wrapper">
