@@ -22,6 +22,10 @@ export class ReportExporter {
     return locale === 'en' ? 'en-US' : 'pt-PT';
   }
 
+  private static organization(report: CompanyHospitalProceduresBalanceType): any {
+    return report.organization;
+  }
+
   private static getCurrentDateTime(): string {
     return new Date().toLocaleDateString(this.localeCode(), {
       day: '2-digit',
@@ -40,12 +44,13 @@ export class ReportExporter {
     report: CompanyHospitalProceduresBalanceType,
     extension: 'pdf' | 'xlsx' | 'csv'
   ): string {
-    const companyName = (report.company?.name || this.tr('t-hpr-company-fallback'))
+    const organization = this.organization(report);
+    const organizationName = (organization?.name || this.tr('t-hpr-company-fallback'))
       .replace(/\s+/g, '-')
       .toLowerCase();
     const date = new Date().toISOString().split('T')[0];
     const prefix = this.tr('t-hpr-file-prefix');
-    return `${prefix}-${companyName}-${date}.${extension}`;
+    return `${prefix}-${organizationName}-${date}.${extension}`;
   }
 
   static async exportToPDF(
@@ -111,8 +116,9 @@ export class ReportExporter {
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
-    const companyName = report.company?.name || this.tr('t-hpr-company-fallback');
-    pdf.text(companyName, margin, currentY + 14);
+    const organization = this.organization(report);
+    const organizationName = organization?.name || this.tr('t-hpr-company-fallback');
+    pdf.text(organizationName, margin, currentY + 14);
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
@@ -133,6 +139,7 @@ export class ReportExporter {
     const cardWidth = (contentWidth - (gap * 2)) / 3;
     const cardHeight = 40;
     const hasCoveragePeriod = report.coveragePeriod !== null && report.coveragePeriod !== undefined;
+    const organization = this.organization(report);
 
     const drawCard = (
       x: number,
@@ -214,10 +221,10 @@ export class ReportExporter {
       currentY,
       [227, 242, 253],
       this.tr('t-institution'),
-      report.company?.name || this.tr('t-hpr-na'),
+      organization?.name || this.tr('t-hpr-na'),
       [
-        `${this.tr('t-hpr-email')}: ${report.company?.email || this.tr('t-hpr-na')}`,
-        `${this.tr('t-hpr-phone-short')}: ${report.company?.phone || this.tr('t-hpr-na')}`
+        `${this.tr('t-hpr-email')}: ${organization?.email || this.tr('t-hpr-na')}`,
+        `${this.tr('t-hpr-phone-short')}: ${organization?.phone || this.tr('t-hpr-na')}`
       ]
     );
 
@@ -367,13 +374,14 @@ export class ReportExporter {
     try {
       const workbook = XLSX.utils.book_new();
       const currentDate = this.getCurrentDate();
+      const organization = this.organization(report);
 
       const summaryData = [
         [this.tr('t-hpr-report-title').toUpperCase()],
         [''],
-        [`${this.tr('t-hpr-company')}:`, report.company?.name || this.tr('t-hpr-na')],
-        [`${this.tr('t-hpr-email')}:`, report.company?.email || this.tr('t-hpr-na')],
-        [`${this.tr('t-hpr-phone')}:`, report.company?.phone || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-company')}:`, organization?.name || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-email')}:`, organization?.email || this.tr('t-hpr-na')],
+        [`${this.tr('t-hpr-phone')}:`, organization?.phone || this.tr('t-hpr-na')],
         [''],
         [this.tr('t-hpr-period-section')],
         [`${this.tr('t-hpr-type')}:`, report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')],
@@ -561,12 +569,13 @@ export class ReportExporter {
   ): Promise<void> {
     try {
       const currentDate = this.getCurrentDate();
+      const organization = this.organization(report);
 
       let csvContent = `${this.tr('t-hpr-report-title').toUpperCase()}\n\n`;
       csvContent += `${this.tr('t-hpr-company-information').toUpperCase()}\n`;
-      csvContent += `${this.tr('t-hpr-company')},${report.company?.name || this.tr('t-hpr-na')}\n`;
-      csvContent += `${this.tr('t-hpr-email')},${report.company?.email || this.tr('t-hpr-na')}\n`;
-      csvContent += `${this.tr('t-hpr-phone')},${report.company?.phone || this.tr('t-hpr-na')}\n\n`;
+      csvContent += `${this.tr('t-hpr-company')},${organization?.name || this.tr('t-hpr-na')}\n`;
+      csvContent += `${this.tr('t-hpr-email')},${organization?.email || this.tr('t-hpr-na')}\n`;
+      csvContent += `${this.tr('t-hpr-phone')},${organization?.phone || this.tr('t-hpr-na')}\n\n`;
       csvContent += `${this.tr('t-hpr-period-section')}\n`;
       csvContent += `${this.tr('t-hpr-type')},${report.coveragePeriod ? this.tr('t-coverage-period') : this.tr('t-custom-period')}\n`;
       csvContent += `${this.tr('t-hpr-name')},${report.coveragePeriod?.name || this.tr('t-hpr-na')}\n`;

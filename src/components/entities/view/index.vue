@@ -1,8 +1,11 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Status from "@/app/common/components/Status.vue";
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
 import type { EntityInsertType } from "@/components/entities/types";
@@ -10,6 +13,7 @@ import type { EntityInsertType } from "@/components/entities/types";
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
+const router = useRouter();
 
 const loading = ref(false);
 const entityId = ref<string | null>(
@@ -53,10 +57,21 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+const goBackToList = () => {
+  router.push("/entities/list");
+};
 </script>
 
 <template>
-  <Card :title="$t('t-view-entity')">
+  <FormPageHeader
+    :title="$t('t-view-entity')"
+    subtitle="Consulte os dados institucionais e de contacto da entidade."
+    :show-save="false"
+    @back="goBackToList"
+  />
+
+  <FormCard class="entity-form-section">
     <v-card-text class="pt-0">
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
@@ -113,5 +128,5 @@ onMounted(async () => {
         </v-col>
       </v-row>
     </v-card-text>
-  </Card>
+  </FormCard>
 </template>

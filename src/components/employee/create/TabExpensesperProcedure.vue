@@ -217,7 +217,7 @@ onBeforeUnmount(() => {
   </v-alert>-->
 
   <!-- Tabela de procedimentos -->
-  <v-row v-if="hasActivePlan && props.employeeId" class="mt-5">
+  <v-row v-if="hasActivePlan && props.employeeId" class="mt-3">
     <v-col cols="12" lg="12">
       <v-card-text>
         <v-row>
@@ -288,7 +288,7 @@ onBeforeUnmount(() => {
 
   <v-card-actions class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
-      {{ $t('t-back-to-health-plan') }} 
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-health-plan') }} 
     </v-btn>
   </v-card-actions>
 </template>

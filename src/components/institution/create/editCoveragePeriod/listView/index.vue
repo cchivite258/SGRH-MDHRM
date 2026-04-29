@@ -388,7 +388,7 @@ const formatAmount = (amount: number | undefined) => {
       <Card :title="$t('t-budget-list')" title-class="pt-0">
         <template #title-action>
           <div>
-            <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
+            <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
               <i class="ph-plus-circle me-1" /> {{ $t('t-add-budget') }}
             </v-btn>
           </div>

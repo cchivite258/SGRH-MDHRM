@@ -7,6 +7,6 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <Breadcrumb :title="t('add-service-provider')" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <Create :card-title="t('t-add-service-provider')" />
 </template>

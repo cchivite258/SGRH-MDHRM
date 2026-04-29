@@ -7,13 +7,14 @@
  * 2. Instituição & Classificação
  */
 
-import { ref, reactive, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
 
 // Components
-import ButtonNav from "@/components/serviceProvider/view/ButtonNav.vue";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/serviceProvider/view/TabGeneralInfo.vue";
 import Step2 from "@/components/serviceProvider/view/TabServiceProviderContact.vue";
 // import Step1 from "@/components/view/create/TabGeneralInfo.vue";
@@ -37,6 +38,11 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const serviceProviderStore = useServiceProviderStore();
+const headerTitle = computed(() => props.cardTitle || t('t-view-service-provider'));
+
+const goBackToList = () => {
+  router.push('/service-provider/list');
+};
 
 // Refs
 const step = ref(1);
@@ -235,10 +241,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card>
-    <v-card-text>
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Consulte os dados do provedor de serviço em blocos claros."
+    :loading="loading"
+    :show-save="false"
+    @back="goBackToList"
+  />
+
+  <FormCard class="service-provider-form-section">
       <!-- Navegação entre abas -->
-      <ButtonNav v-model="step" class="mb-2" />
 
       <!-- Indicador de loading -->
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
@@ -250,16 +262,36 @@ onBeforeUnmount(() => {
       </transition>
 
       <!-- Abas do formulário -->
-      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(false)"
-        :loading="loading" />
+      <Step1 @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(false)"
+        :loading="loading" :show-actions="false" />
 
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(true)"
-        :loading="loading" />
-    </v-card-text>
-  </Card>
+  </FormCard>
+
+  <FormCard class="service-provider-form-section">
+      <Step2 @onStepChange="onStepChange" v-model="serviceProviderData" @save="saveServiceProvider(true)"
+        :loading="loading" :show-actions="false" />
+  </FormCard>
 </template>
 
 <style scoped>
+.service-provider-form-tabs {
+  margin-bottom: 24px;
+}
+
+.service-provider-form-section + .service-provider-form-section {
+  margin-top: 24px;
+}
+
+@media (max-width: 767px) {
+  .service-provider-form-tabs {
+    margin-bottom: 18px;
+  }
+
+  .service-provider-form-section + .service-provider-form-section {
+    margin-top: 18px;
+  }
+}
+
 /* Estilos para o date picker */
 :deep(.dp__input) {
   height: 2.63rem;

@@ -7,7 +7,7 @@
  * 2. Instituição & Classificação
  */
 
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -16,9 +16,11 @@ import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // Components
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
-import Step3 from "@/components/employee/view/TabSalaryReview.vue";
+import Step3 from "@/components/employee/create/TabSalaryReview.vue";
 import Step4 from "@/components/employee/create/TabDependents.vue";
 import Step5 from "@/components/employee/create/TabHealthPlan.vue";
 import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
@@ -67,8 +69,19 @@ const getRouteEmployeeId = (): string | null => {
   return null;
 };
 
+const resolveRelationId = (value: unknown): string | number | undefined => {
+  if (value == null) return undefined;
+  if (typeof value === "string" || typeof value === "number") return value;
+  if (typeof value === "object" && "id" in (value as Record<string, unknown>)) {
+    return (value as Record<string, unknown>).id as string | number | undefined;
+  }
+  return undefined;
+};
+
 // Refs
 const step = ref(1);
+const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
+const step2Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
 const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
@@ -77,6 +90,9 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
+const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
+const canUseHeaderSave = computed(() => step.value === 1);
+const headerSaveLabel = computed(() => t('t-save'));
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -142,11 +158,11 @@ const loadEmployeeData = async (id: string) => {
     const data = response.data;
     Object.assign(employeeData, data);
 
-    employeeData.country = data.country?.id;
-    employeeData.province = data.province?.id;
-    employeeData.company = data.company?.id;
-    employeeData.department = data.department?.id;
-    employeeData.position = data.position?.id;
+    employeeData.country = resolveRelationId(data.country) as string | undefined;
+    employeeData.province = resolveRelationId(data.province) as string | undefined;
+    employeeData.company = resolveRelationId(data.company);
+    employeeData.department = resolveRelationId(data.department) as string | undefined;
+    employeeData.position = resolveRelationId(data.position) as string | undefined;
 
     if (employeeData.company) {
       await departmentStore.fetchDepartments(employeeData.company);
@@ -290,6 +306,21 @@ const onSalaryUpdated = (value: number) => {
   employeeData.baseSalary = value;
 };
 
+const goBackToList = () => {
+  router.push('/employee/list');
+};
+
+const onHeaderSave = async () => {
+  if (step.value === 1) {
+    const isGeneralInfoValid = await step1Ref.value?.validateForm();
+    const isInstitutionValid = await step2Ref.value?.validateForm();
+
+    if (!isGeneralInfoValid || !isInstitutionValid) return;
+
+    await saveEmployee({ ...employeeData }, true);
+  }
+};
+
 watch(
   () => employeeData,
   () => {
@@ -306,7 +337,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber);
+      onStepChange(tabNumber === 2 ? 1 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -404,45 +435,137 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card>
-    <v-card-text>
-      <!-- Navegação entre abas -->
-      <ButtonNav v-model="step" class="mb-2" :employee-id="employeeId as string"
-        :basic-data-validated="basicDataValidated" />
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Crie e organize os dados do colaborador em blocos claros."
+    :save-label="headerSaveLabel"
+    :loading="loading"
+    :save-disabled="!canUseHeaderSave"
+    @back="goBackToList"
+    @save="onHeaderSave"
+  />
 
-      <!-- Barra de progresso para carregamento -->
-      <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
+  <ButtonNav v-model="step" class="employee-form-tabs" :employee-id="employeeId as string"
+    :basic-data-validated="basicDataValidated" />
 
-      <!-- Mensagens de erro -->
-      <transition name="fade">
-        <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
-          density="compact" @click="errorMsg = ''" style="cursor: pointer; white-space: pre-line;" />
-      </transition>
+  <!-- Barra de progresso para carregamento -->
+  <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
-      <!-- Abas do formulário -->
-      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
+  <!-- Mensagens de erro -->
+  <transition name="fade">
+    <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
+      density="compact" @click="errorMsg = ''" style="cursor: pointer; white-space: pre-line;" />
+  </transition>
 
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="employeeData"
-        @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
+  <!-- Abas do formulário -->
+  <FormCard v-if="step === 1" class="employee-form-section">
+    <Step1 ref="step1Ref" @onStepChange="onStepChange" v-model="employeeData"
+      @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
+      :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
+  </FormCard>
 
-      <Step3 v-if="step === 3" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-        :allow-edit="true" :previous-step="2" previous-label-key="t-back-to-institution-and-classification"
-        :next-step="4" @salaryUpdated="onSalaryUpdated" />
+  <FormCard v-if="step === 1" class="employee-form-section">
+    <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
+      @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
+      :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
+  </FormCard>
 
-      <Step4 v-if="step === 4" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 3" class="employee-form-section">
+    <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
+      :previous-step="1" previous-label-key="t-general-information" :next-step="4" @salaryUpdated="onSalaryUpdated" />
+  </FormCard>
 
-      <Step5 v-if="step === 5" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 4" class="employee-form-section">
+    <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  </FormCard>
 
-      <Step6 v-if="step === 6" @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 5" class="employee-form-section">
+    <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  </FormCard>
 
-    </v-card-text>
-  </Card>
+  <FormCard v-if="step === 6" class="employee-form-section">
+    <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  </FormCard>
+
+  <div class="employee-form-footer-actions">
+    <v-btn
+      class="employee-form-footer-actions__save"
+      color="secondary"
+      variant="elevated"
+      :loading="loading"
+      :disabled="!canUseHeaderSave"
+      @click="onHeaderSave"
+    >
+      <i class="ph-floppy-disk me-2" />
+      {{ headerSaveLabel }}
+    </v-btn>
+
+    <v-btn
+      class="employee-form-footer-actions__back"
+      color="secondary"
+      variant="outlined"
+      :disabled="loading"
+      @click="goBackToList"
+    >
+      <i class="ph-arrow-left me-2" />
+      {{ $t('t-back-to-list') }}
+    </v-btn>
+  </div>
 </template>
 
 <style scoped>
+.employee-form-section {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+}
+
+.employee-form-tabs {
+  margin-bottom: 24px;
+}
+
+.employee-form-section + .employee-form-section {
+  margin-top: 24px;
+}
+
+.employee-form-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.employee-form-footer-actions__save,
+.employee-form-footer-actions__back {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  min-height: 36px;
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.employee-form-footer-actions__save {
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .employee-form-tabs {
+    margin-bottom: 18px;
+  }
+
+  .employee-form-section + .employee-form-section {
+    margin-top: 18px;
+  }
+
+  .employee-form-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+  }
+}
+
 /* Estilos para o date picker */
 :deep(.dp__input) {
   height: 2.63rem;
@@ -450,11 +573,11 @@ onBeforeUnmount(() => {
 
 /* Estilos para inputs de telefone */
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 /* Ajustes para inputs com label */
@@ -467,7 +590,7 @@ onBeforeUnmount(() => {
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 /* Placeholder */
@@ -509,6 +632,13 @@ onBeforeUnmount(() => {
   to {
     transform: scaleX(1);
   }
+}
+
+.employee-form-section :deep(.form-card--dark),
+.employee-form-section :deep(.form-card--dark .form-card__body) {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #cbd5e1;
 }
 </style>
 

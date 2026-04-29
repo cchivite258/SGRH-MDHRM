@@ -19,5 +19,5 @@ export const listViewHeader: DataTableHeaderType[] = [
   { title: "rate",  key: "rate", sortable: true },
   { title: "description",  key: "description", sortable: true },
   { title: "availability",  key: "enabled", sortable: true },
-  { title: "action", sortable: false },
+  { title: "action", sortable: false, align: "center" },
 ];

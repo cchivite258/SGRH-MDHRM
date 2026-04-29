@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 
-import { ref, reactive, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -8,7 +8,8 @@ import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErr
 import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 
 // Components
-import ButtonNav from "@/components/serviceProvider/create/ButtonNav.vue";
+import FormCard from "@/app/common/components/FormCard.vue";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/serviceProvider/create/TabGeneralInfo.vue";
 import Step2 from "@/components/serviceProvider/create/TabServiceProviderContact.vue";
 
@@ -35,6 +36,8 @@ const serviceProviderStore = useServiceProviderStore();
 
 // Refs
 const step = ref(1);
+const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
+const step2Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
 const serviceProviderId = ref<string | null>(
   typeof route.params.id === 'string' ? route.params.id : Array.isArray(route.params.id) ? route.params.id[0] : null
 );
@@ -44,6 +47,21 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
+const headerTitle = computed(() => props.cardTitle || (serviceProviderId.value ? t('t-edit-service-provider') : t('t-add-service-provider')));
+const headerSaveLabel = computed(() => t('t-save'));
+
+const goBackToList = () => {
+  router.push('/service-provider/list');
+};
+
+const onHeaderSave = async () => {
+  const isGeneralInfoValid = await step1Ref.value?.validateForm();
+  const isContactValid = await step2Ref.value?.validateForm();
+
+  if (!isGeneralInfoValid || !isContactValid) return;
+
+  await saveServiceProvider(true);
+};
 
 // Dados reativos do formulário
 let serviceProviderData = reactive<ServiceProviderInsertType>({
@@ -258,14 +276,19 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card>
-    <v-card-text>
-      <!-- Navegação entre abas -->
-      <ButtonNav v-model="step" class="mb-2" :service-provider-id="serviceProviderId as string"
-        :basic-data-validated="basicDataValidated" />
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Crie e organize os dados do provedor de serviço em blocos claros."
+    :save-label="headerSaveLabel"
+    :loading="loading"
+    @back="goBackToList"
+    @save="onHeaderSave"
+  />
 
-      <!-- Indicador de loading -->
-      <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
+  <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
+      <!-- Navegação entre abas -->
+  <!-- Indicador de loading -->
+  <FormCard class="service-provider-form-section">
 
       <!-- Mensagens de erro -->
       <transition name="fade">
@@ -274,18 +297,72 @@ onBeforeUnmount(() => {
       </transition>
 
       <!-- Abas do formulário -->
-      <Step1 v-if="step === 1" @onStepChange="onStepChange" v-model="serviceProviderData"
+      <Step1 ref="step1Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         @save="saveServiceProvider(false)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
+        :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
 
-      <Step2 v-if="step === 2" @onStepChange="onStepChange" v-model="serviceProviderData"
+  </FormCard>
+
+  <FormCard class="service-provider-form-section mt-5">
+      <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
-        @clear-server-error="clearApiFieldError" />
-    </v-card-text>
-  </Card>
+        :show-actions="false" @clear-server-error="clearApiFieldError" />
+  </FormCard>
+
+  <div class="service-provider-form-footer-actions">
+    <v-btn class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
+      @click="onHeaderSave">
+      <i class="ph-floppy-disk me-2" />
+      {{ headerSaveLabel }}
+    </v-btn>
+
+    <v-btn class="service-provider-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading"
+      @click="goBackToList">
+      <i class="ph-arrow-left me-2" />
+      {{ $t('t-back-to-list') }}
+    </v-btn>
+  </div>
 </template>
 
 <style scoped>
+.service-provider-form-tabs {
+  margin-bottom: 24px;
+}
+
+.service-provider-form-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.service-provider-form-footer-actions__save,
+.service-provider-form-footer-actions__back {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  min-height: 36px;
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.service-provider-form-footer-actions__save {
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .service-provider-form-tabs {
+    margin-bottom: 18px;
+  }
+
+  .service-provider-form-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+  }
+}
+
 /* Estilos para o date picker */
 :deep(.dp__input) {
   height: 2.63rem;

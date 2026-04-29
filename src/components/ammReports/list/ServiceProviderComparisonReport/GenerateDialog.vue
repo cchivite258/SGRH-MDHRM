@@ -1,4 +1,4 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
@@ -28,7 +28,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 const serviceProvider1Id = ref("");
 const serviceProvider2Id = ref("");
-const companyId = ref("");
+const contractId = ref("");
 const filterType = ref("");
 const coveragePeriodId = ref("");
 const startDate = ref<Date>(new Date());
@@ -76,7 +76,7 @@ const requiredRules = {
     (v: string) => !!v || t("t-please-enter-service-provider"),
     (v: string) => v !== serviceProvider1Id.value || t("t-spc-providers-must-differ")
   ],
-  companyId: [(v: string) => !!v || t("t-please-enter-institution")],
+  contractId: [(v: string) => !!v || t("t-please-enter-institution")],
   filterType: [(v: string) => !!v || t("t-please-select-filter")],
   coveragePeriodId: [
     (v: string) => {
@@ -98,7 +98,7 @@ const requiredRules = {
   ],
 };
 
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   if (!value) return;
   filterType.value = "";
   coveragePeriodId.value = "";
@@ -139,7 +139,7 @@ const onSubmit = async (exportType: ExportType = "pdf") => {
     }
 
     const payload: ServiceProviderComparisonFilterType = {
-      companyId: companyId.value,
+      contractId: contractId.value,
       serviceProvider1Id: serviceProvider1Id.value,
       serviceProvider2Id: serviceProvider2Id.value,
       coveragePeriodId: filterType.value === "1" ? coveragePeriodId.value : undefined,
@@ -264,14 +264,14 @@ onMounted(async () => {
                 {{ $t("t-institution") }} <i class="ph-asterisk text-danger" />
               </div>
               <MenuSelect
-                v-model="companyId"
+                v-model="contractId"
                 :items="institutions"
-                :rules="requiredRules.companyId"
+                :rules="requiredRules.contractId"
                 :loading="institutionStore.loading"
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-filter-by") }} <i class="ph-asterisk text-danger" />
               </div>

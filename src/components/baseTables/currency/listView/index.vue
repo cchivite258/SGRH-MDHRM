@@ -1,66 +1,51 @@
 <script lang="ts" setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
-import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
-import Table from "@/app/common/components/Table.vue";
-import { listViewHeader } from "@/components/baseTables/currency/listView/utils";
-import { CurrencyListingType, CurrencyInsertType } from "@/components/baseTables/currency/types";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useToast } from "vue-toastification";
+import { useI18n } from "vue-i18n";
+import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
+import ListingSearchCard from "@/app/common/components/listing/ListingSearchCard.vue";
 import Status from "@/app/common/components/Status.vue";
 import TableAction from "@/app/common/components/TableAction.vue";
 import CreateUpdateCurrencyModal from "@/components/baseTables/currency/CreateUpdateCurrencyModal.vue";
 import ViewCurrencyModal from "@/components/baseTables/currency/ViewCurrencyModal.vue";
-import { formateDate } from "@/app/common/dateFormate";
-import { useRouter } from "vue-router";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import { currencyService } from "@/app/http/httpServiceProvider";
 import { useCurrencyStore } from "@/store/baseTables/currencyStore";
-import { useToast } from 'vue-toastification';
-import { useI18n } from "vue-i18n";
-import DataTableServer from "@/app/common/components/DataTableServer.vue";
-import { CurrencyOption } from "@/components/baseTables/currency/types";
+import { CurrencyListingType, CurrencyOption } from "@/components/baseTables/currency/types";
+import { listViewHeader } from "@/components/baseTables/currency/listView/utils";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 
-
 const { t } = useI18n();
-//criacao da mensagem toast
 const toast = useToast();
-
 const currencyStore = useCurrencyStore();
 
-const router = useRouter();
 const dialog = ref(false);
 const viewDialog = ref(false);
 const currencyData = ref<CurrencyListingType | null>(null);
-
 const deleteDialog = ref(false);
 const deleteId = ref<string | null>(null);
 const deleteLoading = ref(false);
-const isSelectAll = ref(false);
-
-// Campos para pesquisa
 const searchQuery = ref("");
 const searchProps = "name,symbol";
-
-// Paginação
 const itemsPerPage = ref(10);
-const loadingList = computed(() => currencyStore.loading);
-const totalItems = computed(() => currencyStore.pagination.totalElements);
+const currentPage = ref(1);
 const selectedCurrencies = ref<any[]>([]);
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
+const loadingList = computed(() => currencyStore.loading);
+const totalItems = computed(() => currencyStore.pagination.totalElements);
+const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+
 const handleApiError = (error: any) => {
-  console.error(" ERRO COMPLETO:", JSON.stringify(error, null, 2));
-  console.error(" RESPONSE:", error?.response);
   if (alertTimeout) {
     clearTimeout(alertTimeout);
     alertTimeout = null;
   }
 
   const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
-
   errorMsg.value = message;
-
-  console.log("errorMsg.value ==>", errorMsg.value)
 
   alertTimeout = setTimeout(() => {
     errorMsg.value = "";
@@ -75,18 +60,10 @@ onBeforeUnmount(() => {
   }
 });
 
+watch(selectedCurrencies, newSelection => {
+  console.log("Moedas selecionadas:", newSelection);
+}, { deep: true });
 
-// Carregamento inicial
-onMounted(() => {
-  fetchCurrencies({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: "" });
-});
-
-// Observa mudanças nos funcionários selecionados
-watch(selectedCurrencies, (newSelection) => {
-  console.log('Funcionários selecionados:', newSelection)
-}, { deep: true })
-
-// Função de carregamento da tabela
 const fetchCurrencies = async ({ page, itemsPerPage, sortBy, search }: CurrencyOption) => {
   await currencyStore.fetchCurrencies(
     page - 1,
@@ -137,25 +114,20 @@ const onSubmit = async (data: CurrencyListingType, callbacks?: {
       await currencyService.createCurrency(data);
       toast.success(t('t-toast-message-created'));
     } else {
-      await currencyService.updateCurrency((data.id), data);
+      await currencyService.updateCurrency(data.id, data);
       toast.success(t('t-toast-message-update'));
     }
 
     await fetchCurrencies({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
-
-    // Callback de sucesso (fecha a modal)
     callbacks?.onSuccess?.();
   } catch (error) {
-    getApiErrorMessages(error, t('t-message-save-error')).forEach((message) => toast.error(message));
+    getApiErrorMessages(error, t('t-message-save-error')).forEach(message => toast.error(message));
     handleApiError(error);
   } finally {
-    // Callback para desativar o loading
     callbacks?.onFinally?.();
   }
 };
 
-
-//Consulta do utilizador
 watch(viewDialog, (newVal: boolean) => {
   if (!newVal) {
     currencyData.value = null;
@@ -172,19 +144,17 @@ const onViewClick = (data: CurrencyListingType | null) => {
     };
   } else {
     currencyData.value = data;
-
   }
 
   viewDialog.value = true;
 };
 
-
-//Delete do utilizador
 watch(deleteDialog, (newVal: boolean) => {
   if (!newVal) {
     deleteId.value = null;
   }
 });
+
 const onDelete = (id: string) => {
   deleteId.value = id;
   deleteDialog.value = true;
@@ -195,85 +165,85 @@ const onConfirmDelete = async () => {
 
   try {
     await currencyService.deleteCurrency(deleteId.value!);
-
     await fetchCurrencies({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
-
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach(message => toast.error(message));
     handleApiError(error);
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
   }
-
 };
-
 </script>
-<template>
-  <v-card>
-    <v-card-title class="mt-2">
-      <v-row justify="space-between" align="center" no-gutters>
-        <!-- Novo texto à esquerda -->
-        <v-col lg="auto" class="d-flex align-center">
-          <span class="text-body-1 font-weight-bold">{{ $t('t-currency-list') }}</span>
-        </v-col>
 
-        <!-- Container dos elementos à direita -->
-        <v-col lg="8" class="d-flex justify-end">
-          <v-row justify="end" align="center" no-gutters>
-            <v-col lg="4" class="me-3">
-              <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-currency')" />
-            </v-col>
-            <v-col lg="auto">
-              <v-btn color="secondary" @click="onCreateEditClick(null)">
-                <i class="ph-plus-circle me-1" /> {{ $t('t-add-currency') }}
-              </v-btn>
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
-    </v-card-title>
-    <v-card-text class="mt-2">
-      <DataTableServer v-model="selectedCurrencies" :headers="listViewHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-        :items="currencyStore.currencies" :items-per-page="itemsPerPage" :total-items="totalItems"
-        :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" item-value="id"
-        @load-items="fetchCurrencies">
-        <template #body="{ items }">
-          <tr v-for="item in items as CurrencyListingType[]" :key="item.id" height="50">
-            <td>
-              <v-checkbox :model-value="selectedCurrencies.some(selected => selected.id === item.id)"
-                @update:model-value="toggleSelection(item)" hide-details density="compact" />
-            </td>
-            <td style="padding-right: 200px;">{{ item.name }}</td>
-            <td style="padding-right: 200px;">{{ item.symbol }}</td>
-            <td>
-              <Status :status="item.enabled ? 'enabled' : 'disabled'" />
-            </td> 
-            <td>
-              <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
-                @onDelete="onDelete(item.id)" />
-            </td>
-          </tr>
-        </template>
-        <template v-if="!currencyStore.currencies.length" #body>
-          <tr>
-            <td :colspan="listViewHeader.length + 2" class="text-center py-10">
-              <v-avatar size="80" color="primary" variant="tonal">
-                <i class="ph-magnifying-glass" style="font-size: 30px" />
-              </v-avatar>
-              <div class="text-subtitle-1 font-weight-bold mt-3">
-                {{ $t('t-search-not-found-message') }}
-              </div>
-            </td>
-          </tr>
-        </template>
-      </DataTableServer>
-    </v-card-text>
-  </v-card>
+<template>
+  <ListingPageShell
+    class="base-table-listing-page"
+    :title="$t('t-currency-list')"
+    subtitle="Consulte, pesquise e faça a gestão das moedas registadas."
+    :action-label="$t('t-add-currency')"
+    :page="currentPage"
+    :items-per-page="itemsPerPage"
+    :total-items="totalItems"
+    :total-pages="totalPages"
+    @update:page="currentPage = $event"
+    @action="onCreateEditClick(null)"
+  >
+    <template #filters>
+      <ListingSearchCard v-model="searchQuery" :placeholder="$t('t-search-for-currency')" />
+    </template>
+
+    <template #pagination-summary>
+      {{ $t("t-showing") }}
+      <b>{{ (currentPage - 1) * itemsPerPage + 1 }}-{{ Math.min(currentPage * itemsPerPage, totalItems) }}</b>
+      {{ $t("t-of") }}
+      <b>{{ totalItems }}</b>
+      {{ $t("t-results") }}
+    </template>
+
+    <DataTableServer v-model="selectedCurrencies" v-model:page="currentPage"
+      :headers="listViewHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
+      :items="currencyStore.currencies" :items-per-page="itemsPerPage" :total-items="totalItems"
+      :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" item-value="id"
+      :show-pagination="false" @load-items="fetchCurrencies">
+      <template #body="{ items }">
+        <tr v-for="item in items as CurrencyListingType[]" :key="item.id" class="base-table-listing-page__row">
+          <td data-label="">
+            <v-checkbox :model-value="selectedCurrencies.some(selected => selected.id === item.id)"
+              @update:model-value="toggleSelection(item)" hide-details density="compact" />
+          </td>
+          <td data-label="Nome" class="base-table-listing-page__primary-cell">{{ item.name }}</td>
+          <td data-label="Símbolo">{{ item.symbol }}</td>
+          <td data-label="Disponibilidade">
+            <Status :status="item.enabled ? 'enabled' : 'disabled'" />
+          </td>
+          <td data-label="Acção" class="base-table-listing-page__actions-cell">
+            <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+          </td>
+        </tr>
+      </template>
+
+      <template v-if="!currencyStore.currencies.length" #body>
+        <tr>
+          <td :colspan="listViewHeader.length + 1" class="base-table-listing-page__empty-state text-center py-10">
+            <v-avatar size="72" color="secondary" variant="tonal" class="base-table-listing-page__empty-avatar">
+              <i class="ph-magnifying-glass" style="font-size: 30px" />
+            </v-avatar>
+            <div class="base-table-listing-page__empty-title mt-3">
+              {{ $t('t-search-not-found-message') }}
+            </div>
+            <div class="base-table-listing-page__empty-subtitle mt-1">
+              Ajuste a pesquisa e tente novamente.
+            </div>
+          </td>
+        </tr>
+      </template>
+    </DataTableServer>
+  </ListingPageShell>
 
   <CreateUpdateCurrencyModal v-if="currencyData" v-model="dialog" :data="currencyData" :error="errorMsg"
-    @onSubmit="onSubmit" />
+    @onSubmit="onSubmit"/>
 
   <ViewCurrencyModal v-if="currencyData" v-model="viewDialog" :data="currencyData" />
 
@@ -281,4 +251,106 @@ const onConfirmDelete = async () => {
     :loading="deleteLoading" />
 </template>
 
+<style scoped>
+.base-table-listing-page :deep(.data-table-server-wrapper) {
+  background: #ffffff;
+  border: 1px solid #e8edf3;
+  border-radius: 14px;
+  overflow: hidden;
+}
 
+.base-table-listing-page :deep(.v-table),
+.base-table-listing-page :deep(.v-data-table) {
+  border-radius: 14px;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper) {
+  overflow-x: hidden !important;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper > table > thead),
+.base-table-listing-page :deep(.v-data-table thead) {
+  background: #f3f6fa;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper > table > thead > tr > th),
+.base-table-listing-page :deep(.v-data-table-header th),
+.base-table-listing-page :deep(.v-data-table__th) {
+  background-color: #f3f6fa !important;
+  border-bottom: 1px solid #d8e1ec;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  text-transform: none;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper > table) {
+  table-layout: auto;
+  width: 100%;
+}
+
+.base-table-listing-page :deep(.v-data-table__th .v-data-table-header__content) {
+  align-items: center;
+  color: inherit;
+  font-weight: 700;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper > table > thead > tr > th:last-child),
+.base-table-listing-page :deep(.v-data-table-header th:last-child),
+.base-table-listing-page :deep(.v-data-table__th:last-child) {
+  text-align: center !important;
+}
+
+.base-table-listing-page :deep(.v-table__wrapper > table > thead > tr > th:last-child .v-data-table-header__content),
+.base-table-listing-page :deep(.v-data-table-header th:last-child .v-data-table-header__content),
+.base-table-listing-page :deep(.v-data-table__th:last-child .v-data-table-header__content) {
+  justify-content: center;
+}
+
+.base-table-listing-page :deep(.v-data-table__tr td) {
+  border-bottom: 1px solid #eef2f7;
+  color: #334155;
+  font-size: 0.8rem;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  vertical-align: middle;
+}
+
+.base-table-listing-page__primary-cell {
+  color: #334155;
+  font-weight: 500;
+}
+
+.base-table-listing-page__actions-cell {
+  white-space: nowrap;
+}
+
+.base-table-listing-page :deep(.base-table-listing-page__actions-cell .d-flex) {
+  gap: 6px;
+}
+
+.base-table-listing-page :deep(.base-table-listing-page__actions-cell .v-btn) {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: none;
+}
+
+.base-table-listing-page__empty-avatar {
+  border: 1px solid #e2e8f0;
+}
+
+.base-table-listing-page__empty-title {
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.base-table-listing-page__empty-subtitle {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+</style>

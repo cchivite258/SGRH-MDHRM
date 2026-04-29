@@ -32,7 +32,7 @@ const coveragePeriodStore = useCoveragePeriodStore();
 const institutionStore = useInstitutionStore();
 
 // Form fields
-const companyId = ref("");
+const contractId = ref("");
 const filterType = ref("");
 const issueDateFrom = ref<Date | undefined >(new Date());
 const issueDateTo = ref<Date | undefined >(new Date());
@@ -86,7 +86,7 @@ const userName = computed(() => {
 -------------------------- */
 
 const requiredRules = {
-  companyId: [(v: string) => !!v || t('t-please-enter-institution')],
+  contractId: [(v: string) => !!v || t('t-please-enter-institution')],
   filterType: [(v: string) => !!v || t('t-please-select-filter')],
   coveragePeriodId: [
     (v: string) => {
@@ -118,7 +118,7 @@ const requiredRules = {
    WATCHERS
 -------------------------- */
 
-watch(companyId, async (value) => {
+watch(contractId, async (value) => {
   if (!value) return;
   filterType.value = "";
   coveragePeriodId.value = "";
@@ -163,7 +163,7 @@ const clearTimeoutFunc = () => {
 
 // Reset form
 const resetForm = () => {
-  companyId.value = "";
+  contractId.value = "";
   filterType.value = "";
   coveragePeriodId.value = "";
   issueDateFrom.value = new Date();
@@ -187,7 +187,7 @@ const onSubmit = async (exportType: ExportType = 'pdf') => {
 
   try {
     const payload: CompanyHospitalProceduresBalanceType = {
-      companyId: companyId.value,
+      contractId: contractId.value,
       issueDateFrom: filterType.value === "2" && issueDateFrom.value ? issueDateFrom.value : undefined,
       issueDateTo: filterType.value === "2" && issueDateTo.value ? issueDateTo.value : undefined,
       coveragePeriodId: filterType.value === "1" ? coveragePeriodId.value : undefined,
@@ -213,8 +213,8 @@ const onSubmit = async (exportType: ExportType = 'pdf') => {
     }
 
     // Nome do arquivo
-    const companyName = institutions.value.find(inst => inst.value === companyId.value)?.label || 'empresa';
-    const fileName = `relatorio-gastos-${companyName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
+    const contractName = institutions.value.find(inst => inst.value === contractId.value)?.label || 'contrato';
+    const fileName = `relatorio-gastos-${contractName.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`;
     
     //console.log('Exportando PDF para:', fileName);
     //console.log('Nome do usuário usado:', userName.value);
@@ -305,15 +305,15 @@ onUnmounted(() => {
                 {{ $t('t-institution') }} <i class="ph-asterisk text-danger" />
               </div>
               <MenuSelect 
-                v-model="companyId" 
+                v-model="contractId" 
                 :items="institutions" 
-                :rules="requiredRules.companyId"
+                :rules="requiredRules.contractId"
                 :loading="institutionStore.loading" 
               />
             </v-col>
 
             <!-- FILTRAR POR -->
-            <v-col cols="12" class="mt-n6" v-if="companyId">
+            <v-col cols="12" class="mt-n6" v-if="contractId">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-filter-by') }} <i class="ph-asterisk text-danger" />
               </div>

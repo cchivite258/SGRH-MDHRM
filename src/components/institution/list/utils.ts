@@ -55,7 +55,7 @@ export const institutionHeader: DataTableHeaderType[] = [
   { title: "phone-number", key: "phone", sortable: true }, 
   { title: "created-date", key: "createdAt", sortable: true }, 
   { title: "is-enabled", key: "enabled", sortable: true }, 
-  { title: "action", sortable: false },
+  { title: "action", sortable: false, align: "center" },
 ];
 
 export const invoicesList = [

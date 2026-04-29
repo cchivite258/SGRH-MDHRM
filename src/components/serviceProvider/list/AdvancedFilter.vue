@@ -1,11 +1,11 @@
 <template>
-    <v-card class="mb-4">
-        <v-card-text class="pa-4">
+    <v-card class="listing-advanced-filter-card">
+        <v-card-text class="listing-advanced-filter-card__body">
             <QuerySearch v-model="globalSearch" :placeholder="$t('t-service-provider-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
-                @update:model-value="onGlobalSearch" class="mb-2" />
+                @update:model-value="onGlobalSearch" class="listing-advanced-filter-card__search" />
 
-            <v-expansion-panels class="expansion-panels expansion-panel mt-5">
+            <v-expansion-panels class="expansion-panels expansion-panel listing-advanced-filter-card__panels">
                 <v-expansion-panel>
                     <v-expansion-panel-title class="text-caption font-weight-medium px-2">
                         <i class="ph-faders-horizontal me-2"></i>
@@ -17,13 +17,13 @@
                             <v-radio :label="t('t-and-operator')" value="AND" class="text-caption mr-2"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-and-operator') }}</span>
+                                    <span class="listing-advanced-filter-card__radio-label">{{ t('t-and-operator') }}</span>
                                 </template>
                             </v-radio>
                             <v-radio :label="t('t-or-operator')" value="OR" class="text-caption"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-or-operator') }}</span>
+                                    <span class="listing-advanced-filter-card__radio-label">{{ t('t-or-operator') }}</span>
                                 </template>
                             </v-radio>
                         </v-radio-group>
@@ -42,6 +42,12 @@
                             <v-col cols="12" sm="4" class="py-1 px-1" v-if="isDateField(filter.prop)">
                                 <VueDatePicker v-model="filter.value" :teleport="true" :placeholder="$t('t-enter-date')"
                                     :enable-time-picker="false" format="dd/MM/yyyy" />
+                            </v-col>
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isSelectField(filter.prop)">
+                                <MenuSelect v-model="filter.value" :items="getSelectOptionsForField(filter.prop)"
+                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
+                                    density="compact" variant="outlined"
+                                    :loading="providerTypeStore.loading" />
                             </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
@@ -84,20 +90,23 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useServiceProviderStore } from '@/store/serviceProvider/serviceProviderStore';
+import { useProviderTypeStore } from '@/store/baseTables/providerTypeStore';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
+import type { ProviderTypeListing } from '@/components/baseTables/providerType/types';
 
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const serviceProviderStore = useServiceProviderStore();
+const providerTypeStore = useProviderTypeStore();
 
 const QUERY_KEYS = {
     search: 'search',
@@ -106,12 +115,18 @@ const QUERY_KEYS = {
 } as const;
 
 type LogicalOperator = 'AND' | 'OR';
-type FilterType = 'text' | 'boolean' | 'date';
+type FilterType = 'text' | 'boolean' | 'date' | 'select';
+
+interface SelectOption {
+    text: string;
+    value: string;
+}
 
 interface FilterableField {
     text: string;
     value: string;
     type: FilterType;
+    options?: SelectOption[];
 }
 
 interface AdvancedFilter {
@@ -135,6 +150,7 @@ let routeSyncInProgress = false;
 
 const filterableFields = ref<FilterableField[]>([
     { text: t('t-name'), value: 'name', type: 'text' },
+    { text: t('t-provider-type'), value: 'providerTypes.name', type: 'select', options: [] },
     { text: t('t-description'), value: 'description', type: 'text' },
     { text: t('t-address'), value: 'address', type: 'text' },
     { text: t('t-phone'), value: 'phone', type: 'text' },
@@ -180,6 +196,13 @@ const booleanOptions = ref([
 
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
+const providerTypeOptions = computed<SelectOption[]>(() =>
+    (providerTypeStore.enabledProviderTypes as ProviderTypeListing[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
 const normalizeRouteQueryValue = (value: unknown): string => {
     if (Array.isArray(value)) return String(value[0] ?? '');
     return typeof value === 'string' ? value : '';
@@ -190,6 +213,8 @@ const getFieldDefinition = (field: string): FilterableField | undefined =>
 
 const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
 const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
+const isSelectField = (field: string) => getFieldDefinition(field)?.type === 'select';
+const getSelectOptionsForField = (field: string) => getFieldDefinition(field)?.options ?? [];
 
 const getOperatorsForField = (field: string) => {
     const fieldDef = getFieldDefinition(field);
@@ -197,6 +222,7 @@ const getOperatorsForField = (field: string) => {
 
     if (fieldDef.type === 'boolean') return booleanOperators;
     if (fieldDef.type === 'date') return dateOperators;
+    if (fieldDef.type === 'select') return booleanOperators;
     return textOperators;
 };
 
@@ -253,6 +279,8 @@ const onFieldChange = (index: number) => {
 
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
+    } else if (isSelectField(field)) {
+        advancedFilters.value[index].value = getSelectOptionsForField(field)[0]?.value || '';
     } else if (isDateField(field)) {
         advancedFilters.value[index].value = new Date();
     } else {
@@ -275,6 +303,9 @@ const hasIncompleteFilters = computed(() =>
     advancedFilters.value.some(filter => !isFilterComplete(filter))
 );
 
+const sanitizeFilterTextValue = (value: string) =>
+    value.split(',')[0]?.trim() ?? '';
+
 const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
     return advancedFilters.value
         .filter(isFilterComplete)
@@ -284,6 +315,8 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
 
             if (isDateField(prop) && value instanceof Date) {
                 value = format(value, 'yyyy-MM-dd');
+            } else if (typeof value === 'string') {
+                value = sanitizeFilterTextValue(value);
             }
 
             return {
@@ -293,6 +326,30 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
             };
         });
 };
+
+watch(
+    providerTypeOptions,
+    (options) => {
+        filterableFields.value = filterableFields.value.map((field) =>
+            field.value === 'providerTypes.name'
+                ? { ...field, options }
+                : field
+        );
+
+        advancedFilters.value = advancedFilters.value.map((filter) => {
+            if (filter.prop !== 'providerTypes.name') return filter;
+            if (typeof filter.value === 'string' && options.some((option) => option.value === filter.value)) {
+                return filter;
+            }
+
+            return {
+                ...filter,
+                value: options[0]?.value || ''
+            };
+        });
+    },
+    { immediate: true }
+);
 
 const syncStateToRoute = async (filtersForStore: StoreAdvancedFilter[]) => {
     const nextQuery = {
@@ -395,9 +452,77 @@ watch(
     { immediate: true, deep: true }
 );
 
+onMounted(async () => {
+    if (!providerTypeStore.provider_types.length) {
+        await providerTypeStore.fetchProviderTypes(0, 10000000);
+    }
+});
+
 onBeforeUnmount(() => {
     if (globalSearchDebounce) {
         clearTimeout(globalSearchDebounce);
     }
 });
 </script>
+
+<style scoped>
+.listing-advanced-filter-card {
+    border: 1px solid #e4eaf2;
+    border-radius: 16px !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05) !important;
+}
+
+.listing-advanced-filter-card__body {
+    padding: 18px 18px 16px;
+    font-family: inherit;
+}
+
+.listing-advanced-filter-card__search {
+    margin-bottom: 0;
+}
+
+.listing-advanced-filter-card__panels {
+    margin-top: 14px;
+}
+
+.listing-advanced-filter-card :deep(.v-expansion-panel) {
+    border: 1px solid #edf2f7;
+    border-radius: 12px !important;
+    box-shadow: none;
+}
+
+.listing-advanced-filter-card :deep(.v-expansion-panel-title) {
+    min-height: 46px;
+}
+
+.listing-advanced-filter-card :deep(.v-field__input),
+.listing-advanced-filter-card :deep(.v-label),
+.listing-advanced-filter-card :deep(.v-field__field),
+.listing-advanced-filter-card :deep(.v-select__selection),
+.listing-advanced-filter-card :deep(input),
+.listing-advanced-filter-card :deep(.v-btn),
+.listing-advanced-filter-card :deep(.v-expansion-panel-title__overlay),
+.listing-advanced-filter-card :deep(.v-expansion-panel-title__icon),
+.listing-advanced-filter-card :deep(.v-expansion-panel-text),
+.listing-advanced-filter-card :deep(.v-radio .v-label) {
+    font-family: inherit !important;
+    font-size: 0.76rem !important;
+}
+
+.listing-advanced-filter-card :deep(.v-expansion-panel-title) {
+    font-family: inherit !important;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.listing-advanced-filter-card__radio-label {
+    font-family: inherit;
+    font-size: 0.76rem;
+}
+
+@media (max-width: 767px) {
+    .listing-advanced-filter-card__body {
+        padding: 14px 14px 12px;
+    }
+}
+</style>

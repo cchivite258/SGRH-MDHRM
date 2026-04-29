@@ -4,6 +4,6 @@ import EntitiesList from "@/components/entities/list/index.vue";
 </script>
 
 <template>
-  <Breadcrumb title="entity-list" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <EntitiesList />
 </template>

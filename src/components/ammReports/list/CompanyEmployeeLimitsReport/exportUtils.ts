@@ -124,7 +124,7 @@ export class CompanyEmployeeLimitsReportExporter {
     const limitType = String(employee.healthPlanLimit || "");
     const fixed = Number(employee.fixedAmount || 0);
     const component = String(employee.salaryComponent || "");
-    const perc = Number(employee.companyContributionPercentage || 0);
+    const perc = Number(employee.contractContributionPercentage || 0);
     const base = component === "GROSS_SALARY"
       ? Number(employee.employeeGrossSalary || 0)
       : Number(employee.employeeBaseSalary || 0);
@@ -190,7 +190,7 @@ export class CompanyEmployeeLimitsReportExporter {
 
     const limitType = String(employee.healthPlanLimit || "");
     const component = String(employee.salaryComponent || "");
-    const percentage = Number(employee.companyContributionPercentage || 0);
+    const percentage = Number(employee.contractContributionPercentage || 0);
 
     if (limitType === "FIXED_AMOUNT") return this.tr("t-cel-limit-fixed-amount");
 
@@ -253,7 +253,7 @@ export class CompanyEmployeeLimitsReportExporter {
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
     pdf.text(`${this.tr("t-report")} #100006 - ${this.tr("t-report-100006-title")}`, margin, 18);
-    pdf.text(`${this.tr("t-institution")}: ${report.companyName || "-"}`, margin, 23);
+    pdf.text(`${this.tr("t-institution")}: ${report.contractName || "-"}`, margin, 23);
     pdf.text(`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, margin, 28);
 
     const drawCard = (
@@ -338,7 +338,7 @@ export class CompanyEmployeeLimitsReportExporter {
       cardHeight,
       [227, 242, 253],
       this.tr("t-institution"),
-      report.companyName || "-",
+      report.contractName || "-",
       [
         `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`,
         `${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"}`
@@ -509,7 +509,7 @@ export class CompanyEmployeeLimitsReportExporter {
     const data: any[][] = [
       [this.tr("t-cel-report-title").toUpperCase()],
       [`${this.tr("t-report")} #100006 - ${this.tr("t-report-100006-title")}`],
-      [`${this.tr("t-institution")}: ${report.companyName || "-"} | ${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"} (${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"})`],
+      [`${this.tr("t-institution")}: ${report.contractName || "-"} | ${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"} (${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"})`],
       [],
       [],
       [],
@@ -571,7 +571,7 @@ export class CompanyEmployeeLimitsReportExporter {
     };
 
     setCell(4, 0, this.tr("t-institution"));
-    setCell(5, 0, report.companyName || "-");
+    setCell(5, 0, report.contractName || "-");
     setCell(6, 0, `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`);
     setCell(7, 0, `${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"}`);
 
@@ -675,7 +675,7 @@ export class CompanyEmployeeLimitsReportExporter {
     const monthHeaders = months.map((m) => this.monthLabel(m.year, m.month));
 
     let csv = `${this.tr("t-cel-report-title").toUpperCase()}\n`;
-    csv += `${this.tr("t-institution")},${report.companyName || "-"}\n`;
+    csv += `${this.tr("t-institution")},${report.contractName || "-"}\n`;
     csv += `${this.tr("t-coverage-period")},${report.coveragePeriodName || "-"}\n\n`;
 
     const header = [

@@ -9,8 +9,10 @@ interface DepartmentListResponse {
 }
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {  
@@ -18,6 +20,24 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const DEPARTMENTS_ENDPOINT = '/administration/departments';
+const DEPARTMENTS_BY_CONTRACT_ENDPOINT = `${DEPARTMENTS_ENDPOINT}/in-contract`;
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const toDepartmentPayload = (departmentData: DepartmentInsertType) => ({
+  name: departmentData.name,
+  description: departmentData.description,
+  contract: departmentData.company,
+  enabled: departmentData.enabled
+});
+
+const normalizeDepartment = <T extends Record<string, any>>(item: T): T => ({
+  ...item,
+  company: item.company ?? item.contract
+});
 
 
 export default class DepartmentService extends HttpService {
@@ -45,14 +65,14 @@ export default class DepartmentService extends HttpService {
       }
 
       const queryString = queryParams.join('&');
-      const url = `/administration/departments/in-company?${queryString}`;
+      const url = `${DEPARTMENTS_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisição:', url);
       const response = await this.get<DepartmentListResponse>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeDepartment(item)) as DepartmentListingType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -85,14 +105,14 @@ export default class DepartmentService extends HttpService {
       }
 
       const queryString = queryParams.join('&');
-      const url = `/administration/departments/in-company?${queryString}`;
+      const url = `${DEPARTMENTS_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
       console.log('URL da requisição:', url);
       const response = await this.get<ApiResponse<DepartmentListingForListType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || []
+        content: getContent(response).map((item: any) => normalizeDepartment(item)) as DepartmentListingForListType[],
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -103,10 +123,10 @@ export default class DepartmentService extends HttpService {
 
   async createDepartment(departmentData: DepartmentInsertType): Promise<ServiceResponse<DepartmentListingForListType>> {
     try {
-      const response = await this.post<ApiResponse<DepartmentListingForListType>>('/administration/departments', departmentData);
+      const response = await this.post<ApiResponse<DepartmentListingForListType>>(DEPARTMENTS_ENDPOINT, toDepartmentPayload(departmentData));
       return {
         status: 'success',
-        data: response.data
+        data: normalizeDepartment((response.data ?? response.content ?? response) as any) as DepartmentListingForListType
       };
     } catch (error: any) {
       if (error.response) {
@@ -131,7 +151,7 @@ export default class DepartmentService extends HttpService {
         title: 'Network Error',
         status: 503,
         detail: 'Could not connect to server',
-        instance: '/administration/companies'
+        instance: DEPARTMENTS_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()
@@ -142,12 +162,12 @@ export default class DepartmentService extends HttpService {
   async getDepartmentsById(id: string): Promise<{ data: DepartmentListingForListType }> {
     try {
       const response = await this.get<{ data: DepartmentListingForListType; meta: any }>(
-        `/administration/departments/${id}?includes=company`
+        `${DEPARTMENTS_ENDPOINT}/${id}?includes=contract`
       );
       console.log('Resposta da requisição getDepartmentsById:------------------------', response);
 
       return {
-        data: response.data
+        data: normalizeDepartment(((response as any).data ?? response) as any) as DepartmentListingForListType
       };
     } catch (error) {
       throw this.handleError(error);
@@ -171,7 +191,7 @@ export default class DepartmentService extends HttpService {
 
   async deleteDepartment(id: string): Promise<void> {
     try {
-      await this.delete(`/administration/departments/${id}`);
+      await this.delete(`${DEPARTMENTS_ENDPOINT}/${id}`);
     } catch (error) {
       console.error("❌ Erro ao deletar departamentos:", error);
       throw error;
@@ -183,16 +203,11 @@ export default class DepartmentService extends HttpService {
     try {
 
       // Corpo da requisição conforme especificado
-      const payload = {
-        name: departmentData.name,
-        description: departmentData.description,
-        company: departmentData.company,
-        enabled: departmentData.enabled
-      };
+      const payload = toDepartmentPayload(departmentData);
 
-      const response = await this.put<DepartmentListingForListType>(`/administration/departments/${id}`, payload);
+      const response = await this.put<DepartmentListingForListType>(`${DEPARTMENTS_ENDPOINT}/${id}`, payload);
       console.log('response update deparment', response)
-      return response;
+      return normalizeDepartment(response as any) as DepartmentListingForListType;
 
     } catch (error) {
       console.error("❌ Erro ao actualizar deparment:", error);

@@ -16,16 +16,18 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+const CONTRACT_EMPLOYEE_LIMITS_REPORT_ENDPOINT = "/reports/contract-employee-limits";
+
 export default class CompanyEmployeeLimitsReportService extends HttpService {
   async createReport(
     payload: CompanyEmployeeLimitsFilterType
   ): Promise<ServiceResponse<CompanyEmployeeLimitsReportType>> {
     try {
       const response = await this.post<ApiResponse<CompanyEmployeeLimitsReportType>>(
-        "/reports/company-employee-limits",
+        CONTRACT_EMPLOYEE_LIMITS_REPORT_ENDPOINT,
         payload
       );
-      return { status: "success", data: response.data };
+      return { status: "success", data: response.data ?? (response as unknown as CompanyEmployeeLimitsReportType) };
     } catch (error: any) {
       if (error.response) {
         return {
@@ -44,7 +46,7 @@ export default class CompanyEmployeeLimitsReportService extends HttpService {
             title: "Network Error",
             status: 503,
             detail: "Could not connect to server",
-            instance: "/reports/company-employee-limits"
+            instance: CONTRACT_EMPLOYEE_LIMITS_REPORT_ENDPOINT
           },
           meta: {
             timestamp: new Date().toISOString()
@@ -54,4 +56,3 @@ export default class CompanyEmployeeLimitsReportService extends HttpService {
     }
   }
 }
-

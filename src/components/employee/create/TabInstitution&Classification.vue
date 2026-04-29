@@ -12,6 +12,7 @@
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
+import { useLayoutStore } from "@/store/app";
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -29,6 +30,8 @@ import { EmployeeInsertType } from "@/components/employee/types";
 // Configuração inicial
 const { t } = useI18n();
 const toast = useToast();
+const layoutStore = useLayoutStore();
+const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 import {
   contractDurationTypeOptions
@@ -50,12 +53,18 @@ const emit = defineEmits<{
   (e: 'clear-server-error', field: string): void;
 }>();
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: EmployeeInsertType,
   loading?: boolean,
   serverErrors?: Record<string, string[]>,
-  isEditMode?: boolean
-}>();
+  isEditMode?: boolean,
+  showActions?: boolean
+}>(), {
+  loading: false,
+  serverErrors: () => ({}),
+  isEditMode: false,
+  showActions: true
+});
 
 // Dados computados do employee
 let employeeData = computed({
@@ -92,6 +101,7 @@ watch(
   },
   { deep: true }
 );
+
 
 /**
  * Regras de validação para os campos do formulário
@@ -197,28 +207,35 @@ onMounted(async () => {
 /**
  * Observa mudanças na instituição para carregar departamentos
  */
-watch(() => employeeData.value.company, (newInstitutionId) => {
+watch(() => employeeData.value.company, (newInstitutionId, oldInstitutionId) => {
   emit('clear-server-error', 'company');
   if (newInstitutionId) {
     departmentStore.fetchDepartments(newInstitutionId);
-    employeeData.value.department = undefined;
-    employeeData.value.position = undefined;
+    if (oldInstitutionId !== undefined && oldInstitutionId !== null && oldInstitutionId !== newInstitutionId) {
+      employeeData.value.department = undefined;
+      employeeData.value.position = undefined;
+    }
   } else {
     departmentStore.departments = [];
     positionStore.positions = [];
+    employeeData.value.department = undefined;
+    employeeData.value.position = undefined;
   }
 });
 
 /**
  * Observa mudanças no departamento para carregar cargos
  */
-watch(() => employeeData.value.department, (newDepartmentId) => {
+watch(() => employeeData.value.department, (newDepartmentId, oldDepartmentId) => {
   emit('clear-server-error', 'department');
   if (newDepartmentId) {
     positionStore.fetchPositions(newDepartmentId);
-    employeeData.value.position = undefined;
+    if (oldDepartmentId !== undefined && oldDepartmentId !== null && oldDepartmentId !== newDepartmentId) {
+      employeeData.value.position = undefined;
+    }
   } else {
     positionStore.positions = [];
+    employeeData.value.position = undefined;
   }
 });
 
@@ -270,8 +287,8 @@ const handleError = (message: string, error: any) => {
 /**
  * Valida e envia o formulário
  */
-const saveData = async () => {
-  if (!form2.value) return;
+const validateForm = async () => {
+  if (!form2.value) return false;
 
   const { valid } = await form2.value.validate();
   if (!valid) {
@@ -281,8 +298,15 @@ const saveData = async () => {
       errorMsg.value = "";
       alertTimeout = null;
     }, 5000);
-    return;
+    return false;
   }
+
+  return true;
+};
+
+const saveData = async () => {
+  const valid = await validateForm();
+  if (!valid) return;
 
   console.log("Dados do funcionário:", employeeData.value);
 
@@ -293,11 +317,22 @@ const saveData = async () => {
 
   emit('save', payload);
 };
+
+defineExpose({
+  saveData,
+  validateForm
+});
 </script>
 
 <template>
   <v-form ref="form2" @submit.prevent="saveData">
-    <Card :title="$t('t-institution-and-classification')" elevation="0" title-class="pb-0">
+    <Card
+      class="employee-institution-tab"
+      :class="{ 'employee-institution-tab--dark': isDarkMode }"
+      :title="$t('t-institution-and-classification')"
+      elevation="0"
+      title-class="pb-0"
+    >
       <!-- Mensagem de erro -->
       <transition name="fade">
         <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
@@ -390,12 +425,12 @@ const saveData = async () => {
       </v-card-text>
 
       <!-- Ações do formulário -->
-      <v-card-actions class="d-flex justify-space-between mt-5">
+      <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-5">
         <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
-          {{ $t('t-back-to-general-info') }} <i class="ph-arrow-left ms-2" />
+          <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="saveData" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="saveData" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>
@@ -404,17 +439,31 @@ const saveData = async () => {
 </template>
 
 <style scoped>
+.employee-institution-tab {
+  --employee-custom-input-bg: #ffffff;
+  --employee-custom-input-border: #dde1ef;
+  --employee-custom-input-text: #ababab;
+  --employee-custom-input-muted: #94a3b8;
+}
+
+.employee-institution-tab--dark {
+  --employee-custom-input-bg: #111827;
+  --employee-custom-input-border: #334155;
+  --employee-custom-input-text: #e2e8f0;
+  --employee-custom-input-muted: #94a3b8;
+}
+
 /* Estilos consistentes com os outros componentes */
 :deep(.dp__input) {
   height: 2.63rem;
 }
 
 .custom-phone-input {
-  background-color: #fff;
-  border: 1px solid #DDE1EF;
+  background-color: var(--employee-custom-input-bg);
+  border: 1px solid var(--employee-custom-input-border);
   border-radius: 3px;
   padding: 0;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input.--has-label .m-input-input) {
@@ -426,11 +475,12 @@ const saveData = async () => {
 :deep(.m-input.--sm .m-input-input),
 :deep(.m-input.--sm .m-input-label) {
   font-size: 0.8rem !important;
-  color: #ABABAB !important;
+  color: var(--employee-custom-input-text) !important;
 }
 
 :deep(.m-input-input::placeholder) {
   font-size: 0.75rem !important;
+  color: var(--employee-custom-input-muted) !important;
 }
 
 .fade-enter-active,

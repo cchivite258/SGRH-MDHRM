@@ -128,7 +128,7 @@ onMounted(async () => {
             <v-btn color="danger" class="me-1" @click="dialogValue = false">
               <i class="ph-x me-1" /> {{ $t('t-close') }}
             </v-btn>
-            <v-btn color="primary" variant="elevated" @click="onSubmit" :loading="localLoading"
+            <v-btn color="secondary" variant="elevated" @click="onSubmit" :loading="localLoading"
               :disabled="localLoading">
               {{ localLoading ? $t('t-saving') : $t('t-save') }}
             </v-btn>

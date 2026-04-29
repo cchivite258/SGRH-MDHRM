@@ -3,6 +3,6 @@ import { breadcrumb } from "@/components/baseTables/TaxRate/listView/utils";
 import ListView from "@/components/baseTables/TaxRate/listView/index.vue";
 </script>
 <template>
-  <Breadcrumb title="tax-rates-list" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <ListView />
 </template>

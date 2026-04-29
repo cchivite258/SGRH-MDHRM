@@ -567,7 +567,7 @@ onMounted(async () => {
           {{ $t('t-back-to-list') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
 
-        <v-btn color="success" variant="elevated" @click="submitInvoice" :loading="loading">
+        <v-btn color="secondary" variant="elevated" @click="submitInvoice" :loading="loading">
           <i class="ph-printer me-1" /> {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

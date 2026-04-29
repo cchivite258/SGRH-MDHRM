@@ -1,11 +1,11 @@
 <template>
-    <v-card class="mb-4">
-        <v-card-text class="pa-4">
+    <v-card class="institution-advanced-filter-card">
+        <v-card-text class="institution-advanced-filter-card__body">
             <QuerySearch v-model="globalSearch" :placeholder="$t('t-institution-search')"
                 prepend-inner-icon="ph-magnifying-glass" clearable density="compact"
-                @update:model-value="onGlobalSearch" class="mb-2" />
+                @update:model-value="onGlobalSearch" class="institution-advanced-filter-card__search" />
 
-            <v-expansion-panels class="expansion-panels expansion-panel mt-5">
+            <v-expansion-panels class="expansion-panels expansion-panel institution-advanced-filter-card__panels">
                 <v-expansion-panel>
                     <v-expansion-panel-title class="text-caption font-weight-medium px-2">
                         <i class="ph-faders-horizontal me-2"></i>
@@ -17,13 +17,13 @@
                             <v-radio :label="t('t-and-operator')" value="AND" class="text-caption mr-2"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-and-operator') }}</span>
+                                    <span class="institution-advanced-filter-card__radio-label">{{ t('t-and-operator') }}</span>
                                 </template>
                             </v-radio>
                             <v-radio :label="t('t-or-operator')" value="OR" class="text-caption"
                                 style="--v-radio-size: 16px;">
                                 <template v-slot:label>
-                                    <span style="font-size: 0.80rem;">{{ t('t-or-operator') }}</span>
+                                    <span class="institution-advanced-filter-card__radio-label">{{ t('t-or-operator') }}</span>
                                 </template>
                             </v-radio>
                         </v-radio-group>
@@ -44,6 +44,12 @@
                             <v-col cols="12" sm="4" class="py-1 px-1" v-if="isDateField(filter.prop)">
                                 <VueDatePicker v-model="filter.value" :teleport="true" :placeholder="$t('t-enter-date')"
                                     :enable-time-picker="false" format="dd/MM/yyyy" />
+                            </v-col>
+                            <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isSelectField(filter.prop)">
+                                <MenuSelect v-model="filter.value" :items="getSelectOptionsForField(filter.prop)"
+                                    :placeholder="$t('t-value')" item-title="text" item-value="value"
+                                    density="compact" variant="outlined"
+                                    :loading="institutionTypeStore.loading" />
                             </v-col>
                             <v-col cols="12" sm="4" class="py-1 px-1" v-else-if="isBooleanField(filter.prop)">
                                 <MenuSelect v-model="filter.value" :items="booleanOptions" :placeholder="$t('t-value')"
@@ -88,20 +94,26 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
+import { useCompanyDetailsStore } from '@/store/institution/companyDetailsStore';
+import { useInstitutionTypeStore } from '@/store/baseTables/institutionTypeStore';
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
+import type { InstitutionTypeListing } from '@/components/baseTables/institutionTypes/types';
+import type { EntityListingType } from '@/components/entities/types';
 
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const institutionStore = useInstitutionStore();
+const companyDetailsStore = useCompanyDetailsStore();
+const institutionTypeStore = useInstitutionTypeStore();
 
 const QUERY_KEYS = {
     search: 'search',
@@ -110,12 +122,18 @@ const QUERY_KEYS = {
 } as const;
 
 type LogicalOperator = 'AND' | 'OR';
-type FilterType = 'text' | 'boolean' | 'date';
+type FilterType = 'text' | 'boolean' | 'date' | 'select';
+
+interface SelectOption {
+    text: string;
+    value: string;
+}
 
 interface FilterableField {
     text: string;
     value: string;
     type: FilterType;
+    options?: SelectOption[];
 }
 
 interface AdvancedFilter {
@@ -139,12 +157,13 @@ let routeSyncInProgress = false;
 
 const filterableFields = ref<FilterableField[]>([
     { text: t('t-name'), value: 'name', type: 'text' },
-    { text: t('t-institution-type'), value: 'institutionType.name', type: 'text' },
-    { text: t('t-address'), value: 'address', type: 'text' },
-    { text: t('t-phone'), value: 'phone', type: 'text' },
-    { text: t('t-email'), value: 'email', type: 'text' },
-    { text: t('t-website'), value: 'website', type: 'text' },
-    { text: t('t-income-tax-number'), value: 'incomeTaxNumber', type: 'text' },
+    { text: t('t-entity-name'), value: 'organization.name', type: 'select', options: [] },
+    { text: t('t-institution-type'), value: 'organization.institutionType.name', type: 'select', options: [] },
+    { text: t('t-address'), value: 'organization.address', type: 'text' },
+    { text: t('t-phone'), value: 'organization.phone', type: 'text' },
+    { text: t('t-email'), value: 'organization.email', type: 'text' },
+    { text: t('t-website'), value: 'organization.website', type: 'text' },
+    { text: t('t-income-tax-number'), value: 'organization.incomeTaxNumber', type: 'text' },
     { text: t('t-created-at'), value: 'createdAt', type: 'date' },
     { text: t('t-description'), value: 'description', type: 'text' },
     { text: t('t-enabled'), value: 'enabled', type: 'boolean' }
@@ -174,6 +193,20 @@ const booleanOptions = ref([
 
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
+const entityOptions = computed<SelectOption[]>(() =>
+    (companyDetailsStore.entities as EntityListingType[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
+const institutionTypeOptions = computed<SelectOption[]>(() =>
+    (institutionTypeStore.enabledInstitutionTypes as InstitutionTypeListing[]).map((item) => ({
+        text: item.name,
+        value: item.name
+    }))
+);
+
 const normalizeRouteQueryValue = (value: unknown): string => {
     if (Array.isArray(value)) return String(value[0] ?? '');
     return typeof value === 'string' ? value : '';
@@ -184,6 +217,8 @@ const getFieldDefinition = (field: string): FilterableField | undefined =>
 
 const isBooleanField = (field: string) => getFieldDefinition(field)?.type === 'boolean';
 const isDateField = (field: string) => getFieldDefinition(field)?.type === 'date';
+const isSelectField = (field: string) => getFieldDefinition(field)?.type === 'select';
+const getSelectOptionsForField = (field: string) => getFieldDefinition(field)?.options ?? [];
 
 const getOperatorsForField = (field: string) => {
     const fieldDef = getFieldDefinition(field);
@@ -191,6 +226,7 @@ const getOperatorsForField = (field: string) => {
 
     if (fieldDef.type === 'boolean') return booleanOperators;
     if (fieldDef.type === 'date') return dateOperators;
+    if (fieldDef.type === 'select') return booleanOperators;
     return textOperators;
 };
 
@@ -247,6 +283,8 @@ const onFieldChange = (index: number) => {
 
     if (isBooleanField(field)) {
         advancedFilters.value[index].value = true;
+    } else if (isSelectField(field)) {
+        advancedFilters.value[index].value = getSelectOptionsForField(field)[0]?.value || '';
     } else if (isDateField(field)) {
         advancedFilters.value[index].value = new Date();
     } else {
@@ -269,6 +307,9 @@ const hasIncompleteFilters = computed(() =>
     advancedFilters.value.some(filter => !isFilterComplete(filter))
 );
 
+const sanitizeFilterTextValue = (value: string) =>
+    value.split(',')[0]?.trim() ?? '';
+
 const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
     return advancedFilters.value
         .filter(isFilterComplete)
@@ -278,6 +319,8 @@ const buildStoreFiltersFromUi = (): StoreAdvancedFilter[] => {
 
             if (isDateField(prop) && value instanceof Date) {
                 value = format(value, 'yyyy-MM-dd');
+            } else if (typeof value === 'string') {
+                value = sanitizeFilterTextValue(value);
             }
 
             return {
@@ -369,6 +412,54 @@ const applyAdvancedFilters = async () => {
 };
 
 watch(
+    entityOptions,
+    (options) => {
+        filterableFields.value = filterableFields.value.map((field) =>
+            field.value === 'organization.name'
+                ? { ...field, options }
+                : field
+        );
+
+        advancedFilters.value = advancedFilters.value.map((filter) => {
+            if (filter.prop !== 'organization.name') return filter;
+            if (typeof filter.value === 'string' && options.some((option) => option.value === filter.value)) {
+                return filter;
+            }
+
+            return {
+                ...filter,
+                value: options[0]?.value || ''
+            };
+        });
+    },
+    { immediate: true }
+);
+
+watch(
+    institutionTypeOptions,
+    (options) => {
+        filterableFields.value = filterableFields.value.map((field) =>
+            field.value === 'organization.institutionType.name'
+                ? { ...field, options }
+                : field
+        );
+
+        advancedFilters.value = advancedFilters.value.map((filter) => {
+            if (filter.prop !== 'organization.institutionType.name') return filter;
+            if (typeof filter.value === 'string' && options.some((option) => option.value === filter.value)) {
+                return filter;
+            }
+
+            return {
+                ...filter,
+                value: options[0]?.value || ''
+            };
+        });
+    },
+    { immediate: true }
+);
+
+watch(
     () => route.query,
     async () => {
         if (routeSyncInProgress) return;
@@ -389,9 +480,78 @@ watch(
     { immediate: true, deep: true }
 );
 
+onMounted(async () => {
+    if (!companyDetailsStore.entities.length) {
+        await companyDetailsStore.fetchCompanyDetails(0, 10000000);
+    }
+
+    if (!institutionTypeStore.institutiontypes.length) {
+        await institutionTypeStore.fetchInstitutionTypes();
+    }
+});
+
 onBeforeUnmount(() => {
     if (globalSearchDebounce) {
         clearTimeout(globalSearchDebounce);
     }
 });
 </script>
+
+<style scoped>
+.institution-advanced-filter-card {
+    border: 1px solid #e4eaf2;
+    border-radius: 16px !important;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.05) !important;
+}
+
+.institution-advanced-filter-card__body {
+    padding: 18px 18px 16px;
+    font-family: inherit;
+}
+
+.institution-advanced-filter-card__search {
+    margin-bottom: 0;
+}
+
+.institution-advanced-filter-card__panels {
+    margin-top: 14px;
+}
+
+.institution-advanced-filter-card :deep(.v-expansion-panel) {
+    border: 1px solid #edf2f7;
+    border-radius: 12px !important;
+    box-shadow: none;
+}
+
+.institution-advanced-filter-card :deep(.v-expansion-panel-title) {
+    min-height: 46px;
+    font-family: inherit !important;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.institution-advanced-filter-card :deep(.v-field__input),
+.institution-advanced-filter-card :deep(.v-label),
+.institution-advanced-filter-card :deep(.v-field__field),
+.institution-advanced-filter-card :deep(.v-select__selection),
+.institution-advanced-filter-card :deep(input),
+.institution-advanced-filter-card :deep(.v-btn),
+.institution-advanced-filter-card :deep(.v-expansion-panel-title__overlay),
+.institution-advanced-filter-card :deep(.v-expansion-panel-title__icon),
+.institution-advanced-filter-card :deep(.v-expansion-panel-text),
+.institution-advanced-filter-card :deep(.v-radio .v-label) {
+    font-family: inherit !important;
+    font-size: 0.76rem !important;
+}
+
+.institution-advanced-filter-card__radio-label {
+    font-family: inherit;
+    font-size: 0.76rem;
+}
+
+@media (max-width: 767px) {
+    .institution-advanced-filter-card__body {
+        padding: 14px 14px 12px;
+    }
+}
+</style>

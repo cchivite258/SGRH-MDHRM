@@ -1,14 +1,15 @@
 <script lang="ts" setup>
 import { computed } from "vue";
+import FormTabs from "@/app/common/components/FormTabs.vue";
 
 const emit = defineEmits(["update:modelValue"]);
-const prop = defineProps({
+const props = defineProps({
   modelValue: {
     type: Number,
-    default: 1,
+    default: 1
   },
   serviceProviderId: {
-    type: [String],
+    type: String,
     default: null
   },
   basicDataValidated: {
@@ -19,36 +20,28 @@ const prop = defineProps({
 
 const step = computed({
   get() {
-    return prop.modelValue;
+    return props.modelValue;
   },
-  set(step: number) {
-    emit("update:modelValue", step);
-  },
+  set(step: string | number) {
+    emit("update:modelValue", Number(step));
+  }
 });
 
 const isTabDisabled = (tabNumber: number) => {
-  if (prop.serviceProviderId) return false;
-  return tabNumber > 1 && !prop.basicDataValidated;
+  if (props.serviceProviderId) return false;
+  return tabNumber > 1 && !props.basicDataValidated;
 };
 
-
+const tabs = computed(() => [
+  { value: 1, label: "t-general-information", disabled: isTabDisabled(1) },
+  { value: 2, label: "t-contacts-service-provider", disabled: isTabDisabled(2) }
+]);
 </script>
 
 <template>
-  <div class="d-flex justify-space-between align-center">
-    <v-row no-gutters>
-      <v-col cols="6">
-        <v-btn rounded="0" color="primary" block :variant="step === 1 ? 'elevated' : 'tonal'" @click="step = 1"
-          :disabled="isTabDisabled(1)">
-          {{ $t('t-general-information') }}
-        </v-btn>
-      </v-col>
-      <v-col cols="6">
-        <v-btn rounded="0" color="primary" block :variant="step === 2 ? 'elevated' : 'tonal'" @click="step = 2"
-          :disabled="isTabDisabled(2)">
-          {{ $t('t-contacts-service-provider') }}
-        </v-btn>
-      </v-col>
-    </v-row>
-  </div>
+  <FormTabs
+    v-model="step"
+    :tabs="tabs"
+    aria-label="Navegação do formulário de provedor de serviço"
+  />
 </template>

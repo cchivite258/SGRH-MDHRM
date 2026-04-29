@@ -19,6 +19,8 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+const ORGANIZATION_ENDPOINT = "/administration/organization";
+
 export default class CompanyDetailsService extends HttpService {
   private normalizeListResponse<T>(response: ApiResponse<T[]>): { content: T[]; meta: any } {
     return {
@@ -75,7 +77,7 @@ export default class CompanyDetailsService extends HttpService {
       params.append("includes", "institutionType");
 
       const response = await this.get<ApiResponse<EntityListingType[]>>(
-        `/administration/company-details?${params.toString()}`
+        `${ORGANIZATION_ENDPOINT}?${params.toString()}`
       );
 
       return this.normalizeListResponse(response);
@@ -100,12 +102,12 @@ export default class CompanyDetailsService extends HttpService {
         enabled: entityData.enabled
       };
       const response = await this.post<ApiResponse<EntityResponseType>>(
-        "/administration/company-details",
+        ORGANIZATION_ENDPOINT,
         payload
       );
       return {
         status: "success",
-        data: response.data ?? response.content
+        data: response.data ?? response.content ?? (response as EntityResponseType)
       };
     } catch (error: any) {
       if (error.response) {
@@ -123,7 +125,7 @@ export default class CompanyDetailsService extends HttpService {
 
   async getCompanyDetailsById(id: string): Promise<{ data: EntityResponseType }> {
     const response = await this.get<ApiResponse<EntityResponseType> | EntityResponseType>(
-      `/administration/company-details/${id}?includes=institutionType`
+      `${ORGANIZATION_ENDPOINT}/${id}?includes=institutionType`
     );
 
     const normalized = (response as ApiResponse<EntityResponseType>)?.data
@@ -152,12 +154,12 @@ export default class CompanyDetailsService extends HttpService {
         enabled: entityData.enabled
       };
       const response = await this.put<ApiResponse<EntityResponseType>>(
-        `/administration/company-details/${id}`,
+        `${ORGANIZATION_ENDPOINT}/${id}`,
         payload
       );
       return {
         status: "success",
-        data: response.data ?? response.content
+        data: response.data ?? response.content ?? (response as EntityResponseType)
       };
     } catch (error: any) {
       if (error.response) {
@@ -174,7 +176,7 @@ export default class CompanyDetailsService extends HttpService {
   }
 
   async deleteCompanyDetails(id: string): Promise<void> {
-    await this.delete(`/administration/company-details/${id}`);
+    await this.delete(`${ORGANIZATION_ENDPOINT}/${id}`);
   }
 
   private createNetworkErrorResponse(): ApiErrorResponse {
@@ -186,7 +188,7 @@ export default class CompanyDetailsService extends HttpService {
         title: "Network Error",
         status: 503,
         detail: "Could not connect to server",
-        instance: "/administration/company-details"
+        instance: ORGANIZATION_ENDPOINT
       },
       meta: {
         timestamp: new Date().toISOString()

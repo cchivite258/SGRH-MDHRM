@@ -328,7 +328,7 @@ onMounted(async () => {
   <Card :title="$t('t-dependent-list')" title-class="py-5">
     <template #title-action>
       <div>
-        <v-btn color="primary" class="mx-1" @click="onCreateEditClick(null)">
+        <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-dependent') }}
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">
@@ -344,7 +344,7 @@ onMounted(async () => {
     {{ getEmployeeAlertMessage() }}
   </v-alert>
 
-  <v-row class="mt-5">
+  <v-row class="mt-3">
     <v-col cols="12" lg="12">
       <v-card-text>
         <v-row>
@@ -401,8 +401,11 @@ onMounted(async () => {
 
   <v-card-actions class="d-flex justify-space-between mt-5">
     <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-      {{ $t('t-salary-review') }}
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-salary-review') }}
     </v-btn>
 
+    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
+      {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
+    </v-btn>
   </v-card-actions>
 </template>

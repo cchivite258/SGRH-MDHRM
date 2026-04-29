@@ -18,7 +18,7 @@ export const userHeader: DataTableHeaderType[] = [
   { title: "email", key: "email" , sortable: true },
   { title: "status" , sortable: false },
   { title: "blocked?", sortable: false },
-  { title: "action",  sortable: false  },
+  { title: "action",  sortable: false, align: "center"  },
 ];
 
 export const Options: OptionType[] = [
@@ -48,5 +48,4 @@ export const Options: OptionType[] = [
     value: "enable",
   },
 ];
-
 

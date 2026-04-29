@@ -127,7 +127,7 @@ export default class PositionService extends HttpService {
         title: 'Network Error',
         status: 503,
         detail: 'Could not connect to server',
-        instance: '/administration/companies'
+        instance: '/administration/positions'
       },
       meta: {
         timestamp: new Date().toISOString()

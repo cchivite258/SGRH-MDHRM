@@ -4,8 +4,10 @@ import type { ServiceProviderInsertType, ServiceProviderListingType } from "@/co
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-    data: T;
+    data?: T;
+    content?: T;
     meta?: any;
+    metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -13,6 +15,22 @@ interface ServiceResponse<T> {
     data?: T;
     error?: ApiErrorResponse;
 }
+
+const CONTRACT_SERVICE_PROVIDERS_ENDPOINT = '/administration/contract/service-providers';
+const CONTRACT_SERVICE_PROVIDERS_BY_CONTRACT_ENDPOINT = `${CONTRACT_SERVICE_PROVIDERS_ENDPOINT}/in-contract`;
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const toContractServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType) => ({
+    serviceProvider: serviceProviderData.serviceProvider,
+    contract: serviceProviderData.company
+});
+
+const normalizeContractServiceProvider = <T extends Record<string, any>>(item: T): T => ({
+    ...item,
+    company: item.company ?? item.contract
+});
 
 export default class ServiceProviderService extends HttpService { 
     async getServiceProviderByInstitution(
@@ -44,14 +62,14 @@ export default class ServiceProviderService extends HttpService {
 
                 const queryString = queryParams.join('&');
 
-            const url = `/administration/company/service-providers/in-company?${queryString}`;
+            const url = `${CONTRACT_SERVICE_PROVIDERS_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<ServiceProviderListingType[]>>(url);
 
             return {
-                content: response.data || [],
-                meta: response.meta || []
+                content: getContent(response).map((item: any) => normalizeContractServiceProvider(item)) as ServiceProviderListingType[],
+                meta: getMeta(response)
             };
 
         } catch (error) {
@@ -89,14 +107,14 @@ export default class ServiceProviderService extends HttpService {
 
                 const queryString = queryParams.join('&');
 
-            const url = `/administration/company/service-providers/in-company?${queryString}`;
+            const url = `${CONTRACT_SERVICE_PROVIDERS_BY_CONTRACT_ENDPOINT}?${queryString}`;
 
             console.log('URL da requisição:', url);
             const response = await this.get<ApiResponse<ServiceProviderListingType[]>>(url);
 
             return {
-                content: response.data || [],
-                meta: response.meta || []
+                content: getContent(response).map((item: any) => normalizeContractServiceProvider(item)) as ServiceProviderListingType[],
+                meta: getMeta(response)
             };
 
         } catch (error) {
@@ -107,10 +125,10 @@ export default class ServiceProviderService extends HttpService {
 
     async createServiceProvider(serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderListingType>> {
         try {
-            const response = await this.post<ApiResponse<ServiceProviderListingType>>('/administration/company/service-providers', serviceProviderData);
+            const response = await this.post<ApiResponse<ServiceProviderListingType>>(CONTRACT_SERVICE_PROVIDERS_ENDPOINT, toContractServiceProviderPayload(serviceProviderData));
             return {
                 status: 'success',
-                data: response.data
+                data: normalizeContractServiceProvider((response.data ?? response.content ?? response) as any) as ServiceProviderListingType
             };
         } catch (error: any) {
             if (error.response) {
@@ -135,7 +153,7 @@ export default class ServiceProviderService extends HttpService {
                 title: 'Network Error',
                 status: 503,
                 detail: 'Could not connect to server',
-                instance: '/administration/company/contracted-clinics'
+                instance: CONTRACT_SERVICE_PROVIDERS_ENDPOINT
             },
             meta: {
                 timestamp: new Date().toISOString()
@@ -146,12 +164,12 @@ export default class ServiceProviderService extends HttpService {
     async getServiceProviderById(id: string): Promise<{ data: ServiceProviderListingType }> {
         try {
             const response = await this.get<{ data: ServiceProviderListingType; meta: any }>(
-                `/administration/company/service-providers/${id}?includes=company`
+                `${CONTRACT_SERVICE_PROVIDERS_ENDPOINT}/${id}?includes=contract`
             );
             console.log('Resposta da requisição getServiceProviderById:------------------------', response);
 
             return {
-                data: response.data
+                data: normalizeContractServiceProvider(((response as any).data ?? response) as any) as ServiceProviderListingType
             };
         } catch (error) {
             throw this.handleError(error);
@@ -175,7 +193,7 @@ export default class ServiceProviderService extends HttpService {
 
     async deleteServiceProvider(id: string): Promise<void> {
         try {
-            await this.delete(`/administration/company/service-providers/${id}`);
+            await this.delete(`${CONTRACT_SERVICE_PROVIDERS_ENDPOINT}/${id}`);
         } catch (error) {
             console.error("❌ Erro ao deletar prestador de serviço:", error);
             throw error;
@@ -187,16 +205,12 @@ export default class ServiceProviderService extends HttpService {
         try {
 
             // Corpo da requisição conforme especificado
-            const payload = {
-                serviceProvider: serviceProviderData.serviceProvider,
-                company: serviceProviderData.company,
-                enabled: serviceProviderData.enabled
-            };
+            const payload = toContractServiceProviderPayload(serviceProviderData);
 
-            const response = await this.put<ServiceResponse<ServiceProviderListingType>>(`/administration/company/service-providers/${id}`, payload);
+            const response = await this.put<ServiceResponse<ServiceProviderListingType>>(`${CONTRACT_SERVICE_PROVIDERS_ENDPOINT}/${id}`, payload);
              return {
                 status: 'success',
-                data: response.data
+                data: normalizeContractServiceProvider(((response as any).data ?? response) as any) as ServiceProviderListingType
             };
         } catch (error: any) {
             if (error.response) {
@@ -214,5 +228,3 @@ export default class ServiceProviderService extends HttpService {
 
 
 }
-
-

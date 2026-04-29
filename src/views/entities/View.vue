@@ -21,6 +21,6 @@ const breadcrumb = computed<BreadcrumbType[]>(() => [
 </script>
 
 <template>
-  <Breadcrumb title="view-entity" :items="breadcrumb" />
+  <Breadcrumb :items="breadcrumb" />
   <ViewEntity />
 </template>
