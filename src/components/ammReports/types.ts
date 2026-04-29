@@ -5,13 +5,33 @@ export type ReportType = {
   isChecked?: boolean;
 };
 
+export type ReportOrganizationType = {
+  id?: string | number | null;
+  name: string;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  incomeTaxNumber?: string | null;
+};
+
+export type ReportContractType = ReportOrganizationType & {
+  healthPlanLimit?: string | null;
+  organizationId?: string | number | null;
+  companyDetailsId?: string | number | null;
+  organization?: ReportOrganizationType | null;
+  companyDetails?: ReportOrganizationType | null;
+};
+
 export type CompanyHospitalProceduresBalanceType = {
   contractId?: string | number;
   issueDateFrom?: Date;
   issueDateTo?: Date;
   coveragePeriodId?: string | undefined;
-  contract?: any;
-  organization?: any;
+  contractName?: string;
+  contract?: ReportContractType;
+  organization?: ReportOrganizationType;
   coveragePeriod?: any;
   procedureExpenses?: any;
   totalAmount?: number;
@@ -39,27 +59,9 @@ export type InvoiceEmployeeSummaryType = {
 export type CompanyCostPerEmployeeReportType = {
   contractId?: string | number;
   coveragePeriodId?: string | undefined;
-  contract?: {
-    id: number;
-    name: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-    incomeTaxNumber?: string;
-    healthPlanLimit?: string;
-  };
-  organization?: {
-    id: number;
-    name: string;
-    description?: string;
-    address?: string;
-    phone?: string;
-    email?: string;
-    website?: string;
-    incomeTaxNumber?: string;
-  };
+  contractName?: string;
+  contract?: ReportContractType;
+  organization?: ReportOrganizationType;
   coveragePeriod?: {
     id: number;
     name: string;
