@@ -126,6 +126,7 @@ const form = ref({
   currency: "",
   currencySymbol: "",
   currencyCode: "",
+  nationality: "",
   enabled: true
 });
 
@@ -195,6 +196,7 @@ watch(countryData, (val) => {
       currency: val.currency,
       currencySymbol: val.currencySymbol,
       currencyCode: val.currencyCode,
+      nationality: val.nationality || "",
       enabled: val.enabled
     };
   }
@@ -422,10 +424,15 @@ const handleSubmit = async () => {
       phoneCode: "trimToEmpty",
       currency: "trimToEmpty",
       currencySymbol: "trimToEmpty",
-      currencyCode: "trimToEmpty"
+      currencyCode: "trimToEmpty",
+      nationality: "trimToEmpty"
     });
 
     await countryService.updateCountry(form.value.id!, payload as CountryInsertType);
+    const refreshedCountry = await countryStoreID.fetchCountryByID(form.value.id!);
+    if (refreshedCountry) {
+      countryData.value = refreshedCountry;
+    }
 
     toast.success(t('t-toast-message-update'));
     await countryStore.fetchCountries();

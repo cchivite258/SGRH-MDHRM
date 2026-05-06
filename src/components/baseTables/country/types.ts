@@ -8,6 +8,7 @@ export type CountryInsertType = {
   currency: string;
   currencySymbol: string;
   currencyCode: string;
+  nationality?: string;
   enabled: boolean;
 };
 
@@ -21,6 +22,7 @@ export type CountryListingType = {
   currency: string;
   currencySymbol: string;
   currencyCode: string;
+  nationality?: string;
   enabled: boolean;
 };
 
@@ -33,6 +35,7 @@ export type CountryUpdateType = {
   currency?: string;
   currencySymbol?: string;
   currencyCode?: string;
+  nationality?: string;
   enabled: boolean;
 };
 
@@ -89,6 +92,7 @@ export type CountryResponseType = {
   currency: string;
   currencySymbol: string;
   currencyCode: string;
+  nationality?: string;
   enabled: boolean;
 };
 

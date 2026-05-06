@@ -8,7 +8,7 @@ import { useToast } from "vue-toastification"
 import { useI18n } from "vue-i18n"
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
-import TableAction from "@/app/common/components/TableAction.vue"
+import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue"
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
 import Overview from "@/components/institution/list/Overview.vue"
@@ -17,6 +17,7 @@ import Status from "@/app/common/components/Status.vue"
 import { formateDate } from "@/app/common/dateFormate"
 import type { InstitutionListingType } from "../types"
 import AdvancedFilter from "@/components/institution/list/AdvancedFilter.vue"
+import type { OptionType } from "@/app/common/types/option.type"
 
 const { t } = useI18n()
 const toast = useToast()
@@ -109,6 +110,26 @@ const getInstitutionTypeColor = (type?: string | null) => {
   if (normalizedType.includes("public")) return "entity-public"
   if (normalizedType.includes("privad")) return "entity-private"
   return "entity-neutral"
+}
+
+const institutionOptions: OptionType[] = [
+  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
+  { title: "Eliminar", value: "delete", icon: "ph-trash" }
+]
+
+const onSelect = (option: string, item: InstitutionListingType) => {
+  switch (option) {
+    case "view":
+      onView(item.id)
+      break
+    case "edit":
+      router.push(`/institution/edit/${item.id}`)
+      break
+    case "delete":
+      openDeleteDialog(item.id)
+      break
+  }
 }
 
 onBeforeMount(() => {
@@ -223,11 +244,7 @@ onBeforeRouteLeave(() => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="institution-listing-table__actions-cell">
-            <TableAction
-              @onEdit="() => router.push(`/institution/edit/${item.id}`)"
-              @onView="() => onView(item.id)"
-              @onDelete="() => openDeleteDialog(item.id)"
-            />
+            <ListMenuWithIcon align="center" :menu-items="institutionOptions" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -433,11 +450,14 @@ onBeforeRouteLeave(() => {
 }
 
 .institution-listing-table__actions-cell {
+  text-align: center;
   white-space: nowrap;
 }
 
 .institution-listing-page :deep(.institution-listing-table__actions-cell .d-flex) {
   gap: 6px;
+  justify-content: center !important;
+  width: 100%;
 }
 
 .institution-listing-page :deep(.institution-listing-table__actions-cell .v-btn) {
@@ -565,7 +585,7 @@ onBeforeRouteLeave(() => {
   }
 
   .institution-listing-page :deep(.institution-listing-table__actions-cell .d-flex) {
-    justify-content: flex-start !important;
+    justify-content: center !important;
   }
 }
 </style>

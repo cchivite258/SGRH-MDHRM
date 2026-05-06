@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
     <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
       <i class="ph-arrow-left me-2" /> {{ $t(previousLabelKey) }}
     </v-btn>
-    <v-btn v-if="nextStep" color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', nextStep)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" class="me-2" @click="emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>

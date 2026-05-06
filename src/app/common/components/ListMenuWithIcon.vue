@@ -4,12 +4,14 @@ import { OptionType } from "@/app/common/types/option.type";
 
 const prop = withDefaults(
   defineProps<{
+    align?: "start" | "center" | "end";
     icon: string;
     menuItems: OptionType[] | null;
     variant: "text" | "outlined" | "elevated" | "tonal" | "flat";
     color: string | undefined;
   }>(),
   {
+    align: "end",
     icon: "ph-dots-three-vertical ph-lg",
     menuItems: null,
     variant: "text",
@@ -29,8 +31,8 @@ const onOptionClick = (value: string) => {
 <template>
   <v-menu :close-on-content-click="true">
     <template #activator="{ props }">
-      <div class="d-flex justify-end">
-        <v-btn density="compact" :variant="variant" v-bind="props" icon rounded :color="color" class="ml-auto">
+      <div class="d-flex" :class="`justify-${prop.align}`">
+        <v-btn density="compact" :variant="variant" v-bind="props" icon rounded :color="color">
           <i :class="prop.icon"></i>
         </v-btn>
 

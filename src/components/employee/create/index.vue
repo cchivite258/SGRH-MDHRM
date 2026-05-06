@@ -92,7 +92,8 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
 const canUseHeaderSave = computed(() => step.value === 1);
-const headerSaveLabel = computed(() => t('t-save'));
+const headerSaveLabel = computed(() => t('t-save-and-proceed'));
+const employeeFormSteps = [1, 3, 4, 5, 6];
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -310,6 +311,16 @@ const goBackToList = () => {
   router.push('/employee/list');
 };
 
+const goToNextAvailableStep = () => {
+  const currentStepIndex = employeeFormSteps.indexOf(step.value);
+  if (currentStepIndex === -1) return;
+
+  const nextStep = employeeFormSteps[currentStepIndex + 1];
+  if (nextStep) {
+    step.value = nextStep;
+  }
+};
+
 const onHeaderSave = async () => {
   if (step.value === 1) {
     const isGeneralInfoValid = await step1Ref.value?.validateForm();
@@ -317,7 +328,7 @@ const onHeaderSave = async () => {
 
     if (!isGeneralInfoValid || !isInstitutionValid) return;
 
-    await saveEmployee({ ...employeeData }, true);
+    await saveEmployee({ ...employeeData }, false);
   }
 };
 
@@ -415,7 +426,7 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
       await employeeStore.fetchEmployees();
       router.push('/employee/list');
     } else {
-      step.value++;
+      goToNextAvailableStep();
     }
   } catch (error) {
     console.error('Error saving employee:', error);
@@ -440,6 +451,7 @@ onBeforeUnmount(() => {
     subtitle="Crie e organize os dados do colaborador em blocos claros."
     :save-label="headerSaveLabel"
     :loading="loading"
+    :show-save="canUseHeaderSave"
     :save-disabled="!canUseHeaderSave"
     @back="goBackToList"
     @save="onHeaderSave"
@@ -466,13 +478,13 @@ onBeforeUnmount(() => {
 
   <FormCard v-if="step === 1" class="employee-form-section">
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
-      @save="(payload) => saveEmployee(payload, true)" :loading="loading" :server-errors="apiFieldErrors"
+      @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
       :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
   </FormCard>
 
   <FormCard v-if="step === 3" class="employee-form-section">
     <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-      :previous-step="1" previous-label-key="t-general-information" :next-step="4" @salaryUpdated="onSalaryUpdated" />
+      :previous-step="1" previous-label-key="t-back-to-general-info" :next-step="4" @salaryUpdated="onSalaryUpdated" />
   </FormCard>
 
   <FormCard v-if="step === 4" class="employee-form-section">
@@ -487,7 +499,18 @@ onBeforeUnmount(() => {
     <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
   </FormCard>
 
-  <div class="employee-form-footer-actions">
+  <div v-if="step === 1" class="employee-form-footer-actions">
+    <v-btn
+      class="employee-form-footer-actions__back"
+      color="secondary"
+      variant="outlined"
+      :disabled="loading"
+      @click="goBackToList"
+    >
+      <i class="ph-arrow-left me-2" />
+      {{ $t('t-back-to-list') }}
+    </v-btn>
+
     <v-btn
       class="employee-form-footer-actions__save"
       color="secondary"
@@ -498,17 +521,6 @@ onBeforeUnmount(() => {
     >
       <i class="ph-floppy-disk me-2" />
       {{ headerSaveLabel }}
-    </v-btn>
-
-    <v-btn
-      class="employee-form-footer-actions__back"
-      color="secondary"
-      variant="outlined"
-      :disabled="loading"
-      @click="goBackToList"
-    >
-      <i class="ph-arrow-left me-2" />
-      {{ $t('t-back-to-list') }}
     </v-btn>
   </div>
 </template>

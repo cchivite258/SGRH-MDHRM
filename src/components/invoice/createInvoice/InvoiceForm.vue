@@ -114,26 +114,65 @@ const invoiceData = computed({
   set: (value) => emit('update:modelValue', value)
 });
 
-const institutions = computed(() =>
-  institutionStore.enabledInstitutions.map(item => ({
+const institutions = computed(() => {
+  const options = institutionStore.enabledInstitutions.map(item => ({
     value: item.id,
     label: item.name,
-  }))
-);
+  }));
 
-const service_providers = computed(() =>
-  serviceProviderStore.enabledServiceProviders.map(service_provider => ({
+  if (
+    invoiceData.value.company &&
+    invoiceData.value.companyLabel &&
+    !options.some(item => item.value === invoiceData.value.company)
+  ) {
+    options.push({
+      value: invoiceData.value.company,
+      label: invoiceData.value.companyLabel
+    });
+  }
+
+  return options;
+});
+
+const service_providers = computed(() => {
+  const options = serviceProviderStore.enabledServiceProviders.map(service_provider => ({
     value: service_provider.id,
     label: service_provider.name
-  }))
-);
+  }));
 
-const employees = computed(() =>
-  employeeStore.enabledEmployees.map(item => ({
+  if (
+    invoiceData.value.serviceProvider &&
+    invoiceData.value.serviceProviderLabel &&
+    !options.some(item => item.value === invoiceData.value.serviceProvider)
+  ) {
+    options.push({
+      value: invoiceData.value.serviceProvider,
+      label: invoiceData.value.serviceProviderLabel
+    });
+  }
+
+  return options;
+});
+
+const employees = computed(() => {
+  const options = employeeStore.enabledEmployees.map(item => ({
     value: item.id,
     label: `${item.firstName} ${item.lastName}`,
-  }))
-);
+  }));
+
+  if (
+    invoiceData.value.employee &&
+    invoiceData.value.employeeLabel &&
+    !options.some(item => item.value === invoiceData.value.employee)
+  ) {
+    options.push({
+      value: invoiceData.value.employee,
+      label: invoiceData.value.employeeLabel
+    });
+  }
+
+  return options;
+});
 
 const currencies = computed(() =>
   currencyStore.enabledCurrencies.map(item => ({
@@ -142,12 +181,25 @@ const currencies = computed(() =>
   }))
 );
 
-const dependents = computed(() =>
-  dependentStore.dependentsForDropdown.map(item => ({
+const dependents = computed(() => {
+  const options = dependentStore.dependentsForDropdown.map(item => ({
     value: item.id,
     label: `${item.firstName} ${item.lastName}`,
-  }))
-);
+  }));
+
+  if (
+    invoiceData.value.dependent &&
+    invoiceData.value.dependentLabel &&
+    !options.some(item => item.value === invoiceData.value.dependent)
+  ) {
+    options.push({
+      value: invoiceData.value.dependent,
+      label: invoiceData.value.dependentLabel
+    });
+  }
+
+  return options;
+});
 
 // =============================================
 // VALIDATION RULES
@@ -359,7 +411,7 @@ watch(() => invoiceData.value.company, async (newInstitutionId) => {
         const currentEmployee = employeeStore.employeesForDropdown.find(
           c => c.id === invoiceData.value.employee
         );
-        if (!currentEmployee) {
+        if (!currentEmployee && !invoiceData.value.employeeLabel) {
           invoiceData.value.employee = undefined;
         }
       }
@@ -382,7 +434,7 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
         const currentDependent = dependentStore.dependentsForDropdown.find(
           c => c.id === invoiceData.value.dependent
         );
-        if (!currentDependent) {
+        if (!currentDependent && !invoiceData.value.dependentLabel) {
           invoiceData.value.dependent = undefined;
         }
       }

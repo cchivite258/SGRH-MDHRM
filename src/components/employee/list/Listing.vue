@@ -321,7 +321,7 @@ onBeforeRouteLeave(() => {
           </td>
 
           <td data-label="Acção" class="employee-listing-table__actions-cell">
-            <ListMenuWithIcon :menuItems="getDynamicOptions()" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions()" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -492,7 +492,13 @@ onBeforeRouteLeave(() => {
 }
 
 .employee-listing-table__actions-cell {
+  text-align: center;
   white-space: nowrap;
+}
+
+.employee-listing-page :deep(.employee-listing-table__actions-cell .d-flex) {
+  justify-content: center !important;
+  width: 100%;
 }
 
 .employee-listing-page :deep(.employee-listing-table__actions-cell .v-btn) {

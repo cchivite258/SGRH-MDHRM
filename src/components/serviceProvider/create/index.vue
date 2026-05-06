@@ -310,16 +310,16 @@ onBeforeUnmount(() => {
   </FormCard>
 
   <div class="service-provider-form-footer-actions">
-    <v-btn class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
-      @click="onHeaderSave">
-      <i class="ph-floppy-disk me-2" />
-      {{ headerSaveLabel }}
-    </v-btn>
-
     <v-btn class="service-provider-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading"
       @click="goBackToList">
       <i class="ph-arrow-left me-2" />
       {{ $t('t-back-to-list') }}
+    </v-btn>
+
+    <v-btn class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
+      @click="onHeaderSave">
+      <i class="ph-floppy-disk me-2" />
+      {{ headerSaveLabel }}
     </v-btn>
   </div>
 </template>
