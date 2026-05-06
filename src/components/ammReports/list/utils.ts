@@ -18,7 +18,7 @@ export const reportHeader: TableHeaderType[] = [
   { title: "all", isCheck: true },
   { title: "code" },
   { title: "report" },
-  { title: "action", align: "end" },
+  { title: "action", align: "center" },
 ];
 
 export const reports: ReportType[] = [

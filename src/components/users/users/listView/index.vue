@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
 import Status from "@/app/common/components/Status.vue";
 import CreateUpdateUserModal from "@/components/users/users/CreateUpdateUserModal.vue";
@@ -377,7 +378,7 @@ onMounted(() => {
             <Status :status="item.accountLocked ? 'block' : 'unblock'" />
           </td>
           <td data-label="Acção" class="user-listing-table__actions-cell">
-            <ListMenuWithIcon :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -537,7 +538,13 @@ onMounted(() => {
 }
 
 .user-listing-table__actions-cell {
+  text-align: center;
   white-space: nowrap;
+}
+
+.user-listing-page :deep(.user-listing-table__actions-cell .d-flex) {
+  justify-content: center !important;
+  width: 100%;
 }
 
 .user-listing-page :deep(.user-listing-table__actions-cell .v-btn) {

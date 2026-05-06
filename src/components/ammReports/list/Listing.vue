@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, watch, computed, onMounted } from "vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 import {
   reports,
   reportHeader,
@@ -73,63 +74,40 @@ const filteredReports = ref<ReportType[]>(mappedReports);
 const finalData = ref<ReportType[]>(filteredReports.value);
 
 const page = ref(1);
-const noOfItems = computed(() => {
-  return finalData.value.length;
-});
-const tableData = ref<ReportType[]>([]);
+const noOfItems = computed(() => filteredReports.value.length);
 const loading = ref(false);
 
 const config = ref({
   page: page.value,
-  start: 0,
-  end: 0,
+  start: 1,
+  end: Math.min(10, noOfItems.value),
   noOfItems: noOfItems.value,
   itemsPerPage: 10,
 });
 
-const getPaginatedData = () => {
-  const { itemsPerPage, page } = config.value;
-  const start = (page - 1) * itemsPerPage;
-  let end = start + itemsPerPage;
-  end = end <= noOfItems.value ? end : noOfItems.value;
+const paginatedReports = computed(() => {
+  const { itemsPerPage } = config.value;
+  const startIndex = (page.value - 1) * itemsPerPage;
+  return filteredReports.value.slice(startIndex, startIndex + itemsPerPage);
+});
+
+const syncConfig = () => {
+  const { itemsPerPage } = config.value;
+  const start = filteredReports.value.length === 0 ? 0 : (page.value - 1) * itemsPerPage + 1;
+  const end = Math.min(page.value * itemsPerPage, filteredReports.value.length);
 
   config.value = {
     ...config.value,
+    page: page.value,
     start,
     end,
+    noOfItems: filteredReports.value.length,
   };
-
-  const data = filteredReports.value.slice(
-    config.value.start,
-    config.value.end
-  );
-
-  loading.value = true;
-  tableData.value = [];
-
-  setTimeout(() => {
-  tableData.value = data.map(item => ({
-    ...item,
-  }));
-
-  // aplica o selectAll se estiver ativo
-  if (isAllChecked.value) {
-    tableData.value.forEach(item => (item.isChecked = true));
-  }
-
-  loading.value = false;
-}, 200);
-
 };
 
-onMounted(() => {
-  getPaginatedData();
-});
-
-watch(page, (newPage: number) => {
-  config.value.page = newPage;
-  getPaginatedData();
-});
+onMounted(syncConfig);
+watch(page, syncConfig);
+watch(filteredReports, syncConfig, { deep: true });
 
 
 const onSelectAll = () => {
@@ -141,7 +119,7 @@ const onSelectAll = () => {
   });
 
   // Atualiza os itens da página actual
-  tableData.value.forEach(item => {
+  paginatedReports.value.forEach(item => {
     item.isChecked = isAllChecked.value;
   });
 };
@@ -209,27 +187,13 @@ if (action === "generate" && handler.generate) {
 
 };
 
+const reportActions = computed(() => {
+  return reportAction.map((item) => ({
+    ...item,
+    title: t(`t-${item.title}`),
+  }));
+});
 
-const updateTableData = (newVal: ReportType[]) => {
-  loading.value = true;
-  const { itemsPerPage } = config.value;
-
-  const start = 1;
-  let end = start + itemsPerPage;
-  end = end <= newVal.length ? end : newVal.length;
-  tableData.value = [];
-
-  setTimeout(() => {
-    tableData.value = newVal;
-    config.value = {
-      ...config.value,
-      start,
-      end,
-      noOfItems: newVal.length,
-    };
-    loading.value = false;
-  }, 200);
-};
 
 const searchQuery = ref("");
 
@@ -239,8 +203,7 @@ watch(searchQuery, (value) => {
   filteredReports.value = finalData.value.filter((report) =>
     t(`t-${report.title}`).toLowerCase().includes(val)
   );
-
-  updateTableData(filteredReports.value);
+  page.value = 1;
 });
 
 </script>
@@ -268,7 +231,7 @@ watch(searchQuery, (value) => {
         :headerItems="reportHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" is-pagination
         :loading="loading" @onSelectAll="onSelectAll">
         <template #body>
-          <tr v-for="item in tableData" :key="item.id" class="report-row">
+          <tr v-for="item in paginatedReports" :key="item.id" class="report-row">
             <td>
               <v-checkbox v-model="item.isChecked" color="primary" hide-details />
             </td>
@@ -279,14 +242,21 @@ watch(searchQuery, (value) => {
             </td>
             <td>
               <div class="d-flex align-center report-title-cell">
-                <v-avatar color="light" class="pa-2 mx-1 report-avatar" rounded>
+                <v-btn
+                  icon
+                  rounded
+                  variant="outlined"
+                  density="comfortable"
+                  class="report-document-trigger"
+                  @click="onSelect('preview', item)"
+                >
                   <i :class="item.img"></i>
-                </v-avatar>
+                </v-btn>
                 <span class="font-weight-bold report-title-text">{{ $t(`t-${item.title}`) }}</span>
               </div>
             </td>
-            <td class="text-end">
-              <ListMenuWithIcon :menuItems="reportAction.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" @onSelect="onSelect($event, item)" />
+            <td class="report-actions-cell">
+              <TableActionMenu :menuItems="reportActions" @onSelect="onSelect($event, item)" />
             </td>
           </tr>
         </template>
@@ -387,13 +357,27 @@ watch(searchQuery, (value) => {
   gap: 8px;
 }
 
-.report-avatar {
+.report-document-trigger {
   border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
-  background: rgba(var(--v-theme-on-surface), 0.06);
+  box-shadow: none;
 }
 
 .report-title-text {
   color: rgb(var(--v-theme-on-surface));
+}
+
+.report-actions-cell {
+  text-align: center;
+}
+
+.reports-card :deep(.report-actions-cell .d-flex) {
+  justify-content: center !important;
+  width: 100%;
+}
+
+.reports-card :deep(.report-actions-cell .v-btn) {
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: none;
 }
 
 @media (max-width: 960px) {

@@ -6,6 +6,7 @@ import { useToast } from "vue-toastification"
 import { useLayoutStore } from "@/store/app"
 import CancelInvoiceConfirmationDialog from "@/app/common/components/CancelInvoiceConfirmationDialog.vue"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
+import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
 import PostInvoiceConfirmationDialog from "@/app/common/components/PostInvoiceConfirmationDialog.vue"
 import ReverseInvoiceConfirmationDialog from "@/app/common/components/ReverseInvoiceConfirmationDialog.vue"
@@ -375,7 +376,7 @@ onBeforeRouteLeave(() => {
             <Status :status="item.invoiceStatus" />
           </td>
           <td data-label="Acção" class="invoice-listing-table__actions-cell">
-            <ListMenuWithIcon :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -549,7 +550,13 @@ onBeforeRouteLeave(() => {
 }
 
 .invoice-listing-table__actions-cell {
+  text-align: center;
   white-space: nowrap;
+}
+
+.invoice-listing-page :deep(.invoice-listing-table__actions-cell .d-flex) {
+  justify-content: center !important;
+  width: 100%;
 }
 
 .invoice-listing-page :deep(.invoice-listing-table__actions-cell .v-btn) {
