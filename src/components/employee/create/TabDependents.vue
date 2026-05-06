@@ -404,7 +404,7 @@ onMounted(async () => {
       <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-salary-review') }}
     </v-btn>
 
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
+    <v-btn color="secondary" variant="elevated" class="me-2" @click="$emit('onStepChange', 5)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>

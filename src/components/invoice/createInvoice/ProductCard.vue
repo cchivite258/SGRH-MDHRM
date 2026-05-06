@@ -99,12 +99,25 @@ const activeHealthPlanId = ref("");
 // =============================================
 
 
-const companyAllowedHospitalProcedures = computed(() =>
-  hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
+const companyAllowedHospitalProcedures = computed(() => {
+  const options = hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
     value: item.id,
     label: item.hospitalProcedureType.name
-  }))
-);
+  }));
+
+  const fallbackOptions = invoiceItems.value
+    .filter(item =>
+      !!item.companyAllowedHospitalProcedure &&
+      !!item.companyAllowedHospitalProcedureLabel &&
+      !options.some(option => option.value === item.companyAllowedHospitalProcedure)
+    )
+    .map(item => ({
+      value: item.companyAllowedHospitalProcedure as string,
+      label: item.companyAllowedHospitalProcedureLabel as string
+    }));
+
+  return [...options, ...fallbackOptions];
+});
 
 const taxRates = computed(() =>
   taxRateStore.tax_rates_for_dropdown.map(item => ({

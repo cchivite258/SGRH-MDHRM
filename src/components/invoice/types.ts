@@ -6,6 +6,12 @@ export type InvoiceListingType = {
     totalAmount: number;
     website: string;
     company?: string;
+    contractId?: string | number;
+    contract?: {
+        id: string | number;
+        name: string;
+        description?: string;
+    };
     invoiceStatus: string;
     employee: {
         id: string;
@@ -14,6 +20,10 @@ export type InvoiceListingType = {
         email: string;
         phone: string;
         companyId?: string;
+        company?: {
+            id: string;
+            name: string;
+        };
     };
     serviceProvider: {
         id: string;
@@ -59,6 +69,12 @@ export type InvoiceResponseType = {
     totalAmount: number;
     website: string;
     company?: string;
+    contractId?: string | number;
+    contract?: {
+        id: string | number;
+        name: string;
+        description?: string;
+    };
     invoiceStatus: string;
     employee: {
         id: string;
@@ -67,6 +83,10 @@ export type InvoiceResponseType = {
         email: string;
         phone: string;
         companyId?: string;
+        company?: {
+            id: string;
+            name: string;
+        };
     };
     serviceProvider: {
         id: string;
@@ -118,6 +138,10 @@ export type InvoiceInsertType = {
     notes?: string;
     coveragePeriod?: any;
     invoiceAttachment?: any;
+    companyLabel?: string;
+    serviceProviderLabel?: string;
+    employeeLabel?: string;
+    dependentLabel?: string;
 }
 
 
@@ -129,6 +153,7 @@ export type InvoiceItemInsertType = {
     taxRate: string;
     description: string;
     companyAllowedHospitalProcedure: string | undefined;
+    companyAllowedHospitalProcedureLabel?: string;
     invoice: string | undefined;
     totalAmount: number;
     flag?: string;

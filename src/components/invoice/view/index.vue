@@ -84,11 +84,19 @@ const loadInvoiceData = async (id: string) => {
     if (invoiceResponse?.data) {
       Object.assign(invoiceData, invoiceResponse.data);
       // Mapeia os relacionamentos
-      invoiceData.company = invoiceResponse.data.employee?.companyId || undefined;
+      invoiceData.company = invoiceResponse.data.contract?.id || invoiceResponse.data.contractId || undefined;
+      invoiceData.companyLabel = invoiceResponse.data.contract?.name || '';
       invoiceData.serviceProvider = invoiceResponse.data.serviceProvider?.id || undefined;
+      invoiceData.serviceProviderLabel = invoiceResponse.data.serviceProvider?.name || '';
       invoiceData.employee = invoiceResponse.data.employee?.id || undefined;
+      invoiceData.employeeLabel = invoiceResponse.data.employee
+        ? `${invoiceResponse.data.employee.firstName} ${invoiceResponse.data.employee.lastName}`
+        : '';
       invoiceData.currency = invoiceResponse.data.currency?.id || undefined;
       invoiceData.dependent = invoiceResponse.data.dependent?.id || undefined;
+      invoiceData.dependentLabel = invoiceResponse.data.dependent
+        ? `${invoiceResponse.data.dependent.firstName} ${invoiceResponse.data.dependent.lastName}`
+        : '';
     }
 
     // Processa os itens da factura
@@ -97,6 +105,7 @@ const loadInvoiceData = async (id: string) => {
         ...item,
         taxRate: item.taxRate?.id || '',
         companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure?.id || '',
+        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
         invoice: item.invoice?.id || ''
       }));
     }
