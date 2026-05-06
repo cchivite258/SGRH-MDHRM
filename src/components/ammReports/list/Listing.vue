@@ -10,7 +10,7 @@ import {
 import Table from "@/app/common/components/Table.vue";
 import { ReportType } from "@/components/ammReports/types";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
-import Card from "@/app/common/components/Card.vue";
+import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
 
 import PreviewDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/PreviewDialog.vue";
 import GenerateDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/GenerateDialog.vue";
@@ -208,8 +208,14 @@ watch(searchQuery, (value) => {
 
 </script>
 <template>
-  <Card :title="$t('t-reports')" class="mt-7 reports-card">
-    <v-card-text>
+  <ListingPageShell
+    class="reports-card"
+    :title="$t('t-reports-list')"
+    subtitle="Consulte, pesquise e execute os relatórios disponíveis no sistema."
+    :show-action="false"
+    :show-pagination="false"
+  >
+    <template #afterHeader>
       <div class="reports-header mb-4">
         <div class="reports-header-left">
           <div class="reports-header-subtitle">{{ filteredReports.length }} {{ $t('t-results') }}</div>
@@ -220,13 +226,13 @@ watch(searchQuery, (value) => {
           </v-chip>
         </div>
       </div>
-      <v-row>
-        <v-col cols="12" lg="12">
-          <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-report')" />
-        </v-col>
-      </v-row>
-    </v-card-text>
-    <v-card-text>
+    </template>
+
+    <template #filters>
+      <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-report')" />
+    </template>
+
+    <div>
       <Table v-model="page" :config="config"
         :headerItems="reportHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" is-pagination
         :loading="loading" @onSelectAll="onSelectAll">
@@ -271,8 +277,8 @@ watch(searchQuery, (value) => {
           {{ $t("t-search-not-found-message") }}
         </div>
       </div>
-    </v-card-text>
-  </Card>
+    </div>
+  </ListingPageShell>
 
 
   <PreviewDialog100001 v-model="previewDialog100001"  />
@@ -302,10 +308,6 @@ watch(searchQuery, (value) => {
 </template>
 
 <style scoped>
-.reports-card {
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.2);
-}
-
 .reports-header {
   display: flex;
   align-items: center;
