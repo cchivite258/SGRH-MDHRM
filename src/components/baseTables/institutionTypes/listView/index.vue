@@ -6,7 +6,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
 import ListingSearchCard from "@/app/common/components/listing/ListingSearchCard.vue";
 import Status from "@/app/common/components/Status.vue";
-import TableAction from "@/app/common/components/TableAction.vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 import CreateUpdateInstitutionTypeModal from "@/components/baseTables/institutionTypes/CreateUpdateInstitutionTypeModal.vue";
 import ViewInstitutionTypeModal from "@/components/baseTables/institutionTypes/ViewInstitutionTypeModal.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
@@ -193,7 +193,7 @@ const onConfirmDelete = async () => {
           <td data-label="Descrição">{{ item.description }}</td>
           <td data-label="Disponibilidade"><Status :status="item.enabled ? 'enabled' : 'disabled'" /></td>
           <td data-label="Acção" class="base-table-listing-page__actions-cell">
-            <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+            <TableActionMenu @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
           </td>
         </tr>
       </template>
@@ -220,8 +220,8 @@ const onConfirmDelete = async () => {
 .base-table-listing-page :deep(.v-table__wrapper > table > thead > tr > th), .base-table-listing-page :deep(.v-data-table-header th), .base-table-listing-page :deep(.v-data-table__th) { background-color:#f3f6fa !important; border-bottom:1px solid #d8e1ec; color:#334155; font-size:.7rem; font-weight:700; padding-top:10px; padding-bottom:10px; text-transform:none; }
 .base-table-listing-page :deep(.v-data-table__tr td) { border-bottom:1px solid #eef2f7; color:#334155; font-size:.8rem; padding-top:18px; padding-bottom:18px; vertical-align:middle; }
 .base-table-listing-page__primary-cell { color:#334155; font-weight:500; }
-.base-table-listing-page__actions-cell { white-space:nowrap; }
-.base-table-listing-page :deep(.base-table-listing-page__actions-cell .d-flex) { gap:6px; }
+.base-table-listing-page__actions-cell { text-align:center; white-space:nowrap; }
+.base-table-listing-page :deep(.base-table-listing-page__actions-cell .d-flex) { gap:6px; justify-content:center !important; width:100%; }
 .base-table-listing-page :deep(.base-table-listing-page__actions-cell .v-btn) { border:1px solid rgba(148,163,184,.15); box-shadow:none; }
 .base-table-listing-page__empty-avatar { border:1px solid #e2e8f0; }
 .base-table-listing-page__empty-title { color:#0f172a; font-size:.98rem; font-weight:700; }

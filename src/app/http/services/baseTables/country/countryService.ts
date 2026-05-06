@@ -4,8 +4,10 @@ import type { ProvinceUpdateType, ProvinceListingType, ProvinceInsertType, Provi
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
 
 interface ServiceResponse<T> {
@@ -13,6 +15,43 @@ interface ServiceResponse<T> {
   data?: T;
   error?: ApiErrorResponse;
 }
+
+const normalizeCountryResponse = (raw: any): CountryResponseType => ({
+  id: raw?.id ?? "",
+  name: raw?.name ?? "",
+  code: raw?.code ?? "",
+  iso2Code: raw?.iso2Code ?? raw?.iso2_code ?? "",
+  iso3Code: raw?.iso3Code ?? raw?.iso3_code ?? "",
+  phoneCode: raw?.phoneCode ?? raw?.phone_code ?? "",
+  currency: typeof raw?.currency === "string" ? raw.currency : raw?.currency?.name ?? "",
+  currencySymbol:
+    raw?.currencySymbol ??
+    raw?.currency_symbol ??
+    (typeof raw?.currency === "object" ? raw?.currency?.symbol : "") ??
+    "",
+  currencyCode:
+    raw?.currencyCode ??
+    raw?.currency_code ??
+    (typeof raw?.currency === "string" ? raw.currency : "") ??
+    (typeof raw?.currency === "object" ? raw?.currency?.code : "") ??
+    "",
+  nationality: raw?.nationality ?? "",
+  enabled: Boolean(raw?.enabled)
+});
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? {};
+const getEntity = <T>(response: ApiResponse<T> | T): T | undefined => {
+  if (response && typeof response === "object" && "data" in (response as Record<string, any>)) {
+    return (response as ApiResponse<T>).data;
+  }
+
+  if (response && typeof response === "object" && "content" in (response as Record<string, any>)) {
+    return (response as ApiResponse<T>).content;
+  }
+
+  return response as T;
+};
 
 export default class CountryService extends HttpService {
 
@@ -44,8 +83,8 @@ export default class CountryService extends HttpService {
       const response = await this.get<ApiResponse<CountryListingType[]>>(url);
 
       return {
-        content: response.data || [],
-        meta: response.meta || {}
+        content: getContent(response).map(normalizeCountryResponse),
+        meta: getMeta(response)
       };
 
     } catch (error) {
@@ -56,10 +95,13 @@ export default class CountryService extends HttpService {
 
   async getCountryByID(id: string): Promise<{ data: CountryResponseType }> {
     try {
-      const response = await this.get<{ data: CountryResponseType; meta: any }>
-        (`/administration/setup/countries/${id}`);
+      const response = await this.get<ApiResponse<CountryResponseType> | CountryResponseType>(
+        `/administration/setup/countries/${id}`
+      );
+
+      const rawCountry = getEntity(response);
       return {
-        data: response.data
+        data: normalizeCountryResponse(rawCountry)
       };
     } catch (error) {
       console.error("Erro ao buscar país por ID:", error);
@@ -137,6 +179,7 @@ export default class CountryService extends HttpService {
         currency: countryData.currency,
         currencySymbol: countryData.currencySymbol,
         currencyCode: countryData.currencyCode,
+        nationality: countryData.nationality,
         enabled: countryData.enabled
       };
 

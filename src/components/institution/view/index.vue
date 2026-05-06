@@ -1,8 +1,9 @@
-﻿<script lang="ts" setup>
-import { onMounted, reactive, ref } from "vue";
-import { useRoute } from "vue-router";
+<script lang="ts" setup>
+import { computed, onMounted, reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
+import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Status from "@/app/common/components/Status.vue";
 import ButtonNav from "@/components/institution/create/ButtonNav.vue";
 import Step2 from "@/components/institution/create/TabPeriods.vue";
@@ -14,12 +15,21 @@ import Step7 from "@/components/institution/create/TabEmployees.vue";
 import { institutionService } from "@/app/http/httpServiceProvider";
 import type { InstitutionInsertType } from "@/components/institution/types";
 
+const props = defineProps({
+  cardTitle: {
+    type: String,
+    default: ""
+  }
+});
+
 const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
+const router = useRouter();
 
 const loading = ref(false);
 const step = ref(1);
+const totalSteps = 7;
 const institutionId = ref<string | null>(
   typeof route.params.id === "string"
     ? route.params.id
@@ -48,8 +58,35 @@ const institutionData = reactive<InstitutionInsertType & { institutionTypeName?:
   institutionTypeName: ""
 });
 
+const headerTitle = computed(() => props.cardTitle || t("t-view-institution"));
+
 const onStepChange = (value: number) => {
   step.value = value;
+};
+
+const isFirstStep = computed(() => step.value === 1);
+const isLastStep = computed(() => step.value === totalSteps);
+
+const goBackToList = () => {
+  router.push("/institution/list");
+};
+
+const goToPreviousStep = () => {
+  if (isFirstStep.value) {
+    goBackToList();
+    return;
+  }
+
+  step.value -= 1;
+};
+
+const goToNextStep = () => {
+  if (isLastStep.value) {
+    goBackToList();
+    return;
+  }
+
+  step.value += 1;
 };
 
 onMounted(async () => {
@@ -60,7 +97,7 @@ onMounted(async () => {
     const response = await institutionService.getInstitutionById(institutionId.value);
 
     if (!response?.data) {
-      throw new Error("Dados do contrato nÃ£o disponÃ­veis.");
+      throw new Error("Dados do contrato nao disponiveis.");
     }
 
     Object.assign(institutionData, response.data);
@@ -75,6 +112,14 @@ onMounted(async () => {
 </script>
 
 <template>
+  <FormPageHeader
+    :title="headerTitle"
+    subtitle="Consulte e navegue pelos dados do contrato em blocos claros."
+    :loading="loading"
+    :show-save="false"
+    @back="goBackToList"
+  />
+
   <Card>
     <v-card-text>
       <ButtonNav v-model="step" class="mb-2" :institution-id="institutionId as string" :basic-data-validated="true" />
@@ -144,7 +189,63 @@ onMounted(async () => {
       <Step5 v-if="step === 5" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step6 v-if="step === 6" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step7 v-if="step === 7" :institution-id="institutionId || undefined" :is-view-mode="true" @onStepChange="onStepChange" />
+
+      <div class="institution-view-footer-actions">
+        <v-btn
+          class="institution-view-footer-actions__back"
+          color="secondary"
+          variant="outlined"
+          :disabled="loading"
+          @click="goToPreviousStep"
+        >
+          <i class="ph-arrow-left me-2" />
+          {{ isFirstStep ? $t('t-back-to-list') : $t('t-back') }}
+        </v-btn>
+
+        <v-btn
+          class="institution-view-footer-actions__next"
+          color="secondary"
+          variant="elevated"
+          :disabled="loading"
+          @click="goToNextStep"
+        >
+          {{ isLastStep ? $t('t-back-to-list') : $t('t-proceed') }}
+          <i class="ph-arrow-right ms-2" />
+        </v-btn>
+      </div>
     </v-card-text>
   </Card>
 </template>
 
+<style scoped>
+.institution-view-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.institution-view-footer-actions__back,
+.institution-view-footer-actions__next {
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  min-height: 36px;
+  padding-inline: 14px;
+  text-transform: none;
+}
+
+.institution-view-footer-actions__next {
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .institution-view-footer-actions {
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 18px;
+  }
+}
+</style>

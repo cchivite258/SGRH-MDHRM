@@ -7,7 +7,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
 import ListingSearchCard from "@/app/common/components/listing/ListingSearchCard.vue";
 import Status from "@/app/common/components/Status.vue";
-import TableAction from "@/app/common/components/TableAction.vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 import CreateUpdateHospitalProcedureGroupModal from "@/components/baseTables/hospitalProcedureGroup/CreateUpdateHospitalProcedureGroupModal.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import { hospitalProcedureGroupService } from "@/app/http/httpServiceProvider";
@@ -200,7 +200,7 @@ const onConfirmDelete = async () => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="base-table-listing-page__actions-cell">
-            <TableAction @onEdit="onCreateEditClick(item)" @on-view="onViewClick(item)" @onDelete="onDelete(item.id)" />
+            <TableActionMenu @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
           </td>
         </tr>
       </template>
@@ -281,11 +281,14 @@ const onConfirmDelete = async () => {
 }
 
 .base-table-listing-page__actions-cell {
+  text-align: center;
   white-space: nowrap;
 }
 
 .base-table-listing-page :deep(.base-table-listing-page__actions-cell .d-flex) {
   gap: 6px;
+  justify-content: center !important;
+  width: 100%;
 }
 
 .base-table-listing-page :deep(.base-table-listing-page__actions-cell .v-btn) {

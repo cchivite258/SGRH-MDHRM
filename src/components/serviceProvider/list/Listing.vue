@@ -6,13 +6,14 @@ import { useToast } from "vue-toastification"
 import { useLayoutStore } from "@/store/app"
 import { serviceProviderService } from "@/app/http/httpServiceProvider"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
+import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
 import Status from "@/app/common/components/Status.vue"
-import TableAction from "@/app/common/components/TableAction.vue"
 import AdvancedFilter from "@/components/serviceProvider/list/AdvancedFilter.vue"
 import { serviceProviderHeader } from "@/components/serviceProvider/list/utils"
 import type { ServiceProviderListingType } from "@/components/serviceProvider/types"
+import type { OptionType } from "@/app/common/types/option.type"
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
 
 const { t } = useI18n()
@@ -99,6 +100,26 @@ const truncate = (text: string, maxLength = 30) => {
   return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
 }
 
+const serviceProviderOptions: OptionType[] = [
+  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
+  { title: "Eliminar", value: "delete", icon: "ph-trash" }
+]
+
+const onSelect = (option: string, item: ServiceProviderListingType) => {
+  switch (option) {
+    case "view":
+      onView(item.id)
+      break
+    case "edit":
+      router.push(`/service-provider/edit/${item.id}`)
+      break
+    case "delete":
+      openDeleteDialog(item.id)
+      break
+  }
+}
+
 onBeforeMount(() => {
   resetListingFilters()
 })
@@ -182,11 +203,7 @@ onBeforeRouteLeave(() => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="service-provider-listing-table__actions-cell">
-            <TableAction
-              @on-view="() => router.push(`/service-provider/view/${item.id}`)"
-              @onEdit="() => router.push(`/service-provider/edit/${item.id}`)"
-              @onDelete="() => openDeleteDialog(item.id)"
-            />
+            <ListMenuWithIcon align="center" :menuItems="serviceProviderOptions" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
@@ -352,11 +369,14 @@ onBeforeRouteLeave(() => {
 }
 
 .service-provider-listing-table__actions-cell {
+  text-align: center;
   white-space: nowrap;
 }
 
 .service-provider-listing-page :deep(.service-provider-listing-table__actions-cell .d-flex) {
   gap: 6px;
+  justify-content: center !important;
+  width: 100%;
 }
 
 .service-provider-listing-page :deep(.service-provider-listing-table__actions-cell .v-btn) {
@@ -474,7 +494,7 @@ onBeforeRouteLeave(() => {
   }
 
   .service-provider-listing-page :deep(.service-provider-listing-table__actions-cell .d-flex) {
-    justify-content: flex-start !important;
+    justify-content: center !important;
   }
 }
 </style>

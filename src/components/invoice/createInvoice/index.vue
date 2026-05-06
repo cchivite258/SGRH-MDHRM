@@ -160,14 +160,21 @@ const normalizeInvoicePayload = (payload: InvoiceInsertType): InvoiceInsertType 
     return undefined;
   };
 
-  normalized.company = normalizeId(normalized.company) || "";
   normalized.serviceProvider = normalizeId(normalized.serviceProvider);
   normalized.employee = normalizeId(normalized.employee);
   normalized.currency = normalizeNumericId(normalized.currency);
   normalized.coveragePeriod = normalizeId(normalized.coveragePeriod);
   normalized.dependent = normalized.isEmployeeInvoice ? undefined : normalizeId(normalized.dependent);
+  const {
+    company,
+    companyLabel,
+    serviceProviderLabel,
+    employeeLabel,
+    dependentLabel,
+    ...apiPayload
+  } = normalized;
 
-  return normalized;
+  return apiPayload as InvoiceInsertType;
 };
 
 const normalizeInvoiceItems = (items: InvoiceItemInsertType[]): InvoiceItemInsertType[] =>
@@ -240,11 +247,19 @@ const loadInvoiceData = async (id: string) => {
     if (invoiceResponse?.data) {
       Object.assign(invoiceData, {
         ...invoiceResponse.data,
-        company: invoiceResponse.data.employee?.companyId,
+        company: invoiceResponse.data.contract?.id || invoiceResponse.data.contractId || '',
+        companyLabel: invoiceResponse.data.contract?.name || '',
         serviceProvider: invoiceResponse.data.serviceProvider?.id,
+        serviceProviderLabel: invoiceResponse.data.serviceProvider?.name || '',
         employee: invoiceResponse.data.employee?.id,
+        employeeLabel: invoiceResponse.data.employee
+          ? `${invoiceResponse.data.employee.firstName} ${invoiceResponse.data.employee.lastName}`
+          : '',
         currency: invoiceResponse.data.currency?.id,
-        dependent: invoiceResponse.data.dependent?.id
+        dependent: invoiceResponse.data.dependent?.id,
+        dependentLabel: invoiceResponse.data.dependent
+          ? `${invoiceResponse.data.dependent.firstName} ${invoiceResponse.data.dependent.lastName}`
+          : ''
       });
     }
 
@@ -253,6 +268,7 @@ const loadInvoiceData = async (id: string) => {
         ...item,
         taxRate: item.taxRate?.id || '',
         companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure?.id || '',
+        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
         invoice: item.invoice?.id || ''
       }));
     }
