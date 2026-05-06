@@ -43,6 +43,16 @@ const invoiceId = ref<string | null>(
  */
 const isEditMode = computed(() => !!invoiceId.value); // Determina se está em modo de edição
 
+const normalizeCompanyId = (
+  contractId?: string | number | null
+): string | undefined => {
+  if (contractId === undefined || contractId === null || contractId === "") {
+    return undefined;
+  }
+
+  return String(contractId);
+};
+
 /**
  * Dados reativos da fatura
  */
@@ -84,7 +94,9 @@ const loadInvoiceData = async (id: string) => {
     if (invoiceResponse?.data) {
       Object.assign(invoiceData, invoiceResponse.data);
       // Mapeia os relacionamentos
-      invoiceData.company = invoiceResponse.data.contract?.id || invoiceResponse.data.contractId || undefined;
+      invoiceData.company = normalizeCompanyId(
+        invoiceResponse.data.contract?.id ?? invoiceResponse.data.contractId
+      );
       invoiceData.companyLabel = invoiceResponse.data.contract?.name || '';
       invoiceData.serviceProvider = invoiceResponse.data.serviceProvider?.id || undefined;
       invoiceData.serviceProviderLabel = invoiceResponse.data.serviceProvider?.name || '';
