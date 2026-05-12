@@ -235,3 +235,69 @@ export type EmployeeExpenseStatementReportType = {
   employeeRemaingBalance?: number;
   employeeAllocatedBalance?: number;
 };
+
+export type InvoiceReferenceReportFilterType = {
+  invoiceReferenceNumber?: string;
+  contractId?: string | number;
+  serviceProviderId?: string | number;
+};
+
+export type InvoiceReferenceReportContractType = {
+  id?: string | number;
+  name?: string;
+  description?: string;
+  organizationId?: string | number;
+  enabled?: boolean;
+};
+
+export type InvoiceReferenceReportServiceProviderType = {
+  id?: string | number;
+  name?: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  incomeTaxNumber?: string;
+  personOfContactFullname1?: string;
+  personOfContactPhone1?: string;
+  personOfContactEmail1?: string;
+  personOfContactFullname2?: string;
+  personOfContactPhone2?: string;
+  personOfContactEmail2?: string;
+  contractStartDate?: string;
+  contractEndDate?: string;
+  providerTypeId?: string | number;
+  provinceId?: string | number;
+  countryId?: string | number;
+};
+
+export type InvoiceReferenceReportDetailType = {
+  id?: string;
+  invoiceNumber?: string;
+  issueDate?: string;
+  dueDate?: string;
+  totalAmount?: number;
+  invoiceStatus?: string;
+  employeeId?: string;
+  invoiceReferenceNumber?: string;
+  serviceProviderId?: string | number;
+  currencyId?: string | number;
+  invoiceAttachmentId?: string;
+  flag?: string;
+  dependentId?: string;
+  isEmployeeInvoice?: boolean;
+  authorizedBy?: string;
+  coveragePeriodId?: string | number;
+  contractId?: string | number;
+  areItemsFlagged?: boolean;
+  notes?: string;
+};
+
+export type InvoiceReferenceReportType = {
+  serviceProvider?: InvoiceReferenceReportServiceProviderType;
+  contract?: InvoiceReferenceReportContractType;
+  invoiceReferenceNumber?: string;
+  totalAmount?: number;
+  details?: InvoiceReferenceReportDetailType[];
+};

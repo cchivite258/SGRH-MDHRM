@@ -80,6 +80,10 @@ export class CompanyEmployeeLimitsReportExporter {
     return d.toLocaleDateString(this.localeCode(), { month: "long", year: "2-digit" });
   }
 
+  private static monthLabelNumeric(year: number, month: number): string {
+    return `${String(month).padStart(2, "0")}/${String(year).slice(-2)}`;
+  }
+
   private static toMonthKey(year: number, month: number): string {
     return `${year}-${String(month).padStart(2, "0")}`;
   }
@@ -253,8 +257,9 @@ export class CompanyEmployeeLimitsReportExporter {
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
     pdf.text(`${this.tr("t-report")} #100006 - ${this.tr("t-report-100006-title")}`, margin, 18);
-    pdf.text(`${this.tr("t-institution")}: ${report.contractName || "-"}`, margin, 23);
-    pdf.text(`${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`, margin, 28);
+    pdf.setDrawColor(180, 180, 180);
+    pdf.setLineWidth(0.3);
+    pdf.line(margin, 23, pageWidth - margin, 23);
 
     const drawCard = (
       x: number,
@@ -327,7 +332,7 @@ export class CompanyEmployeeLimitsReportExporter {
       });
     };
 
-    const cardsY = 33;
+    const cardsY = 28;
     const cardGap = 4;
     const cardWidth = (pageWidth - (margin * 2) - (cardGap * 2)) / 3;
     const cardHeight = 40;
@@ -372,7 +377,7 @@ export class CompanyEmployeeLimitsReportExporter {
       { titleColor: [120, 120, 120], headlineColor: [183, 28, 28] }
     );
 
-    const monthHeaders = months.map((m) => this.monthLabel(m.year, m.month));
+    const monthHeaders = months.map((m) => this.monthLabelNumeric(m.year, m.month));
     const headers = [
       this.tr("t-name"),
       this.tr("t-department"),
@@ -426,8 +431,12 @@ export class CompanyEmployeeLimitsReportExporter {
       margin: { left: margin, right: margin },
       head: [headers],
       body,
-      styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, lineColor: [220, 220, 220] },
-      headStyles: { fillColor: [220, 235, 255], textColor: [31, 58, 147], fontStyle: "bold" },
+      styles: { fontSize: 6.2, cellPadding: 1.2, lineWidth: 0.1, lineColor: [220, 220, 220] },
+      headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 6.6 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 20 }
+      },
       didParseCell: (data: any) => {
         if (data.section === "body") {
           const isTotalsRow = data.row.index === rows.length;

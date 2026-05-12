@@ -31,6 +31,8 @@ import PreviewDialog100008 from "@/components/ammReports/list/TotalBilledByProvi
 import GenerateDialog100008 from "@/components/ammReports/list/TotalBilledByProviderReport/GenerateDialog.vue";
 import PreviewDialog100009 from "@/components/ammReports/list/EmployeeExpenseStatementReport/PreviewDialog.vue";
 import GenerateDialog100009 from "@/components/ammReports/list/EmployeeExpenseStatementReport/GenerateDialog.vue";
+import PreviewDialog100010 from "@/components/ammReports/list/InvoiceReferenceReport/PreviewDialog.vue";
+import GenerateDialog100010 from "@/components/ammReports/list/InvoiceReferenceReport/GenerateDialog.vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -54,6 +56,8 @@ const previewDialog100008 = ref(false);
 const generateDialog100008 = ref(false);
 const previewDialog100009 = ref(false);
 const generateDialog100009 = ref(false);
+const previewDialog100010 = ref(false);
+const generateDialog100010 = ref(false);
 
 const prop = defineProps({
   filters: {
@@ -164,6 +168,10 @@ const reportHandlers: Record<string, {
   "100009": {
      preview: () => previewDialog100009.value = true,
      generate: () => generateDialog100009.value = true
+  },
+  "100010": {
+     preview: () => previewDialog100010.value = true,
+     generate: () => generateDialog100010.value = true
   },
 };
 
@@ -302,6 +310,8 @@ watch(searchQuery, (value) => {
   <GenerateDialog100008 v-model="generateDialog100008"  />
   <PreviewDialog100009 v-model="previewDialog100009"  />
   <GenerateDialog100009 v-model="generateDialog100009"  />
+  <PreviewDialog100010 v-model="previewDialog100010"  />
+  <GenerateDialog100010 v-model="generateDialog100010"  />
 
 
 
