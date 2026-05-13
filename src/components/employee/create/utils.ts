@@ -118,6 +118,21 @@ export const relationshipOptions: MenuSelectItemType[] = [
   }
 ];
 
+export const dependentDocumentTypeOptions: MenuSelectItemType[] = [
+  { value: "", label: "Selecione o Tipo de Documento" },
+  { label: "Bilhete de Identidade", value: "ID_CARD" },
+  { label: "Certidão de Nascimento", value: "BIRTH_CERTIFICATE" },
+  { label: "Passaporte", value: "PASSPORT" },
+  { label: "Certidão de Casamento", value: "MARRIAGE_CERTIFICATE" },
+  { label: "Declaração", value: "AFFIDAVIT" },
+  { label: "Certificado de Estudante", value: "STUDENT_CERTIFICATE" },
+  { label: "Comprovativo de Matrícula", value: "PROOF_OF_ENROLLMENT" },
+  { label: "Certificado de Deficiência", value: "DISABILITY_CERTIFICATE" },
+  { label: "NUIT", value: "TAX_IDENTIFICATION" },
+  { label: "Documento de Tutela Legal", value: "LEGAL_GUARDIANSHIP_DOCUMENT" },
+  { label: "Documento de Suporte", value: "SUPPORTING_DOCUMENT" }
+];
+
 export const breadcrumbHealthPlan: BreadcrumbType[] = [
   {
     title: "view-health-plan",

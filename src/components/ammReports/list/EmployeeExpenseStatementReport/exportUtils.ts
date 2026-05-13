@@ -1,6 +1,5 @@
-﻿import * as XLSX from "xlsx-js-style";
+import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
 import { amountFormate } from "@/app/common/amountFormate";
 import { formateDate } from "@/app/common/dateFormate";
@@ -40,6 +39,32 @@ export class EmployeeExpenseStatementReportExporter {
     return new Date().toLocaleDateString(this.localeCode());
   }
 
+  private static fitText(pdf: jsPDF, text: string, maxWidth: number): string {
+    let value = text || "";
+    if (pdf.getTextWidth(value) <= maxWidth) return value;
+    const ellipsis = "...";
+    while (value.length > 0 && pdf.getTextWidth(value + ellipsis) > maxWidth) {
+      value = value.slice(0, -1);
+    }
+    return `${value}${ellipsis}`;
+  }
+
+  private static drawTextInCell(
+    pdf: jsPDF,
+    text: string,
+    x: number,
+    y: number,
+    width: number,
+    align: "left" | "right" = "left"
+  ) {
+    const fitted = this.fitText(pdf, text, Math.max(2, width - 2));
+    if (align === "right") {
+      pdf.text(fitted, x + width, y, { align: "right" });
+      return;
+    }
+    pdf.text(fitted, x, y);
+  }
+
   static async exportToPDF(
     report: EmployeeExpenseStatementReportType,
     userName: string,
@@ -51,22 +76,32 @@ export class EmployeeExpenseStatementReportExporter {
     const employeeRemaingBalance = Number(report.employeeRemaingBalance || 0);
     const employeeAllocatedBalance = Number(report.employeeAllocatedBalance || 0);
     const employeeName = `${report.employeeFirstName || ""} ${report.employeeLastName || ""}`.trim() || "-";
-
-    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+    const generatedAt = this.getCurrentDateTime();
+    const pdf = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+      compress: false,
+      putOnlyUsedFonts: true,
+      precision: 2
+    });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const margin = 12;
-    const contentWidth = pageWidth - margin * 2;
-    const generatedAt = this.getCurrentDateTime();
+    const contentWidth = pageWidth - (margin * 2);
+    const tableMargin = 8;
+    const tableWidth = pageWidth - (tableMargin * 2);
 
     let currentY = margin;
 
-    pdf.setFontSize(16);
     pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
     pdf.text(this.tr("t-ees-report-title"), margin, currentY);
 
-    pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
     pdf.text(`${this.tr("t-report")} #100009 - ${this.tr("t-report-100009-title")}`, margin, currentY + 6);
 
     pdf.setDrawColor(180, 180, 180);
@@ -76,7 +111,7 @@ export class EmployeeExpenseStatementReportExporter {
     currentY = 28;
 
     const gap = 4;
-    const cardWidth = (contentWidth - gap * 2) / 3;
+    const cardWidth = (contentWidth - (gap * 2)) / 3;
     const cardHeight = 34;
 
     const drawCard = (
@@ -86,66 +121,36 @@ export class EmployeeExpenseStatementReportExporter {
       headline: string,
       lines: string[],
       headlineColor: [number, number, number] = [55, 71, 79],
-      iconBg: [number, number, number] = [227, 242, 253],
-      iconType: "employee" | "institution" | "financial" = "employee"
+      iconBg: [number, number, number] = [227, 242, 253]
     ) => {
-      const maxTextWidth = cardWidth - 16;
-      const fitSingleLine = (text: string, fontSize: number): string => {
-        pdf.setFontSize(fontSize);
-        let output = text || "";
-        while (pdf.getTextWidth(output) > maxTextWidth && output.length > 1) {
-          output = `${output.slice(0, -2)}...`;
-        }
-        return output;
-      };
-
+      const maxTextWidth = cardWidth - 18;
       pdf.setDrawColor(225, 229, 235);
       pdf.setFillColor(255, 255, 255);
       pdf.roundedRect(x, y, cardWidth, cardHeight, 2, 2, "FD");
-
       pdf.setFillColor(iconBg[0], iconBg[1], iconBg[2]);
-      pdf.roundedRect(x + 3, y + 3, 7, 7, 1.2, 1.2, "F");
-      // Icones vetoriais para garantir renderizacao no PDF sem depender de fontes externas.
-      pdf.setDrawColor(255, 255, 255);
-      pdf.setLineWidth(0.35);
-      if (iconType === "employee") {
-        pdf.circle(x + 6.5, y + 5.2, 1.1, "S");
-        pdf.roundedRect(x + 5.2, y + 6.7, 2.6, 2.2, 0.6, 0.6, "S");
-      } else if (iconType === "institution") {
-        pdf.rect(x + 5.2, y + 4.6, 2.8, 4.0, "S");
-        pdf.line(x + 5.2, y + 5.9, x + 8.0, y + 5.9);
-        pdf.line(x + 6.1, y + 4.6, x + 6.1, y + 8.6);
-        pdf.line(x + 7.0, y + 4.6, x + 7.0, y + 8.6);
-      } else {
-        pdf.circle(x + 6.5, y + 6.5, 2.0, "S");
-        pdf.line(x + 5.5, y + 6.5, x + 7.5, y + 6.5);
-        pdf.line(x + 6.5, y + 5.5, x + 6.5, y + 7.5);
-      }
+      pdf.roundedRect(x + 4, y + 4, 8, 8, 1.5, 1.5, "F");
 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7);
       pdf.setTextColor(120, 120, 120);
-      pdf.text(fitSingleLine(title, 7), x + 12, y + 6);
+      pdf.text(this.fitText(pdf, title, maxTextWidth), x + 14, y + 7);
 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(9.5);
+      pdf.setFontSize(10);
       pdf.setTextColor(headlineColor[0], headlineColor[1], headlineColor[2]);
-      pdf.text(fitSingleLine(headline, 9.5), x + 12, y + 11);
+      pdf.text(this.fitText(pdf, headline, maxTextWidth), x + 14, y + 12);
 
-      const dividerY = y + 13;
+      const dividerY = y + 16;
       pdf.setDrawColor(236, 239, 244);
       pdf.line(x + 3, dividerY, x + cardWidth - 3, dividerY);
 
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7);
       pdf.setTextColor(90, 90, 90);
-
-      let lineY = dividerY + 4;
+      let lineY = dividerY + 5;
       lines.forEach((line) => {
-        if (lineY <= y + cardHeight - 2) {
-          pdf.text(fitSingleLine(line, 7), x + 3, lineY);
-          lineY += 4;
-        }
+        pdf.text(this.fitText(pdf, line, cardWidth - 8), x + 4, lineY);
+        lineY += 4;
       });
     };
 
@@ -156,11 +161,10 @@ export class EmployeeExpenseStatementReportExporter {
       employeeName,
       [
         `${this.tr("t-department")}: ${report.employeeDepartmentName || "-"}`,
-        `${this.tr("t-position")}: ${report.employeePositionName || "-"}`,
+        `${this.tr("t-position")}: ${report.employeePositionName || "-"}`
       ],
       [55, 71, 79],
-      [227, 242, 253],
-      "employee"
+      [227, 242, 253]
     );
 
     drawCard(
@@ -170,100 +174,152 @@ export class EmployeeExpenseStatementReportExporter {
       report.contractName || "-",
       [
         `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`,
-        `${this.tr("t-total-invoices")}: ${details.length}`,
+        `${this.tr("t-total-invoices")}: ${details.length}`
       ],
       [46, 125, 50],
-      [232, 245, 233],
-      "institution"
+      [232, 245, 233]
     );
 
     drawCard(
-      margin + (cardWidth + gap) * 2,
+      margin + ((cardWidth + gap) * 2),
       currentY,
       this.tr("t-total-billed"),
       `${amountFormate(totalAmount)} MT`,
       [
         `${this.tr("t-total-paid-by-company")}: ${amountFormate(employeeUsedBalance)} MT`,
         `${this.tr("t-remaining-balance")}: ${amountFormate(employeeRemaingBalance)} MT`,
-        `${this.tr("t-total-allocated")}: ${amountFormate(employeeAllocatedBalance)} MT`,
+        `${this.tr("t-total-allocated")}: ${amountFormate(employeeAllocatedBalance)} MT`
       ],
       [183, 28, 28],
-      [255, 235, 238],
-      "financial"
+      [255, 235, 238]
     );
 
     currentY += cardHeight + 8;
 
-    autoTable(pdf, {
-      startY: currentY,
-      margin: { left: margin, right: margin },
-      head: [[
-        this.tr("t-issue-date"),
-        this.tr("t-invoice-number"),
-        this.tr("t-service-provider"),
-        this.tr("t-patient"),
-        this.tr("t-procedures"),
-        this.tr("t-total-billed"),
-      ]],
-      body: details.map((item) => [
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(this.tr("t-report-details"), margin, currentY);
+    currentY += 5;
+
+    const baseColumns = [
+      { key: "issueDate", title: this.tr("t-issue-date"), width: 24, align: "left" as const },
+      { key: "invoiceNumber", title: this.tr("t-invoice-number"), width: 24, align: "left" as const },
+      { key: "serviceProvider", title: this.tr("t-service-provider"), width: 36, align: "left" as const },
+      { key: "patient", title: this.tr("t-patient"), width: 34, align: "left" as const },
+      { key: "procedures", title: this.tr("t-procedures"), width: 78, align: "left" as const },
+      { key: "total", title: this.tr("t-total-billed"), width: 24, align: "right" as const }
+    ];
+    const baseWidth = baseColumns.reduce((sum, column) => sum + column.width, 0);
+    const scale = tableWidth / baseWidth;
+    const columns = baseColumns.map((column, index) => {
+      const scaledWidth = index === baseColumns.length - 1
+        ? tableWidth - baseColumns.slice(0, -1).reduce((sum, current) => sum + Math.round(current.width * scale * 10) / 10, 0)
+        : Math.round(column.width * scale * 10) / 10;
+      return { ...column, width: scaledWidth };
+    });
+
+    const rowHeight = 8;
+    const headerHeight = 10;
+    const footerHeight = 8;
+    const tableX = tableMargin;
+    const drawTableHeader = (y: number) => {
+      let x = tableX;
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(8);
+      columns.forEach((column) => {
+        pdf.setFillColor(66, 66, 66);
+        pdf.setDrawColor(200, 200, 200);
+        pdf.rect(x, y, column.width, headerHeight, "FD");
+        pdf.setTextColor(255, 255, 255);
+        this.drawTextInCell(pdf, column.title, x + 1.5, y + 6, column.width - 3, column.align);
+        x += column.width;
+      });
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+    };
+
+    const maxBodyY = pageHeight - 22;
+    drawTableHeader(currentY);
+    currentY += headerHeight;
+
+    for (const item of details) {
+      if (currentY + rowHeight > maxBodyY) {
+        pdf.addPage("a4", "landscape");
+        currentY = margin;
+        drawTableHeader(currentY);
+        currentY += headerHeight;
+      }
+
+      const row = [
         item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-",
         item.invoiceNumber || "-",
         item.serviceProviderName || "-",
         item.pacientName || "-",
         (item.hospitalProcedureTypeName || []).join(", ") || "-",
-        `${amountFormate(Number(item.invoiceTotalAmount || 0))} MT`,
-      ]),
-      foot: [[
-        this.tr("t-totals").toUpperCase(),
-        "-",
-        "-",
-        "-",
-        "-",
-        `${amountFormate(totalAmount)} MT`,
-      ]],
-      theme: "grid",
-      tableWidth: contentWidth,
-      styles: { fontSize: 7.5, cellPadding: 2, lineWidth: 0.1, lineColor: [200, 200, 200], overflow: "linebreak" },
-      headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
-      footStyles: { fillColor: [248, 249, 250], textColor: [0, 0, 0], fontStyle: "bold" },
-      columnStyles: {
-        0: { cellWidth: 32 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: 44 },
-        3: { cellWidth: 40 },
-        4: { cellWidth: 95 },
-        5: { cellWidth: 32, halign: "right" },
-      },
-      didParseCell: (data: any) => {
-        if (data.section === "foot" && data.column.index === 5) {
-          data.cell.styles.textColor = [183, 28, 28];
-        }
-      },
+        `${amountFormate(Number(item.invoiceTotalAmount || 0))} MT`
+      ];
+
+      let x = tableX;
+      columns.forEach((column, index) => {
+        pdf.setDrawColor(220, 220, 220);
+        pdf.rect(x, currentY, column.width, rowHeight);
+        this.drawTextInCell(pdf, row[index], x + 1.5, currentY + 5.3, column.width - 3, column.align);
+        x += column.width;
+      });
+
+      currentY += rowHeight;
+    }
+
+    if (currentY + footerHeight > maxBodyY) {
+      pdf.addPage("a4", "landscape");
+      currentY = margin;
+      drawTableHeader(currentY);
+      currentY += headerHeight;
+    }
+
+    let footerX = tableX;
+    const footerRow = [
+      this.tr("t-totals").toUpperCase(),
+      "-",
+      "-",
+      "-",
+      "-",
+      `${amountFormate(totalAmount)} MT`
+    ];
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(7.5);
+    columns.forEach((column, index) => {
+      pdf.setFillColor(248, 249, 250);
+      pdf.setDrawColor(180, 180, 180);
+      pdf.rect(footerX, currentY, column.width, footerHeight, "FD");
+      pdf.setTextColor(index === columns.length - 1 ? 183 : 0, index === columns.length - 1 ? 28 : 0, index === columns.length - 1 ? 28 : 0);
+      this.drawTextInCell(pdf, footerRow[index], footerX + 1.5, currentY + 5.3, column.width - 3, column.align);
+      footerX += column.width;
     });
+    pdf.setTextColor(0, 0, 0);
 
     const totalPages = pdf.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
-      const footerY = pageHeight - 10;
+      const footerY = pageHeight - 15;
       pdf.setDrawColor(180, 180, 180);
       pdf.setLineWidth(0.3);
-      pdf.line(margin, footerY - 6, pageWidth - margin, footerY - 6);
-
+      pdf.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
       pdf.setFontSize(7);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(100, 100, 100);
-
       const footerText = this.tr("t-spr-system-footer");
       const pageText = this.tr("t-spr-page-of", { current: i, total: totalPages });
-      const dateFooter = `${this.tr("t-spr-date")}: ${this.getCurrentDate()}`;
+      const dateText = `${this.tr("t-spr-date")}: ${this.getCurrentDate()}`;
       const generatedText = `${this.tr("t-spr-generated-at")}: ${generatedAt}`;
       const userFooter = `${this.tr("t-spr-user")}: ${userName || this.tr("t-spr-system-user")}`;
-
-      pdf.text(footerText, margin, footerY - 2);
-      pdf.text(generatedText, margin, footerY - 8);
-      pdf.text(pageText, pageWidth - margin - pdf.getTextWidth(pageText), footerY - 2);
-      pdf.text(dateFooter, pageWidth - margin - pdf.getTextWidth(dateFooter), footerY - 8);
-      pdf.text(userFooter, pageWidth - margin - pdf.getTextWidth(userFooter), footerY - 14);
+      pdf.text(footerText, margin, footerY - 5);
+      pdf.text(generatedText, margin, footerY - 12);
+      pdf.text(pageText, pageWidth - margin - pdf.getTextWidth(pageText), footerY - 5);
+      pdf.text(dateText, pageWidth - margin - pdf.getTextWidth(dateText), footerY - 12);
+      pdf.text(userFooter, pageWidth - margin - pdf.getTextWidth(userFooter), footerY - 19);
     }
 
     const fileName = options?.fileName || `extrato-por-colaborador-${new Date().toISOString().split("T")[0]}`;

@@ -492,7 +492,7 @@ const filteredMenuItems = computed(() => {
 .menu-side-panel__list,
 .submenu-side-panel__list {
   display: grid;
-  gap: 2px;
+  gap: 8px;
   padding: 0;
   width: 100%;
   min-width: 0;
@@ -503,10 +503,17 @@ const filteredMenuItems = computed(() => {
 .menu-side-panel__item,
 .submenu-side-panel__item {
   margin-bottom: 0;
+  min-height: 38px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.menu-side-panel__item.premium-submenu-item,
+.submenu-side-panel__item.premium-nested-item {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 .menu-side-panel__item :deep(.v-list-item__content),
