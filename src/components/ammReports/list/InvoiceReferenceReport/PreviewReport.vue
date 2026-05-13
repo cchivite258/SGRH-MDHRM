@@ -1,15 +1,15 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { useI18n } from "vue-i18n";
 import { amountFormate } from "@/app/common/amountFormate";
 import { formateDate } from "@/app/common/dateFormate";
-import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
-import { EmployeeExpenseStatementReportExporter } from "./exportUtils";
+import type { InvoiceReferenceReportType } from "@/components/ammReports/types";
+import { InvoiceReferenceReportExporter } from "./exportUtils";
 
 const props = defineProps<{
-  report: EmployeeExpenseStatementReportType;
+  report: InvoiceReferenceReportType;
 }>();
 
 const { t, locale } = useI18n();
@@ -17,7 +17,6 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const exporting = ref(false);
-const exportType = ref<"pdf" | "excel" | "csv" | null>(null);
 const exportMenu = ref(false);
 
 const userName = computed(() => {
@@ -26,13 +25,10 @@ const userName = computed(() => {
   return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || "";
 });
 
-const employeeFullName = computed(() => {
-  const first = props.report?.employeeFirstName || "";
-  const last = props.report?.employeeLastName || "";
-  return `${first} ${last}`.trim() || "-";
-});
-
 const details = computed(() => props.report?.details || []);
+const totalAmount = computed(() => Number(props.report?.totalAmount || 0));
+const serviceProvider = computed(() => props.report?.serviceProvider);
+const contract = computed(() => props.report?.contract);
 
 const currentDate = computed(() => {
   const uiLocale = locale.value === "en" ? "en-US" : "pt-PT";
@@ -45,30 +41,24 @@ const currentDate = computed(() => {
   });
 });
 
-const totalAmount = computed(() => Number(props.report?.totalAmount || 0));
-const employeeUsedBalance = computed(() => Number(props.report?.employeeUsedBalance || 0));
-const employeeRemaingBalance = computed(() => Number(props.report?.employeeRemaingBalance || 0));
-const employeeAllocatedBalance = computed(() => Number(props.report?.employeeAllocatedBalance || 0));
-
 const onBack = () => router.push({ path: "/reports/list" });
 
 const handleExport = async (type: "pdf" | "excel" | "csv") => {
   try {
     exporting.value = true;
-    exportType.value = type;
 
-    const fileNamePrefix = locale.value === "en" ? "employee-expense-statement" : "extrato-por-colaborador";
+    const fileNamePrefix = locale.value === "en" ? "invoice-reference-report" : "relatorio-facturas-por-referencia";
     const fileName = `${fileNamePrefix}-${new Date().toISOString().split("T")[0]}`;
 
     switch (type) {
       case "pdf":
-        await EmployeeExpenseStatementReportExporter.exportToPDF(props.report, userName.value, { fileName });
+        await InvoiceReferenceReportExporter.exportToPDF(props.report, userName.value, { fileName });
         break;
       case "excel":
-        await EmployeeExpenseStatementReportExporter.exportToExcel(props.report, userName.value, { fileName });
+        await InvoiceReferenceReportExporter.exportToExcel(props.report, userName.value, { fileName });
         break;
       case "csv":
-        await EmployeeExpenseStatementReportExporter.exportToCSV(props.report, userName.value, { fileName });
+        await InvoiceReferenceReportExporter.exportToCSV(props.report, userName.value, { fileName });
         break;
     }
   } catch (error) {
@@ -76,7 +66,6 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
     alert(t("t-error-exporting-report"));
   } finally {
     exporting.value = false;
-    exportType.value = null;
   }
 };
 
@@ -88,13 +77,13 @@ const exportOptions = [
 </script>
 
 <template>
-  <v-container class="py-8 px-4" max-width="1200px">
+  <v-container class="py-8 px-4" max-width="1400px">
     <div class="header-container mb-8">
       <div class="d-flex justify-space-between align-center mb-4">
         <div>
           <h1 class="text-h5 font-weight-bold text-grey-darken-3">{{ $t("t-preview-report") }}</h1>
           <div class="text-caption text-grey mt-1">
-            {{ $t("t-report") }} #100009 - {{ $t("t-report-100009-title") }}
+            {{ $t("t-report") }} #100010 - {{ $t("t-report-100010-title") }}
           </div>
         </div>
 
@@ -105,13 +94,13 @@ const exportOptions = [
           </v-chip>
 
           <v-btn-group variant="outlined" density="comfortable">
-            <v-btn color="primary" prepend-icon="mdi-printer" @click="handleExport('pdf')" :disabled="exporting" :loading="exporting && exportType === 'pdf'">
+            <v-btn color="primary" prepend-icon="mdi-printer" @click="handleExport('pdf')" :disabled="exporting">
               {{ $t("t-print") }}
             </v-btn>
 
             <v-menu v-model="exportMenu" :close-on-content-click="false">
               <template #activator="{ props }">
-                <v-btn color="grey-darken-2" prepend-icon="mdi-download" v-bind="props" :disabled="exporting" :loading="exporting && exportType !== 'pdf'">
+                <v-btn color="grey-darken-2" prepend-icon="mdi-download" v-bind="props" :disabled="exporting" :loading="exporting">
                   {{ $t("t-export") }}
                   <v-icon end>mdi-chevron-down</v-icon>
                 </v-btn>
@@ -138,22 +127,22 @@ const exportOptions = [
         <v-card variant="outlined" class="pa-4 h-100" elevation="0">
           <div class="d-flex align-center mb-3">
             <div class="icon-container bg-blue-lighten-5 mr-3">
-              <v-icon color="blue-darken-2">mdi-account</v-icon>
+              <v-icon color="blue-darken-2">mdi-file-document-outline</v-icon>
             </div>
             <div>
-              <div class="text-caption text-grey">{{ $t("t-employee") }}</div>
-              <div class="text-h6 font-weight-bold">{{ employeeFullName }}</div>
+              <div class="text-caption text-grey">{{ $t("t-invoice-reference") }}</div>
+              <div class="text-h6 font-weight-bold">{{ report.invoiceReferenceNumber || "-" }}</div>
             </div>
           </div>
           <v-divider class="my-2" />
           <div class="text-caption text-grey">
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-department") }}:</span>
-              <span class="font-weight-medium">{{ report.employeeDepartmentName || "-" }}</span>
+              <span>{{ $t("t-total-invoices") }}:</span>
+              <span class="font-weight-medium">{{ details.length }}</span>
             </div>
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-position") }}:</span>
-              <span class="font-weight-medium">{{ report.employeePositionName || "-" }}</span>
+              <span>{{ $t("t-contract") }}:</span>
+              <span class="font-weight-medium">{{ contract?.name || "-" }}</span>
             </div>
           </div>
         </v-card>
@@ -166,19 +155,19 @@ const exportOptions = [
               <v-icon color="green-darken-2">mdi-office-building</v-icon>
             </div>
             <div>
-              <div class="text-caption text-grey">{{ $t("t-institution") }}</div>
-              <div class="text-body-1 font-weight-medium">{{ report.contractName || "-" }}</div>
+              <div class="text-caption text-grey">{{ $t("t-service-provider") }}</div>
+              <div class="text-body-1 font-weight-medium">{{ serviceProvider?.name || "-" }}</div>
             </div>
           </div>
           <v-divider class="my-2" />
           <div class="text-caption text-grey">
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-coverage-period") }}:</span>
-              <span class="font-weight-medium">{{ report.coveragePeriodName || "-" }}</span>
+              <span>{{ $t("t-service-provider-phone") }}:</span>
+              <span class="font-weight-medium">{{ serviceProvider?.phone || "-" }}</span>
             </div>
             <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-invoices") }}:</span>
-              <span class="font-weight-medium">{{ details.length }}</span>
+              <span>{{ $t("t-service-provider-email") }}:</span>
+              <span class="font-weight-medium">{{ serviceProvider?.email || "-" }}</span>
             </div>
           </div>
         </v-card>
@@ -193,21 +182,6 @@ const exportOptions = [
             <div>
               <div class="text-caption text-grey">{{ $t("t-total-billed") }}</div>
               <div class="text-h6 font-weight-bold text-red-darken-2">{{ amountFormate(totalAmount) }} MT</div>
-            </div>
-          </div>
-          <v-divider class="my-2" />
-          <div class="text-caption text-grey">
-            <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-paid-by-company") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(employeeUsedBalance) }} MT</span>
-            </div>
-            <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-remaining-balance") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(employeeRemaingBalance) }} MT</span>
-            </div>
-            <div class="d-flex justify-space-between my-1">
-              <span>{{ $t("t-total-allocated") }}:</span>
-              <span class="font-weight-medium">{{ amountFormate(employeeAllocatedBalance) }} MT</span>
             </div>
           </div>
         </v-card>
@@ -226,27 +200,30 @@ const exportOptions = [
         <v-table density="comfortable" hover class="report-table">
           <thead>
             <tr>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-issue-date") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-number") }}</th>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-service-provider") }}</th>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-patient") }}</th>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-procedures") }}</th>
-              <th class="text-right text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-total-billed") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-reference") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-issue-date") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-due-date") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-status") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-authorized-by") }}</th>
+              <th class="text-right text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-total-amount") }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in details" :key="row.invoiceId || index" class="table-row">
-              <td class="pa-4">{{ row.invoiceIssueDate ? formateDate(row.invoiceIssueDate) : "-" }}</td>
+            <tr v-for="(row, index) in details" :key="row.id || index" class="table-row">
               <td class="pa-4">{{ row.invoiceNumber || "-" }}</td>
-              <td class="pa-4">{{ row.serviceProviderName || "-" }}</td>
-              <td class="pa-4">{{ row.pacientName || "-" }}</td>
-              <td class="pa-4">{{ (row.hospitalProcedureTypeName || []).join(", ") || "-" }}</td>
-              <td class="text-right pa-4 font-weight-medium">{{ amountFormate(Number(row.invoiceTotalAmount || 0)) }} MT</td>
+              <td class="pa-4">{{ row.invoiceReferenceNumber || "-" }}</td>
+              <td class="pa-4">{{ row.issueDate ? formateDate(row.issueDate) : "-" }}</td>
+              <td class="pa-4">{{ row.dueDate ? formateDate(row.dueDate) : "-" }}</td>
+              <td class="pa-4">{{ row.invoiceStatus || "-" }}</td>
+              <td class="pa-4">{{ row.authorizedBy || "-" }}</td>
+              <td class="text-right pa-4 font-weight-medium">{{ amountFormate(Number(row.totalAmount || 0)) }} MT</td>
             </tr>
           </tbody>
           <tfoot>
             <tr class="total-row">
               <td class="pa-4 font-weight-bold text-grey-darken-3">{{ $t("t-totals") }}</td>
+              <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>
               <td class="pa-4 text-grey">-</td>

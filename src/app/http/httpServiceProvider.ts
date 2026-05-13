@@ -40,6 +40,7 @@ import CompanyEmployeeLimitsReportService from "@/app/http/services/ammReports/c
 import TotalBilledMedicalAssistanceReportService from "@/app/http/services/ammReports/totalBilledMedicalAssistanceReportService";
 import TotalBilledByProviderReportService from "@/app/http/services/ammReports/totalBilledByProviderReportService";
 import EmployeeExpenseStatementReportService from "@/app/http/services/ammReports/employeeExpenseStatementReportService";
+import InvoiceReferenceReportService from "@/app/http/services/ammReports/invoiceReferenceReportService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -73,6 +74,7 @@ const companyEmployeeLimitsReportService = new CompanyEmployeeLimitsReportServic
 const totalBilledMedicalAssistanceReportService = new TotalBilledMedicalAssistanceReportService();
 const totalBilledByProviderReportService = new TotalBilledByProviderReportService();
 const employeeExpenseStatementReportService = new EmployeeExpenseStatementReportService();
+const invoiceReferenceReportService = new InvoiceReferenceReportService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -127,5 +129,6 @@ export {
     companyEmployeeLimitsReportService,
     totalBilledMedicalAssistanceReportService,
     totalBilledByProviderReportService,
-    employeeExpenseStatementReportService
+    employeeExpenseStatementReportService,
+    invoiceReferenceReportService
 };

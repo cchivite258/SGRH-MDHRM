@@ -70,7 +70,8 @@ const dialog = ref(false);
 const viewDialog = ref(false);
 const deleteDialog = ref(false);
 const deleteLoading = ref(false);
-const dependentData = ref<DependentInsertType | DependentListingType | null>(null);
+const dependentData = ref<DependentInsertType | null>(null);
+const dependentViewData = ref<DependentInsertType | DependentListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
@@ -174,7 +175,8 @@ const onCreateEditClick = (data: DependentInsertType | DependentListingType | nu
   dependentData.value = data
     ? {
       ...data,
-      employee: employee // sobrescreve com o employeeId atual
+      employee: employee, // sobrescreve com o employeeId atual
+      isLifeTimeCard: !!data.isLifeTimeCard
     }
     : {
       id: undefined,
@@ -189,6 +191,7 @@ const onCreateEditClick = (data: DependentInsertType | DependentListingType | nu
       idCardNumber: "",
       idCardIssuer: "",
       idCardExpiryDate: undefined,
+      isLifeTimeCard: false,
       idCardIssuanceDate: undefined,
       enabled: true
     };
@@ -209,7 +212,7 @@ interface ServiceResponse<T> {
 const onSubmit = async (
   data: DependentInsertType,
   callbacks?: {
-    onSuccess?: () => void,
+    onSuccess?: (savedData?: DependentListingType) => void,
     onError?: (error: unknown) => void,
     onFinally?: () => void
   }
@@ -226,6 +229,24 @@ const onSubmit = async (
     if (response?.status === "error") {
       callbacks?.onError?.(response.error);
       return;
+    }
+
+    const dependentId = response.data?.id;
+    if (dependentId && data.attachmentUploads && data.attachmentUploads.length > 0) {
+      for (const attachmentUpload of data.attachmentUploads) {
+        if (!attachmentUpload.file || !attachmentUpload.dependentDocumentType) continue;
+
+        const attachmentResponse = await dependentEmployeeService.uploadAttachment(
+          dependentId,
+          attachmentUpload.file,
+          attachmentUpload.dependentDocumentType
+        );
+
+        if (attachmentResponse.status === "error") {
+          callbacks?.onError?.(attachmentResponse.error);
+          return;
+        }
+      }
     }
 
     toast.success(
@@ -245,7 +266,7 @@ const onSubmit = async (
       toast.warning(t('t-exceeds-number-of-dependents'));
     }
 
-    callbacks?.onSuccess?.();
+    callbacks?.onSuccess?.(response.data);
 
   } catch (error: any) {
     console.error("Erro ao gravar dependentes:", error);
@@ -262,11 +283,11 @@ const onSubmit = async (
  */
 watch(viewDialog, (newVal: boolean) => {
   if (!newVal) {
-    dependentData.value = null;
+    dependentViewData.value = null;
   }
 });
 const onViewClick = (data: DependentInsertType | DependentListingType) => {
-  dependentData.value = { ...data };
+  dependentViewData.value = { ...data };
   viewDialog.value = true;
 };
 
@@ -396,7 +417,7 @@ onMounted(async () => {
 
   <!-- Dialogs -->
   <CreateEditDependentsDialog v-model="dialog" :data="dependentData" @onSubmit="onSubmit" />
-  <ViewDependentsDialog v-model="viewDialog" :data="dependentData" />
+  <ViewDependentsDialog v-model="viewDialog" :data="dependentViewData" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
   <v-card-actions class="d-flex justify-space-between mt-5">
