@@ -254,8 +254,10 @@ export type DependentInsertType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: Date | undefined;
+  isLifeTimeCard?: boolean;
   idCardIssuanceDate: Date | undefined;
   enabled: boolean;
+  attachmentUploads?: DependentAttachmentUploadType[];
 }
 
 export type DependentListingType = {
@@ -276,9 +278,52 @@ export type DependentListingType = {
   idCardNumber: string;
   idCardIssuer: string;
   idCardExpiryDate: Date | undefined;
+  isLifeTimeCard?: boolean | null;
   idCardIssuanceDate: Date | undefined;
   enabled: boolean;
+  dependentDocumentType?: DependentDocumentType | null;
 }
+
+export type DependentDocumentType =
+  | "ID_CARD"
+  | "BIRTH_CERTIFICATE"
+  | "PASSPORT"
+  | "MARRIAGE_CERTIFICATE"
+  | "AFFIDAVIT"
+  | "STUDENT_CERTIFICATE"
+  | "PROOF_OF_ENROLLMENT"
+  | "DISABILITY_CERTIFICATE"
+  | "TAX_IDENTIFICATION"
+  | "LEGAL_GUARDIANSHIP_DOCUMENT"
+  | "SUPPORTING_DOCUMENT";
+
+export type DependentAttachmentType = {
+  id: string;
+  dependentId: string;
+  dependentAttachmentId: string;
+  dependentDocumentType: DependentDocumentType;
+  dependent?: any;
+  fileMetadata?: {
+    originalFilename?: string;
+    name?: string;
+    extension?: string;
+    fileSize?: number;
+    size?: number;
+  } | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
+
+export type DependentAttachmentUploadType = {
+  dependentDocumentType: DependentDocumentType | "";
+  file: File | null;
+};
 
 export type HealthPlanListingType = {
   id: string | undefined;
