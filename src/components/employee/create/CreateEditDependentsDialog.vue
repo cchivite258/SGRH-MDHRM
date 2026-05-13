@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, nextTick } from "vue";
+import { v4 as uuidv4 } from "uuid";
 import {
   DependentInsertType,
   DependentListingType,
@@ -95,7 +96,7 @@ const idCardExpiryDatePicker = ref();
 const idCardIssuanceDatePicker = ref();
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
-  id: crypto.randomUUID(),
+  id: uuidv4(),
   dependentDocumentType: "",
   files: []
 });
