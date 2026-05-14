@@ -43,11 +43,23 @@ const formErrors = ref<Record<string, string>>({
 
 const totalItems = computed(() => hospitalProcedureTypeStore.pagination.totalElements);
 const loadingList = computed(() => hospitalProcedureTypeStore.loading || loadingRelations.value);
+
+const compareByName = (a: HospitalProcedureTypeListing, b: HospitalProcedureTypeListing) =>
+  (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" });
+
 const orderedHospitalProcedureTypes = computed(() => {
-  const items = hospitalProcedureTypeStore.hospital_procedure_types || [];
-  const selected = items.filter((item) => isIdSelected(item.id));
-  const notSelected = items.filter((item) => !isIdSelected(item.id));
-  return [...selected, ...notSelected];
+  const items = [...(hospitalProcedureTypeStore.hospital_procedure_types || [])];
+
+  return items.sort((a, b) => {
+    const aSelected = isIdSelected(a.id) ? 0 : 1;
+    const bSelected = isIdSelected(b.id) ? 0 : 1;
+
+    if (aSelected !== bSelected) {
+      return aSelected - bSelected;
+    }
+
+    return compareByName(a, b);
+  });
 });
 const displayedHospitalProcedureTypes = computed(() => {
   return orderedHospitalProcedureTypes.value;
