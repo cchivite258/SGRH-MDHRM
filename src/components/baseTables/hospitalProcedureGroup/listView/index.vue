@@ -96,10 +96,10 @@ const onCreateEditClick = (data: HospitalProcedureGroupListing | null) => {
       description: "",
       enabled: true
     };
+    dialog.value = true;
   } else {
-    hospitalProcedureGroupData.value = data;
+    router.push(`/baseTable/edit-hospital-procedure-group/${data.id}`);
   }
-  dialog.value = true;
 };
 
 const onSubmit = async (data: HospitalProcedureGroupListing, callbacks?: {
