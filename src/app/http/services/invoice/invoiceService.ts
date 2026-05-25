@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,coveragePeriod,invoiceAttachment`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,contract,coveragePeriod,invoiceAttachment`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 

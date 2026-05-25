@@ -83,18 +83,18 @@ const invoiceItemData = reactive<InvoiceItemInsertType>({
 });
 
 const institutions = computed(() => {
-  const options = institutionStore.institutions.map((item) => ({
-    value: item.id,
+  const options = institutionStore.enabledInstitutions.map((item) => ({
+    value: String(item.id),
     label: item.name,
   }));
 
   if (
     invoiceData.value.company &&
     invoiceData.value.companyLabel &&
-    !options.some(item => item.value === invoiceData.value.company)
+    !options.some(item => item.value === String(invoiceData.value.company))
   ) {
     options.push({
-      value: invoiceData.value.company,
+      value: String(invoiceData.value.company),
       label: invoiceData.value.companyLabel
     });
   }
@@ -316,7 +316,7 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutions(0, 1000000000),
+      institutionStore.fetchInstitutionsforListing(0, 1000000000),
       currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
       serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
     ]);
