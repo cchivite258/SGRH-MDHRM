@@ -225,6 +225,22 @@ export type ServiceProviderListingType = {
         id: string | number;
         name: string;
         description: string;
+        address?: string | null;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        incomeTaxNumber?: string | null;
+        personOfContactFullname1?: string | null;
+        personOfContactPhone1?: string | null;
+        personOfContactEmail1?: string | null;
+        personOfContactFullname2?: string | null;
+        personOfContactPhone2?: string | null;
+        personOfContactEmail2?: string | null;
+        contractStartDate?: Date | string | null;
+        contractEndDate?: Date | string | null;
+        providerTypeId?: string | number | null;
+        provinceId?: string | number | null;
+        countryId?: string | number | null;
         createdAt: Date | null;
         updatedAt: Date | null;
         deletedAt: Date | null;
@@ -240,6 +256,29 @@ export type ServiceProviderListingType = {
     updatedBy: string;
     deletedBy: string;
     enabled: boolean;
+};
+
+export type ServiceProviderContractExtensionPayloadType = {
+    id?: string | number;
+    serviceProviderId: string | number;
+    contractEndDate: Date | string | null;
+};
+
+export type ServiceProviderContractExtensionType = {
+    id: string | number;
+    contractStartDate: Date | string | null;
+    contractEndDate: Date | string | null;
+    status: string;
+    serviceProviderId: string | number;
+    serviceProvider?: ServiceProviderListingType["serviceProvider"];
+    removable: boolean;
+    enabled: boolean;
+    createdAt: Date | string | null;
+    updatedAt: Date | string | null;
+    deletedAt: Date | string | null;
+    createdBy: string | null;
+    updatedBy: string | null;
+    deletedBy: string | null;
 };
 
 export type ServiceProviderInsertType = {

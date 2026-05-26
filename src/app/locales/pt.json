@@ -1,5 +1,12 @@
 {
   "t-menu": "Menu",
+  "t-contract-addenda": "Adendas",
+  "t-manage-contract-addenda": "Gerir Adendas",
+  "t-add-contract-addendum": "Adicionar Adenda",
+  "t-edit-contract-addendum": "Editar Adenda",
+  "t-contract-addendum-created-success": "Adenda criada com sucesso!",
+  "t-contract-addendum-updated-success": "Adenda actualizada com sucesso!",
+  "t-error-loading-contract-addenda": "Erro ao carregar adendas",
   "t-personnel-managment": "Gestão de Pessoal",
   "t-healthcare-management": "Gestão de Assistência Médica",
   "t-institutions": "Contratos",

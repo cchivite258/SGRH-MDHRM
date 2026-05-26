@@ -15,6 +15,10 @@ const props = defineProps({
   basicDataValidated: {
     type: Boolean,
     default: false
+  },
+  contractDataValidated: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -29,12 +33,15 @@ const step = computed({
 
 const isTabDisabled = (tabNumber: number) => {
   if (props.serviceProviderId) return false;
-  return tabNumber > 1 && !props.basicDataValidated;
+  if (tabNumber === 2) return !props.basicDataValidated;
+  if (tabNumber === 3) return !props.basicDataValidated || !props.contractDataValidated;
+  return false;
 };
 
 const tabs = computed(() => [
   { value: 1, label: "t-general-information", disabled: isTabDisabled(1) },
-  { value: 2, label: "t-contacts-service-provider", disabled: isTabDisabled(2) }
+  { value: 2, label: "t-contract", disabled: isTabDisabled(2) },
+  { value: 3, label: "t-contacts-service-provider", disabled: isTabDisabled(3) }
 ]);
 </script>
 

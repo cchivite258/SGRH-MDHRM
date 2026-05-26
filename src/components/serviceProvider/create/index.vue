@@ -11,7 +11,9 @@ import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import Step1 from "@/components/serviceProvider/create/TabGeneralInfo.vue";
-import Step2 from "@/components/serviceProvider/create/TabServiceProviderContact.vue";
+import Step2 from "@/components/serviceProvider/create/TabContractInfo.vue";
+import Step3 from "@/components/serviceProvider/create/TabServiceProviderContact.vue";
+import ButtonNav from "@/components/serviceProvider/create/ButtonNav.vue";
 
 // Services & Types
 import { serviceProviderService } from "@/app/http/httpServiceProvider";
@@ -38,6 +40,7 @@ const serviceProviderStore = useServiceProviderStore();
 const step = ref(1);
 const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
 const step2Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
+const step3Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
 const serviceProviderId = ref<string | null>(
   typeof route.params.id === 'string' ? route.params.id : Array.isArray(route.params.id) ? route.params.id[0] : null
 );
@@ -47,6 +50,7 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
+const contractDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (serviceProviderId.value ? t('t-edit-service-provider') : t('t-add-service-provider')));
 const headerSaveLabel = computed(() => t('t-save'));
 
@@ -56,9 +60,10 @@ const goBackToList = () => {
 
 const onHeaderSave = async () => {
   const isGeneralInfoValid = await step1Ref.value?.validateForm();
-  const isContactValid = await step2Ref.value?.validateForm();
+  const isContractValid = await step2Ref.value?.validateForm();
+  const isContactValid = await step3Ref.value?.validateForm();
 
-  if (!isGeneralInfoValid || !isContactValid) return;
+  if (!isGeneralInfoValid || !isContractValid || !isContactValid) return;
 
   await saveServiceProvider(true);
 };
@@ -125,6 +130,7 @@ onMounted(async () => {
     try {
       loading.value = true;
       basicDataValidated.value = true;
+      contractDataValidated.value = true;
       const response = await serviceProviderService.getServiceProviderById(serviceProviderId.value);
 
       if (!response.data) {
@@ -147,32 +153,52 @@ onMounted(async () => {
 });
 
 
-/**
- * Muda entre as abas do formulário
- * @param value - Número da aba (1 ou 2)
- */
+const validateCurrentStep = async () => {
+  if (step.value === 1) {
+    const valid = await step1Ref.value?.validateForm();
+    if (valid) basicDataValidated.value = true;
+    return !!valid;
+  }
 
-const onStepChange = (value: number) => {
-  // Permite sempre voltar para tabs anteriores
+  if (step.value === 2) {
+    const valid = await step2Ref.value?.validateForm();
+    if (valid) contractDataValidated.value = true;
+    return !!valid;
+  }
+
+  const valid = await step3Ref.value?.validateForm();
+  return !!valid;
+};
+
+const onStepChange = async (value: number) => {
+  if (value === step.value) return;
+
   if (value < step.value) {
     step.value = value;
     return;
   }
 
-  // No modo de edição ou quando dados básicos já foram validados, permite navegar livremente
-  if (serviceProviderId.value || basicDataValidated.value) {
-    step.value = value;
-    return;
+  const valid = await validateCurrentStep();
+  if (!valid) return;
+
+  if (value === 3 && !contractDataValidated.value) {
+    const contractValid = await step2Ref.value?.validateForm();
+    if (!contractValid) {
+      step.value = 2;
+      return;
+    }
+    contractDataValidated.value = true;
   }
 
-  // No modo criação, só permite avançar para a próxima tab sequencialmente
-  if (value === step.value + 1 && basicDataValidated.value) {
-    step.value = value;
-  }
+  step.value = value;
 };
 
 const onBasicDataValidated = () => {
   basicDataValidated.value = true;
+};
+
+const onContractDataValidated = () => {
+  contractDataValidated.value = true;
 };
 
 watch(
@@ -180,6 +206,9 @@ watch(
   () => {
     if (!serviceProviderId.value && step.value === 1) {
       basicDataValidated.value = false;
+    }
+    if (!serviceProviderId.value && step.value === 2) {
+      contractDataValidated.value = false;
     }
   },
   { deep: true }
@@ -283,40 +312,68 @@ onBeforeUnmount(() => {
     :loading="loading"
     @back="goBackToList"
     @save="onHeaderSave"
-  />
+  >
+    <template #actions>
+      <v-btn color="secondary" variant="outlined" :disabled="loading" @click="goBackToList">
+        <i class="ph-arrow-left me-2" />
+        {{ $t('t-back-to-list') }}
+      </v-btn>
+      <v-btn color="secondary" variant="elevated" :loading="loading" @click="onHeaderSave">
+        <i class="ph-floppy-disk me-2" />
+        {{ headerSaveLabel }}
+      </v-btn>
+    </template>
+  </FormPageHeader>
 
   <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
-      <!-- Navegação entre abas -->
-  <!-- Indicador de loading -->
-  <FormCard class="service-provider-form-section">
+  <div class="service-provider-form-tabs">
+    <ButtonNav
+      v-model="step"
+      :service-provider-id="serviceProviderId"
+      :basic-data-validated="basicDataValidated"
+      :contract-data-validated="contractDataValidated"
+      @update:model-value="onStepChange"
+    />
+  </div>
+  <FormCard v-show="step === 1" class="service-provider-form-section">
 
       <!-- Mensagens de erro -->
       <transition name="fade">
         <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"
           density="compact" @click="errorMsg = ''" style="cursor: pointer; white-space: pre-line;" />
       </transition>
-
-      <!-- Abas do formulário -->
       <Step1 ref="step1Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         @save="saveServiceProvider(false)" :loading="loading" :server-errors="apiFieldErrors"
         :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
 
   </FormCard>
 
-  <FormCard class="service-provider-form-section mt-5">
+  <FormCard v-show="step === 2" class="service-provider-form-section">
       <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
+        :service-provider-id="serviceProviderId"
+        @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
+        :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onContractDataValidated" />
+  </FormCard>
+
+  <FormCard v-show="step === 3" class="service-provider-form-section">
+      <Step3 ref="step3Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
         :show-actions="false" @clear-server-error="clearApiFieldError" />
   </FormCard>
 
   <div class="service-provider-form-footer-actions">
     <v-btn class="service-provider-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading"
-      @click="goBackToList">
+      @click="step === 1 ? goBackToList() : onStepChange(step - 1)">
       <i class="ph-arrow-left me-2" />
-      {{ $t('t-back-to-list') }}
+      {{ step === 1 ? $t('t-back-to-list') : $t('t-back') }}
     </v-btn>
 
-    <v-btn class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
+    <v-btn v-if="step < 3" class="service-provider-form-footer-actions__save" color="secondary" variant="elevated"
+      :loading="loading" @click="onStepChange(step + 1)">
+      {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
+    </v-btn>
+
+    <v-btn v-else class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
       @click="onHeaderSave">
       <i class="ph-floppy-disk me-2" />
       {{ headerSaveLabel }}

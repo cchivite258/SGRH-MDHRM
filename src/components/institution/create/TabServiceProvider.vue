@@ -22,6 +22,7 @@ import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import CreateEditServiceProviderDialog from "@/components/institution/create/CreateEditServiceProviderDialog.vue";
 import ViewServiceProviderDialog from "@/components/institution/create/ViewServiceProviderDialog.vue";
+import ServiceProviderContractExtensionsDialog from "@/components/institution/create/ServiceProviderContractExtensionsDialog.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import TableActionSimplified from "@/app/common/components/TableActionSimplified.vue";
 
@@ -68,10 +69,12 @@ const institutionId = ref(props.institutionId);
 
 const dialog = ref(false);
 const viewDialog = ref(false);
+const extensionDialog = ref(false);
 const deleteDialog = ref(false);
 const deleteLoading = ref(false);
 const serviceProviderData = ref<ServiceProviderInsertType | null>(null);
 const serviceProviderViewData = ref<ServiceProviderListingType | null>(null);
+const selectedServiceProviderForExtensions = ref<ServiceProviderListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
@@ -219,6 +222,11 @@ const onViewClick = (data: ServiceProviderListingType) => {
   viewDialog.value = true;
 };
 
+const onContractExtensionsClick = (data: ServiceProviderListingType) => {
+  selectedServiceProviderForExtensions.value = { ...data };
+  extensionDialog.value = true;
+};
+
 /**
  * Prepara exclusão de contato
  */
@@ -302,17 +310,28 @@ onBeforeUnmount(() => {
             </td>
             <td>{{ item.serviceProvider.name }}</td>
             <td class="text-end">
-              <v-btn
-                v-if="props.isViewMode"
-                icon
-                size="small"
-                variant="tonal"
-                color="primary"
-                @click="onViewClick(item)"
-              >
-                <i class="ph-eye" />
-              </v-btn>
-              <TableActionSimplified v-else @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+              <div class="d-flex justify-end" style="gap: 8px">
+                <v-btn
+                  icon="ph-file-plus ph-sm"
+                  color="info"
+                  density="compact"
+                  variant="tonal"
+                  rounded
+                  :title="$t('t-manage-contract-addenda')"
+                  @click="onContractExtensionsClick(item)"
+                />
+                <v-btn
+                  v-if="props.isViewMode"
+                  icon
+                  size="small"
+                  variant="tonal"
+                  color="primary"
+                  @click="onViewClick(item)"
+                >
+                  <i class="ph-eye" />
+                </v-btn>
+                <TableActionSimplified v-else @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+              </div>
             </td>
           </tr>
         </template>
@@ -336,6 +355,13 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
   <CreateEditServiceProviderDialog v-model="dialog" :data="serviceProviderData" @onSubmit="onSubmit" />
   <ViewServiceProviderDialog v-model="viewDialog" :data="serviceProviderViewData" />
+  <ServiceProviderContractExtensionsDialog
+    v-model="extensionDialog"
+    :service-provider-id="selectedServiceProviderForExtensions?.serviceProvider?.id || null"
+    :service-provider-name="selectedServiceProviderForExtensions?.serviceProvider?.name || ''"
+    :current-contract-end-date="selectedServiceProviderForExtensions?.serviceProvider?.contractEndDate || null"
+    :read-only="props.isViewMode"
+  />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
   <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
