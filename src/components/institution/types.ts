@@ -343,6 +343,29 @@ export type CoveragePeriodListingType = {
     enabled: boolean;
 };
 
+export type CoveragePeriodExtensionPayloadType = {
+    id?: string | number;
+    coveragePeriodId: string | number;
+    endDate: Date | string | null;
+};
+
+export type CoveragePeriodExtensionType = {
+    id: string | number;
+    startDate: Date | string | null;
+    endDate: Date | string | null;
+    status: string;
+    coveragePeriodId: string | number;
+    coveragePeriod?: CoveragePeriodListingType;
+    removable: boolean;
+    enabled: boolean;
+    createdAt: Date | string | null;
+    updatedAt: Date | string | null;
+    deletedAt: Date | string | null;
+    createdBy: string | null;
+    updatedBy: string | null;
+    deletedBy: string | null;
+};
+
 export type CoveragePeriodInsertType = {
     id?: string | undefined; 
     name: string;
