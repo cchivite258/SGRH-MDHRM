@@ -85,7 +85,8 @@ const pagination = ref({
 const extensionForm = ref<CoveragePeriodExtensionPayloadType>({
   id: undefined,
   coveragePeriodId: "",
-  endDate: new Date().toISOString().split("T")[0]
+  endDate: new Date().toISOString().split("T")[0],
+  budgetAmount: undefined
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -151,6 +152,12 @@ const requiredRules = {
       if (!selectedEndDate || !currentEndDate) return true;
       return selectedEndDate > currentEndDate || t("t-end-date-must-be-after-current-end-date");
     }
+  ],
+  budgetAmount: [
+    (v: number | string | null | undefined) => {
+      if (v === null || v === undefined || v === "") return true;
+      return Number(v) >= 0 || t("t-min-zero-amount");
+    }
   ]
 };
 
@@ -209,7 +216,8 @@ const resetForm = () => {
   extensionForm.value = {
     id: undefined,
     coveragePeriodId: props.coveragePeriodId || "",
-    endDate: getDefaultEndDate()
+    endDate: getDefaultEndDate(),
+    budgetAmount: undefined
   };
   serverErrors.value = {};
   errorMsg.value = "";
@@ -230,7 +238,8 @@ const openEditDialog = async (item: CoveragePeriodExtensionType) => {
     extensionForm.value = {
       id: extension.id,
       coveragePeriodId: extension.coveragePeriodId || props.coveragePeriodId || "",
-      endDate: extension.endDate
+      endDate: extension.endDate,
+      budgetAmount: extension.budgetAmount ?? undefined
     };
     formDialog.value = true;
   } catch (error) {
@@ -262,7 +271,13 @@ const onSubmit = async () => {
     formLoading.value = true;
     const payload: CoveragePeriodExtensionPayloadType = {
       coveragePeriodId: props.coveragePeriodId,
-      endDate: extensionForm.value.endDate
+      endDate: extensionForm.value.endDate,
+      budgetAmount:
+        extensionForm.value.budgetAmount === null ||
+        extensionForm.value.budgetAmount === undefined ||
+        extensionForm.value.budgetAmount === ""
+          ? undefined
+          : Number(extensionForm.value.budgetAmount)
     };
 
     const response = extensionForm.value.id
@@ -406,6 +421,17 @@ watch(formDialog, (isOpen) => {
                 :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)"
                 :teleport="true"
                 format="dd/MM/yyyy"
+              />
+            </v-col>
+            <v-col cols="12">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-budget-amount') }}
+              </div>
+              <TextField
+                v-model.number="extensionForm.budgetAmount"
+                :placeholder="$t('t-enter-budget-amount')"
+                type="number"
+                :rules="applyServerErrorsToRules('budgetAmount', requiredRules.budgetAmount)"
               />
             </v-col>
           </v-row>
