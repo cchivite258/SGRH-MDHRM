@@ -1,9 +1,12 @@
 <script lang="ts" setup>
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import type { PropType } from 'vue';
 
 const props = defineProps({
-  modelValue: [Date, String, Array],
+  modelValue: {
+    type: [Date, String, Array] as PropType<Date | string | unknown[] | null | undefined>,
+    default: undefined,
+  },
   rules: {
     type: Array as PropType<Array<(value: any) => boolean | string>>,
     default: () => [],

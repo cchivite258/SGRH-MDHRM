@@ -16,7 +16,6 @@ import { useToast } from 'vue-toastification';
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 
 // Stores
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
@@ -85,8 +84,6 @@ let serviceProviderData = computed({
 // Estado da UI
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
-const idContractStartDatePicker = ref();
-const idContractEndDatePicker = ref();
 const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
 const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
   ...rules,
@@ -102,8 +99,6 @@ watch(
   async (errors) => {
     if (errors && Object.keys(errors).length > 0) {
       await nextTick();
-      await idContractStartDatePicker.value?.validate?.();
-      await idContractEndDatePicker.value?.validate?.();
       await form.value?.validate();
     }
   },
@@ -140,23 +135,6 @@ const requiredRules = {
   ],
   providerType: [
     (v: string) => !!v || t('t-please-enter-provider-type'),
-  ],
-  contractStartDate: [
-    (v: Date) => !!v || t('t-please-enter-contract-start-date'),
-  ],
-  contractEndDate: [
-    (v: Date) => !!v || t('t-please-enter-contract-end-date'),
-    (v: Date) => {
-      if (!v || !serviceProviderData.value.contractStartDate) return true;
-      const startDate = new Date(serviceProviderData.value.contractStartDate);
-      const endDate = new Date(v);
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-        return t('t-validation-error');
-      }
-      startDate.setHours(0, 0, 0, 0);
-      endDate.setHours(0, 0, 0, 0);
-      return endDate >= startDate || t('t-contract-end-date-must-be-after-start-date');
-    }
   ]
 
 };
@@ -209,8 +187,6 @@ watch(() => serviceProviderData.value.address, () => emit('clear-server-error', 
 watch(() => serviceProviderData.value.phone, () => emit('clear-server-error', 'phone'));
 watch(() => serviceProviderData.value.email, () => emit('clear-server-error', 'email'));
 watch(() => serviceProviderData.value.website, () => emit('clear-server-error', 'website'));
-watch(() => serviceProviderData.value.contractStartDate, () => emit('clear-server-error', 'contractStartDate'));
-watch(() => serviceProviderData.value.contractEndDate, () => emit('clear-server-error', 'contractEndDate'));
 
 /**
  * Carrega dados iniciais quando o componente é montado
@@ -283,11 +259,9 @@ const onBack = () => {
  */
 const validateForm = async () => {
   if (!form.value) return false;
-  const isContractStartDateValid = await idContractStartDatePicker.value?.validate?.();
-  const isContractEndDateValid = await idContractEndDatePicker.value?.validate?.();
 
   const { valid } = await form.value.validate();
-  if (!valid || isContractStartDateValid === false || isContractEndDateValid === false) {
+  if (!valid) {
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
       errorMsg.value = "";
@@ -405,26 +379,6 @@ defineExpose({ submitForm, validateForm });
             </div>
             <TextField v-model="serviceProviderData.website" :placeholder="$t('t-enter-service-provider-website')"
               :rules="applyServerErrorsToRules('website', requiredRules.website)" />
-          </v-col>
-        </v-row>
-
-        <v-row class="mt-n6">
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
-            </div>
-            <ValidatedDatePicker ref="idContractStartDatePicker" v-model="serviceProviderData.contractStartDate"
-              :placeholder="$t('t-enter-contract-start-date')"
-              :rules="applyServerErrorsToRules('contractStartDate', requiredRules.contractStartDate)" :teleport="true"/>
-          </v-col>
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
-            </div>
-            <ValidatedDatePicker ref="idContractEndDatePicker" v-model="serviceProviderData.contractEndDate"
-              :teleport="true" :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
-              :placeholder="$t('t-enter-contract-end-date')"
-              format="dd/MM/yyyy" />
           </v-col>
         </v-row>
 

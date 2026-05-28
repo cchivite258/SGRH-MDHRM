@@ -170,6 +170,7 @@ let routeSyncInProgress = false;
 const filterableFields = ref<FilterableField[]>([
     { text: t('t-invoice-number'), value: 'invoiceNumber', type: 'text' },
     { text: t('t-issue-date'), value: 'issueDate', type: 'date' },
+    { text: t('t-service-provision-date'), value: 'serviceProvisionDate', type: 'date' },
     { text: t('t-due-date'), value: 'dueDate', type: 'date' },
     { text: t('t-total-amount'), value: 'totalAmount', type: 'text' },
     { text: t('t-invoice-status'), value: 'invoiceStatus', type: 'enum', enumType: 'invoiceStatusGroup' },

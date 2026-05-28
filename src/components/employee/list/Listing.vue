@@ -4,6 +4,7 @@ import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useToast } from "vue-toastification"
 import { useLayoutStore } from "@/store/app"
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors"
 import EmployeeExtractNotificationConfirmationDialog from "@/app/common/components/EmployeeExtractNotificationConfirmationDialog.vue"
 import { employeeExpenseStatementReportService, employeeService } from "@/app/http/httpServiceProvider"
 import DataTableServer from "@/app/common/components/DataTableServer.vue"
@@ -11,6 +12,7 @@ import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue"
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue"
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue"
 import Status from "@/app/common/components/Status.vue"
+import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue"
 import AdvancedFilter from "@/components/employee/list/AdvancedFilter.vue"
 import Overview from "@/components/employee/list/Overview.vue"
 import { employeeHeader, Options } from "@/components/employee/list/utils"
@@ -32,6 +34,10 @@ const deleteLoading = ref(false)
 const notificationDialog = ref(false)
 const notificationEmployeeId = ref<string | null>(null)
 const notificationLoading = ref(false)
+const terminateDialog = ref(false)
+const terminateEmployeeId = ref<string | null>(null)
+const terminateLoading = ref(false)
+const terminateFieldErrors = ref<Record<string, string[]>>({})
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedEmployees = ref<any[]>([])
@@ -79,6 +85,12 @@ const openNotificationDialog = (id: string) => {
   notificationDialog.value = true
 }
 
+const openTerminateDialog = (id: string) => {
+  terminateEmployeeId.value = id
+  terminateFieldErrors.value = {}
+  terminateDialog.value = true
+}
+
 const deleteEmployee = async () => {
   if (!deleteId.value) return
 
@@ -117,6 +129,44 @@ const sendEmployeeExtractNotification = async () => {
     notificationDialog.value = false
     notificationEmployeeId.value = null
   }
+}
+
+const terminateEmployeeContract = async (terminationDate: string) => {
+  if (!terminateEmployeeId.value) return
+
+  terminateLoading.value = true
+  terminateFieldErrors.value = {}
+
+  try {
+    const response = await employeeService.terminateEmployee(terminateEmployeeId.value, { terminationDate })
+
+    if (response.status === "error") {
+      terminateFieldErrors.value = getApiValidationErrors(response.error)
+      getApiErrorMessages(response.error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+        toast.error(message)
+      })
+      return
+    }
+
+    toast.success(t("t-toast-message-terminate-contract-success"))
+    await employeeStore.fetchEmployees(currentPage.value - 1, itemsPerPage.value)
+    terminateDialog.value = false
+    terminateEmployeeId.value = null
+  } catch (error) {
+    terminateFieldErrors.value = getApiValidationErrors(error)
+    getApiErrorMessages(error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+      toast.error(message)
+    })
+  } finally {
+    terminateLoading.value = false
+  }
+}
+
+const clearTerminateFieldError = (field: string) => {
+  if (!terminateFieldErrors.value[field]) return
+  const next = { ...terminateFieldErrors.value }
+  delete next[field]
+  terminateFieldErrors.value = next
 }
 
 const toggleSelection = (item: EmployeeListingType) => {
@@ -164,6 +214,9 @@ const onSelect = (option: string, data: EmployeeListingType) => {
       break
     case "send-notification":
       openNotificationDialog(data.id)
+      break
+    case "terminate-contract":
+      openTerminateDialog(data.id)
       break
     case "delete":
       openDeleteDialog(data.id)
@@ -349,6 +402,13 @@ onBeforeRouteLeave(() => {
     v-model="notificationDialog"
     :loading="notificationLoading"
     @onConfirm="sendEmployeeExtractNotification"
+  />
+  <TerminateEmployeeContractDialog
+    v-model="terminateDialog"
+    :loading="terminateLoading"
+    :server-errors="terminateFieldErrors"
+    @onConfirm="terminateEmployeeContract"
+    @clear-server-error="clearTerminateFieldError"
   />
 </template>
 

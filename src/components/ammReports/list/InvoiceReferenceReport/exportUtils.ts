@@ -1,7 +1,10 @@
 import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import type { InvoiceReferenceReportType } from "@/components/ammReports/types";
+import type {
+  InvoiceReferenceReportDetailType,
+  InvoiceReferenceReportType,
+} from "@/components/ammReports/types";
 import { amountFormate } from "@/app/common/amountFormate";
 import { formateDate } from "@/app/common/dateFormate";
 import i18n from "@/plugins/i18n";
@@ -9,6 +12,25 @@ import i18n from "@/plugins/i18n";
 export interface ExportOptions {
   fileName?: string;
 }
+
+export const getInvoiceReferenceServiceProvisionDate = (
+  item: InvoiceReferenceReportDetailType
+): string | undefined => item.invoiceServiceProvisionDate || item.serviceProvisionDate;
+
+export const formatInvoiceReferenceServiceProvisionDate = (
+  item: InvoiceReferenceReportDetailType
+): string => {
+  const serviceProvisionDate = getInvoiceReferenceServiceProvisionDate(item);
+  return serviceProvisionDate ? formateDate(serviceProvisionDate) : "-";
+};
+
+const invoiceStatusTranslationKeys: Record<string, string> = {
+  CANCELLED: "t-cancelled",
+  DRAFT: "t-draft",
+  PENDING: "t-pending",
+  POSTED: "t-posted",
+  REVERSED: "t-reversed",
+};
 
 export class InvoiceReferenceReportExporter {
   private static readonly SOFT_BLUE = "DCEBFF";
@@ -42,6 +64,16 @@ export class InvoiceReferenceReportExporter {
 
   private static getTitle(): string {
     return this.tr("t-report-100010-title");
+  }
+
+  private static formatInvoiceStatus(status?: string): string {
+    if (!status) return "-";
+
+    const translationKey = invoiceStatusTranslationKeys[status.toUpperCase()];
+    if (!translationKey) return status;
+
+    const translated = this.tr(translationKey);
+    return translated === translationKey ? status : translated;
   }
 
   static async exportToPDF(
@@ -169,7 +201,7 @@ export class InvoiceReferenceReportExporter {
       head: [[
         this.tr("t-invoice-number"),
         this.tr("t-invoice-reference"),
-        this.tr("t-issue-date"),
+        this.tr("t-service-provision-date"),
         this.tr("t-due-date"),
         this.tr("t-invoice-status"),
         this.tr("t-authorized-by"),
@@ -178,9 +210,9 @@ export class InvoiceReferenceReportExporter {
       body: details.map((item) => [
         item.invoiceNumber || "-",
         item.invoiceReferenceNumber || "-",
-        item.issueDate ? formateDate(item.issueDate) : "-",
+        formatInvoiceReferenceServiceProvisionDate(item),
         item.dueDate ? formateDate(item.dueDate) : "-",
-        item.invoiceStatus || "-",
+        this.formatInvoiceStatus(item.invoiceStatus),
         item.authorizedBy || "-",
         `${amountFormate(Number(item.totalAmount || 0))} MT`,
       ]),
@@ -260,13 +292,13 @@ export class InvoiceReferenceReportExporter {
       [`${this.tr("t-total-amount")}: ${amountFormate(totalAmount)} MT`, "", "", "", "", "", ""],
       ["", "", "", "", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", "", "", "", ""],
-      [this.tr("t-invoice-number"), this.tr("t-invoice-reference"), this.tr("t-issue-date"), this.tr("t-due-date"), this.tr("t-invoice-status"), this.tr("t-authorized-by"), `${this.tr("t-total-amount")} (MT)`],
+      [this.tr("t-invoice-number"), this.tr("t-invoice-reference"), this.tr("t-service-provision-date"), this.tr("t-due-date"), this.tr("t-invoice-status"), this.tr("t-authorized-by"), `${this.tr("t-total-amount")} (MT)`],
       ...details.map((item) => [
         item.invoiceNumber || "-",
         item.invoiceReferenceNumber || "-",
-        item.issueDate ? formateDate(item.issueDate) : "-",
+        formatInvoiceReferenceServiceProvisionDate(item),
         item.dueDate ? formateDate(item.dueDate) : "-",
-        item.invoiceStatus || "-",
+        this.formatInvoiceStatus(item.invoiceStatus),
         item.authorizedBy || "-",
         String(item.totalAmount || 0),
       ]),
@@ -363,10 +395,10 @@ export class InvoiceReferenceReportExporter {
     csvContent += `${this.tr("t-service-provider")},${report.serviceProvider?.name || "-"}\n`;
     csvContent += `${this.tr("t-total-amount")},${totalAmount}\n\n`;
 
-    csvContent += `${this.tr("t-invoice-number")},${this.tr("t-invoice-reference")},${this.tr("t-issue-date")},${this.tr("t-due-date")},${this.tr("t-invoice-status")},${this.tr("t-authorized-by")},${this.tr("t-total-amount")}\n`;
+    csvContent += `${this.tr("t-invoice-number")},${this.tr("t-invoice-reference")},${this.tr("t-service-provision-date")},${this.tr("t-due-date")},${this.tr("t-invoice-status")},${this.tr("t-authorized-by")},${this.tr("t-total-amount")}\n`;
 
     details.forEach((item) => {
-      csvContent += `${item.invoiceNumber || "-"},${item.invoiceReferenceNumber || "-"},${item.issueDate ? formateDate(item.issueDate) : "-"},${item.dueDate ? formateDate(item.dueDate) : "-"},${item.invoiceStatus || "-"},${item.authorizedBy || "-"},${item.totalAmount || 0}\n`;
+      csvContent += `${item.invoiceNumber || "-"},${item.invoiceReferenceNumber || "-"},${formatInvoiceReferenceServiceProvisionDate(item)},${item.dueDate ? formateDate(item.dueDate) : "-"},${this.formatInvoiceStatus(item.invoiceStatus)},${item.authorizedBy || "-"},${item.totalAmount || 0}\n`;
     });
 
     csvContent += `${this.tr("t-totals").toUpperCase()},-,-,-,-,-,${totalAmount}\n\n`;

@@ -206,6 +206,8 @@ export type EmployeeExpenseStatementDetailType = {
   invoiceId?: string;
   invoiceNumber?: string;
   invoiceIssueDate?: string;
+  serviceProvisionDate?: string;
+  invoiceServiceProvisionDate?: string;
   serviceProviderId?: string | number;
   serviceProviderName?: string;
   authorizedBy?: string;
@@ -276,6 +278,8 @@ export type InvoiceReferenceReportDetailType = {
   id?: string;
   invoiceNumber?: string;
   issueDate?: string;
+  serviceProvisionDate?: string;
+  invoiceServiceProvisionDate?: string;
   dueDate?: string;
   totalAmount?: number;
   invoiceStatus?: string;

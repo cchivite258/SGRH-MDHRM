@@ -4,9 +4,11 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { useI18n } from "vue-i18n";
 import { amountFormate } from "@/app/common/amountFormate";
-import { formateDate } from "@/app/common/dateFormate";
 import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
-import { EmployeeExpenseStatementReportExporter } from "./exportUtils";
+import {
+  EmployeeExpenseStatementReportExporter,
+  formatEmployeeExpenseServiceProvisionDate,
+} from "./exportUtils";
 
 const props = defineProps<{
   report: EmployeeExpenseStatementReportType;
@@ -226,7 +228,7 @@ const exportOptions = [
         <v-table density="comfortable" hover class="report-table">
           <thead>
             <tr>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-issue-date") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-service-provision-date") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-number") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-service-provider") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-patient") }}</th>
@@ -236,7 +238,7 @@ const exportOptions = [
           </thead>
           <tbody>
             <tr v-for="(row, index) in details" :key="row.invoiceId || index" class="table-row">
-              <td class="pa-4">{{ row.invoiceIssueDate ? formateDate(row.invoiceIssueDate) : "-" }}</td>
+              <td class="pa-4">{{ formatEmployeeExpenseServiceProvisionDate(row) }}</td>
               <td class="pa-4">{{ row.invoiceNumber || "-" }}</td>
               <td class="pa-4">{{ row.serviceProviderName || "-" }}</td>
               <td class="pa-4">{{ row.pacientName || "-" }}</td>

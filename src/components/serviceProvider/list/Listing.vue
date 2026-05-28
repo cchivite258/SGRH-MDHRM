@@ -203,7 +203,9 @@ onBeforeRouteLeave(() => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="service-provider-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="serviceProviderOptions" @onSelect="onSelect($event, item)" />
+            <div class="d-flex justify-center" style="gap: 8px">
+              <ListMenuWithIcon align="center" :menuItems="serviceProviderOptions" @onSelect="onSelect($event, item)" />
+            </div>
           </td>
         </tr>
       </template>

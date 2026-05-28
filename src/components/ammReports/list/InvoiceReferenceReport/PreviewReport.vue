@@ -3,10 +3,14 @@ import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { useI18n } from "vue-i18n";
+import Status from "@/app/common/components/Status.vue";
 import { amountFormate } from "@/app/common/amountFormate";
 import { formateDate } from "@/app/common/dateFormate";
 import type { InvoiceReferenceReportType } from "@/components/ammReports/types";
-import { InvoiceReferenceReportExporter } from "./exportUtils";
+import {
+  formatInvoiceReferenceServiceProvisionDate,
+  InvoiceReferenceReportExporter,
+} from "./exportUtils";
 
 const props = defineProps<{
   report: InvoiceReferenceReportType;
@@ -202,7 +206,7 @@ const exportOptions = [
             <tr>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-number") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-reference") }}</th>
-              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-issue-date") }}</th>
+              <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-service-provision-date") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-due-date") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-invoice-status") }}</th>
               <th class="text-left text-subtitle-2 font-weight-bold text-grey-darken-3 pa-4">{{ $t("t-authorized-by") }}</th>
@@ -213,9 +217,12 @@ const exportOptions = [
             <tr v-for="(row, index) in details" :key="row.id || index" class="table-row">
               <td class="pa-4">{{ row.invoiceNumber || "-" }}</td>
               <td class="pa-4">{{ row.invoiceReferenceNumber || "-" }}</td>
-              <td class="pa-4">{{ row.issueDate ? formateDate(row.issueDate) : "-" }}</td>
+              <td class="pa-4">{{ formatInvoiceReferenceServiceProvisionDate(row) }}</td>
               <td class="pa-4">{{ row.dueDate ? formateDate(row.dueDate) : "-" }}</td>
-              <td class="pa-4">{{ row.invoiceStatus || "-" }}</td>
+              <td class="pa-4">
+                <Status v-if="row.invoiceStatus" :status="row.invoiceStatus" />
+                <span v-else>-</span>
+              </td>
               <td class="pa-4">{{ row.authorizedBy || "-" }}</td>
               <td class="text-right pa-4 font-weight-medium">{{ amountFormate(Number(row.totalAmount || 0)) }} MT</td>
             </tr>
