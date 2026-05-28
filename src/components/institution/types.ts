@@ -347,12 +347,14 @@ export type CoveragePeriodExtensionPayloadType = {
     id?: string | number;
     coveragePeriodId: string | number;
     endDate: Date | string | null;
+    budgetAmount?: number | null;
 };
 
 export type CoveragePeriodExtensionType = {
     id: string | number;
     startDate: Date | string | null;
     endDate: Date | string | null;
+    budgetAmount?: number | null;
     status: string;
     coveragePeriodId: string | number;
     coveragePeriod?: CoveragePeriodListingType;
