@@ -156,7 +156,7 @@ const service_providers = computed(() => {
 });
 
 const employees = computed(() => {
-  const options = employeeStore.enabledEmployees.map(item => ({
+  const options = employeeStore.employeesForDropdown.map(item => ({
     value: item.id,
     label: `${item.firstName} ${item.lastName}`,
   }));
