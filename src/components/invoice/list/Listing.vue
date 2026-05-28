@@ -27,7 +27,7 @@ const invoiceStore = useInvoiceStore()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "invoiceNumber,issueDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
+const searchProps = "invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
 const postDialog = ref(false)
 const postFlaggedDialog = ref(false)
 const postId = ref<string | null>(null)
@@ -368,9 +368,6 @@ onBeforeRouteLeave(() => {
           </td>
           <td data-label="Total" class="invoice-listing-table__amount-cell">
             {{ formatAmount(item.totalAmount) || "N/A" }} {{ item.currency?.symbol }}
-          </td>
-          <td data-label="Vencimento">
-            {{ formateDate(item.dueDate) || "N/A" }}
           </td>
           <td data-label="Estado">
             <Status :status="item.invoiceStatus" />

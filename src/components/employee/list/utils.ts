@@ -40,6 +40,11 @@ export const Options: OptionType[] = [
     value: "send-notification",
   },
   {
+    title: "terminate-contract",
+    icon: "ph-user-minus",
+    value: "terminate-contract",
+  },
+  {
     title: "delete",
     icon: "ph-trash",
     value: "delete",

@@ -1,6 +1,9 @@
 import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
-import type { EmployeeExpenseStatementReportType } from "@/components/ammReports/types";
+import type {
+  EmployeeExpenseStatementDetailType,
+  EmployeeExpenseStatementReportType,
+} from "@/components/ammReports/types";
 import { amountFormate } from "@/app/common/amountFormate";
 import { formateDate } from "@/app/common/dateFormate";
 import i18n from "@/plugins/i18n";
@@ -8,6 +11,17 @@ import i18n from "@/plugins/i18n";
 export interface ExportOptions {
   fileName?: string;
 }
+
+export const getEmployeeExpenseServiceProvisionDate = (
+  item: EmployeeExpenseStatementDetailType
+): string | undefined => item.invoiceServiceProvisionDate || item.serviceProvisionDate;
+
+export const formatEmployeeExpenseServiceProvisionDate = (
+  item: EmployeeExpenseStatementDetailType
+): string => {
+  const serviceProvisionDate = getEmployeeExpenseServiceProvisionDate(item);
+  return serviceProvisionDate ? formateDate(serviceProvisionDate) : "-";
+};
 
 export class EmployeeExpenseStatementReportExporter {
   private static readonly SOFT_BLUE = "DCEBFF";
@@ -203,7 +217,7 @@ export class EmployeeExpenseStatementReportExporter {
     currentY += 5;
 
     const baseColumns = [
-      { key: "issueDate", title: this.tr("t-issue-date"), width: 24, align: "left" as const },
+      { key: "serviceProvisionDate", title: this.tr("t-service-provision-date"), width: 24, align: "left" as const },
       { key: "invoiceNumber", title: this.tr("t-invoice-number"), width: 24, align: "left" as const },
       { key: "serviceProvider", title: this.tr("t-service-provider"), width: 36, align: "left" as const },
       { key: "patient", title: this.tr("t-patient"), width: 34, align: "left" as const },
@@ -253,7 +267,7 @@ export class EmployeeExpenseStatementReportExporter {
       }
 
       const row = [
-        item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-",
+        formatEmployeeExpenseServiceProvisionDate(item),
         item.invoiceNumber || "-",
         item.serviceProviderName || "-",
         item.pacientName || "-",
@@ -348,9 +362,9 @@ export class EmployeeExpenseStatementReportExporter {
       [this.tr("t-remaining-balance"), `${amountFormate(employeeRemaingBalance)} MT`, this.tr("t-total-allocated"), `${amountFormate(employeeAllocatedBalance)} MT`, "", ""],
       ["", "", "", "", "", ""],
       [this.tr("t-report-details").toUpperCase(), "", "", "", "", ""],
-      [this.tr("t-issue-date"), this.tr("t-invoice-number"), this.tr("t-service-provider"), this.tr("t-patient"), this.tr("t-procedures"), `${this.tr("t-total-billed")} (MT)`],
+      [this.tr("t-service-provision-date"), this.tr("t-invoice-number"), this.tr("t-service-provider"), this.tr("t-patient"), this.tr("t-procedures"), `${this.tr("t-total-billed")} (MT)`],
       ...details.map((item) => [
-        item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-",
+        formatEmployeeExpenseServiceProvisionDate(item),
         item.invoiceNumber || "-",
         item.serviceProviderName || "-",
         item.pacientName || "-",
@@ -458,10 +472,10 @@ export class EmployeeExpenseStatementReportExporter {
     csvContent += `${this.tr("t-remaining-balance")},${employeeRemaingBalance}\n`;
     csvContent += `${this.tr("t-total-allocated")},${employeeAllocatedBalance}\n\n`;
 
-    csvContent += `${this.tr("t-issue-date")},${this.tr("t-invoice-number")},${this.tr("t-service-provider")},${this.tr("t-patient")},${this.tr("t-procedures")},${this.tr("t-total-billed")}\n`;
+    csvContent += `${this.tr("t-service-provision-date")},${this.tr("t-invoice-number")},${this.tr("t-service-provider")},${this.tr("t-patient")},${this.tr("t-procedures")},${this.tr("t-total-billed")}\n`;
 
     details.forEach((item) => {
-      csvContent += `${item.invoiceIssueDate ? formateDate(item.invoiceIssueDate) : "-"},${item.invoiceNumber || "-"},${item.serviceProviderName || "-"},${item.pacientName || "-"},"${(item.hospitalProcedureTypeName || []).join(", ")}",${item.invoiceTotalAmount || 0}\n`;
+      csvContent += `${formatEmployeeExpenseServiceProvisionDate(item)},${item.invoiceNumber || "-"},${item.serviceProviderName || "-"},${item.pacientName || "-"},"${(item.hospitalProcedureTypeName || []).join(", ")}",${item.invoiceTotalAmount || 0}\n`;
     });
 
     csvContent += `${this.tr("t-totals").toUpperCase()},-,-,-,-,${totalAmount}\n\n`;

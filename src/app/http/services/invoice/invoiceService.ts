@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
+        params.append('query_props', 'invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -274,6 +274,7 @@ export default class InvoiceService extends HttpService {
       const payload = {
         invoiceNumber: invoiceData.invoiceNumber,
         issueDate: invoiceData.issueDate,
+        serviceProvisionDate: invoiceData.serviceProvisionDate,
         dueDate: invoiceData.dueDate,
         totalAmount: invoiceData.totalAmount,
         employee: invoiceData.employee,

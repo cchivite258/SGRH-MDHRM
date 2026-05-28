@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed } from "vue";
+import type { PropType } from "vue";
 import FormTabs from "@/app/common/components/FormTabs.vue";
 
 const emit = defineEmits(["update:modelValue"]);
@@ -9,7 +10,7 @@ const props = defineProps({
     default: 1
   },
   serviceProviderId: {
-    type: String,
+    type: String as PropType<string | null>,
     default: null
   },
   basicDataValidated: {

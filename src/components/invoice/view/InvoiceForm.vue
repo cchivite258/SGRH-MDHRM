@@ -175,6 +175,7 @@ const requiredRules = {
   service_provider: [(v: string) => !!v || t('t-service-provider-required')],
   employee: [(v: string) => !!v || t('t-employee-required')],
   issueDate: [(v: Date) => !!v || t('t-issue-date-required')],
+  serviceProvisionDate: [(v: Date) => !!v || t('t-service-provision-date-required')],
   dueDate: [(v: Date) => !!v || t('t-due-date-required')],
   currency: [(v: string) => !!v || t('t-currency-required')],
   invoiceNumber: [(v: string) => !!v || t('t-invoice-number-required')],
@@ -396,19 +397,25 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n6">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
+            <div class="font-weight-bold">{{ $t('t-service-provision-date') }} <i class="ph-asterisk ph-xs text-danger" /></div>
+            <ValidatedDatePicker v-model="invoiceData.serviceProvisionDate" :teleport="true" :enable-time-picker="false"
+              :rules="requiredRules.serviceProvisionDate" :placeholder="$t('t-select-service-provision-date')" disabled />
+          </v-col>
+
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">{{ $t('t-issue-date') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <ValidatedDatePicker v-model="invoiceData.issueDate" :teleport="true" :enable-time-picker="false"
               :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" disabled />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">{{ $t('t-currency') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.currency" :items="currencies" :rules="requiredRules.currency"
               :placeholder="$t('t-select-currency')" disabled />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">{{ $t('t-due-date') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <ValidatedDatePicker v-model="invoiceData.dueDate" :teleport="true" :enable-time-picker="false"
               :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" disabled />

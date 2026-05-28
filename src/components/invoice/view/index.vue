@@ -62,6 +62,7 @@ const invoiceData = reactive<InvoiceInsertType>({
   currency: undefined,
   employee: undefined,
   issueDate: new Date(),
+  serviceProvisionDate: new Date(),
   dueDate: new Date(),
   totalAmount: 0,
   isEmployeeInvoice: false,

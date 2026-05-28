@@ -18,6 +18,7 @@ import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
+import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/create/TabSalaryReview.vue";
@@ -87,6 +88,9 @@ const routeInstitutionId = ref<string | null>(route.query.institutionId as strin
 const loading = ref(false);
 const errorMsg = ref("");
 const apiFieldErrors = ref<Record<string, string[]>>({});
+const terminateDialog = ref(false);
+const terminateLoading = ref(false);
+const terminateFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
@@ -307,6 +311,49 @@ const onSalaryUpdated = (value: number) => {
   employeeData.baseSalary = value;
 };
 
+const openTerminateDialog = () => {
+  terminateFieldErrors.value = {};
+  terminateDialog.value = true;
+};
+
+const clearTerminateFieldError = (field: string) => {
+  if (!terminateFieldErrors.value[field]) return;
+  const next = { ...terminateFieldErrors.value };
+  delete next[field];
+  terminateFieldErrors.value = next;
+};
+
+const terminateEmployeeContract = async (terminationDate: string) => {
+  if (!employeeId.value) return;
+
+  terminateLoading.value = true;
+  terminateFieldErrors.value = {};
+
+  try {
+    const response = await employeeService.terminateEmployee(employeeId.value, { terminationDate });
+
+    if (response.status === "error") {
+      terminateFieldErrors.value = getApiValidationErrors(response.error);
+      getApiErrorMessages(response.error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+        toast.error(message);
+      });
+      return;
+    }
+
+    employeeData.terminationDate = response.data?.terminationDate || terminationDate;
+    employeeData.enabled = response.data?.enabled ?? false;
+    toast.success(t("t-toast-message-terminate-contract-success"));
+    terminateDialog.value = false;
+  } catch (error) {
+    terminateFieldErrors.value = getApiValidationErrors(error);
+    getApiErrorMessages(error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+      toast.error(message);
+    });
+  } finally {
+    terminateLoading.value = false;
+  }
+};
+
 const goBackToList = () => {
   router.push('/employee/list');
 };
@@ -479,7 +526,8 @@ onBeforeUnmount(() => {
   <FormCard v-if="step === 1" class="employee-form-section">
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
-      :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()" />
+      :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()"
+      :employee-id="employeeId" @terminate-contract="openTerminateDialog" />
   </FormCard>
 
   <FormCard v-if="step === 3" class="employee-form-section">
@@ -523,6 +571,14 @@ onBeforeUnmount(() => {
       {{ headerSaveLabel }}
     </v-btn>
   </div>
+
+  <TerminateEmployeeContractDialog
+    v-model="terminateDialog"
+    :loading="terminateLoading"
+    :server-errors="terminateFieldErrors"
+    @onConfirm="terminateEmployeeContract"
+    @clear-server-error="clearTerminateFieldError"
+  />
 </template>
 
 <style scoped>
