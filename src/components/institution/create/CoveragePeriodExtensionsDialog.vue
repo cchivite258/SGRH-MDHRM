@@ -274,8 +274,7 @@ const onSubmit = async () => {
       endDate: extensionForm.value.endDate,
       budgetAmount:
         extensionForm.value.budgetAmount === null ||
-        extensionForm.value.budgetAmount === undefined ||
-        extensionForm.value.budgetAmount === ""
+        extensionForm.value.budgetAmount === undefined
           ? undefined
           : Number(extensionForm.value.budgetAmount)
     };
