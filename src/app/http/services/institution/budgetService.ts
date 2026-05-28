@@ -18,7 +18,10 @@ interface ServiceResponse<T> {
 
 const BUDGETS_ENDPOINT = '/administration/contract/coverage-period-budgets';
 
-const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
+const getContent = <T>(response: ApiResponse<T[] | T>): T[] => {
+    const rawContent = response.content ?? response.data ?? [];
+    return Array.isArray(rawContent) ? rawContent : rawContent ? [rawContent] : [];
+};
 const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
 
 export default class BudgetService extends HttpService {

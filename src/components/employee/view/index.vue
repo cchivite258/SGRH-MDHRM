@@ -11,11 +11,13 @@ import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue"
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
+import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 
 // Components
 import ButtonNav from "@/components/employee/view/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
+import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue";
 import Step1 from "@/components/employee/view/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/view/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/view/TabSalaryReview.vue";
@@ -76,6 +78,9 @@ const employeeId = ref<string | null>(
 );// ID do employee (null se for criação)
 const loading = ref(false); // Estado de loading global
 const errorMsg = ref(""); // Mensagem de erro global
+const terminateDialog = ref(false);
+const terminateLoading = ref(false);
+const terminateFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null; // Timeout para mensagens de erro
 
 // Dados reativos do formulário
@@ -229,6 +234,49 @@ const onStepChange = (value: number) => {
   }
 };
 
+const openTerminateDialog = () => {
+  terminateFieldErrors.value = {};
+  terminateDialog.value = true;
+};
+
+const clearTerminateFieldError = (field: string) => {
+  if (!terminateFieldErrors.value[field]) return;
+  const next = { ...terminateFieldErrors.value };
+  delete next[field];
+  terminateFieldErrors.value = next;
+};
+
+const terminateEmployeeContract = async (terminationDate: string) => {
+  if (!employeeId.value) return;
+
+  terminateLoading.value = true;
+  terminateFieldErrors.value = {};
+
+  try {
+    const response = await employeeService.terminateEmployee(employeeId.value, { terminationDate });
+
+    if (response.status === "error") {
+      terminateFieldErrors.value = getApiValidationErrors(response.error);
+      getApiErrorMessages(response.error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+        toast.error(message);
+      });
+      return;
+    }
+
+    employeeData.terminationDate = response.data?.terminationDate || terminationDate;
+    employeeData.enabled = response.data?.enabled ?? false;
+    toast.success(t("t-toast-message-terminate-contract-success"));
+    terminateDialog.value = false;
+  } catch (error) {
+    terminateFieldErrors.value = getApiValidationErrors(error);
+    getApiErrorMessages(error, t("t-toast-message-terminate-contract-error")).forEach((message) => {
+      toast.error(message);
+    });
+  } finally {
+    terminateLoading.value = false;
+  }
+};
+
 
 // E o watcher deve ficar assim:
 watch(() => route.query.tab, (newTab) => {
@@ -322,7 +370,7 @@ onBeforeUnmount(() => {
 
   <FormCard v-if="step === 1" class="employee-form-section">
       <Step2 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
-        :loading="loading" :show-actions="false" />
+        :loading="loading" :show-actions="false" :employee-id="employeeId" @terminate-contract="openTerminateDialog" />
 
   </FormCard>
 
@@ -347,6 +395,14 @@ onBeforeUnmount(() => {
       <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
   </FormCard>
+
+  <TerminateEmployeeContractDialog
+    v-model="terminateDialog"
+    :loading="terminateLoading"
+    :server-errors="terminateFieldErrors"
+    @onConfirm="terminateEmployeeContract"
+    @clear-server-error="clearTerminateFieldError"
+  />
 </template>
 
 <style scoped>

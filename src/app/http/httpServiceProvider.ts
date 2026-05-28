@@ -7,6 +7,8 @@ import CompanyDetailsService from "@/app/http/services/institution/companyDetail
 import DepartmentService from "@/app/http/services/institution/departmentService";
 import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
+import ServiceProviderContractExtensionService from "@/app/http/services/institution/serviceProviderContractExtensionService";
+import CoveragePeriodExtensionService from "@/app/http/services/institution/coveragePeriodExtensionService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
@@ -55,6 +57,8 @@ const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
 const healthPlanService = new HealthPlanService();
 const serviceProviderService = new ServiceProviderService();
+const serviceProviderContractExtensionService = new ServiceProviderContractExtensionService();
+const coveragePeriodExtensionService = new CoveragePeriodExtensionService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
 const serviceProviderInstitutionService = new ServiceProviderInstitutionService();
@@ -109,6 +113,8 @@ export {
     departmentService, 
     positionService, 
     serviceProviderService,
+    serviceProviderContractExtensionService,
+    coveragePeriodExtensionService,
     contactPersonService,
     serviceProviderInstitutionService,
     hospitalProcedureService,

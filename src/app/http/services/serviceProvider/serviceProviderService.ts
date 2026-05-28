@@ -13,6 +13,28 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType): ServiceProviderInsertType => ({
+  name: serviceProviderData.name,
+  description: serviceProviderData.description,
+  address: serviceProviderData.address,
+  phone: serviceProviderData.phone,
+  email: serviceProviderData.email,
+  website: serviceProviderData.website,
+  incomeTaxNumber: serviceProviderData.incomeTaxNumber,
+  personOfContactFullname1: serviceProviderData.personOfContactFullname1,
+  personOfContactPhone1: serviceProviderData.personOfContactPhone1,
+  personOfContactEmail1: serviceProviderData.personOfContactEmail1,
+  personOfContactFullname2: serviceProviderData.personOfContactFullname2,
+  personOfContactPhone2: serviceProviderData.personOfContactPhone2,
+  personOfContactEmail2: serviceProviderData.personOfContactEmail2,
+  providerTypeId: serviceProviderData.providerTypeId,
+  contractStartDate: serviceProviderData.contractStartDate,
+  contractEndDate: serviceProviderData.contractEndDate,
+  enabled: serviceProviderData.enabled,
+  provinceId: serviceProviderData.provinceId,
+  countryId: serviceProviderData.countryId
+});
+
 export default class ServiceProviderService extends HttpService { 
 
   // Obter todos os prestadores de serviços
@@ -119,8 +141,9 @@ export default class ServiceProviderService extends HttpService {
   // Criar novo prestador de serviços
   async createServiceProvider(serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderResponseType>> {
     try {
+      const payload = toServiceProviderPayload(serviceProviderData);
       //const response = await this.post<ApiResponse<ServiceProviderResponseType>>('/administration/service-providers', serviceProviderData);
-      const response = await this.post<ApiResponse<ServiceProviderResponseType>>('/administration/service-provider', serviceProviderData);
+      const response = await this.post<ApiResponse<ServiceProviderResponseType>>('/administration/service-provider', payload);
       return {
         status: 'success',
         data: response.data
@@ -154,8 +177,9 @@ export default class ServiceProviderService extends HttpService {
   // Atualizar prestador de serviços
   async updateServiceProvider(id: string, serviceProviderData: ServiceProviderInsertType): Promise<ServiceResponse<ServiceProviderResponseType>> { 
     try {
+      const payload = toServiceProviderPayload(serviceProviderData);
       //const response = await this.put<ServiceProviderResponseType>(`/administration/service-providers/${id}`, serviceProviderData);
-      const response = await this.put<ServiceResponse<ServiceProviderResponseType>>(`/administration/service-provider/${id}`, serviceProviderData);
+      const response = await this.put<ServiceResponse<ServiceProviderResponseType>>(`/administration/service-provider/${id}`, payload);
       return {
         status: 'success',
         data: response.data

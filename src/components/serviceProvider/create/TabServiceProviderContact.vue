@@ -218,8 +218,8 @@ defineExpose({ saveData, validateForm });
 
       <!-- Ações do formulário -->
       <v-card-actions v-if="showActions" class="d-flex justify-space-between mt-5">
-        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 1)" :disabled="loading">
-          <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
+        <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', 2)" :disabled="loading">
+          <i class="ph-arrow-left me-2" /> {{ $t('t-contract') }}
         </v-btn>
 
         <v-btn color="secondary" variant="elevated" @click="saveData" :loading="loading">

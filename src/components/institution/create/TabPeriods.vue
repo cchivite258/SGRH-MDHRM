@@ -22,6 +22,9 @@ import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import CreateEditCoveragePeriodDialog from "@/components/institution/create/CreateEditCoveragePeriodDialog.vue";
 import ViewCoveragePeriodDialog from "@/components/institution/create/ViewCoveragePeriodDialog.vue";
+import CoveragePeriodExtensionsDialog from "@/components/institution/create/CoveragePeriodExtensionsDialog.vue";
+import CreateEditBudgetDialog from "@/components/institution/create/editCoveragePeriod/CreateEditBudgetDialog.vue";
+import ViewBudgetModal from "@/components/institution/create/editCoveragePeriod/ViewBudgetModal.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import StartConfirmationDialog from "@/app/common/components/StartConfirmationDialog.vue";
 import CloseConfirmationDialog from "@/app/common/components/CloseConfirmationDialog.vue";
@@ -29,14 +32,16 @@ import TableAction from "@/app/common/components/TableAction.vue";
 import { formateDate } from "@/app/common/dateFormate";
 // Stores e Services
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
-import { coveragePeriodsService } from "@/app/http/httpServiceProvider";
+import { budgetService, coveragePeriodsService } from "@/app/http/httpServiceProvider";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
   CoveragePeriodListingType,
-  CoveragePeriodInsertType
+  CoveragePeriodInsertType,
+  BudgetInsertType,
+  BudgetListingType
 } from "@/components/institution/types";
 
 // Utils
@@ -67,9 +72,19 @@ const institutionId = ref(props.institutionId);
 // constants
 const dialog = ref(false);
 const viewDialog = ref(false);
+const coveragePeriodExtensionDialog = ref(false);
+const budgetDialog = ref(false);
+const budgetViewDialog = ref(false);
 const deleteDialog = ref(false);
 const deleteLoading = ref(false);
 const coveragePeriodData = ref<CoveragePeriodInsertType | CoveragePeriodListingType | null>(null);
+const selectedCoveragePeriodForExtension = ref<CoveragePeriodListingType | null>(null);
+const budgetFormData = ref<BudgetInsertType | BudgetListingType | null>(null);
+const budgetSummaryByCoveragePeriod = ref<Record<string, {
+  loaded: boolean;
+  hasBudget: boolean;
+  latestBudget: BudgetListingType | null;
+}>>({});
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
@@ -109,6 +124,131 @@ const fetchCoveragePeriods = async ({ page, itemsPerPage, sortBy, search }: Fetc
     search,
     searchProps
   );
+
+  await preloadBudgetSummaries(coveragePeriodStore.coverage_periods);
+};
+
+const reloadCoveragePeriods = async () => {
+  if (!institutionId.value) return;
+
+  await coveragePeriodStore.fetchCoveragePeriods(
+    institutionId.value,
+    0,
+    itemsPerPage.value,
+    "createdAt",
+    "asc",
+    searchQuery.value,
+    searchProps
+  );
+
+  await preloadBudgetSummaries(coveragePeriodStore.coverage_periods);
+};
+
+watch(
+  () => props.institutionId,
+  async (newInstitutionId) => {
+    institutionId.value = newInstitutionId;
+
+    if (!newInstitutionId) {
+      coveragePeriodStore.coverage_periods = [];
+      budgetSummaryByCoveragePeriod.value = {};
+      return;
+    }
+
+    await reloadCoveragePeriods();
+  },
+  { immediate: true }
+);
+
+const refreshSelectedCoveragePeriod = async () => {
+  if (!selectedCoveragePeriodForExtension.value?.id) return;
+
+  const response = await coveragePeriodsService.getCoveragePeriodById(selectedCoveragePeriodForExtension.value.id);
+  selectedCoveragePeriodForExtension.value = {
+    ...selectedCoveragePeriodForExtension.value,
+    ...response.data
+  };
+};
+
+const onCoveragePeriodExtensionSaved = async () => {
+  await refreshSelectedCoveragePeriod();
+  await reloadCoveragePeriods();
+};
+
+const findLatestEnabledBudgetForCoveragePeriod = async (coveragePeriodId: string) => {
+  const pageSize = 50;
+  let page = 0;
+  let totalPages = 1;
+  let latestEnabledBudget: BudgetListingType | null = null;
+
+  const getBudgetTimestamp = (budget: BudgetListingType) => {
+    const createdAt = budget.createdAt ? new Date(String(budget.createdAt)).getTime() : 0;
+    const updatedAt = budget.updatedAt ? new Date(String(budget.updatedAt)).getTime() : 0;
+    return Math.max(createdAt, updatedAt);
+  };
+
+  while (page < totalPages) {
+    const { content, meta } = await budgetService.getBudgetByCoveragePeriodForDropdown(
+      coveragePeriodId,
+      page,
+      pageSize,
+      "name",
+      "asc"
+    );
+    const budgets = Array.isArray(content) ? content : content ? [content] : [];
+
+    const enabledBudgets = budgets.filter((budget) => budget.enabled);
+    for (const budget of enabledBudgets) {
+      if (!latestEnabledBudget || getBudgetTimestamp(budget) > getBudgetTimestamp(latestEnabledBudget)) {
+        latestEnabledBudget = budget;
+      }
+    }
+
+    const resolvedTotalPages = Number(meta?.totalPages);
+    if (Number.isFinite(resolvedTotalPages) && resolvedTotalPages > 0) {
+      totalPages = resolvedTotalPages;
+    } else if (budgets.length < pageSize) {
+      totalPages = page + 1;
+    } else {
+      totalPages = page + 2;
+    }
+
+    page += 1;
+  }
+
+  return latestEnabledBudget;
+};
+
+const loadBudgetSummaryForCoveragePeriod = async (coveragePeriodId: string) => {
+  try {
+    const latestEnabledBudget = await findLatestEnabledBudgetForCoveragePeriod(coveragePeriodId);
+
+    budgetSummaryByCoveragePeriod.value = {
+      ...budgetSummaryByCoveragePeriod.value,
+      [coveragePeriodId]: {
+        loaded: true,
+        hasBudget: !!latestEnabledBudget,
+        latestBudget: latestEnabledBudget
+      }
+    };
+  } catch (error) {
+    budgetSummaryByCoveragePeriod.value = {
+      ...budgetSummaryByCoveragePeriod.value,
+      [coveragePeriodId]: {
+        loaded: false,
+        hasBudget: false,
+        latestBudget: null
+      }
+    };
+  }
+};
+
+const preloadBudgetSummaries = async (periods: CoveragePeriodListingType[]) => {
+  const idsToLoad = periods.map(period => period.id);
+
+  if (idsToLoad.length === 0) return;
+
+  await Promise.all(idsToLoad.map((id) => loadBudgetSummaryForCoveragePeriod(id)));
 };
 
 /**
@@ -188,11 +328,7 @@ const onSubmit = async (
     // Só mostra sucesso se realmente foi bem-sucedido
     toast.success(data.id ? t('t-toast-message-update') : t('t-toast-message-created'));
 
-    await coveragePeriodStore.fetchCoveragePeriods(
-      institutionId.value,
-      0,
-      itemsPerPage.value
-    );
+    await reloadCoveragePeriods();
     callbacks?.onSuccess?.();
 
   } catch (error: any) {
@@ -208,34 +344,53 @@ const onSubmit = async (
 Opcoes da lista
 */
 const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
+  const status = invoice.status?.toString().toUpperCase();
+  const budgetSummary = budgetSummaryByCoveragePeriod.value[invoice.id];
+  const budgetOption = budgetSummary?.loaded
+    ? (
+        budgetSummary.hasBudget
+          ? { title: "view-budget", icon: "ph-eye", value: "view-budget" }
+          : status === "INACTIVE"
+            ? { title: "add-budget", icon: "ph-wallet", value: "add-budget" }
+            : null
+      )
+    : status === "INACTIVE"
+      ? { title: "view-budget", icon: "ph-eye", value: "view-budget" }
+      : null;
+  const contractAddendumOption = status === "RUNNING"
+    ? { title: "extend-period", icon: "ph-file-plus", value: "contract-addendum" }
+    : null;
+
   if (props.isViewMode) {
-    return Options
-      .filter((option) => option.title === "view")
-      .map((option) => ({
-        ...option,
-        title: t(`t-${option.title}`)
-      }));
+    return [
+      ...Options.filter((option) => option.title === "view"),
+      ...(budgetOption?.value === "view-budget" ? [budgetOption] : [])
+    ].map((option) => ({
+      ...option,
+      title: t(`t-${option.title}`)
+    }));
   }
 
-  // Opções base
   let availableOptions = [...Options];
-
-  // Filtros baseados no status
-  if (invoice.status === 'CLOSED') {
-    // Período fechado não pode ser reaberto ou fechado novamente
-    availableOptions = availableOptions.filter(option =>
-      option.title === 'view'
-    );
-  } else if (invoice.status === 'INACTIVE') {
-    // Período inativo não pode ser fechado
-    availableOptions = availableOptions.filter(option =>
-      option.title !== 'close'
-    );
+  if (contractAddendumOption) {
+    availableOptions.splice(2, 0, contractAddendumOption);
   }
-  else if (invoice.status === 'RUNNING') {
-    // Período em execução não pode ser fechado
+
+  if (budgetOption) {
+    availableOptions.splice(contractAddendumOption ? 3 : 2, 0, budgetOption);
+  }
+
+  if (status === "CLOSED") {
     availableOptions = availableOptions.filter(option =>
-      option.title !== 'start' && option.title !== 'edit' && option.title !== 'delete'
+      option.title === "view" || option.value === "view-budget"
+    );
+  } else if (status === "INACTIVE") {
+    availableOptions = availableOptions.filter(option =>
+      option.title !== "close"
+    );
+  } else if (status === "RUNNING") {
+    availableOptions = availableOptions.filter(option =>
+      option.title !== "start" && option.title !== "edit" && option.title !== "delete"
     );
   }
 
@@ -245,7 +400,6 @@ const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
   }));
 };
 
-
 const onSelect = (option: string, data: CoveragePeriodListingType) => {
   switch (option) {
     case "view":
@@ -253,6 +407,15 @@ const onSelect = (option: string, data: CoveragePeriodListingType) => {
       break;
     case "edit":
       onEditClick(data.id);
+      break;
+    case "contract-addendum":
+      onCoveragePeriodExtensionClick(data);
+      break;
+    case "add-budget":
+      onRegisterBudgetClick(data);
+      break;
+    case "view-budget":
+      onViewBudgetClick(data);
       break;
     case "start":
       onStart(data.id);
@@ -263,6 +426,84 @@ const onSelect = (option: string, data: CoveragePeriodListingType) => {
     case "delete":
       onDelete(data.id);
       break;
+  }
+};
+
+const onCoveragePeriodExtensionClick = (data: CoveragePeriodListingType) => {
+  selectedCoveragePeriodForExtension.value = { ...data };
+  coveragePeriodExtensionDialog.value = true;
+};
+
+const onRegisterBudgetClick = (data: CoveragePeriodListingType) => {
+  budgetFormData.value = {
+    id: undefined,
+    name: data.name || "",
+    budgetAmount: 0,
+    coveragePeriod: data.id,
+    enabled: true
+  };
+  budgetDialog.value = true;
+};
+
+const onViewBudgetClick = async (data: CoveragePeriodListingType) => {
+  try {
+    const budget = await findLatestEnabledBudgetForCoveragePeriod(data.id);
+
+    budgetSummaryByCoveragePeriod.value = {
+      ...budgetSummaryByCoveragePeriod.value,
+      [data.id]: {
+        loaded: true,
+        hasBudget: !!budget,
+        latestBudget: budget
+      }
+    };
+
+    if (!budget) {
+      if (data.status?.toString().toUpperCase() === "INACTIVE") {
+        onRegisterBudgetClick(data);
+        return;
+      }
+
+      toast.error(t("t-search-not-found-message"));
+      return;
+    }
+
+    budgetFormData.value = { ...budget };
+    budgetViewDialog.value = true;
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  }
+};
+
+const onSubmitBudget = async (
+  data: BudgetInsertType,
+  callbacks?: {
+    onSuccess?: () => void,
+    onError?: (error: any) => void,
+    onFinally?: () => void
+  }
+) => {
+  try {
+    const response = data.id
+      ? await budgetService.updateBudget(data.id, data)
+      : await budgetService.createBudget(data);
+
+    if (response.status === "error") {
+      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
+      callbacks?.onError?.({ error: response.error });
+      return;
+    }
+
+    toast.success(data.id ? t("t-toast-message-update") : t("t-toast-message-created"));
+    if (data.coveragePeriod) {
+      await loadBudgetSummaryForCoveragePeriod(String(data.coveragePeriod));
+    }
+    callbacks?.onSuccess?.();
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+    callbacks?.onError?.(error);
+  } finally {
+    callbacks?.onFinally?.();
   }
 };
 
@@ -282,7 +523,7 @@ const onConfirmClose = async () => {
   try {
     await coveragePeriodsService.closeCoveragePeriod(periodId.value);
     toast.success(t('t-toast-message-close'));
-    await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
+    await reloadCoveragePeriods();
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
     getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
@@ -308,7 +549,7 @@ const onConfirmStart = async () => {
   try {
     await coveragePeriodsService.startCoveragePeriod(periodId.value);
     toast.success(t('t-toast-message-start'));
-    await coveragePeriodStore.fetchCoveragePeriods(institutionId.value, 0, itemsPerPage.value);
+    await reloadCoveragePeriods();
   } catch (error: unknown) {
     console.log('Erro completo:', error); // Para debugging
     getApiErrorMessages(error, t('t-toast-message-error')).forEach((message) => toast.error(message));
@@ -365,11 +606,7 @@ const onConfirmDelete = async () => {
     selectedCoveragePeriods.value = selectedCoveragePeriods.value.filter(
       period => period.id !== deleteId.value
     );
-    await coveragePeriodStore.fetchCoveragePeriods(
-      institutionId.value,
-      0,
-      itemsPerPage.value
-    );
+    await reloadCoveragePeriods();
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
     toast.error(t('t-toast-message-deleted-erros'));
@@ -460,6 +697,24 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
   <CreateEditCoveragePeriodDialog v-model="dialog" :data="coveragePeriodData" @onSubmit="onSubmit" />
   <ViewCoveragePeriodDialog v-model="viewDialog" :data="coveragePeriodData" />
+  <CoveragePeriodExtensionsDialog
+    v-model="coveragePeriodExtensionDialog"
+    :coverage-period-id="selectedCoveragePeriodForExtension?.id || null"
+    :coverage-period-name="selectedCoveragePeriodForExtension?.name || ''"
+    :current-end-date="selectedCoveragePeriodForExtension?.endDate || null"
+    @saved="onCoveragePeriodExtensionSaved"
+  />
+  <CreateEditBudgetDialog
+    v-if="budgetFormData"
+    v-model="budgetDialog"
+    :data="budgetFormData"
+    @onSubmit="onSubmitBudget"
+  />
+  <ViewBudgetModal
+    v-if="budgetFormData"
+    v-model="budgetViewDialog"
+    :data="budgetFormData"
+  />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
   <StartConfirmationDialog v-model="periodStartDialog" :loading="periodStartLoading" @onConfirm="onConfirmStart" />
   <CloseConfirmationDialog v-model="periodCloseDialog" :loading="periodCloseLoading" @onConfirm="onConfirmClose" />

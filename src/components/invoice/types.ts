@@ -2,6 +2,7 @@ export type InvoiceListingType = {
     id: string ;
     invoiceNumber: string;
     issueDate: Date;
+    serviceProvisionDate: Date;
     dueDate: Date;
     totalAmount: number;
     website: string;
@@ -65,6 +66,7 @@ export type InvoiceResponseType = {
     id: string ;
     invoiceNumber: string;
     issueDate: Date;
+    serviceProvisionDate: Date;
     dueDate: Date;
     totalAmount: number;
     website: string;
@@ -125,6 +127,7 @@ export type InvoiceInsertType = {
     id?: string;
     invoiceNumber: string;
     issueDate: Date;
+    serviceProvisionDate: Date;
     dueDate: Date;
     totalAmount: number;
     employee: string | undefined;

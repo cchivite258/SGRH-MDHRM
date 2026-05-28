@@ -51,6 +51,7 @@ const emit = defineEmits<{
   (e: 'save', payload: EmployeeInsertType): void;
   (e: 'update:modelValue', value: EmployeeInsertType): void;
   (e: 'clear-server-error', field: string): void;
+  (e: 'terminate-contract'): void;
 }>();
 
 const props = withDefaults(defineProps<{
@@ -58,11 +59,13 @@ const props = withDefaults(defineProps<{
   loading?: boolean,
   serverErrors?: Record<string, string[]>,
   isEditMode?: boolean,
+  employeeId?: string | null,
   showActions?: boolean
 }>(), {
   loading: false,
   serverErrors: () => ({}),
   isEditMode: false,
+  employeeId: null,
   showActions: true
 });
 
@@ -318,6 +321,10 @@ const saveData = async () => {
   emit('save', payload);
 };
 
+const canTerminateContract = computed(() => {
+  return props.isEditMode && !!props.employeeId && !employeeData.value.terminationDate;
+});
+
 defineExpose({
   saveData,
   validateForm
@@ -333,6 +340,20 @@ defineExpose({
       elevation="0"
       title-class="pb-0"
     >
+      <template #title-action>
+        <v-btn
+          v-if="canTerminateContract"
+          color="danger"
+          variant="tonal"
+          size="small"
+          :disabled="loading"
+          @click="emit('terminate-contract')"
+        >
+          <i class="ph-user-minus me-2" />
+          {{ $t('t-terminate-contract') }}
+        </v-btn>
+      </template>
+
       <!-- Mensagem de erro -->
       <transition name="fade">
         <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4 mx-5 mt-3" variant="tonal" color="danger"

@@ -198,6 +198,10 @@ export type EmployeeBaseSalaryUpdateType = {
   starDate?: string;
 };
 
+export type EmployeeTerminationType = {
+  terminationDate: string;
+};
+
 
 export type EmployeeUpdateType = {
   employeeNumber: string;

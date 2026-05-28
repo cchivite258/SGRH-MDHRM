@@ -142,7 +142,6 @@ const submitForm = async () => {
 <template>
   <v-form ref="form" @submit.prevent="submitForm">
     <Card :title="$t('t-general-information')" elevation="0" title-class="pb-0">
-      
       <!-- Mensagem de erro -->
       <transition name="fade">
         <v-alert
@@ -262,6 +261,7 @@ const submitForm = async () => {
         </v-btn>
       </v-card-actions>
     </Card>
+
   </v-form>
 </template>
 

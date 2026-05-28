@@ -53,7 +53,6 @@ export const invoiceHeader: TableHeaderType[] = [
   { title: "employee-name",key: "employee.firstName", sortable: true },
   { title: "service-provider",key: "clinic.name", sortable: true },
   { title: "total-amount",key: "totalAmount", sortable: true },
-  { title: "due-date",key: "dueDate", sortable: true },
   { title: "status" ,key: "invoiceStatus", sortable: true},
   { title: "action", align: "center" },
 ];

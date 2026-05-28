@@ -25,10 +25,13 @@ const loading = ref(false);
 const loadingRelations = ref(false);
 const searchQuery = ref("");
 const itemsPerPage = ref(10);
+const currentPage = ref(1);
 const selectedHospitalProcedureTypes = ref<HospitalProcedureTypeListing[]>([]);
 const selectedHospitalProcedureTypeIds = ref<(string | number)[]>([]);
 const errorMsg = ref("");
 const searchProps = "name,description";
+const allHospitalProcedureTypes = ref<HospitalProcedureTypeListing[]>([]);
+const allProceduresPageSize = 10000000;
 
 const form = ref({
   id: "",
@@ -41,14 +44,32 @@ const formErrors = ref<Record<string, string>>({
   name: "",
 });
 
-const totalItems = computed(() => hospitalProcedureTypeStore.pagination.totalElements);
 const loadingList = computed(() => hospitalProcedureTypeStore.loading || loadingRelations.value);
 
 const compareByName = (a: HospitalProcedureTypeListing, b: HospitalProcedureTypeListing) =>
   (a.name || "").localeCompare(b.name || "", "pt", { sensitivity: "base" });
 
+const normalizeSearchValue = (value: string | null | undefined) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt");
+
+const filteredHospitalProcedureTypes = computed(() => {
+  const search = normalizeSearchValue(searchQuery.value.trim());
+  const items = allHospitalProcedureTypes.value;
+
+  if (!search) return items;
+
+  return items.filter((item) => {
+    const name = normalizeSearchValue(item.name);
+    const description = normalizeSearchValue(item.description);
+    return name.includes(search) || description.includes(search);
+  });
+});
+
 const orderedHospitalProcedureTypes = computed(() => {
-  const items = [...(hospitalProcedureTypeStore.hospital_procedure_types || [])];
+  const items = [...filteredHospitalProcedureTypes.value];
 
   return items.sort((a, b) => {
     const aSelected = isIdSelected(a.id) ? 0 : 1;
@@ -61,8 +82,12 @@ const orderedHospitalProcedureTypes = computed(() => {
     return compareByName(a, b);
   });
 });
+
+const totalItems = computed(() => orderedHospitalProcedureTypes.value.length);
+
 const displayedHospitalProcedureTypes = computed(() => {
-  return orderedHospitalProcedureTypes.value;
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  return orderedHospitalProcedureTypes.value.slice(start, start + itemsPerPage.value);
 });
 
 const isIdSelected = (id: string | number) => selectedHospitalProcedureTypeIds.value.some(item => String(item) === String(id));
@@ -76,7 +101,7 @@ const extractId = (item: unknown): string | number | null => {
 };
 
 const syncVisibleSelection = () => {
-  const visible = hospitalProcedureTypeStore.hospital_procedure_types || [];
+  const visible = allHospitalProcedureTypes.value;
   const selectedVisible = visible.filter((item) => isIdSelected(item.id));
 
   const keptHidden = selectedHospitalProcedureTypes.value.filter(
@@ -91,7 +116,7 @@ watch(selectedHospitalProcedureTypes, (newSelection) => {
     .map((item) => extractId(item))
     .filter((id): id is string | number => id !== null);
 
-  const visibleIds = (hospitalProcedureTypeStore.hospital_procedure_types || []).map((item) => item.id);
+  const visibleIds = allHospitalProcedureTypes.value.map((item) => item.id);
   const hiddenSelectedIds = selectedHospitalProcedureTypeIds.value.filter(
     (id) => !visibleIds.some((visibleId) => String(visibleId) === String(id))
   );
@@ -110,16 +135,26 @@ const toggleSelection = (item: HospitalProcedureTypeListing) => {
   selectedHospitalProcedureTypeIds.value = selectedHospitalProcedureTypeIds.value.filter((id) => String(id) !== String(item.id));
 };
 
-const fetchHospitalProcedureTypes = async ({ page, itemsPerPage, sortBy, search }: any) => {
+const fetchHospitalProcedureTypes = async ({ page, itemsPerPage: perPage, sortBy, search }: any) => {
+  currentPage.value = page || 1;
+  itemsPerPage.value = perPage || itemsPerPage.value;
+  searchQuery.value = search || "";
+
+  if (allHospitalProcedureTypes.value.length) {
+    syncVisibleSelection();
+    return;
+  }
+
   await hospitalProcedureTypeStore.fetchHospitalProcedureTypes(
-    page - 1,
-    itemsPerPage,
-    sortBy[0]?.key || "name",
-    sortBy[0]?.order || "asc",
-    search,
+    0,
+    allProceduresPageSize,
+    sortBy?.[0]?.key || "name",
+    sortBy?.[0]?.order || "asc",
+    "",
     searchProps
   );
 
+  allHospitalProcedureTypes.value = hospitalProcedureTypeStore.hospital_procedure_types || [];
   syncVisibleSelection();
 };
 
@@ -292,6 +327,7 @@ onMounted(async () => {
             <v-card-text>
               <DataTableServer
                 v-model="selectedHospitalProcedureTypes"
+                v-model:page="currentPage"
                 :headers="listViewHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
                 :items="displayedHospitalProcedureTypes"
                 :items-per-page="itemsPerPage"
@@ -318,7 +354,7 @@ onMounted(async () => {
                   </tr>
                 </template>
 
-                <template v-if="!hospitalProcedureTypeStore.hospital_procedure_types.length" #body>
+                <template v-if="!orderedHospitalProcedureTypes.length" #body>
                   <tr>
                     <td :colspan="listViewHeader.length + 1" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">

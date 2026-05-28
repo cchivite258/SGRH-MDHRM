@@ -87,6 +87,7 @@ const AttachmentDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const productCardRef = ref<{ emitItemsReady: () => Promise<boolean> }>();
 const issueDatePickerRef = ref<{ validate: () => boolean } | null>(null);
+const serviceProvisionDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const dueDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const errorMsg = ref("");
 const alertTimeout = ref<number | null>(null);
@@ -209,6 +210,7 @@ const requiredRules = {
   service_provider: [(v: string) => !!v || t('t-service-provider-required')],
   employee: [(v: string) => !!v || t('t-employee-required')],
   issueDate: [(v: Date) => !!v || t('t-issue-date-required')],
+  serviceProvisionDate: [(v: Date) => !!v || t('t-service-provision-date-required')],
   dueDate: [(v: Date) => !!v || t('t-due-date-required')],
   currency: [(v: string) => !!v || t('t-currency-required')],
   invoiceNumber: [(v: string) => !!v || t('t-invoice-number-required')],
@@ -353,10 +355,11 @@ const onConfirmDelete = async () => {
 const submitInvoice = async () => {
   if (!form.value) return;
   const isIssueDateValid = issueDatePickerRef.value?.validate() ?? true;
+  const isServiceProvisionDateValid = serviceProvisionDatePickerRef.value?.validate() ?? true;
   const isDueDateValid = dueDatePickerRef.value?.validate() ?? true;
 
   const { valid } = await form.value.validate();
-  if (!valid || !isIssueDateValid || !isDueDateValid) {
+  if (!valid || !isIssueDateValid || !isServiceProvisionDateValid || !isDueDateValid) {
     toast.error(t('t-validation-error'));
     return;
   }
@@ -564,7 +567,16 @@ onMounted(async () => {
 
         <!-- Seção de Datas e Moeda -->
         <v-row class="mt-n6">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
+            <div class="font-weight-bold">
+              {{ $t('t-service-provision-date') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <ValidatedDatePicker ref="serviceProvisionDatePickerRef" v-model="invoiceData.serviceProvisionDate"
+              :teleport="true" :enable-time-picker="false" :rules="requiredRules.serviceProvisionDate"
+              :placeholder="$t('t-select-service-provision-date')" />
+          </v-col>
+
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">
               {{ $t('t-issue-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -572,7 +584,7 @@ onMounted(async () => {
               :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">
               {{ $t('t-currency') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -580,7 +592,7 @@ onMounted(async () => {
               :placeholder="$t('t-select-currency')" />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="3">
             <div class="font-weight-bold">
               {{ $t('t-due-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
