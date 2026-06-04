@@ -356,9 +356,26 @@ export type UsagesListingType = {
   employeeId?: string;
   employee: any;
   companyHealthPlanId: string;
-  billedAmount: string;
-  memberPaidAmount: string;
-  amountCovered: string;
+  billedAmount: number | string;
+  memberPaidAmount: number | string;
+  amountCovered: number | string;
+  isEmployee?: boolean;
+  allowedAmount?: number | string;
+  invoiceId?: string;
+  dependentId?: string;
+  dependentName?: string;
+  patientName?: string;
+  pacientName?: string;
+  dependent?: Partial<DependentListingType>;
+  invoice?: {
+    id?: string;
+    invoiceNumber?: string;
+    dependentId?: string;
+    dependentName?: string;
+    patientName?: string;
+    pacientName?: string;
+    dependent?: Partial<DependentListingType>;
+  };
 }
 
 export type ExpensePerProcedureType = {
@@ -385,4 +402,71 @@ export type ExpensePerProcedureType = {
  updatedBy: string | null;
  deletedBy: string | null;
 
+}
+
+export type EmployeeHospitalProcedurePlanUsageType = {
+  id: string;
+  billedAmount: number;
+  amountCovered: number;
+  memberPaidAmount: number;
+  employeeHospitalProcedurePlanLimitId: string;
+  hospitalProcedureTypeId: string | number;
+  invoiceItemId: string;
+  invoiceNumber?: string;
+  invoiceId?: string;
+  invoice?: {
+    id?: string;
+    invoiceNumber?: string;
+    totalAmount?: number;
+  };
+  invoiceItem?: {
+    id?: string;
+    invoiceId?: string;
+    invoice?: {
+      id?: string;
+      invoiceNumber?: string;
+      totalAmount?: number;
+    };
+  };
+}
+
+export type DependentHospitalProcedurePlanLimitType = {
+  id: string;
+  allocatedBalance: number;
+  usedBalance: number;
+  remainingBalance: number;
+  employeeHealthPlanId: string;
+  contractHealthPlanHospitalProceduresId?: string;
+  companyHealthPlanHospitalProceduresId?: string;
+  hospitalProcedureTypeId: string | number;
+  hospitalProcedureGroupId?: string | number | null;
+  dependentId: string;
+  isEmployee: boolean;
+  belongsToGroup: boolean;
+  groupAllocatedBalance?: number | null;
+  groupUsedBalance?: number | null;
+  groupRemainingBalance?: number | null;
+  employeeHealthPlan?: HealthPlanListingType;
+  contractHealthPlanHospitalProcedures?: any;
+  companyHealthPlanHospitalProcedures?: any;
+  hospitalProcedureType?: any;
+  hospitalProcedureGroup?: any;
+  employeeHospitalProcedurePlanUsages?: EmployeeHospitalProcedurePlanUsageType[];
+  dependent?: DependentListingType;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string;
+  updatedBy: string | null;
+  deletedBy: string | null;
+}
+
+export type DependentHospitalProcedurePlanUsedBalanceType = {
+  dependent?: DependentListingType;
+  employeeHealthPlan?: HealthPlanListingType;
+  allocatedBalance: number;
+  usedBalance: number;
+  remainingBalance: number;
 }
