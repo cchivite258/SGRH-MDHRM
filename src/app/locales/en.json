@@ -793,5 +793,17 @@
   "t-insufficient-funds": "Insufficient funds!",
   "t-exceeds-global-limit": "Exceeds Global Limit",
   "t-exceeds-procedure-limit": "Exceeds procedure limit",
-  "t-back-to-salary-review": "Back to Salary Review"
+  "t-back-to-salary-review": "Back to Salary Review",
+  "t-employee-or-dependent": "Employee or Dependent?",
+  "t-consult-health-plan": "Consult plan",
+  "t-dependent-health-plan": "Dependent health plan",
+  "t-usages-list": "Usages list",
+  "t-view-extract": "View extract",
+  "t-billed-amount": "Billed Amount",
+  "t-covered-amount": "Company Covered Amount",
+  "t-member-paid-amount": "Member Paid Amount",
+  "t-dependent-name": "Dependent Name",
+  "t-view-invoice": "View Invoice",
+  "t-view-invoice-action": "View Invoice",
+  "t-no-active-health-plan": "No active health plan found for this employee"
 }

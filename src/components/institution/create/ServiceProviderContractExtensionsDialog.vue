@@ -66,6 +66,7 @@ const tableHeaders = computed(() =>
 );
 
 const formDialog = ref(false);
+const viewDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const contractEndDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const loading = ref(false);
@@ -74,6 +75,7 @@ const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<ServiceProviderContractExtensionType[]>([]);
 const extensions = ref<ServiceProviderContractExtensionType[]>([]);
+const selectedExtension = ref<ServiceProviderContractExtensionType | null>(null);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -190,25 +192,9 @@ const openCreateDialog = () => {
   formDialog.value = true;
 };
 
-const openEditDialog = async (item: ServiceProviderContractExtensionType) => {
-  try {
-    formLoading.value = true;
-    serverErrors.value = {};
-    const response = await serviceProviderContractExtensionService.getById(item.id);
-    const extension = response.data;
-
-    extensionForm.value = {
-      id: extension.id,
-      serviceProviderId: extension.serviceProviderId || props.serviceProviderId || "",
-      contractEndDate: extension.contractEndDate
-    };
-    formDialog.value = true;
-  } catch (error) {
-    console.error("Erro ao carregar adenda:", error);
-    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
-  } finally {
-    formLoading.value = false;
-  }
+const openViewDialog = (item: ServiceProviderContractExtensionType) => {
+  selectedExtension.value = { ...item };
+  viewDialog.value = true;
 };
 
 const closeFormDialog = () => {
@@ -273,6 +259,12 @@ watch(formDialog, (isOpen) => {
     resetForm();
   }
 });
+
+watch(viewDialog, (isOpen) => {
+  if (!isOpen) {
+    selectedExtension.value = null;
+  }
+});
 </script>
 
 <template>
@@ -323,16 +315,14 @@ watch(formDialog, (isOpen) => {
                 </td>
                 <td class="text-end">
                   <v-btn
-                    v-if="!readOnly"
-                    icon="ph-pencil ph-sm"
+                    icon="ph-eye ph-sm"
                     color="secondary"
                     density="compact"
                     variant="tonal"
                     rounded
-                    :loading="formLoading"
-                    @click="openEditDialog(item)"
+                    :title="$t('t-view')"
+                    @click="openViewDialog(item)"
                   />
-                  <span v-else>-</span>
                 </td>
               </tr>
             </template>
@@ -393,5 +383,38 @@ watch(formDialog, (isOpen) => {
         </v-card-actions>
       </Card>
     </v-form>
+  </v-dialog>
+
+  <v-dialog v-model="viewDialog" width="500">
+    <Card :title="$t('t-contract-addendum')" title-class="py-0" style="overflow: hidden">
+      <template #title-action>
+        <v-btn icon="ph-x" variant="plain" @click="viewDialog = false" />
+      </template>
+      <v-divider />
+
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-start-date') }}</div>
+            <div>{{ formateDate(selectedExtension?.contractStartDate || undefined) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-end-date') }}</div>
+            <div>{{ formateDate(selectedExtension?.contractEndDate || undefined) || '-' }}</div>
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
+            <Status :status="selectedExtension?.status || 'INACTIVE'" />
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <v-divider />
+      <v-card-actions class="d-flex justify-end">
+        <v-btn color="danger" @click="viewDialog = false">
+          <i class="ph-x me-1" /> {{ $t('t-close') }}
+        </v-btn>
+      </v-card-actions>
+    </Card>
   </v-dialog>
 </template>

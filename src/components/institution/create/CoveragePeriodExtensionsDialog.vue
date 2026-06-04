@@ -67,6 +67,7 @@ const tableHeaders = computed(() =>
 );
 
 const formDialog = ref(false);
+const viewDialog = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const endDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const loading = ref(false);
@@ -75,6 +76,7 @@ const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<CoveragePeriodExtensionType[]>([]);
 const extensions = ref<CoveragePeriodExtensionType[]>([]);
+const selectedExtension = ref<CoveragePeriodExtensionType | null>(null);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -124,6 +126,15 @@ const clearErrorLater = () => {
     alertTimeout = null;
   }, 5000);
 };
+
+const toTime = (value: Date | string | null | undefined) => {
+  if (!value) return 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+
+const sortByEndDateDesc = (items: CoveragePeriodExtensionType[]) =>
+  [...items].sort((first, second) => toTime(second.endDate) - toTime(first.endDate));
 
 const setError = (message: string) => {
   errorMsg.value = message;
@@ -181,11 +192,11 @@ const fetchExtensions = async ({
       props.coveragePeriodId,
       page - 1,
       itemsPerPage,
-      sortBy[0]?.key || "startDate",
+      sortBy[0]?.key || "endDate",
       sortBy[0]?.order || "desc"
     );
 
-    extensions.value = content;
+    extensions.value = sortBy[0]?.key ? content : sortByEndDateDesc(content);
     pagination.value = {
       totalElements: meta.totalElements ?? content.length,
       currentPage: meta.page ?? page - 1,
@@ -226,6 +237,11 @@ const resetForm = () => {
 const openCreateDialog = () => {
   resetForm();
   formDialog.value = true;
+};
+
+const openViewDialog = (item: CoveragePeriodExtensionType) => {
+  selectedExtension.value = { ...item };
+  viewDialog.value = true;
 };
 
 const openEditDialog = async (item: CoveragePeriodExtensionType) => {
@@ -318,6 +334,12 @@ watch(formDialog, (isOpen) => {
     resetForm();
   }
 });
+
+watch(viewDialog, (isOpen) => {
+  if (!isOpen) {
+    selectedExtension.value = null;
+  }
+});
 </script>
 
 <template>
@@ -368,16 +390,14 @@ watch(formDialog, (isOpen) => {
                 </td>
                 <td class="text-end">
                   <v-btn
-                    v-if="!readOnly"
-                    icon="ph-pencil ph-sm"
+                    icon="ph-eye ph-sm"
                     color="secondary"
                     density="compact"
                     variant="tonal"
                     rounded
-                    :loading="formLoading"
-                    @click="openEditDialog(item)"
+                    :title="$t('t-view')"
+                    @click="openViewDialog(item)"
                   />
-                  <span v-else>-</span>
                 </td>
               </tr>
             </template>
@@ -449,5 +469,42 @@ watch(formDialog, (isOpen) => {
         </v-card-actions>
       </Card>
     </v-form>
+  </v-dialog>
+
+  <v-dialog v-model="viewDialog" width="500">
+    <Card :title="$t('t-period-extension')" title-class="py-0" style="overflow: hidden">
+      <template #title-action>
+        <v-btn icon="ph-x" variant="plain" @click="viewDialog = false" />
+      </template>
+      <v-divider />
+
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-start-date') }}</div>
+            <div>{{ formateDate(selectedExtension?.startDate || undefined) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-end-date') }}</div>
+            <div>{{ formateDate(selectedExtension?.endDate || undefined) || '-' }}</div>
+          </v-col>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
+            <Status :status="selectedExtension?.status || 'INACTIVE'" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-budget-amount') }}</div>
+            <div>{{ selectedExtension?.budgetAmount ?? '-' }}</div>
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <v-divider />
+      <v-card-actions class="d-flex justify-end">
+        <v-btn color="danger" @click="viewDialog = false">
+          <i class="ph-x me-1" /> {{ $t('t-close') }}
+        </v-btn>
+      </v-card-actions>
+    </Card>
   </v-dialog>
 </template>

@@ -43,7 +43,7 @@ export default class CoveragePeriodExtensionService extends HttpService {
     async getAll(
         page: number = 0,
         size: number = 10,
-        sortColumn: string = "startDate",
+        sortColumn: string = "endDate",
         direction: string = "desc"
     ): Promise<{ content: CoveragePeriodExtensionType[]; meta: any }> {
         try {
@@ -71,7 +71,7 @@ export default class CoveragePeriodExtensionService extends HttpService {
         coveragePeriodId: string | number,
         page: number = 0,
         size: number = 10,
-        sortColumn: string = "startDate",
+        sortColumn: string = "endDate",
         direction: string = "desc"
     ): Promise<{ content: CoveragePeriodExtensionType[]; meta: any }> {
         try {
