@@ -2,7 +2,6 @@
 import { ref, computed, onMounted } from "vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { HealthPlanListingType, UsagesListingType } from "@/components/employee/types";
-import TableActionView from "@/app/common/components/TableActionView.vue";
 import CreateEditHospitalProcedureDialog from "@/components/institution/create/editHealthPlan/CreateEditHospitalProcedureDialog.vue";
 import ViewHospitalProcedureDialog from "@/components/institution/create/editHealthPlan/ViewHospitalProcedureDialog.vue";
 import { useRouter } from "vue-router";
@@ -136,6 +135,26 @@ const onViewClick = (data: UsagesListingType) => {
     viewDialog.value = true;
 };
 
+const getUsageBeneficiaryLabel = (item: UsagesListingType) => {
+    if (item.isEmployee === true) return t('t-employee');
+    if (item.isEmployee === false) return t('t-dependent');
+    return '-';
+};
+
+const getUsageInvoiceNumber = (item: UsagesListingType) => {
+    return item.invoice?.invoiceNumber || '-';
+};
+
+const getUsageInvoiceId = (item: UsagesListingType) => {
+    return item.invoiceId || item.invoice?.id;
+};
+
+const onViewInvoice = (item: UsagesListingType) => {
+    const invoiceId = getUsageInvoiceId(item);
+    if (!invoiceId) return;
+    router.push(`/invoices/view/${invoiceId}`);
+};
+
 
 
 // Voltar para lista de departamentos
@@ -231,16 +250,26 @@ interface ServiceResponse<T> {
                                                 @update:model-value="toggleSelection(item)" hide-details
                                                 density="compact" />
                                         </td>
+                                        <td>{{ getUsageBeneficiaryLabel(item) }}</td>
+                                        <td>{{ getUsageInvoiceNumber(item) }}</td>
                                         <td>{{ formatCurrency(item.billedAmount) }}</td>
                                         <td>{{ formatCurrency(item.memberPaidAmount) }}</td>
                                         <td>{{ formatCurrency(item.amountCovered) }}</td>
+                                        <td>
+                                            <v-btn color="primary" variant="tonal" density="compact" size="small"
+                                                class="text-none employee-health-plan__invoice-btn"
+                                                :disabled="!getUsageInvoiceId(item)" @click="onViewInvoice(item)">
+                                                <i class="ph-eye me-1" />
+                                                {{ $t('t-view-invoice-action') }}
+                                            </v-btn>
+                                        </td>
                                     </tr>
                                 </template>
 
                                 <template v-if="!healthPlanFormData.usages || healthPlanFormData.usages.length === 0"
                                     #body>
                                     <tr>
-                                        <td :colspan="usagesHeader.length" class="text-center py-10">
+                                        <td :colspan="usagesHeader.length + 1" class="text-center py-10">
                                             <v-avatar size="80" color="primary" variant="tonal">
                                                 <i class="ph-magnifying-glass" style="font-size: 30px" />
                                             </v-avatar>
@@ -268,3 +297,11 @@ interface ServiceResponse<T> {
 
 
 </template>
+
+<style scoped>
+.employee-health-plan__invoice-btn {
+    min-width: 150px;
+    height: 32px;
+    padding-inline: 14px;
+}
+</style>

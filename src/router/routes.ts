@@ -180,6 +180,12 @@ const employeeRoutes = [
     component: () => import("@/views/employee/viewHealthPlan/View.vue"),
     meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
   },
+  {
+    path: `${employeePrefix}/dependent-health-plan/:employeeId/:dependentId`,
+    name: "ViewDependentHealthPlan",
+    component: () => import("@/views/employee/DependentHealthPlan.vue"),
+    meta: { title: "Dependent Health Plan", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,

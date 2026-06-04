@@ -10,21 +10,19 @@
  */
 
 import { ref, watch, computed, onMounted, onBeforeUnmount, PropType } from "vue";
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
-import { v4 as uuidv4 } from "uuid";
 
 
 // Components
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
-import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import CreateEditDependentsDialog from "@/components/employee/create/CreateEditDependentsDialog.vue";
 import ViewDependentsDialog from "@/components/employee/create/ViewDependentsDialog.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
-import TableAction from "@/app/common/components/TableAction.vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
 import { dependentEmployeeService, employeeService } from "@/app/http/httpServiceProvider";
@@ -39,10 +37,8 @@ import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
-import { contactOptions as Options } from "@/components/institution/create/utils";
 
 const { t } = useI18n();
-const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const dependentStore = useDependentEmployeeStore();
@@ -85,6 +81,12 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
+const dependentActionOptions = computed(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-edit"), value: "edit", icon: "ph-pencil-simple" },
+  { title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" },
+  { title: t("t-delete"), value: "delete", icon: "ph-trash" }
+]);
 
 const showDependentApiErrors = (error: unknown, fallbackKey = "t-message-save-error") => {
   const messages = getApiErrorMessages(error, t(fallbackKey));
@@ -291,6 +293,35 @@ const onViewClick = (data: DependentInsertType | DependentListingType) => {
   viewDialog.value = true;
 };
 
+const onConsultPlan = (data: DependentListingType) => {
+  if (!employeeId.value) return;
+
+  router.push({
+    name: "ViewDependentHealthPlan",
+    params: {
+      employeeId: employeeId.value,
+      dependentId: data.id
+    }
+  });
+};
+
+const onActionSelect = (action: string, item: DependentListingType) => {
+  switch (action) {
+    case "view":
+      onViewClick(item);
+      break;
+    case "edit":
+      onCreateEditClick(item);
+      break;
+    case "consult-plan":
+      onConsultPlan(item);
+      break;
+    case "delete":
+      onDelete(item.id);
+      break;
+  }
+};
+
 /**
  * Prepara exclusão de contato
  */
@@ -393,8 +424,7 @@ onMounted(async () => {
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
             <td>
-              <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
-                @onDelete="onDelete(item.id)" />
+              <TableActionMenu :menu-items="dependentActionOptions" @onSelect="onActionSelect($event, item)" />
             </td>
           </tr>
         </template>

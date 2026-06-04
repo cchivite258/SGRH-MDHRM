@@ -141,9 +141,12 @@ export const breadcrumbHealthPlan: BreadcrumbType[] = [
 ];
 
 export const usagesHeader: DataTableHeaderType[] = [
+  { title: "employee-or-dependent", key: "isEmployee", sortable: true },
+  { title: "invoice-number", key: "invoice.invoiceNumber", sortable: true },
   { title: "billed-amount", key: "billedAmount", sortable: true },
+  { title: "member-paid-amount", key: "memberPaidAmount", sortable: true },
   { title: "covered-amount", key: "amountCovered", sortable: true },
-  { title: "member-paid-amount", key: "memberPaidAmount", sortable: true }
+  { title: "action", key: "action", sortable: false }
 ];
 
 
