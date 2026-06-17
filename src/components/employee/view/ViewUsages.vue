@@ -152,7 +152,13 @@ const getUsageInvoiceId = (item: UsagesListingType) => {
 const onViewInvoice = (item: UsagesListingType) => {
     const invoiceId = getUsageInvoiceId(item);
     if (!invoiceId) return;
-    router.push(`/invoices/view/${invoiceId}`);
+    router.push({
+        path: `/invoices/view/${invoiceId}`,
+        query: {
+            returnTo: route.fullPath,
+            returnTitle: "view-health-plan"
+        }
+    });
 };
 
 
