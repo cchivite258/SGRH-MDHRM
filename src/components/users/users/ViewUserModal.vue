@@ -38,6 +38,7 @@ const id =  ref(formData.value.id || "");
 const firstName = ref(formData.value.firstName || "");
 const lastName = ref(formData.value.lastName || "");
 const email = ref(formData.value.email || "");
+const requiredChangePassword = ref(formData.value.requiredChangePassword ?? false);
 //const enable = ref(formData.value.enable || true);
 
 // Remove as refs de password se não for criação
@@ -78,6 +79,16 @@ const { t } = useI18n();
           {{ $t('t-email') }} <i class="ph-asterisk ph-xs text-danger" />
         </div>
         <TextField v-model="email" !isEmail :placeholder="$t('t-enter-email-form')" disabled/>
+
+        <div class="mt-2 mb-1">
+          <v-checkbox v-model="requiredChangePassword" density="compact" color="primary" hide-details disabled
+            class="d-inline-flex">
+            <template #label>
+              <span class="text-caption text-muted">{{ $t('t-required-change-password') }}</span>
+            </template>
+          </v-checkbox>
+        </div>
+
         <v-row v-if="isCreate">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption  mb-1">

@@ -17,7 +17,9 @@ const returnTo = computed(() => {
 
 const returnTitle = computed(() => {
   const value = route.query.returnTitle;
-  return typeof value === "string" ? value : Array.isArray(value) ? value[0] : "invoices";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return "invoices";
 });
 
 const breadcrumb = computed<BreadcrumbType[]>(() => {

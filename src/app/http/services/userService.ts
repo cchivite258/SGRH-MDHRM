@@ -91,7 +91,8 @@ export default class UserService extends HttpService {
       const payload = {
         firstName: userData.firstName,
         lastName: userData.lastName,
-        email: userData.email
+        email: userData.email,
+        requiredChangePassword: userData.requiredChangePassword
       };
 
       const response = await this.put<UserListingType>(`/administration/users/${id}`, payload);

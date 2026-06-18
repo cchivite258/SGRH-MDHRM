@@ -14,6 +14,8 @@ import Step6 from "@/components/institution/create/TabServiceProvider.vue";
 import Step7 from "@/components/institution/create/TabEmployees.vue";
 import { institutionService } from "@/app/http/httpServiceProvider";
 import type { InstitutionInsertType } from "@/components/institution/types";
+import { useUserStore } from "@/store/userStore";
+import type { UserType1 } from "@/app/http/types";
 
 const props = defineProps({
   cardTitle: {
@@ -26,6 +28,7 @@ const { t } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
+const userStore = useUserStore();
 
 const loading = ref(false);
 const step = ref(1);
@@ -41,6 +44,7 @@ const institutionId = ref<string | null>(
 const institutionData = reactive<InstitutionInsertType & { institutionTypeName?: string }>({
   name: "",
   companyDetailsId: undefined,
+  responsibleId: undefined,
   address: "",
   phone: "",
   email: "",
@@ -89,6 +93,25 @@ const goToNextStep = () => {
   step.value += 1;
 };
 
+const formatUser = (user: { firstName?: string | null; lastName?: string | null; email?: string | null }) => {
+  const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+  if (fullName && user.email) return `${fullName} (${user.email})`;
+  return fullName || user.email || "-";
+};
+
+const formatResponsible = computed(() => {
+  const responsible = institutionData.responsible;
+  if (!responsible) {
+    const user = (userStore.users as UserType1[]).find(
+      (item) => String(item.id) === String(institutionData.responsibleId)
+    );
+
+    return user ? formatUser(user) : "-";
+  }
+
+  return formatUser(responsible);
+});
+
 onMounted(async () => {
   if (!institutionId.value) return;
 
@@ -103,6 +126,11 @@ onMounted(async () => {
     Object.assign(institutionData, response.data);
     institutionData.institutionType = response.data.institutionType?.id || undefined;
     institutionData.institutionTypeName = response.data.institutionType?.name || "-";
+
+    if (!institutionData.responsible && userStore.users.length === 0) {
+      userStore.clearFilters();
+      await userStore.fetchUsers(0, 10000000);
+    }
   } catch (error) {
     toast.error(t("t-error-loading-institution"));
   } finally {
@@ -147,12 +175,16 @@ onMounted(async () => {
               <div>{{ institutionData.institutionTypeName || "-" }}</div>
             </v-col>
             <v-col cols="12" lg="6">
-              <div class="font-weight-bold mb-2">NUIT</div>
-              <div>{{ institutionData.incomeTaxNumber || "-" }}</div>
+              <div class="font-weight-bold mb-2">{{ $t("t-contract-responsible") }}</div>
+              <div>{{ formatResponsible }}</div>
             </v-col>
           </v-row>
 
           <v-row>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">NUIT</div>
+              <div>{{ institutionData.incomeTaxNumber || "-" }}</div>
+            </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">{{ $t("t-address") }}</div>
               <div>{{ institutionData.address || "-" }}</div>
