@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import InvoiceForm from "@/components/invoice/view/InvoiceForm.vue";
-import { ref, reactive, computed, watch, onMounted } from "vue";
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
@@ -31,6 +31,7 @@ const loading = ref(false); // Estado de carregamento global
 const errorMsg = ref(""); // Mensagem de erro
 const basicDataValidated = ref(false); // Validação básica
 const invoiceItems = ref<InvoiceItemInsertType[]>([]); // Itens da fatura
+const isComponentActive = ref(true);
 
 // Obtém o ID da fatura da rota (se estiver em modo de edição)
 const invoiceId = ref<string | null>(
@@ -88,6 +89,8 @@ const loadInvoiceData = async (id: string) => {
       invoiceItemService.getInvoiceItemByInvoice(id)
     ]);
 
+    if (!isComponentActive.value) return;
+
     console.log("invoiceResponse: ", invoiceResponse);
     console.log("itemsResponse: ", itemsResponse);
 
@@ -124,10 +127,14 @@ const loadInvoiceData = async (id: string) => {
     }
 
   } catch (error) {
-    toast.error(t('t-error-loading-invoice'));
+    if (isComponentActive.value) {
+      toast.error(t('t-error-loading-invoice'));
+    }
     console.error('Error loading invoice:', error);
   } finally {
-    loading.value = false;
+    if (isComponentActive.value) {
+      loading.value = false;
+    }
   }
 };
 
@@ -177,6 +184,7 @@ watch(() => route.params.id, async (newId) => {
   if (newInvoiceId) {
     console.log('Loading data for invoice:', newInvoiceId);
     await loadInvoiceData(newInvoiceId);
+    if (!isComponentActive.value) return;
     invoiceStore.setCurrentInvoiceId(newInvoiceId);
   }
 }, { immediate: true });
@@ -198,6 +206,10 @@ onMounted(() => {
     invoiceId.value = invoiceStore.currentInvoiceId;
     basicDataValidated.value = true;
   }
+});
+
+onUnmounted(() => {
+  isComponentActive.value = false;
 });
 
 /**

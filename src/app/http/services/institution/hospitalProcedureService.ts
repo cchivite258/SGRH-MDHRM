@@ -307,6 +307,9 @@ export default class HospitalProcedureService extends HttpService {
         groupPercentage: hospitalProcedureData.groupPercentage,
         hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit,
         belongsToGroup: !!hospitalProcedureData.belongsToGroup,
+        limitType: hospitalProcedureData.limitType,
+        frequencyInterval: hospitalProcedureData.frequencyInterval,
+        allowedFrequencyUse: hospitalProcedureData.allowedFrequencyUse,
         enabled: hospitalProcedureData.enabled
       };
       const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);

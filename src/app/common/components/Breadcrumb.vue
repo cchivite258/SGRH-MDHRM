@@ -2,8 +2,10 @@
 import { type PropType } from "vue";
 import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 
 const router = useRouter();
+const { t, te } = useI18n();
 
 const prop = defineProps({
   title: {
@@ -21,11 +23,19 @@ const onBreadcrumbClick = (item: Pick<BreadcrumbType, "disabled" | "to">) => {
     router.back();
   }
 };
+
+const translateLabel = (value: string) => {
+  if (!value) return "";
+  if (te(value)) return t(value);
+
+  const prefixedKey = `t-${value}`;
+  return te(prefixedKey) ? t(prefixedKey) : value;
+};
 </script>
 <template>
   <div class="d-flex align-center" :class="title ? 'justify-space-between' : 'justify-end'">
     <h2 v-if="title" class="text-subtitle-1 text-uppercase font-weight-bold">
-      {{ $t(`t-${title}`) }}
+      {{ translateLabel(title) }}
     </h2>
     <v-breadcrumbs :items="items" class="breadcrumb-wrapper">
       <template #item="{ item }">
@@ -34,7 +44,7 @@ const onBreadcrumbClick = (item: Pick<BreadcrumbType, "disabled" | "to">) => {
           :to="item.to"
           @click="onBreadcrumbClick(item)"
         >
-          {{ $t(`t-${item.title}`) }}
+          {{ translateLabel(item.title) }}
         </v-breadcrumbs-item>
       </template>
       <template #divider>

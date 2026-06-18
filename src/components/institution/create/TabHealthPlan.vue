@@ -114,6 +114,36 @@ const fetchHealthPlans = async ({ page, itemsPerPage, sortBy, search }: FetchPar
 /**
  * Alterna seleção de pessoas de contato
  */
+const reloadHealthPlans = async () => {
+  if (!institutionId.value) return;
+
+  await healthPlanStore.fetchHealthPlans(
+    institutionId.value,
+    0,
+    itemsPerPage.value,
+    "createdAt",
+    "asc",
+    searchQuery.value,
+    searchProps
+  );
+};
+
+watch(
+  () => props.institutionId,
+  async (newInstitutionId) => {
+    institutionId.value = newInstitutionId;
+
+    if (!newInstitutionId) {
+      healthPlanStore.health_plans = [];
+      healthPlanStore.pagination.totalElements = 0;
+      return;
+    }
+
+    await reloadHealthPlans();
+  },
+  { immediate: true }
+);
+
 const toggleSelection = (item: HealthPlanListingType) => {
   const index = selectedHealthPlans.value.findIndex(selected => selected.id === item.id);
   if (index === -1) {

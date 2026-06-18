@@ -245,17 +245,6 @@ onMounted(async () => {
 
   <div v-if="step === 1" class="institution-form-footer-actions">
     <v-btn
-      class="institution-form-footer-actions__back"
-      color="secondary"
-      variant="outlined"
-      :disabled="loading"
-      @click="goBackToList"
-    >
-      <i class="ph-arrow-left me-2" />
-      {{ $t('t-back-to-list') }}
-    </v-btn>
-
-    <v-btn
       class="institution-form-footer-actions__save"
       color="secondary"
       variant="elevated"
@@ -264,6 +253,17 @@ onMounted(async () => {
     >
       <i class="ph-floppy-disk me-2" />
       {{ headerSaveLabel }}
+    </v-btn>
+
+    <v-btn
+      class="institution-form-footer-actions__back"
+      color="secondary"
+      variant="outlined"
+      :disabled="loading"
+      @click="goBackToList"
+    >
+      <i class="ph-arrow-left me-2" />
+      {{ $t('t-back-to-list') }}
     </v-btn>
   </div>
 </template>
@@ -275,7 +275,6 @@ onMounted(async () => {
 
 .institution-form-section + .institution-form-section {
   margin-top: 24px;
-  font-weight: 200px;
 }
 
 .institution-form-footer-actions {

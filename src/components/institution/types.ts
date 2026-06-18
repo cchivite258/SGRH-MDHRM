@@ -298,6 +298,9 @@ export type HospitalProcedureListingType = {
     groupPercentage?: number | null;
     hospitalProcedureGroupLimit?: string | null;
     belongsToGroup?: boolean;
+    limitType?: string | null;
+    frequencyInterval?: number | null;
+    allowedFrequencyUse?: number | null;
     hospitalProcedureType: any | undefined;
     companyHealthPlan: any | undefined;
     company: any;
@@ -320,6 +323,9 @@ export type HospitalProcedureInsertType = {
     groupPercentage?: number | null;
     hospitalProcedureGroupLimit?: string | null;
     belongsToGroup?: boolean;
+    limitType?: string | null;
+    frequencyInterval?: number | null;
+    allowedFrequencyUse?: number | null;
     hospitalProcedureType: any | undefined;
     companyHealthPlan: any;
     company: any;

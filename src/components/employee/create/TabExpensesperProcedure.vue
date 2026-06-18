@@ -11,6 +11,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { formatCurrency } from '@/app/common/currencyFormat';
+import { formateDate } from "@/app/common/dateFormate";
 
 // Stores
 import { useHospitalProcedureBalanceStore } from "@/store/employee/hospitalProcedureBalanceStore";
@@ -107,7 +108,7 @@ const fetchProcedures = async ({ page, itemsPerPage, sortBy, search }: {
       sortColumn: sortBy[0]?.key || 'createdAt',
       direction: sortBy[0]?.order || 'asc',
       query_value: search,
-      query_props: "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance"
+      query_props: "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
     }
   );
 };
@@ -153,6 +154,10 @@ const getDisplayRemainingBalance = (item: ExpensePerProcedureType) => {
   const value = isGroupedProcedure(item) ? item.groupRemainingBalance : item.remainingBalance;
   return formatCurrency(value ?? 0);
 };
+
+const formatOptionalNumber = (value?: number | null) => value ?? '-';
+
+const formatOptionalDate = (value?: string | null) => value ? formateDate(value) : '-';
 
 // Limpeza ao desmontar
 onBeforeUnmount(() => {
@@ -261,6 +266,9 @@ onBeforeUnmount(() => {
             <td>{{ getDisplayAllocatedBalance(item) }}</td>
             <td>{{ getDisplayUsedBalance(item) }}</td>
             <td>{{ getDisplayRemainingBalance(item) }}</td>
+            <td>{{ formatOptionalNumber(item.frequencyInterval) }}</td>
+            <td>{{ formatOptionalDate(item.lastUsageDate) }}</td>
+            <td>{{ formatOptionalNumber(item.allowedFrequencyUse) }}</td>
             <td>
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
