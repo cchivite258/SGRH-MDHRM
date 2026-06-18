@@ -55,6 +55,7 @@ const institutionData = reactive<InstitutionInsertType>({
   name: "",
   description: null,
   companyDetailsId: undefined,
+  responsibleId: undefined,
   address: null,
   phone: "",
   email: "",
@@ -96,6 +97,7 @@ const loadInstitutionData = async (id: string) => {
     institutionData.name = data.name || data.companyDetails?.name || "";
     institutionData.description = data.description || data.companyDetails?.description || null;
     institutionData.companyDetailsId = data.companyDetailsId || data.companyDetails?.id;
+    institutionData.responsibleId = data.responsibleId || data.responsible?.id || undefined;
     institutionData.address = data.address || data.companyDetails?.address || null;
     institutionData.phone = data.phone || data.companyDetails?.phone || "";
     institutionData.email = data.email || data.companyDetails?.email || "";

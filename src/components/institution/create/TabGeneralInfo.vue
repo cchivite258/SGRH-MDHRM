@@ -8,12 +8,15 @@ import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
 import type { EntityListingType } from "@/components/entities/types";
 import { InstitutionInsertType } from "@/components/institution/types";
+import { useUserStore } from "@/store/userStore";
+import type { UserType1 } from "@/app/http/types";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
+const userStore = useUserStore();
 
-const emit = defineEmits(["onStepChange", "save", "update:modelValue"]);
+const emit = defineEmits(["onStepChange", "save", "update:modelValue", "clear-server-error"]);
 
 const props = defineProps({
   modelValue: {
@@ -60,11 +63,28 @@ const companyDetailsOptions = computed(() => {
     }));
 });
 
-const getServerErrors = (field: string) => props.serverErrors?.[field] || [];
+const userOptions = computed(() =>
+  (userStore.users as UserType1[]).map((user) => {
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    return {
+      value: String(user.id),
+      label: fullName ? `${fullName} (${user.email})` : user.email,
+    };
+  })
+);
+
+const getServerErrors = (field: string) => {
+  if (field === "companyDetailsId") {
+    return props.serverErrors?.companyDetailsId || props.serverErrors?.organizationId || [];
+  }
+
+  return props.serverErrors?.[field] || [];
+};
 
 const requiredRules = {
   name: [(v: string) => !!String(v || "").trim() || t("t-please-enter-institution-name")],
-  companyDetailsId: [(v: string | number) => !!v || t("t-please-enter-institution")]
+  companyDetailsId: [(v: string | number) => !!v || t("t-please-enter-institution")],
+  responsibleId: [(v: string | number) => !!v || t("t-please-select-contract-responsible")]
 };
 
 watch(
@@ -98,6 +118,12 @@ watch(
   { immediate: true }
 );
 
+watch(() => institutionData.value.name, () => emit("clear-server-error", "name"));
+watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "companyDetailsId"));
+watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "organizationId"));
+watch(() => institutionData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
+watch(() => institutionData.value.description, () => emit("clear-server-error", "description"));
+
 const onBack = () => {
   router.push("/institution/list");
 };
@@ -118,7 +144,13 @@ defineExpose({ submitGeneralInfo });
 
 onMounted(async () => {
   try {
-    const response = await companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc");
+    const [response] = await Promise.all([
+      companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc"),
+      (async () => {
+        userStore.clearFilters();
+        await userStore.fetchUsers(0, 10000000);
+      })()
+    ]);
     companyDetails.value = response.content || [];
     applySelectedEntityToForm();
   } catch (error) {
@@ -169,13 +201,25 @@ onMounted(async () => {
           </v-col>
           
           <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">{{ $t('t-institution-type') }}</div>
-            <TextField :model-value="selectedEntity?.institutionType?.name || ''" :disabled="true" />
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-responsible') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <MenuSelect
+              v-model="institutionData.responsibleId"
+              :items="userOptions"
+              :loading="userStore.loading"
+              :placeholder="$t('t-select-contract-responsible')"
+              :rules="requiredRules.responsibleId"
+              :error-messages="getServerErrors('responsibleId')"
+            />
           </v-col>
         </v-row>
 
-
         <v-row class="mt-n6">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">{{ $t('t-institution-type') }}</div>
+            <TextField :model-value="selectedEntity?.institutionType?.name || ''" :disabled="true" />
+          </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">NUIT</div>
             <TextField v-model="institutionData.incomeTaxNumber" :disabled="true" />

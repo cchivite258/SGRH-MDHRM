@@ -305,3 +305,114 @@ export type InvoiceReferenceReportType = {
   totalAmount?: number;
   details?: InvoiceReferenceReportDetailType[];
 };
+
+export type HospitalProcedureTrendFilterType = {
+  contractId?: string | number;
+  coveragePeriodId?: string | number;
+  top?: number;
+  ascending?: boolean;
+};
+
+export type HospitalProcedureTrendDetailType = {
+  hospitalProcedureTypeId?: string | number;
+  hospitalProcedureTypeName?: string;
+  totalUsages?: number;
+};
+
+export type HospitalProcedureTrendReportType = {
+  coveragePeriod?: {
+    id?: string | number;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  };
+  contract?: ReportContractType;
+  details?: HospitalProcedureTrendDetailType[];
+};
+
+export type EmployeeHealthPlanLimitsTrendFilterType = {
+  contractId?: string | number;
+  coveragePeriodId?: string | number;
+  usagePercentageAbove?: number;
+};
+
+export type EmployeeHealthPlanLimitsTrendEmployeeType = {
+  id?: string;
+  employeeNumber?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
+  departmentName?: string;
+  positionName?: string;
+  baseSalary?: number;
+  grossSalary?: number;
+  hireDate?: string;
+  terminationDate?: string;
+};
+
+export type EmployeeHealthPlanLimitsTrendDetailType = {
+  employee?: EmployeeHealthPlanLimitsTrendEmployeeType;
+  allocatedBalance?: number;
+  usedBalance?: number;
+  remainingBalance?: number;
+  percentSpended?: number;
+  percentRemaining?: number;
+};
+
+export type EmployeeHealthPlanLimitsTrendReportType = {
+  numberOfEmployees?: number;
+  percentSpended?: number;
+  percentRemaining?: number;
+  coveragePeriod?: {
+    id?: string | number;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    contractId?: string | number;
+    closingDate?: string | null;
+    contractHealthPlanId?: string;
+  };
+  coveragePeriodBudget?: {
+    id?: string;
+    name?: string;
+    coveragePeriodId?: string | number;
+    budgetAmount?: number;
+    budgetSpended?: number;
+    totalAmountByContractEmployees?: number;
+  };
+  contract?: ReportContractType;
+  details?: EmployeeHealthPlanLimitsTrendDetailType[];
+};
+
+export type EmployeeFrequencyTrendFilterType = {
+  contractId?: string | number;
+  coveragePeriodId?: string | number;
+};
+
+export type EmployeeFrequencyTrendProcedureType = {
+  hospitalProcedureTypeId?: string | number;
+  hospitalProcedureTypeName?: string;
+  totalUsages?: number;
+};
+
+export type EmployeeFrequencyTrendDetailType = {
+  employee?: EmployeeHealthPlanLimitsTrendEmployeeType;
+  hospitalProcedures?: EmployeeFrequencyTrendProcedureType[];
+};
+
+export type EmployeeFrequencyTrendReportType = {
+  coveragePeriod?: {
+    id?: string | number;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+    contractId?: string | number;
+    closingDate?: string | null;
+    contractHealthPlanId?: string;
+  };
+  contract?: ReportContractType;
+  details?: EmployeeFrequencyTrendDetailType[];
+};

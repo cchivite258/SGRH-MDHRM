@@ -206,7 +206,9 @@ export const menuItems: MenuItemType[] = [
     label: "settings",
     icon: "ph-gear",
     id: "sidebarSettings",
+    prefix: "/settings",
     subMenu: [
+      { label: "alerts", link: "/settings/alerts" },
       //{ label: "period", link: "/users/users/list" },
      // { label: "functions", link: "/auth/signup" },
     ],

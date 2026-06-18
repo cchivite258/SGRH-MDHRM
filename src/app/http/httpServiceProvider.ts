@@ -31,6 +31,7 @@ import LanguageService from "@/app/http/services/baseTables/languages/languageSe
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
 import BudgetService from "@/app/http/services/institution/budgetService";
+import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -43,6 +44,9 @@ import TotalBilledMedicalAssistanceReportService from "@/app/http/services/ammRe
 import TotalBilledByProviderReportService from "@/app/http/services/ammReports/totalBilledByProviderReportService";
 import EmployeeExpenseStatementReportService from "@/app/http/services/ammReports/employeeExpenseStatementReportService";
 import InvoiceReferenceReportService from "@/app/http/services/ammReports/invoiceReferenceReportService";
+import HospitalProcedureTrendReportService from "@/app/http/services/ammReports/hospitalProcedureTrendReportService";
+import EmployeeHealthPlanLimitsTrendReportService from "@/app/http/services/ammReports/employeeHealthPlanLimitsTrendReportService";
+import EmployeeFrequencyTrendReportService from "@/app/http/services/ammReports/employeeFrequencyTrendReportService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -79,6 +83,9 @@ const totalBilledMedicalAssistanceReportService = new TotalBilledMedicalAssistan
 const totalBilledByProviderReportService = new TotalBilledByProviderReportService();
 const employeeExpenseStatementReportService = new EmployeeExpenseStatementReportService();
 const invoiceReferenceReportService = new InvoiceReferenceReportService();
+const hospitalProcedureTrendReportService = new HospitalProcedureTrendReportService();
+const employeeHealthPlanLimitsTrendReportService = new EmployeeHealthPlanLimitsTrendReportService();
+const employeeFrequencyTrendReportService = new EmployeeFrequencyTrendReportService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -91,6 +98,7 @@ const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
 const providerTypeService = new ProviderTypeService();
+const alertConfigurationService = new AlertConfigurationService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -126,6 +134,7 @@ export {
     healthPlanService,
     healthPlanEmployeeService,
     providerTypeService,
+    alertConfigurationService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,
@@ -136,5 +145,8 @@ export {
     totalBilledMedicalAssistanceReportService,
     totalBilledByProviderReportService,
     employeeExpenseStatementReportService,
-    invoiceReferenceReportService
+    invoiceReferenceReportService,
+    hospitalProcedureTrendReportService,
+    employeeHealthPlanLimitsTrendReportService,
+    employeeFrequencyTrendReportService
 };

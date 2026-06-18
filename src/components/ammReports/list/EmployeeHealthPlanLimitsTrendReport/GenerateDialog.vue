@@ -1,0 +1,217 @@
+<script lang="ts" setup>
+import { ref, computed, watch, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
+import { useToast } from "vue-toastification";
+import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import { employeeHealthPlanLimitsTrendReportService } from "@/app/http/httpServiceProvider";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import type { EmployeeHealthPlanLimitsTrendFilterType } from "@/components/ammReports/types";
+import { EmployeeHealthPlanLimitsTrendReportExporter } from "./exportUtils";
+import { useAuthStore } from "@/store/authStore";
+import { useInstitutionStore } from "@/store/institution/institutionStore";
+import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
+import type { CoveragePeriodListingType } from "@/components/institution/types";
+
+const { t, locale } = useI18n();
+const toast = useToast();
+const authStore = useAuthStore();
+const institutionStore = useInstitutionStore();
+const coveragePeriodStore = useCoveragePeriodStore();
+
+const props = defineProps({
+  modelValue: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(["update:modelValue"]);
+const contractId = ref("");
+const coveragePeriodId = ref("");
+const usagePercentageAbove = ref<number | string>(0);
+const localLoading = ref(false);
+const errorMsg = ref("");
+const exportMenu = ref(false);
+type ExportType = "pdf" | "excel" | "csv";
+const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+
+const institutions = computed(() => {
+  return (institutionStore.enabledInstitutions || []).map((item: any) => ({
+    value: item.id,
+    label: item.name,
+  }));
+});
+
+const coveragePeriods = computed(() => {
+  return (coveragePeriodStore.coverage_periods_for_dropdown || []).map((item: CoveragePeriodListingType) => ({
+    value: item.id,
+    label: item.name,
+  }));
+});
+
+const userName = computed(() => {
+  const user = authStore.user;
+  if (!user) return "Sistema";
+  return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || "Sistema";
+});
+
+const requiredRules = {
+  contractId: [(v: string) => !!v || t("t-please-enter-institution")],
+  coveragePeriodId: [(v: string) => !!v || t("t-please-enter-coverage-period")],
+  usagePercentageAbove: [
+    (v: string | number) => String(v ?? "").trim().length > 0 || t("t-ehplt-please-enter-usage-percentage"),
+    (v: string | number) => !Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 100 || t("t-ehplt-usage-percentage-range")
+  ],
+};
+
+watch(contractId, async (value) => {
+  coveragePeriodId.value = "";
+  if (!value) return;
+  await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, 10000000);
+});
+
+const onSubmit = async (exportType: ExportType = "pdf") => {
+  if (!form.value) return;
+  const { valid } = await form.value.validate();
+  if (!valid) {
+    toast.error(t("t-validation-error"));
+    return;
+  }
+
+  localLoading.value = true;
+  errorMsg.value = "";
+
+  try {
+    const payload: EmployeeHealthPlanLimitsTrendFilterType = {
+      contractId: contractId.value,
+      coveragePeriodId: coveragePeriodId.value,
+      usagePercentageAbove: Number(usagePercentageAbove.value),
+    };
+
+    console.log("[EmployeeHealthPlanLimitsTrendReport] payload sent to API:", payload);
+
+    const response = await employeeHealthPlanLimitsTrendReportService.createReport(payload);
+    console.log("[EmployeeHealthPlanLimitsTrendReport] API response:", response);
+    if (response.status === "error") {
+      const messages = getApiErrorMessages(response.error, t("t-error-generating-report"));
+      errorMsg.value = messages[0] || t("t-error-generating-report");
+      messages.forEach((message) => toast.error(message));
+      return;
+    }
+
+    if (!response.data) {
+      toast.error(t("t-no-report-data"));
+      return;
+    }
+
+    const prefix = locale.value === "en" ? "employee-health-plan-limits-trend" : "tendencia-limites-plano-saude-colaboradores";
+    const fileName = `${prefix}-${new Date().toISOString().split("T")[0]}`;
+    if (exportType === "pdf") {
+      await EmployeeHealthPlanLimitsTrendReportExporter.exportToPDF(response.data, userName.value, { fileName });
+    } else if (exportType === "excel") {
+      await EmployeeHealthPlanLimitsTrendReportExporter.exportToExcel(response.data, userName.value, { fileName });
+    } else {
+      await EmployeeHealthPlanLimitsTrendReportExporter.exportToCSV(response.data, userName.value, { fileName });
+    }
+
+    emit("update:modelValue", false);
+    toast.success(t("t-file-generated-successfully", { format: exportType.toUpperCase() }));
+  } catch (error: any) {
+    const messages = getApiErrorMessages(error, t("t-error-generating-report"));
+    errorMsg.value = messages[0] || t("t-error-generating-report");
+    messages.forEach((message) => toast.error(message));
+  } finally {
+    localLoading.value = false;
+  }
+};
+
+const exportOptions = [
+  { title: "PDF", icon: "mdi-file-pdf-box", color: "red", value: "pdf" as ExportType },
+  { title: "Excel", icon: "mdi-file-excel", color: "green", value: "excel" as ExportType },
+  { title: "CSV", icon: "mdi-file-delimited", color: "blue", value: "csv" as ExportType },
+];
+
+onMounted(async () => {
+  await institutionStore.fetchInstitutionsforListing(0, 10000000);
+});
+</script>
+
+<template>
+  <v-dialog :model-value="props.modelValue" width="520" persistent>
+    <v-form ref="form" @submit.prevent="() => onSubmit()">
+      <Card :title="$t('t-filters')" title-class="py-0">
+        <template #title-action>
+          <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
+        </template>
+
+        <v-divider />
+        <v-card-text>
+          <v-alert v-if="errorMsg" :text="errorMsg" type="error" class="mb-4" variant="tonal" density="compact" closable @click:close="errorMsg = ''" />
+          <v-row>
+            <v-col cols="12" class="mt-1">
+              <div class="font-weight-bold text-caption mb-1">{{ $t("t-institution") }} <i class="ph-asterisk text-danger" /></div>
+              <MenuSelect v-model="contractId" :items="institutions" :rules="requiredRules.contractId" :loading="institutionStore.loading" />
+            </v-col>
+            <v-col cols="12" class="mt-n6" v-if="contractId">
+              <div class="font-weight-bold text-caption mb-1">{{ $t("t-coverage-period") }} <i class="ph-asterisk text-danger" /></div>
+              <MenuSelect v-model="coveragePeriodId" :items="coveragePeriods" :rules="requiredRules.coveragePeriodId" :loading="coveragePeriodStore.loading" />
+            </v-col>
+            <v-col cols="12" class="mt-n6">
+              <div class="font-weight-bold text-caption mb-1">{{ $t("t-ehplt-usage-percentage-above") }} <i class="ph-asterisk text-danger" /></div>
+              <v-text-field
+                v-model="usagePercentageAbove"
+                class="text-field-component percentage-field"
+                type="number"
+                min="0"
+                max="100"
+                variant="solo"
+                density="compact"
+                :rules="requiredRules.usagePercentageAbove"
+                hide-spin-buttons
+              >
+                <template #append-inner>
+                  <span class="percentage-field__suffix">%</span>
+                </template>
+              </v-text-field>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-divider />
+        <v-card-actions class="d-flex justify-end">
+          <v-btn color="danger" class="me-2" @click="emit('update:modelValue', false)" :disabled="localLoading">
+            <i class="ph-x me-1" /> {{ $t("t-close") }}
+          </v-btn>
+          <v-menu v-model="exportMenu">
+            <template #activator="{ props }">
+              <v-btn color="primary" variant="elevated" v-bind="props" :loading="localLoading" :disabled="localLoading">
+                <template v-if="localLoading">
+                  <v-progress-circular indeterminate size="20" width="2" class="mr-2" />
+                  {{ $t("t-preparing") }}
+                </template>
+                <template v-else>
+                  <i class="ph-download-simple me-1" /> {{ $t("t-generate") }}
+                </template>
+              </v-btn>
+            </template>
+            <v-list density="compact" class="export-menu-list">
+              <v-list-item v-for="option in exportOptions" :key="option.value" class="export-menu-item" @click="onSubmit(option.value); exportMenu = false">
+                <template #prepend>
+                  <v-icon :color="option.color" size="18">{{ option.icon }}</v-icon>
+                </template>
+                <v-list-item-title class="export-menu-title">{{ option.title }}</v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </v-card-actions>
+      </Card>
+    </v-form>
+  </v-dialog>
+</template>
+
+<style scoped>
+.export-menu-list :deep(.v-list-item) { min-height: 34px; padding-inline: 10px; }
+.export-menu-title { font-size: 14px; font-weight: 500; line-height: 1.2; font-family: inherit; }
+.percentage-field__suffix {
+  color: rgba(var(--v-theme-on-surface), 0.62);
+  font-size: 13px;
+  line-height: 1;
+}
+</style>

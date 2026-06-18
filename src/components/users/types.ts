@@ -3,6 +3,7 @@ export type UserInsertType= {
   firstName: string;
   lastName: string;
   email: string;
+  requiredChangePassword: boolean;
   password?: string;
   password_confirm?: string;
 };
@@ -21,6 +22,7 @@ export type UserListingType  = {
   lastFailedLogin: string | Date;
   lastPasswordUpdate: string | Date;
   passwordExpirationDate: string | Date;
+  requiredChangePassword: boolean;
 };
 
 
@@ -28,6 +30,7 @@ export type UserUpdateType = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  requiredChangePassword?: boolean;
 }
 
 export type OptionType = {

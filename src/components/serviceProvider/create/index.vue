@@ -85,6 +85,7 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   personOfContactPhone2: '',
   personOfContactEmail2: '',
   providerTypeId: undefined,
+  responsibleId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
   enabled: true,
@@ -244,6 +245,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       personOfContactFullname2: "trimToNull",
       personOfContactPhone2: "trimToNull",
       personOfContactEmail2: "trimToNull",
+      responsibleId: "trimToEmpty",
     });
 
     let response;

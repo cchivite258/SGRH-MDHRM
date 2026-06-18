@@ -37,6 +37,7 @@ const id = ref(formData.value.id || "");
 const firstName = ref(formData.value.firstName || "");
 const lastName = ref(formData.value.lastName || "");
 const email = ref(formData.value.email || "");
+const requiredChangePassword = ref(formData.value.requiredChangePassword ?? isCreate.value);
 const password = ref<{ value: string; isValid: boolean }>({ value: "", isValid: false });
 const password_confirm = ref<{ value: string; isValid: boolean }>({ value: "", isValid: false });
 
@@ -86,9 +87,9 @@ const onSubmit = async () => {
     firstName: firstName.value,
     lastName: lastName.value,
     email: email.value,
+    requiredChangePassword: requiredChangePassword.value,
     ...(isCreate.value && {
       password: password.value.value,
-      password_confirm: password_confirm.value.value,
     }),
   };
 
@@ -97,7 +98,6 @@ const onSubmit = async () => {
     lastName: "trimToNull",
     email: "trimToEmpty",
     password: "trimToEmpty",
-    password_confirm: "trimToEmpty",
   });
 
   emit("onSubmit", data, {
@@ -135,7 +135,7 @@ const onSubmit = async () => {
             </v-col>
           </v-row>
 
-          <div class="font-weight-bold text-caption mb-1">
+          <div class="font-weight-bold text-caption mt-n3">
             {{ $t('t-email') }} <i class="ph-asterisk ph-xs text-danger" />
           </div>
           <TextField v-model="email" !isEmail :placeholder="$t('t-enter-email-form')" :rules="requiredRules.email" />
@@ -156,6 +156,15 @@ const onSubmit = async () => {
                 :placeholder="$t('t-enter-password-confirm')" :rules="requiredRules.passwordConfirm" />
             </v-col>
           </v-row>
+
+          <div class="mt-2 mt-n6">
+            <v-checkbox v-model="requiredChangePassword" density="compact" color="primary" hide-details
+              class="d-inline-flex">
+              <template #label>
+                <span class="text-caption text-muted">{{ $t('t-required-change-password') }}</span>
+              </template>
+            </v-checkbox>
+          </div>
         </v-card-text>
 
         <v-divider />

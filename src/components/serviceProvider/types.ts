@@ -14,6 +14,13 @@ export type ServiceProviderUpdateType = {
   personOfContactPhone2: string;
   personOfContactEmail2: string;
   providerTypeId: string | undefined;
+  responsibleId: string | undefined;
+  responsible?: {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | undefined;
   providerTypes?: {
     id: number;
     name: string
@@ -38,6 +45,13 @@ export type ServiceProviderResponseType = {
   personOfContactPhone2: string;
   personOfContactEmail2: string;
   providerTypeId: string | undefined;
+  responsibleId: string | undefined;
+  responsible?: {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | undefined;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypes?: {
@@ -64,6 +78,13 @@ export type ServiceProviderInsertType = {
   personOfContactPhone2: string;
   personOfContactEmail2: string;
   providerTypeId: string | undefined;
+  responsibleId: string | undefined;
+  responsible?: {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | undefined;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypes?: {
@@ -93,6 +114,13 @@ export type ServiceProviderListingType = {
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypeId: string | undefined;
+  responsibleId: string | undefined;
+  responsible?: {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | undefined;
   providerTypes?: {
     id: number;
     name: string
@@ -120,6 +148,13 @@ export type ServiceProviderListingForListType = {
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypeId: string | undefined;
+  responsibleId: string | undefined;
+  responsible?: {
+    id: string | number;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  } | undefined;
   providerTypes?: {
     id: number;
     name: string
