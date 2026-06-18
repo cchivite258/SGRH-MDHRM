@@ -312,6 +312,19 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
   return getLimitTypeLabel(limitType || "");
 };
 
+const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
+
+const getUsageLimitTypeLabel = (value?: string | null) => {
+  const labels: Record<string, string> = {
+    NONE: t("t-limit-type-none"),
+    DAY: t("t-limit-type-day"),
+    MONTH: t("t-limit-type-month"),
+    YEAR: t("t-limit-type-year")
+  };
+
+  return labels[value || "NONE"] || value || "-";
+};
+
 const getSalaryComponentLabel = (value: string | undefined) => {
   const option = salaryComponentOptions.find(opt => opt.value === value);
   return option ? option.label : value;
@@ -435,9 +448,9 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                     <td>{{ getDisplayLimitType(item) }}</td>
                     <td>{{ getDisplayFixedAmount(item) }}</td>
                     <td>{{ getDisplayPercentage(item) }}</td>
-                    <td>
-                      <Status :status="item.enabled ? 'enabled' : 'disabled'" />
-                    </td>
+                    <td>{{ getUsageLimitTypeLabel(item.limitType) }}</td>
+                    <td>{{ getDisplayOptionalNumber(item.frequencyInterval) }}</td>
+                    <td>{{ getDisplayOptionalNumber(item.allowedFrequencyUse) }}</td>
                     <td>
                       <TableActionView @onView="onViewClick(item)" />
                     </td>

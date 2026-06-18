@@ -387,6 +387,9 @@ export type ExpensePerProcedureType = {
  groupUsedBalance?: number | null;
  groupRemainingBalance?: number | null;
  belongsToGroup?: boolean;
+ frequencyInterval?: number | null;
+ lastUsageDate?: string | null;
+ allowedFrequencyUse?: number | null;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;
@@ -446,6 +449,10 @@ export type DependentHospitalProcedurePlanLimitType = {
   groupAllocatedBalance?: number | null;
   groupUsedBalance?: number | null;
   groupRemainingBalance?: number | null;
+  limitType?: string | null;
+  frequencyInterval?: number | null;
+  lastUsageDate?: string | null;
+  allowedFrequencyUse?: number | null;
   employeeHealthPlan?: HealthPlanListingType;
   contractHealthPlanHospitalProcedures?: any;
   companyHealthPlanHospitalProcedures?: any;

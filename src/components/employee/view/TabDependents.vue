@@ -19,12 +19,9 @@ import { v4 as uuidv4 } from "uuid";
 // Components
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
-import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
-import CreateEditDependentsDialog from "@/components/employee/create/CreateEditDependentsDialog.vue";
 import ViewDependentsDialog from "@/components/employee/create/ViewDependentsDialog.vue";
-import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
-import TableActionView from "@/app/common/components/TableActionView.vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
 import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
@@ -81,6 +78,10 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
+const dependentActionOptions = computed(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" }
+]);
 
 interface FetchParams {
   page: number;
@@ -152,7 +153,29 @@ const onViewClick = (data: DependentInsertType | DependentListingType) => {
   viewDialog.value = true;
 };
 
+const onConsultPlan = (data: DependentListingType) => {
+  if (!employeeId.value) return;
 
+  router.push({
+    name: "ViewDependentHealthPlan",
+    params: {
+      employeeId: employeeId.value,
+      dependentId: data.id
+    },
+    query: { mode: "view" }
+  });
+};
+
+const onActionSelect = (action: string, item: DependentListingType) => {
+  switch (action) {
+    case "view":
+      onViewClick(item);
+      break;
+    case "consult-plan":
+      onConsultPlan(item);
+      break;
+  }
+};
 
 // Limpeza ao desmontar
 onBeforeUnmount(() => {
@@ -205,7 +228,7 @@ onBeforeUnmount(() => {
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>
             <td>
-              <TableActionView  @onView="onViewClick(item)"/>
+              <TableActionMenu :menu-items="dependentActionOptions" @onSelect="onActionSelect($event, item)" />
             </td>
           </tr>
         </template>

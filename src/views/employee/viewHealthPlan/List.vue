@@ -50,6 +50,6 @@ onMounted(async () => {
 });
 </script>
 <template>
-  <Breadcrumb :title="t('view-health-plan')" :items="breadcrumbHealthPlan" />
+  <Breadcrumb title="view-health-plan" :items="breadcrumbHealthPlan" />
   <List :card-title="t('t-view-health-plan')" />
 </template>

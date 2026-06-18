@@ -82,5 +82,8 @@ export const hospitalProcedureBalanceHeader: DataTableHeaderType[] = [
   { title: "allocated-balance", key: "allocatedBalance", sortable: true },
   { title: "used-balance", key: "usedBalance", sortable: true },
   { title: "remaining-balance", key: "remainingBalance", sortable: true },
+  { title: "frequency-interval", key: "frequencyInterval", sortable: true },
+  { title: "last-usage-date", key: "lastUsageDate", sortable: true },
+  { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
   { title: "enabled", key: "enabled", sortable: true }
 ];

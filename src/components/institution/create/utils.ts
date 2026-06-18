@@ -94,6 +94,25 @@ export const limitTypeDefinitionOptions: MenuSelectItemType[] = [
   }
 ];
 
+export const hospitalProcedureLimitTypeOptions: MenuSelectItemType[] = [
+  {
+    label: "NONE",
+    value: "NONE"
+  },
+  {
+    label: "DAY",
+    value: "DAY"
+  },
+  {
+    label: "MONTH",
+    value: "MONTH"
+  },
+  {
+    label: "YEAR",
+    value: "YEAR"
+  }
+];
+
 export const salaryComponentOptions: MenuSelectItemType[] = [
   {
     value: undefined,
@@ -344,7 +363,9 @@ export const hospitalProcedureHeader: TableHeaderType[] = [
   { title: "limit-type-definition", key: "limitTypeDefinition", sortable: true },
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
   { title: "percentage", key: "percentage", sortable: true },
-  { title: "enabled", key: "enabled", sortable: true },
+  { title: "limit-type", key: "limitType", sortable: true },
+  { title: "frequency-interval", key: "frequencyInterval", sortable: true },
+  { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
   { title: "action", sortable: false, align: "center" }
 ];
 

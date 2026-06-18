@@ -18,7 +18,6 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
-import Status from "@/app/common/components/Status.vue"; 
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 //Options Enums
@@ -253,6 +252,9 @@ const onCreateEditClick = (data: HospitalProcedureInsertType | HospitalProcedure
     groupPercentage: data?.groupPercentage ?? null,
     hospitalProcedureGroupLimit: data?.hospitalProcedureGroupLimit ?? null,
     belongsToGroup: data?.belongsToGroup ?? false,
+    limitType: data?.limitType ?? "NONE",
+    frequencyInterval: data?.frequencyInterval ?? 0,
+    allowedFrequencyUse: data?.allowedFrequencyUse ?? 0,
     hospitalProcedureType: data?.hospitalProcedureType || undefined,
     companyHealthPlan: healthPlanId.value || undefined,
     company: healthPlanFormData.value.company || undefined,
@@ -452,6 +454,19 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
   return getLimitTypeLabel(limitType || "");
 };
 
+const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
+
+const getUsageLimitTypeLabel = (value?: string | null) => {
+  const labels: Record<string, string> = {
+    NONE: t("t-limit-type-none"),
+    DAY: t("t-limit-type-day"),
+    MONTH: t("t-limit-type-month"),
+    YEAR: t("t-limit-type-year")
+  };
+
+  return labels[value || "NONE"] || value || "-";
+};
+
 </script>
 
 <template>
@@ -592,9 +607,9 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
                     <td>{{ getDisplayLimitType(item) }}</td>
                     <td>{{ getDisplayFixedAmount(item) }}</td>
                     <td>{{ getDisplayPercentage(item) }}</td>
-                    <td>
-                      <Status :status="item.enabled ? 'enabled' : 'disabled'" />
-                    </td>
+                    <td>{{ getUsageLimitTypeLabel(item.limitType) }}</td>
+                    <td>{{ getDisplayOptionalNumber(item.frequencyInterval) }}</td>
+                    <td>{{ getDisplayOptionalNumber(item.allowedFrequencyUse) }}</td>
                     <td>
                       <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
                         @onDelete="onDelete(item.id)" />

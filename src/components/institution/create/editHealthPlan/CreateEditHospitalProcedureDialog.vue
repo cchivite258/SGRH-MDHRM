@@ -10,6 +10,7 @@ import { useHospitalProcedureGroupStore } from "@/store/baseTables/hospitalProce
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
+import type { MenuSelectItemType } from "@/app/common/components/filters/types";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -40,6 +41,9 @@ const props = defineProps({
       groupPercentage: null,
       hospitalProcedureGroupLimit: "",
       belongsToGroup: false,
+      limitType: "NONE",
+      frequencyInterval: 0,
+      allowedFrequencyUse: 0,
       hospitalProcedureType: "",
       companyHealthPlan: "",
       enabled: true
@@ -61,6 +65,9 @@ const groupFixedAmount = ref<number | null>(null);
 const groupPercentage = ref<number | null>(null);
 const hospitalProcedureGroupLimit = ref("");
 const belongsToGroup = ref(false);
+const limitType = ref("NONE");
+const frequencyInterval = ref<number | null>(0);
+const allowedFrequencyUse = ref<number | null>(0);
 const hospitalProcedureType = ref("");
 const companyHealthPlan = ref(""); 
 const enabled = ref(true);
@@ -69,6 +76,13 @@ const enabled = ref(true);
 import {
   limitTypeDefinitionOptions
 } from "@/components/institution/create/utils";
+
+const hospitalProcedureLimitTypeOptions = computed<MenuSelectItemType[]>(() => [
+  { label: t("t-limit-type-none"), value: "NONE" },
+  { label: t("t-limit-type-day"), value: "DAY" },
+  { label: t("t-limit-type-month"), value: "MONTH" },
+  { label: t("t-limit-type-year"), value: "YEAR" }
+]);
 
 const getHospitalProcedureGroupValue = (group: HospitalProcedureListingType["hospitalProcedureGroup"]) => {
   if (!group) return "";
@@ -88,6 +102,9 @@ watch(() => props.data, (newData) => {
     groupPercentage.value = newData.groupPercentage ?? null;
     hospitalProcedureGroupLimit.value = newData.hospitalProcedureGroupLimit ?? "";
     belongsToGroup.value = newData.belongsToGroup ?? false;
+    limitType.value = newData.limitType || "NONE";
+    frequencyInterval.value = newData.frequencyInterval ?? 0;
+    allowedFrequencyUse.value = newData.allowedFrequencyUse ?? 0;
     
     if (typeof newData.hospitalProcedureType === 'object' && newData.hospitalProcedureType !== null) {
       hospitalProcedureType.value = newData.hospitalProcedureType.id; 
@@ -136,6 +153,10 @@ watch(belongsToGroup, (isGroupBased) => {
 });
 
 const isCreate = computed(() => !id.value);
+const hasSelectedAmountLimit = computed(() => {
+  const selectedLimit = belongsToGroup.value ? hospitalProcedureGroupLimit.value : limitTypeDefinition.value;
+  return selectedLimit === "FIXED_AMOUNT" || selectedLimit === "PERCENTAGE";
+});
 
 const dialogValue = computed({
   get() {
@@ -277,6 +298,9 @@ const onSubmit = async () => {
     groupPercentage: belongsToGroup.value ? groupPercentage.value : null,
     hospitalProcedureGroupLimit: belongsToGroup.value ? (hospitalProcedureGroupLimit.value || null) : null,
     belongsToGroup: belongsToGroup.value,
+    limitType: limitType.value || "NONE",
+    frequencyInterval: frequencyInterval.value,
+    allowedFrequencyUse: allowedFrequencyUse.value,
     hospitalProcedureType: belongsToGroup.value ? undefined : hospitalProcedureType.value,
     companyHealthPlan: companyHealthPlan.value,
     company: props.data?.company || "",
@@ -388,8 +412,8 @@ onMounted(async () => {
                 :error-messages="getServerErrors('hospitalProcedureGroup')" />
             </v-col>
           </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="12" v-if="belongsToGroup">
+          <v-row class="mt-n9" v-if="belongsToGroup">
+            <v-col cols="12" :lg="hasSelectedAmountLimit ? 6 : 12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-hospital-procedure-group-limit') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -397,16 +421,14 @@ onMounted(async () => {
                 :rules="applyServerErrorsToRules('hospitalProcedureGroupLimit', requiredRules.hospitalProcedureGroupLimit)"
                 :error-messages="getServerErrors('hospitalProcedureGroupLimit')" />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col :cols="12" :lg="12" v-if="belongsToGroup && hospitalProcedureGroupLimit === 'FIXED_AMOUNT'">
+            <v-col :cols="12" :lg="hasSelectedAmountLimit ? 6 : 12" v-if="hospitalProcedureGroupLimit === 'FIXED_AMOUNT'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-group-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="groupFixedAmount" type="number" :placeholder="$t('t-enter-group-fixed-amount')"
                 :rules="applyServerErrorsToRules('groupFixedAmount', requiredRules.groupFixedAmount)" />
             </v-col>
-            <v-col :cols="12" :lg="12" v-if="belongsToGroup && hospitalProcedureGroupLimit === 'PERCENTAGE'">
+            <v-col :cols="12" :lg="hasSelectedAmountLimit ? 6 : 12" v-if="hospitalProcedureGroupLimit === 'PERCENTAGE'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-group-percentage') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -414,17 +436,15 @@ onMounted(async () => {
                 :rules="applyServerErrorsToRules('groupPercentage', requiredRules.groupPercentage)" />
             </v-col>
           </v-row>
-          <v-row class="mt-9" v-if="!belongsToGroup">
-            <v-col cols="12" lg="12">
+          <v-row class="mt-n7" v-if="!belongsToGroup">
+            <v-col cols="12" :lg="hasSelectedAmountLimit ? 6 : 12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-limit-type-definition') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="limitTypeDefinition" :items="limitTypeDefinitionOptions"
                 :rules="requiredRules.limitTypeDefinition" :error-messages="getServerErrors('limitTypeDefinition')" />
             </v-col>
-          </v-row>
-          <v-row class="mt-n6" v-if="!belongsToGroup">
-            <v-col :cols="12" :lg="limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="limitTypeDefinition === 'FIXED_AMOUNT'">
+            <v-col :cols="12" :lg="hasSelectedAmountLimit ? 6 : 12" v-if="limitTypeDefinition === 'FIXED_AMOUNT'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-fixed-amount') }} <i v-if="limitTypeDefinition === 'FIXED_AMOUNT'"
                   class="ph-asterisk ph-xs text-danger" />
@@ -432,7 +452,7 @@ onMounted(async () => {
               <TextField v-model="fixedAmount" type="number" :placeholder="$t('t-enter-fixed-amount')"
                 :rules="applyServerErrorsToRules('fixedAmount', requiredRules.fixedAmount)" />
             </v-col>     
-            <v-col :cols="12" :lg="limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="limitTypeDefinition === 'PERCENTAGE'">
+            <v-col :cols="12" :lg="hasSelectedAmountLimit ? 6 : 12" v-if="limitTypeDefinition === 'PERCENTAGE'">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-percentage') }} <i v-if="limitTypeDefinition === 'PERCENTAGE'"
                   class="ph-asterisk ph-xs text-danger" />
@@ -441,7 +461,26 @@ onMounted(async () => {
                 :rules="applyServerErrorsToRules('percentage', requiredRules.percentage)" />
             </v-col>
           </v-row>
-          <v-row class="mt-n3">
+          <v-row class="mt-n8">
+            <v-col cols="12" lg="12">
+              <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type') }}</div>
+              <MenuSelect v-model="limitType" :items="hospitalProcedureLimitTypeOptions"
+                :error-messages="getServerErrors('limitType')" />
+            </v-col>
+          </v-row>
+          <v-row class="mt-n6">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">{{ $t('t-frequency-interval') }}</div>
+              <TextField v-model.number="frequencyInterval" type="number"
+                :placeholder="$t('t-enter-frequency-interval')" />
+            </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">{{ $t('t-allowed-frequency-use') }}</div>
+              <TextField v-model.number="allowedFrequencyUse" type="number"
+                :placeholder="$t('t-enter-allowed-frequency-use')" />
+            </v-col>
+          </v-row>
+          <v-row class="mt-n6">
           <v-col cols="12" lg="12" class="">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-enabled') }}</div>
             <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

@@ -33,6 +33,12 @@ import PreviewDialog100009 from "@/components/ammReports/list/EmployeeExpenseSta
 import GenerateDialog100009 from "@/components/ammReports/list/EmployeeExpenseStatementReport/GenerateDialog.vue";
 import PreviewDialog100010 from "@/components/ammReports/list/InvoiceReferenceReport/PreviewDialog.vue";
 import GenerateDialog100010 from "@/components/ammReports/list/InvoiceReferenceReport/GenerateDialog.vue";
+import PreviewDialog100011 from "@/components/ammReports/list/HospitalProcedureTrendReport/PreviewDialog.vue";
+import GenerateDialog100011 from "@/components/ammReports/list/HospitalProcedureTrendReport/GenerateDialog.vue";
+import PreviewDialog100012 from "@/components/ammReports/list/EmployeeHealthPlanLimitsTrendReport/PreviewDialog.vue";
+import GenerateDialog100012 from "@/components/ammReports/list/EmployeeHealthPlanLimitsTrendReport/GenerateDialog.vue";
+import PreviewDialog100013 from "@/components/ammReports/list/EmployeeFrequencyTrendReport/PreviewDialog.vue";
+import GenerateDialog100013 from "@/components/ammReports/list/EmployeeFrequencyTrendReport/GenerateDialog.vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -58,6 +64,12 @@ const previewDialog100009 = ref(false);
 const generateDialog100009 = ref(false);
 const previewDialog100010 = ref(false);
 const generateDialog100010 = ref(false);
+const previewDialog100011 = ref(false);
+const generateDialog100011 = ref(false);
+const previewDialog100012 = ref(false);
+const generateDialog100012 = ref(false);
+const previewDialog100013 = ref(false);
+const generateDialog100013 = ref(false);
 
 const prop = defineProps({
   filters: {
@@ -172,6 +184,18 @@ const reportHandlers: Record<string, {
   "100010": {
      preview: () => previewDialog100010.value = true,
      generate: () => generateDialog100010.value = true
+  },
+  "100011": {
+     preview: () => previewDialog100011.value = true,
+     generate: () => generateDialog100011.value = true
+  },
+  "100012": {
+     preview: () => previewDialog100012.value = true,
+     generate: () => generateDialog100012.value = true
+  },
+  "100013": {
+     preview: () => previewDialog100013.value = true,
+     generate: () => generateDialog100013.value = true
   },
 };
 
@@ -312,6 +336,12 @@ watch(searchQuery, (value) => {
   <GenerateDialog100009 v-model="generateDialog100009"  />
   <PreviewDialog100010 v-model="previewDialog100010"  />
   <GenerateDialog100010 v-model="generateDialog100010"  />
+  <PreviewDialog100011 v-model="previewDialog100011"  />
+  <GenerateDialog100011 v-model="generateDialog100011"  />
+  <PreviewDialog100012 v-model="previewDialog100012"  />
+  <GenerateDialog100012 v-model="generateDialog100012"  />
+  <PreviewDialog100013 v-model="previewDialog100013"  />
+  <GenerateDialog100013 v-model="generateDialog100013"  />
 
 
 

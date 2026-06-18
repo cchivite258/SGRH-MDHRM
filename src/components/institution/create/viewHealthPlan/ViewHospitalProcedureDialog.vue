@@ -19,6 +19,9 @@ const props = defineProps({
     fixedAmount: 0,
     percentage: 0,
     limitTypeDefinition: "",
+    limitType: "NONE",
+    frequencyInterval: null,
+    allowedFrequencyUse: null,
     hospitalProcedureType: undefined,
     companyHealthPlan: undefined,
     company: undefined
@@ -34,6 +37,19 @@ const getLimitTypeLabel = (value: string) => {
   ];
   const option = options.find(opt => opt.value === value);
   return option ? option.label : value;
+};
+
+const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
+
+const getUsageLimitTypeLabel = (value?: string | null) => {
+  const labels: Record<string, string> = {
+    NONE: t("t-limit-type-none"),
+    DAY: t("t-limit-type-day"),
+    MONTH: t("t-limit-type-month"),
+    YEAR: t("t-limit-type-year")
+  };
+
+  return labels[value || "NONE"] || value || "-";
 };
 
 const dialogValue = computed({
@@ -78,6 +94,24 @@ const dialogValue = computed({
           <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'PERCENTAGE'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-percentage') }}</div>
             <div>{{ props.data?.percentage || '0' }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3">
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type') }}</div>
+            <div>{{ getUsageLimitTypeLabel(props.data?.limitType) }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-frequency-interval') }}</div>
+            <div>{{ getDisplayOptionalNumber(props.data?.frequencyInterval) }}</div>
+          </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-allowed-frequency-use') }}</div>
+            <div>{{ getDisplayOptionalNumber(props.data?.allowedFrequencyUse) }}</div>
           </v-col>
         </v-row>
       </v-card-text>

@@ -1,12 +1,16 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 
+import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import ServiceProviderContractExtensionsDialog from "@/components/institution/create/ServiceProviderContractExtensionsDialog.vue";
 import type { ServiceProviderInsertType } from "@/components/serviceProvider/types";
+import { useUserStore } from "@/store/userStore";
+import type { UserType1 } from "@/app/http/types";
 
 const { t } = useI18n();
+const userStore = useUserStore();
 
 const emit = defineEmits<{
   (e: "onStepChange", step: number): void;
@@ -55,6 +59,9 @@ const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => st
 ];
 
 const requiredRules = {
+  responsibleId: [
+    (v: string | number | null | undefined) => !!v || t("t-please-select-contract-responsible")
+  ],
   contractStartDate: [
     (v: Date | string | null) => !!v || t("t-please-enter-contract-start-date")
   ],
@@ -74,6 +81,21 @@ const requiredRules = {
   ]
 };
 
+const userOptions = computed(() =>
+  (userStore.users as UserType1[]).map((user) => {
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    return {
+      value: String(user.id),
+      label: fullName ? `${fullName} (${user.email})` : user.email,
+    };
+  })
+);
+
+onMounted(async () => {
+  userStore.clearFilters();
+  await userStore.fetchUsers(0, 10000000);
+});
+
 watch(
   () => props.serverErrors,
   async (errors) => {
@@ -89,6 +111,7 @@ watch(
 
 watch(() => serviceProviderData.value.contractStartDate, () => emit("clear-server-error", "contractStartDate"));
 watch(() => serviceProviderData.value.contractEndDate, () => emit("clear-server-error", "contractEndDate"));
+watch(() => serviceProviderData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
 
 const showError = () => {
   if (alertTimeout) {
@@ -160,7 +183,7 @@ defineExpose({ submitForm, validateForm });
 
       <v-card-text class="pt-0">
         <v-row class="mt-2">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -174,7 +197,7 @@ defineExpose({ submitForm, validateForm });
             />
           </v-col>
 
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -185,6 +208,20 @@ defineExpose({ submitForm, validateForm });
               :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
               :teleport="true"
               format="dd/MM/yyyy"
+            />
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-responsible') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <MenuSelect
+              v-model="serviceProviderData.responsibleId"
+              :items="userOptions"
+              :loading="userStore.loading"
+              :placeholder="$t('t-select-contract-responsible')"
+              :rules="applyServerErrorsToRules('responsibleId', requiredRules.responsibleId)"
+              :error-messages="getServerErrors('responsibleId')"
             />
           </v-col>
         </v-row>

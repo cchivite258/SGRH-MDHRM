@@ -149,6 +149,12 @@ export type InvoiceInsertType = {
 
 
 
+export type InvoiceItemFlag =
+    | "EXCEEDS_LIMIT"
+    | "FREQUENCY_FLAGGED"
+    | "INSUFFICIENT_FUNDS"
+    | "UNFLAGGED";
+
 export type InvoiceItemInsertType = {
     id?: string;
     unitPrice: number;
@@ -159,7 +165,7 @@ export type InvoiceItemInsertType = {
     companyAllowedHospitalProcedureLabel?: string;
     invoice: string | undefined;
     totalAmount: number;
-    flag?: string;
+    flag?: InvoiceItemFlag;
 }
 
 export type InvoiceItemListingType = {
@@ -183,7 +189,7 @@ export type InvoiceItemListingType = {
         totalAmount: number;
     };
     totalAmount: number;
-    flag?: string;
+    flag?: InvoiceItemFlag;
     createdAt: Date ;
     updatedAt: Date | null;
     deletedAt: Date | null;

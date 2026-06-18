@@ -28,6 +28,7 @@ const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType
   personOfContactPhone2: serviceProviderData.personOfContactPhone2,
   personOfContactEmail2: serviceProviderData.personOfContactEmail2,
   providerTypeId: serviceProviderData.providerTypeId,
+  responsibleId: serviceProviderData.responsibleId,
   contractStartDate: serviceProviderData.contractStartDate,
   contractEndDate: serviceProviderData.contractEndDate,
   enabled: serviceProviderData.enabled,
@@ -167,7 +168,7 @@ export default class ServiceProviderService extends HttpService {
     try {
       //const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-providers/${id}`);
       
-      const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-provider/${id}?includes=providerTypes`);
+      const response = await this.get<{ data: ServiceProviderResponseType; meta: any }>(`/administration/service-provider/${id}?includes=providerTypes,responsible`);
       return { data: response.data };
     } catch (error) {
       throw this.handleError(error);

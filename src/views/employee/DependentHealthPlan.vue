@@ -6,6 +6,7 @@ import { useI18n } from "vue-i18n";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { formatCurrency } from "@/app/common/currencyFormat";
+import { formateDate } from "@/app/common/dateFormate";
 import { healthPlanEmployeeService, invoiceItemService, invoiceService } from "@/app/http/httpServiceProvider";
 import type { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import type { DataTableHeaderType } from "@/app/common/types/table.types";
@@ -30,6 +31,7 @@ const dependentId = computed(() => {
   const value = route.params.dependentId;
   return typeof value === "string" ? value : Array.isArray(value) ? value[0] : null;
 });
+const isViewMode = computed(() => route.query.mode === "view");
 
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
@@ -63,6 +65,9 @@ const headers: DataTableHeaderType[] = [
   { title: "billed-amount", key: "billedAmount", sortable: false },
   { title: "covered-amount", key: "amountCovered", sortable: false },
   { title: "member-paid-amount", key: "memberPaidAmount", sortable: false },
+  { title: "frequency-interval", key: "frequencyInterval", sortable: true },
+  { title: "last-usage-date", key: "lastUsageDate", sortable: true },
+  { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
   { title: "action", key: "action", sortable: false, align: "center" }
 ];
 
@@ -73,10 +78,10 @@ const breadcrumb = computed<BreadcrumbType[]>(() => [
     to: "/employee/list"
   },
   {
-    title: "edit-employee",
+    title: isViewMode.value ? "view-employee" : "edit-employee",
     disabled: false,
     to: employeeId.value
-      ? { path: `/employee/edit/${employeeId.value}`, query: { tab: "4" } }
+      ? { path: `/employee/${isViewMode.value ? "view" : "edit"}/${employeeId.value}`, query: { tab: "4" } }
       : undefined
   },
   {
@@ -90,6 +95,19 @@ const dependentName = computed(() => {
   if (!dependent) return "";
 
   return [dependent.firstName, dependent.middleName, dependent.lastName]
+    .filter(Boolean)
+    .join(" ");
+});
+
+const employeeName = computed(() => {
+  const employee = activeHealthPlan.value?.employee
+    || dependentPlanSummary.value?.employeeHealthPlan?.employee
+    || planLimits.value[0]?.employeeHealthPlan?.employee
+    || employeeHealthPlans.value[0]?.employee;
+
+  if (!employee) return "";
+
+  return [employee.firstName, employee.middleName, employee.lastName]
     .filter(Boolean)
     .join(" ");
 });
@@ -121,6 +139,10 @@ const getUsageTotal = (
     0
   ) ?? 0;
 };
+
+const formatOptionalNumber = (value?: number | null) => value ?? '-';
+
+const formatOptionalDate = (value?: string | null) => value ? formateDate(value) : '-';
 
 const selectedPlanLimitUsages = computed(() =>
   selectedPlanLimit.value?.employeeHospitalProcedurePlanUsages || []
@@ -185,7 +207,13 @@ const onViewInvoice = (usage: EmployeeHospitalProcedurePlanUsageType) => {
   const invoiceId = getUsageInvoiceId(usage);
   if (!invoiceId) return;
 
-  router.push(`/invoices/view/${invoiceId}`);
+  router.push({
+    path: `/invoices/view/${invoiceId}`,
+    query: {
+      returnTo: route.fullPath,
+      returnTitle: "dependent-health-plan"
+    }
+  });
 };
 
 const totalAllocated = computed(() => dependentPlanSummary.value?.allocatedBalance ?? activeHealthPlan.value?.allocatedBalance ?? 0);
@@ -339,7 +367,10 @@ const toggleSelection = (item: DependentHospitalProcedurePlanLimitType) => {
 
 const onBack = () => {
   if (employeeId.value) {
-    router.push({ path: `/employee/edit/${employeeId.value}`, query: { tab: "4" } });
+    router.push({
+      path: `/employee/${isViewMode.value ? "view" : "edit"}/${employeeId.value}`,
+      query: { tab: "4" }
+    });
     return;
   }
 
@@ -379,7 +410,18 @@ onMounted(async () => {
 <template>
   <Breadcrumb title="dependent-health-plan" :items="breadcrumb" />
 
-  <Card :title="$t('t-dependent-health-plan')" title-class="py-5">
+  <Card title="" title-class="py-5">
+    <template #title-badge>
+      <div class="dependent-health-plan__title">
+        <h4 class="text-body-1 font-weight-bold mb-1">
+          {{ $t('t-dependent-health-plan') }}
+        </h4>
+        <div class="dependent-health-plan__employee-name" v-if="employeeName">
+          <span class="text-muted">{{ $t('t-employee') }}:</span>
+          <span class="font-weight-bold ms-1">{{ employeeName }}</span>
+        </div>
+      </div>
+    </template>
     <template #title-action>
       <v-btn color="secondary" variant="outlined" @click="onBack">
         <i class="ph-arrow-left me-2" />
@@ -397,19 +439,19 @@ onMounted(async () => {
       <v-card class="mb-4">
         <v-card-text>
           <v-row>
-            <v-col cols="12" lg="3">
+            <v-col cols="12" md="6" lg="3">
               <div class="font-weight-bold mb-1">{{ $t('t-dependent') }}</div>
               <div>{{ dependentName || '-' }}</div>
             </v-col>
-            <v-col cols="12" lg="3">
+            <v-col cols="12" md="6" lg="3">
               <div class="font-weight-bold mb-1">Saldo Alocado ao Membro Principal</div>
               <div>{{ formatCurrency(totalAllocated) }}</div>
             </v-col>
-            <v-col cols="12" lg="3">
+            <v-col cols="12" md="6" lg="3">
               <div class="font-weight-bold mb-1">Valor gasto pelo Dependente</div>
               <div>{{ formatCurrency(totalUsed) }}</div>
             </v-col>
-            <v-col cols="12" lg="3">
+            <v-col cols="12" md="6" lg="3">
               <div class="font-weight-bold mb-1">Saldo Remanescente do Membro Principal</div>
               <div>{{ formatCurrency(totalRemaining) }}</div>
             </v-col>
@@ -457,6 +499,9 @@ onMounted(async () => {
             <td>{{ formatCurrency(getUsageTotal(item, 'billedAmount')) }}</td>
             <td>{{ formatCurrency(getUsageTotal(item, 'amountCovered')) }}</td>
             <td>{{ formatCurrency(getUsageTotal(item, 'memberPaidAmount')) }}</td>
+            <td>{{ formatOptionalNumber(item.frequencyInterval) }}</td>
+            <td>{{ formatOptionalDate(item.lastUsageDate) }}</td>
+            <td>{{ formatOptionalNumber(item.allowedFrequencyUse) }}</td>
             <td class="text-center">
               <v-btn
                 color="primary"
@@ -591,5 +636,14 @@ onMounted(async () => {
   min-width: 150px;
   height: 32px;
   padding-inline: 14px;
+}
+
+.dependent-health-plan__title {
+  line-height: 1.3;
+}
+
+.dependent-health-plan__employee-name {
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 </style>

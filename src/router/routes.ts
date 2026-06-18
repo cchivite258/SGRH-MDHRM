@@ -34,6 +34,7 @@ const usersPrefix = "/users";
 const serviceProviderPrefix = "/service-provider";
 const reportsPrefix = "/reports";
 const entitiesPrefix = "/entities";
+const settingsPrefix = "/settings";
 
 
 const institutionRoutes = [
@@ -297,6 +298,24 @@ const ammReportRoutes = [
   name: "ReportPreview100010",
   component: () => import("@/views/ammReports/InvoiceReferenceReport/ReportPreview.vue"),
   meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100011/preview`,
+  name: "ReportPreview100011",
+  component: () => import("@/views/ammReports/HospitalProcedureTrendReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100012/preview`,
+  name: "ReportPreview100012",
+  component: () => import("@/views/ammReports/EmployeeHealthPlanLimitsTrendReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
+},
+{
+  path: `${reportsPrefix}100013/preview`,
+  name: "ReportPreview100013",
+  component: () => import("@/views/ammReports/EmployeeFrequencyTrendReport/ReportPreview.vue"),
+  meta: { title: "t-preview-report", authRequired: true },
 }
 
 
@@ -405,6 +424,20 @@ const usersRoutes = [
     name: "UsersListView",
     component: () => import("@/views/users/users/ListView.vue"),
     meta: { title: "Users List", authRequired: true },
+  },
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+
+const settingsRoutes = [
+  {
+    path: `${settingsPrefix}/alerts`,
+    name: "AlertConfigurations",
+    component: () => import("@/views/settings/Alerts.vue"),
+    meta: { title: "t-alerts", authRequired: true },
   },
 ].map((data) => {
   return {
@@ -1407,6 +1440,7 @@ export const routes = [
   ...employeeRoutes,
   ...baseTableRoutes,
   ...usersRoutes,
+  ...settingsRoutes,
   ...serviceProviderRoutes,
   ...ammReportRoutes,
   {
