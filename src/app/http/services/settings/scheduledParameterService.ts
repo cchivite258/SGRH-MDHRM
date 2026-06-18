@@ -1,14 +1,15 @@
 import HttpService from "@/app/http/httpService";
 import type {
-  AlertConfigurationForm,
   AlertConfigurationId,
-  AlertConfigurationListing,
+  ScheduledParameterForm,
+  ScheduledParameterListing,
 } from "@/components/settings/alerts/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
-  data?: T;
+  data?: T | ApiResponse<T>;
   content?: T;
+  items?: T;
   meta?: any;
   metadata?: any;
 }
@@ -19,11 +20,21 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
-const ALERT_CONFIGURATIONS_ENDPOINT = "/scheduler/scheduled-jobs";
+const SCHEDULED_PARAMETERS_ENDPOINT = "/scheduler/scheduled-parameters";
 
-const getContent = <T>(response: ApiResponse<T[]> | T[]): T[] => {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return value !== null && typeof value === "object";
+};
+
+const getContent = <T>(response: ApiResponse<T[]> | T[] | null | undefined): T[] => {
+  if (!response) return [];
   if (Array.isArray(response)) return response;
-  return response.content ?? response.data ?? [];
+  if (Array.isArray(response.content)) return response.content;
+  if (Array.isArray(response.items)) return response.items;
+  if (Array.isArray(response.data)) return response.data;
+  if (isRecord(response.data)) return getContent(response.data as ApiResponse<T[]>);
+
+  return [];
 };
 
 const getMeta = <T>(response: ApiResponse<T[]> | T[], fallbackLength: number) => {
@@ -36,7 +47,8 @@ const getMeta = <T>(response: ApiResponse<T[]> | T[], fallbackLength: number) =>
     };
   }
 
-  const meta = response.metadata ?? response.meta;
+  const nestedResponse = isRecord(response.data) ? response.data as ApiResponse<T[]> : null;
+  const meta = response.metadata ?? response.meta ?? nestedResponse?.metadata ?? nestedResponse?.meta;
   const resolvedSize = meta?.size ?? meta?.itemsPerPage ?? fallbackLength;
   const pageSize = resolvedSize || 10;
 
@@ -51,67 +63,55 @@ const getMeta = <T>(response: ApiResponse<T[]> | T[], fallbackLength: number) =>
 const resolveItem = <T>(response: ApiResponse<T> | T): T => {
   if (response && typeof response === "object" && ("data" in response || "content" in response)) {
     const wrapped = response as ApiResponse<T>;
+    if (isRecord(wrapped.data)) {
+      return resolveItem(wrapped.data as ApiResponse<T>);
+    }
+
     return (wrapped.data ?? wrapped.content) as T;
   }
 
   return response as T;
 };
 
-const toCreatePayload = (data: AlertConfigurationForm) => ({
-  name: data.name,
-  description: data.description,
+const toPayload = (data: ScheduledParameterForm) => ({
+  scheduledJobId: data.scheduledJobId,
   type: data.type,
-  maxRetryCount: data.maxRetryCount,
-  enabled: data.enabled,
-  repeatUnit: data.repeatUnit,
-  repeatValue: data.repeatValue,
+  value: data.value,
 });
 
-const toUpdatePayload = (data: AlertConfigurationForm) => ({
-  ...toCreatePayload(data),
-});
-
-export default class AlertConfigurationService extends HttpService {
-  async getAlertConfigurations(
+export default class ScheduledParameterService extends HttpService {
+  async getScheduledParameters(
+    scheduledJobId: AlertConfigurationId,
     page: number = 0,
-    size: number = 10,
-    sortColumn: string = "createdAt",
-    direction: string = "asc",
-    query_value?: string,
-    query_props?: string
-  ): Promise<{ content: AlertConfigurationListing[]; meta: any }> {
+    size: number = 100
+  ): Promise<{ content: ScheduledParameterListing[]; meta: any }> {
     try {
       const params = new URLSearchParams({
         page: String(page),
         size: String(size),
-        sortColumn,
-        direction,
+        sortColumn: "createdAt",
+        direction: "asc",
       });
 
-      if (query_value && query_props) {
-        params.append("query_props", query_props);
-        params.append("query_value", query_value);
-      }
-
-      const response = await this.get<ApiResponse<AlertConfigurationListing[]> | AlertConfigurationListing[]>(
-        `${ALERT_CONFIGURATIONS_ENDPOINT}?${params.toString()}`
+      const response = await this.get<ApiResponse<ScheduledParameterListing[]> | ScheduledParameterListing[]>(
+        `${SCHEDULED_PARAMETERS_ENDPOINT}/by-scheduled-job/${scheduledJobId}?${params.toString()}`
       );
-      const content = getContent<AlertConfigurationListing>(response);
+      const content = getContent<ScheduledParameterListing>(response);
 
       return {
         content,
         meta: getMeta(response, content.length),
       };
     } catch (error) {
-      console.error("Erro ao buscar configuracoes de alertas:", error);
+      console.error("Erro ao buscar parâmetros do alerta:", error);
       throw this.handleError(error);
     }
   }
 
-  async getAlertConfigurationById(id: AlertConfigurationId): Promise<{ data: AlertConfigurationListing }> {
+  async getScheduledParameterById(id: AlertConfigurationId): Promise<{ data: ScheduledParameterListing }> {
     try {
-      const response = await this.get<ApiResponse<AlertConfigurationListing> | AlertConfigurationListing>(
-        `${ALERT_CONFIGURATIONS_ENDPOINT}/${id}`
+      const response = await this.get<ApiResponse<ScheduledParameterListing> | ScheduledParameterListing>(
+        `${SCHEDULED_PARAMETERS_ENDPOINT}/${id}`
       );
 
       return {
@@ -122,11 +122,11 @@ export default class AlertConfigurationService extends HttpService {
     }
   }
 
-  async createAlertConfiguration(data: AlertConfigurationForm): Promise<ServiceResponse<AlertConfigurationListing>> {
+  async createScheduledParameter(data: ScheduledParameterForm): Promise<ServiceResponse<ScheduledParameterListing>> {
     try {
-      const response = await this.post<ApiResponse<AlertConfigurationListing>>(
-        ALERT_CONFIGURATIONS_ENDPOINT,
-        toCreatePayload(data)
+      const response = await this.post<ApiResponse<ScheduledParameterListing>>(
+        SCHEDULED_PARAMETERS_ENDPOINT,
+        toPayload(data)
       );
 
       return {
@@ -148,11 +148,11 @@ export default class AlertConfigurationService extends HttpService {
     }
   }
 
-  async updateAlertConfiguration(id: AlertConfigurationId, data: AlertConfigurationForm): Promise<ServiceResponse<AlertConfigurationListing>> {
+  async updateScheduledParameter(id: AlertConfigurationId, data: ScheduledParameterForm): Promise<ServiceResponse<ScheduledParameterListing>> {
     try {
-      const response = await this.put<ApiResponse<AlertConfigurationListing> | AlertConfigurationListing>(
-        `${ALERT_CONFIGURATIONS_ENDPOINT}/${id}`,
-        toUpdatePayload(data)
+      const response = await this.put<ApiResponse<ScheduledParameterListing> | ScheduledParameterListing>(
+        `${SCHEDULED_PARAMETERS_ENDPOINT}/${id}`,
+        toPayload(data)
       );
 
       return {
@@ -174,25 +174,11 @@ export default class AlertConfigurationService extends HttpService {
     }
   }
 
-  async executeAlertConfiguration(id: AlertConfigurationId): Promise<AlertConfigurationListing> {
+  async deleteScheduledParameter(id: AlertConfigurationId): Promise<void> {
     try {
-      const response = await this.put<ApiResponse<AlertConfigurationListing> | AlertConfigurationListing>(
-        `${ALERT_CONFIGURATIONS_ENDPOINT}/${id}/execute`,
-        {}
-      );
-
-      return resolveItem(response);
+      await this.delete(`${SCHEDULED_PARAMETERS_ENDPOINT}/${id}`);
     } catch (error) {
-      console.error("Erro ao executar alerta:", error);
-      throw this.handleError(error);
-    }
-  }
-
-  async deleteAlertConfiguration(id: AlertConfigurationId): Promise<void> {
-    try {
-      await this.delete(`${ALERT_CONFIGURATIONS_ENDPOINT}/${id}`);
-    } catch (error) {
-      console.error("Erro ao eliminar alerta:", error);
+      console.error("Erro ao eliminar parâmetro do alerta:", error);
       throw this.handleError(error);
     }
   }
@@ -200,7 +186,7 @@ export default class AlertConfigurationService extends HttpService {
   private handleError(error: any) {
     if (error.response) {
       return {
-        message: error.response.data?.message || "Erro na requisicao",
+        message: error.response.data?.message || "Erro na requisição",
         error: error.response.data?.error || null,
         status: error.response.status,
         response: error.response,
@@ -208,7 +194,7 @@ export default class AlertConfigurationService extends HttpService {
     }
 
     return {
-      message: "Erro de conexao",
+      message: "Erro de conexão",
       error: null,
       status: 503,
     };
@@ -223,7 +209,7 @@ export default class AlertConfigurationService extends HttpService {
         title: "Network Error",
         status: 503,
         detail: "Could not connect to server",
-        instance: ALERT_CONFIGURATIONS_ENDPOINT,
+        instance: SCHEDULED_PARAMETERS_ENDPOINT,
       },
       meta: {
         timestamp: new Date().toISOString(),

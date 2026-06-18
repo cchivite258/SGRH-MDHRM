@@ -34,12 +34,15 @@ const formatDate = (value?: string | null) => {
 };
 
 const getAlertTypeLabel = (type: string) => {
-  return alertTypeOptions.find(option => option.value === type)?.label ?? type;
+  const option = alertTypeOptions.find(option => option.value === type);
+  return option ? t(option.label) : type;
 };
 
 const executionStatusColor = (status?: string | null) => {
+  if (status === "SCHEDULED") return "warning";
   if (status === "SUCCESS") return "success";
   if (status === "FAILURE") return "danger";
+  if (status === "RUNNING") return "info";
   return "secondary";
 };
 
@@ -47,11 +50,35 @@ const getExecutionStatusLabel = (status?: string | null) => {
   if (!status) return "-";
 
   const statusLabels: Record<string, string> = {
+    SCHEDULED: t("t-scheduled-job-status-scheduled"),
     SUCCESS: t("t-cron-execution-status-success"),
     FAILURE: t("t-cron-execution-status-failure"),
+    RUNNING: t("t-scheduled-job-status-running"),
   };
 
   return statusLabels[status] ?? status;
+};
+
+const getRepeatUnitLabel = (unit?: string | null) => {
+  if (!unit) return "";
+
+  const unitLabels: Record<string, string> = {
+    MINUTES: t("t-repeat-unit-minutes"),
+    HOURS: t("t-repeat-unit-hours"),
+    DAYS: t("t-repeat-unit-days"),
+    WEEKS: t("t-repeat-unit-weeks"),
+    MONTHS: t("t-repeat-unit-months"),
+  };
+
+  return unitLabels[unit] ?? unit;
+};
+
+const getScheduleLabel = () => {
+  if (prop.data.repeatValue && prop.data.repeatUnit) {
+    return `${prop.data.repeatValue} ${getRepeatUnitLabel(prop.data.repeatUnit)}`;
+  }
+
+  return prop.data.cronExpression || "-";
 };
 </script>
 
@@ -85,8 +112,8 @@ const getExecutionStatusLabel = (status?: string | null) => {
           </v-col>
 
           <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t("t-interval-days") }}</div>
-            <div>{{ data.intervalDays ?? "-" }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t("t-cron-expression") }}</div>
+            <div>{{ getScheduleLabel() }}</div>
           </v-col>
 
           <v-col cols="12" md="6">
@@ -102,13 +129,13 @@ const getExecutionStatusLabel = (status?: string | null) => {
           <v-col cols="12" md="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t("t-last-execution-status") }}</div>
             <v-chip
-              v-if="data.lastExecutionStatus"
+              v-if="data.lastStatus"
               density="compact"
               label
               variant="tonal"
-              :color="executionStatusColor(data.lastExecutionStatus)"
+              :color="executionStatusColor(data.lastStatus)"
             >
-              <span class="status-chip">{{ getExecutionStatusLabel(data.lastExecutionStatus) }}</span>
+              <span class="status-chip">{{ getExecutionStatusLabel(data.lastStatus) }}</span>
             </v-chip>
             <span v-else>-</span>
           </v-col>

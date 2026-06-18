@@ -16,8 +16,7 @@ export const breadcrumb: BreadcrumbType[] = [
 export const listViewHeader: DataTableHeaderType[] = [
   { title: "name", key: "name", sortable: true },
   { title: "type", key: "type", sortable: true },
-  { title: "interval-days", key: "intervalDays", sortable: true },
-  { title: "last-execution-status", key: "lastExecutionStatus", sortable: true },
+  { title: "last-execution-status", key: "lastStatus", sortable: true },
   { title: "last-execution", key: "lastExecution", sortable: true },
   { title: "next-execution", key: "nextExecution", sortable: true },
   { title: "availability", key: "enabled", sortable: true },
@@ -26,19 +25,11 @@ export const listViewHeader: DataTableHeaderType[] = [
 
 export const alertTypeOptions: MenuSelectItemType[] = [
   {
-    label: "Prestador de serviço a expirar",
+    label: "t-alert-type-service-provider-contract-expiring",
     value: "SERVICE_PROVIDER_EXPIRING",
   },
   {
-    label: "Contrato do prestador de serviço expirado",
-    value: "SERVICE_PROVIDER_CONTRACT_EXPIRED",
-  },
-  {
-    label: "Período de cobertura a expirar",
+    label: "t-alert-type-client-contract-coverage-expiring",
     value: "COVERAGE_PERIOD_EXPIRING",
-  },
-  {
-    label: "Período de cobertura expirado",
-    value: "COVERAGE_PERIOD_EXPIRED",
   },
 ];

@@ -4,8 +4,12 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
-import type { AlertConfigurationForm } from "@/components/settings/alerts/types";
+import type { AlertConfigurationForm, ScheduledJobRepeatUnit } from "@/components/settings/alerts/types";
 import { alertTypeOptions } from "@/components/settings/alerts/listView/utils";
+
+type EditableAlertConfiguration = AlertConfigurationForm & {
+  cronExpression?: string | null;
+};
 
 const localLoading = ref(false);
 const emit = defineEmits(["update:modelValue", "onSubmit"]);
@@ -39,20 +43,78 @@ const dialogValue = computed({
   },
 });
 
+const parseStepValue = (segment?: string) => {
+  if (!segment) return null;
+  const match = segment.match(/^.+\/(\d+)$/);
+  return match ? Number(match[1]) : null;
+};
+
+const getRepeatFromCronExpression = (cronExpression?: string | null): {
+  repeatUnit: ScheduledJobRepeatUnit;
+  repeatValue: number | null;
+} => {
+  const parts = (cronExpression || "").trim().split(/\s+/);
+
+  if (parts.length < 6) {
+    return {
+      repeatUnit: "DAYS",
+      repeatValue: null,
+    };
+  }
+
+  const [, minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  const minuteStep = parseStepValue(minute);
+  const hourStep = parseStepValue(hour);
+  const dayStep = parseStepValue(dayOfMonth);
+  const monthStep = parseStepValue(month);
+  const weekStep = parseStepValue(dayOfWeek);
+
+  if (minuteStep) return { repeatUnit: "MINUTES", repeatValue: minuteStep };
+  if (hourStep) return { repeatUnit: "HOURS", repeatValue: hourStep };
+  if (dayStep) return { repeatUnit: "DAYS", repeatValue: dayStep };
+  if (weekStep) return { repeatUnit: "WEEKS", repeatValue: weekStep };
+  if (monthStep) return { repeatUnit: "MONTHS", repeatValue: monthStep };
+
+  return {
+    repeatUnit: "DAYS",
+    repeatValue: null,
+  };
+};
+
+const cronRepeat = getRepeatFromCronExpression((prop.data as EditableAlertConfiguration).cronExpression);
+
 const id = ref(prop.data.id || "");
 const name = ref(prop.data.name || "");
 const description = ref(prop.data.description || "");
 const type = ref(prop.data.type || "SERVICE_PROVIDER_EXPIRING");
-const intervalDays = ref<number | null>(prop.data.intervalDays ?? null);
+const repeatUnit = ref<ScheduledJobRepeatUnit>(prop.data.repeatUnit || cronRepeat.repeatUnit);
+const repeatValue = ref<number | null>(prop.data.repeatValue ?? cronRepeat.repeatValue);
 const maxRetryCount = ref<number | null>(prop.data.maxRetryCount ?? null);
+const enabled = ref(prop.data.enabled ?? true);
 const errorMessage = computed(() => prop.error);
+
+const repeatUnitOptions = computed(() => [
+  { label: t("t-repeat-unit-minutes"), value: "MINUTES" },
+  { label: t("t-repeat-unit-hours"), value: "HOURS" },
+  { label: t("t-repeat-unit-days"), value: "DAYS" },
+  { label: t("t-repeat-unit-weeks"), value: "WEEKS" },
+  { label: t("t-repeat-unit-months"), value: "MONTHS" },
+]);
+
+const alertTypeSelectOptions = computed(() =>
+  alertTypeOptions.map(option => ({
+    ...option,
+    label: t(option.label),
+  }))
+);
 
 const requiredRules = {
   name: [(v: string) => !!v?.trim() || t("t-please-enter-name")],
   type: [(v: string) => !!v || t("t-please-select-alert-type")],
-  intervalDays: [
-    (v: number | string | null) => v !== null && v !== "" || t("t-please-enter-interval-days"),
-    (v: number | string | null) => Number(v) > 0 || t("t-interval-days-minimum"),
+  repeatUnit: [(v: string) => !!v || t("t-please-select-repeat-unit")],
+  repeatValue: [
+    (v: number | string | null) => v !== null && v !== "" || t("t-please-enter-repeat-value"),
+    (v: number | string | null) => Number(v) > 0 || t("t-repeat-value-minimum"),
   ],
   maxRetryCount: [
     (v: number | string | null) => v !== null && v !== "" || t("t-please-enter-max-retry-count"),
@@ -76,8 +138,10 @@ const onSubmit = async () => {
     name: name.value,
     description: description.value,
     type: type.value,
-    intervalDays: Number(intervalDays.value),
     maxRetryCount: Number(maxRetryCount.value),
+    enabled: enabled.value,
+    repeatUnit: repeatUnit.value,
+    repeatValue: Number(repeatValue.value),
   };
 
   normalizeObjectStringFieldsInPlace(data as Record<string, any>, {
@@ -128,32 +192,44 @@ const onSubmit = async () => {
               <TextField v-model="name" :placeholder="$t('t-enter-name')" :rules="requiredRules.name" />
             </v-col>
 
-            <v-col cols="12" class="mt-n3">
+            <v-col cols="12" lg="6" class="mt-n3">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-type") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect
                 v-model="type"
-                :items="alertTypeOptions"
+                :items="alertTypeSelectOptions"
                 :placeholder="$t('t-select-alert-type')"
                 :rules="requiredRules.type"
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n3">
+            <v-col cols="12" lg="6" class="mt-n3">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t("t-interval-days") }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t("t-repeat-unit") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField
-                v-model.number="intervalDays"
-                type="number"
-                min="1"
-                :placeholder="$t('t-enter-interval-days')"
-                :rules="requiredRules.intervalDays"
+              <MenuSelect
+                v-model="repeatUnit"
+                :items="repeatUnitOptions"
+                :placeholder="$t('t-select-repeat-unit')"
+                :rules="requiredRules.repeatUnit"
               />
             </v-col>
 
-            <v-col cols="12" class="mt-n3">
+            <v-col cols="12" lg="6" class="mt-n3">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-repeat-value") }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField
+                v-model.number="repeatValue"
+                type="number"
+                min="1"
+                :placeholder="$t('t-enter-repeat-value')"
+                :rules="requiredRules.repeatValue"
+              />
+            </v-col>
+
+            <v-col cols="12" lg="6" class="mt-n3">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-max-retry-count") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -177,6 +253,15 @@ const onSubmit = async () => {
                 rows="3"
                 hide-details
               />
+            </v-col>
+
+            <v-col cols="12" class="mt-n3">
+              <div class="font-weight-bold">{{ $t("t-availability") }}</div>
+              <v-checkbox v-model="enabled" density="compact" color="primary" hide-details class="d-inline-flex">
+                <template #label>
+                  <span>{{ $t("t-is-enabled") }}</span>
+                </template>
+              </v-checkbox>
             </v-col>
           </v-row>
         </v-card-text>

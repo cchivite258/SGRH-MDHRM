@@ -31,7 +31,11 @@ const serviceProviderData = computed({
   }
 });
 
-const formatUser = (user: Pick<UserType1, "firstName" | "lastName" | "email">) => {
+const formatUser = (user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+}) => {
   const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
   if (fullName && user.email) return `${fullName} (${user.email})`;
   return fullName || user.email || "-";

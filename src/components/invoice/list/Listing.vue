@@ -276,7 +276,7 @@ const getInvoiceAlerts = (invoice: InvoiceListingType) => {
 
   if (invoice.flag === "EXCEEDS_GLOBAL_LIMIT") alerts.push(t("t-exceeds-global-limit"))
   if (invoice.flag === "INSUFFICIENT_FUNDS") alerts.push(t("t-insufficient-funds"))
-  if (invoice.areItemsFlagged === true) alerts.push(t("t-exceeds-procedure-limit"))
+  if (invoice.areItemsFlagged === true) alerts.push(t("t-items-flagged"))
 
   return alerts
 }

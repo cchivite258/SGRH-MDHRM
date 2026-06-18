@@ -162,6 +162,11 @@ const flagConfig: Record<string, FlagConfig> = {
     icon: 'ph-warning', 
     text: t('t-exceeds-limit') 
   },
+  FREQUENCY_FLAGGED: { 
+    color: 'info', 
+    icon: 'ph-clock-counter-clockwise', 
+    text: t('t-frequency-flagged') 
+  },
   INSUFFICIENT_FUNDS: { 
     color: 'error', 
     icon: 'ph-money', 
@@ -169,8 +174,8 @@ const flagConfig: Record<string, FlagConfig> = {
   },
   default: { 
     color: 'info', 
-    icon: '', 
-    text: '' 
+    icon: 'ph-warning-circle', 
+    text: t('t-unknown-flag') 
   }
 };
 
@@ -553,9 +558,28 @@ onMounted(() => {
 
 .flag-border-EXCEEDS_LIMIT {
   border-left: 4px solid orange;
+  background-color: rgba(255, 152, 0, 0.08);
+}
+
+.flag-border-EXCEEDS_LIMIT > td {
+  background-color: rgba(255, 152, 0, 0.08);
+}
+
+.flag-border-FREQUENCY_FLAGGED {
+  border-left: 4px solid #2196f3;
+  background-color: rgba(33, 150, 243, 0.08);
+}
+
+.flag-border-FREQUENCY_FLAGGED > td {
+  background-color: rgba(33, 150, 243, 0.08);
 }
 
 .flag-border-INSUFFICIENT_FUNDS {
   border-left: 4px solid red;
+  background-color: rgba(244, 67, 54, 0.08);
+}
+
+.flag-border-INSUFFICIENT_FUNDS > td {
+  background-color: rgba(244, 67, 54, 0.08);
 }
 </style>

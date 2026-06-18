@@ -32,6 +32,7 @@ import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
 import BudgetService from "@/app/http/services/institution/budgetService";
 import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
+import ScheduledParameterService from "@/app/http/services/settings/scheduledParameterService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -99,6 +100,7 @@ const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
 const providerTypeService = new ProviderTypeService();
 const alertConfigurationService = new AlertConfigurationService();
+const scheduledParameterService = new ScheduledParameterService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -135,6 +137,7 @@ export {
     healthPlanEmployeeService,
     providerTypeService,
     alertConfigurationService,
+    scheduledParameterService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,

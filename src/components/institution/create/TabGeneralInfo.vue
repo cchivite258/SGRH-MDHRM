@@ -216,15 +216,15 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n6">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" md="4">
             <div class="font-weight-bold mb-2">{{ $t('t-institution-type') }}</div>
             <TextField :model-value="selectedEntity?.institutionType?.name || ''" :disabled="true" />
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" md="4">
             <div class="font-weight-bold mb-2">NUIT</div>
             <TextField v-model="institutionData.incomeTaxNumber" :disabled="true" />
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" md="4">
             <div class="font-weight-bold mb-2">{{ $t('t-phone-number') }}</div>
             <TextField v-model="institutionData.phone" :disabled="true" />
           </v-col>
