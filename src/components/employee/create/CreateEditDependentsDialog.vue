@@ -36,6 +36,7 @@ type AttachmentUploadRow = {
 };
 
 const PROOF_OF_ENROLLMENT: DependentDocumentType = "PROOF_OF_ENROLLMENT";
+const MAX_DEPENDENT_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024;
 
 const props = defineProps({
   modelValue: {
@@ -69,6 +70,7 @@ const localLoading = ref(false);
 const saveLoading = ref(false);
 const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
+let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const id = ref("");
 const firstName = ref("");
@@ -102,7 +104,21 @@ const createAttachmentUploadRow = (): AttachmentUploadRow => ({
 });
 
 watch(() => props.data, (newData) => {
-  if (!newData) return;
+  if (alertTimeout) {
+    clearTimeout(alertTimeout);
+    alertTimeout = null;
+  }
+
+  errorMsg.value = "";
+  serverErrors.value = {};
+  attachmentUploads.value = [];
+  currentAttachments.value = [];
+
+  if (!newData) {
+    id.value = "";
+    return;
+  }
+
   id.value = newData.id || "";
   firstName.value = newData.firstName || "";
   middleName.value = newData.middleName || "";
@@ -122,8 +138,6 @@ watch(() => props.data, (newData) => {
   idCardIssuanceDate.value = newData.idCardIssuanceDate ? new Date(newData.idCardIssuanceDate) : undefined;
   isLifeTimeCard.value = !!newData.isLifeTimeCard;
   enabled.value = newData.enabled !== undefined ? newData.enabled : true;
-  attachmentUploads.value = [];
-  currentAttachments.value = [];
 }, { immediate: true });
 
 watch(
@@ -216,7 +230,6 @@ const requiredRules = {
 };
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const toast = useToast();
 const getServerErrors = (field: string) => serverErrors.value[field] || [];
 const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
@@ -316,6 +329,17 @@ const hasRequiredRelationshipDocuments = computed(() => {
 });
 
 const pendingUploadsValidationMessage = computed(() => {
+  const hasOversizedFile = attachmentUploads.value.some((item) =>
+    item.files.some((fileItem) =>
+      fileItem?.file instanceof File
+      && fileItem.file.size > MAX_DEPENDENT_DOCUMENT_SIZE_BYTES
+    )
+  );
+
+  if (hasOversizedFile) {
+    return t('t-dependent-document-max-file-size');
+  }
+
   const hasIncompleteRow = attachmentUploads.value.some((item) => {
     const selectedFile = item.files.find((fileItem) => fileItem?.file instanceof File)?.file || null;
     return (!!item.dependentDocumentType && !selectedFile) || (!item.dependentDocumentType && !!selectedFile);
