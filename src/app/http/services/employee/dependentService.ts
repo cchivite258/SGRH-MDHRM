@@ -259,8 +259,26 @@ export default class DependentEmployeeService extends HttpService {
       formData.append('file', file);
       formData.append('dependentDocumentType', dependentDocumentType);
 
+      const endpoint = `/human-resource/employees-dependents/attachments/${dependentId}/attach-file`;
+      console.log('[Dependent attachment upload] Request:', {
+        method: 'PUT',
+        endpoint,
+        dependentId,
+        dependentDocumentType,
+        file: {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          lastModified: file.lastModified
+        },
+        formData: {
+          file: formData.get('file'),
+          dependentDocumentType: formData.get('dependentDocumentType')
+        }
+      });
+
       const response = await this.putFile<ApiResponse<DependentAttachmentType>>(
-        `/human-resource/employees-dependents/attachments/${dependentId}/attach-file`,
+        endpoint,
         formData
       );
 

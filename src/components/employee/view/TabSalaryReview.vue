@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
     </v-btn>
   </v-card-actions>
 
-  <v-dialog v-if="allowEdit" v-model="dialog" width="700">
+  <v-dialog v-if="allowEdit" v-model="dialog" width="700" persistent>
     <v-form ref="formRef" @submit.prevent="submitSalaryUpdate">
       <Card :title="$t('t-change-salary')" title-class="py-0" style="overflow: hidden">
         <template #title-action>
