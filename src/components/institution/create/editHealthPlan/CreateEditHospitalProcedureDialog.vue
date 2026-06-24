@@ -42,7 +42,7 @@ const props = defineProps({
       hospitalProcedureGroupLimit: "",
       belongsToGroup: false,
       limitType: "NONE",
-      frequencyInterval: 0,
+      frequencyInterval: null,
       allowedFrequencyUse: 0,
       hospitalProcedureType: "",
       companyHealthPlan: "",
@@ -66,7 +66,7 @@ const groupPercentage = ref<number | null>(null);
 const hospitalProcedureGroupLimit = ref("");
 const belongsToGroup = ref(false);
 const limitType = ref("NONE");
-const frequencyInterval = ref<number | null>(0);
+const frequencyInterval = ref<number | null>(null);
 const allowedFrequencyUse = ref<number | null>(0);
 const hospitalProcedureType = ref("");
 const companyHealthPlan = ref(""); 
@@ -84,9 +84,11 @@ const hospitalProcedureLimitTypeOptions = computed<MenuSelectItemType[]>(() => [
   { label: t("t-limit-type-year"), value: "YEAR" }
 ]);
 
-const getHospitalProcedureGroupValue = (group: HospitalProcedureListingType["hospitalProcedureGroup"]) => {
+const getHospitalProcedureGroupValue = (
+  group: HospitalProcedureListingType["hospitalProcedureGroup"] | number
+) => {
   if (!group) return "";
-  if (typeof group === "string") return group;
+  if (typeof group === "string" || typeof group === "number") return String(group);
   return group.id != null ? String(group.id) : "";
 };
 
@@ -97,13 +99,15 @@ watch(() => props.data, (newData) => {
     fixedAmount.value = newData.fixedAmount ?? 0;
     percentage.value = newData.percentage ?? 0;
     limitTypeDefinition.value = newData.limitTypeDefinition || "";
-    hospitalProcedureGroup.value = getHospitalProcedureGroupValue(newData.hospitalProcedureGroup) || (newData as any).hospitalProcedureGroupId || "";
+    const groupId = getHospitalProcedureGroupValue(newData.hospitalProcedureGroup)
+      || (newData as any).hospitalProcedureGroupId;
+    hospitalProcedureGroup.value = groupId != null ? String(groupId) : "";
     groupFixedAmount.value = newData.groupFixedAmount ?? null;
     groupPercentage.value = newData.groupPercentage ?? null;
     hospitalProcedureGroupLimit.value = newData.hospitalProcedureGroupLimit ?? "";
     belongsToGroup.value = newData.belongsToGroup ?? false;
     limitType.value = newData.limitType || "NONE";
-    frequencyInterval.value = newData.frequencyInterval ?? 0;
+    frequencyInterval.value = newData.frequencyInterval ?? null;
     allowedFrequencyUse.value = newData.allowedFrequencyUse ?? 0;
     
     if (typeof newData.hospitalProcedureType === 'object' && newData.hospitalProcedureType !== null) {
@@ -153,9 +157,17 @@ watch(belongsToGroup, (isGroupBased) => {
 });
 
 const isCreate = computed(() => !id.value);
+const hasUsageLimit = computed(() => !!limitType.value && limitType.value !== "NONE");
 const hasSelectedAmountLimit = computed(() => {
   const selectedLimit = belongsToGroup.value ? hospitalProcedureGroupLimit.value : limitTypeDefinition.value;
   return selectedLimit === "FIXED_AMOUNT" || selectedLimit === "PERCENTAGE";
+});
+
+watch(limitType, (selectedLimitType) => {
+  if (!selectedLimitType || selectedLimitType === "NONE") {
+    frequencyInterval.value = null;
+    allowedFrequencyUse.value = 0;
+  }
 });
 
 const dialogValue = computed({
@@ -225,6 +237,20 @@ const requiredRules = {
       return true;
     }
   ],
+  frequencyInterval: [
+    (v: number | null) => {
+      if (!hasUsageLimit.value) return true;
+      if (v === undefined || v === null) return t('t-please-enter-frequency-interval');
+      return Number(v) > 0 || t('t-frequency-interval-minimum');
+    }
+  ],
+  allowedFrequencyUse: [
+    (v: number | null) => {
+      if (!hasUsageLimit.value) return true;
+      if (v === undefined || v === null) return t('t-please-enter-allowed-frequency-use');
+      return Number(v) > 0 || t('t-allowed-frequency-use-minimum');
+    }
+  ],
 
 };
 
@@ -244,7 +270,7 @@ const heathPlanOptions = computed(() => {
 
 const hospitalProcedureGroups = computed(() => {
   return (hospitalProcedureGroupStore.hospital_procedure_groups_dropdown || []).map((item: HospitalProcedureGroupListing) => ({
-    value: item.id,
+    value: String(item.id),
     label: item.name,
   }));
 });
@@ -297,10 +323,10 @@ const onSubmit = async () => {
     groupFixedAmount: belongsToGroup.value ? groupFixedAmount.value : null,
     groupPercentage: belongsToGroup.value ? groupPercentage.value : null,
     hospitalProcedureGroupLimit: belongsToGroup.value ? (hospitalProcedureGroupLimit.value || null) : null,
-    belongsToGroup: belongsToGroup.value,
+    ...(isCreate.value ? { belongsToGroup: belongsToGroup.value } : {}),
     limitType: limitType.value || "NONE",
-    frequencyInterval: frequencyInterval.value,
-    allowedFrequencyUse: allowedFrequencyUse.value,
+    frequencyInterval: hasUsageLimit.value ? frequencyInterval.value : null,
+    allowedFrequencyUse: allowedFrequencyUse.value ?? 0,
     hospitalProcedureType: belongsToGroup.value ? undefined : hospitalProcedureType.value,
     companyHealthPlan: companyHealthPlan.value,
     company: props.data?.company || "",
@@ -373,7 +399,7 @@ onMounted(async () => {
         <v-divider /> 
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
-        <v-card-text >
+        <v-card-text class="hospital-procedure-dialog-content">
           <!--<v-row class="">
             <v-col cols="12" lg="12">
               <div class="font-weight-bold text-caption mb-1">
@@ -386,7 +412,8 @@ onMounted(async () => {
           <v-row class="">
             <v-col cols="12" lg="12">
               <div class="font-weight-bold text-caption mb-1">{{ $t('t-belongs-to-group') }}</div>
-              <v-checkbox v-model="belongsToGroup" density="compact" color="primary" class="d-inline-flex">
+              <v-checkbox v-model="belongsToGroup" density="compact" color="primary" class="d-inline-flex"
+                :disabled="!isCreate">
                 <template #label>
                   <span>{{ $t('t-belongs-to-group') }}?</span>
                 </template>
@@ -409,7 +436,7 @@ onMounted(async () => {
               <MenuSelect v-model="hospitalProcedureGroup" :items="hospitalProcedureGroups"
                 :loading="hospitalProcedureGroupStore.loading"
                 :rules="applyServerErrorsToRules('hospitalProcedureGroup', requiredRules.hospitalProcedureGroup)" 
-                :error-messages="getServerErrors('hospitalProcedureGroup')" />
+                :error-messages="getServerErrors('hospitalProcedureGroup')" :disabled="!isCreate" />
             </v-col>
           </v-row>
           <v-row class="mt-n9" v-if="belongsToGroup">
@@ -468,16 +495,24 @@ onMounted(async () => {
                 :error-messages="getServerErrors('limitType')" />
             </v-col>
           </v-row>
-          <v-row class="mt-n6">
+          <v-row v-if="hasUsageLimit" class="mt-n6">
             <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">{{ $t('t-frequency-interval') }}</div>
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-frequency-interval') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
               <TextField v-model.number="frequencyInterval" type="number"
-                :placeholder="$t('t-enter-frequency-interval')" />
+                :placeholder="$t('t-enter-frequency-interval')"
+                :rules="applyServerErrorsToRules('frequencyInterval', requiredRules.frequencyInterval)"
+                :error-messages="getServerErrors('frequencyInterval')" />
             </v-col>
             <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">{{ $t('t-allowed-frequency-use') }}</div>
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-allowed-frequency-use') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
               <TextField v-model.number="allowedFrequencyUse" type="number"
-                :placeholder="$t('t-enter-allowed-frequency-use')" />
+                :placeholder="$t('t-enter-allowed-frequency-use')"
+                :rules="applyServerErrorsToRules('allowedFrequencyUse', requiredRules.allowedFrequencyUse)"
+                :error-messages="getServerErrors('allowedFrequencyUse')" />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -507,3 +542,12 @@ onMounted(async () => {
     </v-form>
   </v-dialog>
 </template>
+
+<style scoped>
+.hospital-procedure-dialog-content {
+  max-height: min(70vh, calc(100dvh - 200px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+</style>

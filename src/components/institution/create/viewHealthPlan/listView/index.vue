@@ -313,6 +313,7 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
 };
 
 const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
+const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "-" : getDisplayOptionalNumber(value);
 
 const getUsageLimitTypeLabel = (value?: string | null) => {
   const labels: Record<string, string> = {
@@ -450,7 +451,7 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                     <td>{{ getDisplayPercentage(item) }}</td>
                     <td>{{ getUsageLimitTypeLabel(item.limitType) }}</td>
                     <td>{{ getDisplayOptionalNumber(item.frequencyInterval) }}</td>
-                    <td>{{ getDisplayOptionalNumber(item.allowedFrequencyUse) }}</td>
+                    <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
                     <td>
                       <TableActionView @onView="onViewClick(item)" />
                     </td>

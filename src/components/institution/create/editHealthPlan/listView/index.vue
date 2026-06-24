@@ -16,6 +16,7 @@ import { useI18n } from "vue-i18n";
 import { useRoute } from 'vue-router';
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
+import { useHospitalProcedureGroupStore } from '@/store/baseTables/hospitalProcedureGroupStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
@@ -38,6 +39,7 @@ const route = useRoute();
 const healthPlanStore = useHealthPlanStore();
 const hospitalProcedureStore = useHospitalProcedureStore();
 const coveragePeriodStore = useCoveragePeriodStore();
+const hospitalProcedureGroupStore = useHospitalProcedureGroupStore();
 
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -162,6 +164,7 @@ onMounted(async () => {
 
         // Carrega períodos de cobertura
         await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, 10000000);
+        await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
 
         healthPlanFormData.value = {
           id: healthPlan.id,
@@ -309,7 +312,15 @@ const onSubmitHospitalProcedure = async (
 
 // Visualização de posição
 const onViewClick = (data: HospitalProcedureListingType) => {
-  hospitalProcedureFormData.value = { ...data };
+  const group = data.hospitalProcedureGroup as string | number | { id?: string | number } | null | undefined;
+  const groupId = typeof group === "object" && group !== null ? group.id : group;
+
+  hospitalProcedureFormData.value = {
+    ...data,
+    hospitalProcedureGroup: data.belongsToGroup && groupId != null
+      ? { id: groupId, name: getHospitalProcedureGroupName(data) }
+      : data.hospitalProcedureGroup
+  };
   viewDialog.value = true;
 };
 
@@ -433,10 +444,17 @@ const getLimitTypeLabel = (value: string) => {
 const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
   if (!item.belongsToGroup) return "Sem grupo";
 
-  const group = item.hospitalProcedureGroup as string | { name?: string; id?: string | number } | null | undefined;
+  const group = item.hospitalProcedureGroup as string | number | { name?: string; id?: string | number } | null | undefined;
   if (!group) return "Grupo sem nome";
-  if (typeof group === "string") return group;
-  return group.name || (group.id != null ? String(group.id) : "Grupo sem nome");
+
+  if (typeof group === "object" && group.name) return group.name;
+
+  const groupId = typeof group === "object" ? group.id : group;
+  const matchingGroup = hospitalProcedureGroupStore.hospital_procedure_groups_dropdown.find(
+    option => String(option.id) === String(groupId)
+  );
+
+  return matchingGroup?.name || "Grupo sem nome";
 };
 
 const getDisplayFixedAmount = (item: HospitalProcedureListingType) => {
@@ -455,6 +473,7 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
 };
 
 const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
+const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "-" : getDisplayOptionalNumber(value);
 
 const getUsageLimitTypeLabel = (value?: string | null) => {
   const labels: Record<string, string> = {
@@ -609,7 +628,7 @@ const getUsageLimitTypeLabel = (value?: string | null) => {
                     <td>{{ getDisplayPercentage(item) }}</td>
                     <td>{{ getUsageLimitTypeLabel(item.limitType) }}</td>
                     <td>{{ getDisplayOptionalNumber(item.frequencyInterval) }}</td>
-                    <td>{{ getDisplayOptionalNumber(item.allowedFrequencyUse) }}</td>
+                    <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
                     <td>
                       <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
                         @onDelete="onDelete(item.id)" />

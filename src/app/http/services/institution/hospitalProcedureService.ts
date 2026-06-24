@@ -16,10 +16,30 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+type HospitalProcedureUpdatePayload = {
+  limitTypeDefinition?: string;
+  fixedAmount?: number;
+  percentage?: number;
+  groupFixedAmount?: number;
+  groupPercentage?: number;
+  hospitalProcedureGroupLimit?: string;
+  limitType: string;
+  frequencyInterval?: number;
+  allowedFrequencyUse: number;
+  enabled: boolean;
+};
+
 const CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT = '/administration/contract/allowed-hospital-procedures';
 
 const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
 const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === "") return undefined;
+
+  const normalizedValue = Number(value);
+  return Number.isFinite(normalizedValue) ? normalizedValue : undefined;
+};
 
 const normalizeHospitalProcedure = <T extends Record<string, any>>(item: T): T => ({
   ...item,
@@ -299,19 +319,17 @@ export default class HospitalProcedureService extends HttpService {
 
       // Corpo da requisiÃ§Ã£o conforme especificado
       const rawPayload = {
-        fixedAmount: hospitalProcedureData.fixedAmount,
-        percentage: hospitalProcedureData.percentage,
-        limitTypeDefinition: hospitalProcedureData.limitTypeDefinition,
-        hospitalProcedureGroup: hospitalProcedureData.hospitalProcedureGroup,
-        groupFixedAmount: hospitalProcedureData.groupFixedAmount,
-        groupPercentage: hospitalProcedureData.groupPercentage,
-        hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit,
-        belongsToGroup: !!hospitalProcedureData.belongsToGroup,
-        limitType: hospitalProcedureData.limitType,
-        frequencyInterval: hospitalProcedureData.frequencyInterval,
-        allowedFrequencyUse: hospitalProcedureData.allowedFrequencyUse,
-        enabled: hospitalProcedureData.enabled
-      };
+        limitTypeDefinition: hospitalProcedureData.limitTypeDefinition || undefined,
+        fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
+        percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
+        groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
+        hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit || undefined,
+        limitType: hospitalProcedureData.limitType || "NONE",
+        frequencyInterval: toOptionalNumber(hospitalProcedureData.frequencyInterval),
+        allowedFrequencyUse: toOptionalNumber(hospitalProcedureData.allowedFrequencyUse) ?? 0,
+        enabled: Boolean(hospitalProcedureData.enabled)
+      } satisfies HospitalProcedureUpdatePayload;
       const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
 
       const response = await this.put<ApiResponse<HospitalProcedureListingType>>(`${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/${id}`, payload);
