@@ -129,10 +129,15 @@ const toggleSelection = (item: HospitalProcedureTypeListing) => {
 
   if (index === -1) {
     selectedHospitalProcedureTypeIds.value = [...selectedHospitalProcedureTypeIds.value, item.id];
-    return;
+  } else {
+    selectedHospitalProcedureTypeIds.value = selectedHospitalProcedureTypeIds.value.filter(
+      (id) => String(id) !== String(item.id)
+    );
   }
 
-  selectedHospitalProcedureTypeIds.value = selectedHospitalProcedureTypeIds.value.filter((id) => String(id) !== String(item.id));
+  // Mantem o v-model da tabela alinhado com a fonte de verdade dos IDs.
+  // Sem isto, a selecao antiga pode voltar a adicionar um item desmarcado.
+  syncVisibleSelection();
 };
 
 const fetchHospitalProcedureTypes = async ({ page, itemsPerPage: perPage, sortBy, search }: any) => {
@@ -210,15 +215,13 @@ const normalizeId = (value: string | number) => {
 };
 
 const saveRelationsByDeleteInsert = async () => {
-  const { content } = await hospitalProcedureGroupingService.getHospitalProcedureGroupings();
+  const { content: currentGroupRelations } = await hospitalProcedureGroupingService.getHospitalProcedureGroupings(
+    groupId.value,
+    "hospitalProcedureGroup.id",
+    "hospitalProcedureType,hospitalProcedureGroup"
+  );
 
-  const currentGroupRelations = (content || []).filter((item: HospitalProcedureGroupingListing) => {
-    const byDirect = item.hospitalProcedureGroupId != null && String(item.hospitalProcedureGroupId) === groupId.value;
-    const byNested = item.hospitalProcedureGroup?.id != null && String(item.hospitalProcedureGroup.id) === groupId.value;
-    return byDirect || byNested;
-  });
-
-  for (const relation of currentGroupRelations) {
+  for (const relation of currentGroupRelations || []) {
     await hospitalProcedureGroupingService.deleteHospitalProcedureGrouping(relation.id);
   }
 

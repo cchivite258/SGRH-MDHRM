@@ -13,10 +13,15 @@ export default class HospitalProcedureGroupingService extends HttpService {
   async getHospitalProcedureGroupings(
     query_value?: string | number,
     query_props?: string,
-    includes?: string
+    includes?: string,
+    page: number = 0,
+    size: number = 10000000
   ): Promise<{ content: HospitalProcedureGroupingListing[]; meta: any }> {
     try {
-      const queryParams: string[] = [];
+      const queryParams: string[] = [
+        `page=${page}`,
+        `size=${size}`
+      ];
 
       if (query_value !== undefined && query_value !== null && query_value !== "" && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
