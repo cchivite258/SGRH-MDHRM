@@ -23,6 +23,7 @@ import InvoiceItemService from "@/app/http/services/invoice/invoiceItemService";
 import CountryService from "@/app/http/services/baseTables/country/countryService";
 import CurrencyService from "@/app/http/services/baseTables/currency/currencyService";
 import HospitalProcedureTypeService from "@/app/http/services/baseTables/hospitalProcedureType/hospitalProcedureTypeService";
+import HospitalProcedureCategoryService from "@/app/http/services/baseTables/hospitalProcedureCategory/hospitalProcedureCategoryService";
 import HospitalProcedureGroupService from "@/app/http/services/baseTables/hospitalProcedureGroup/hospitalProcedureGroupService";
 import HospitalProcedureGroupingService from "@/app/http/services/baseTables/hospitalProcedureGrouping/hospitalProcedureGroupingService";
 import InstitutionTypeService from "@/app/http/services/baseTables/institutionTypes/institutionTypeService";
@@ -92,6 +93,7 @@ const employeeFrequencyTrendReportService = new EmployeeFrequencyTrendReportServ
 const countryService = new CountryService();
 const currencyService = new CurrencyService();
 const hospitalProcedureTypeService = new HospitalProcedureTypeService();
+const hospitalProcedureCategoryService = new HospitalProcedureCategoryService();
 const hospitalProcedureGroupService = new HospitalProcedureGroupService();
 const hospitalProcedureGroupingService = new HospitalProcedureGroupingService();
 const institutionTypeService = new InstitutionTypeService();
@@ -113,6 +115,7 @@ export {
     countryService, 
     currencyService, 
     hospitalProcedureTypeService, 
+    hospitalProcedureCategoryService,
     hospitalProcedureGroupService,
     hospitalProcedureGroupingService,
     institutionTypeService, 
