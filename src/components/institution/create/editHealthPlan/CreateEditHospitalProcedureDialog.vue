@@ -258,7 +258,22 @@ const hospitalProceduresTypes = computed(() => {
   return (hospitalProcedureTypeStore.hospital_procedure_types_dropdown || []).map((item: HospitalProcedureTypeListing) => ({
     value: item.id,
     label: item.code ? `${item.code} - ${item.name}` : item.name,
+    categoryName: item.categoryName,
   }));
+});
+
+const selectedHospitalProcedureCategoryName = computed(() => {
+  const dataProcedureType = props.data?.hospitalProcedureType;
+  const selectedProcedureType = (hospitalProcedureTypeStore.hospital_procedure_types_dropdown || []).find(
+    (item: HospitalProcedureTypeListing) => String(item.id) === String(hospitalProcedureType.value)
+  );
+
+  if (selectedProcedureType?.categoryName) return selectedProcedureType.categoryName;
+  if (typeof dataProcedureType === "object" && dataProcedureType !== null) {
+    return dataProcedureType.categoryName || "-";
+  }
+
+  return "-";
 });
 
 const heathPlanOptions = computed(() => {
@@ -428,6 +443,10 @@ onMounted(async () => {
               <MenuSelect v-model="hospitalProcedureType" :items="hospitalProceduresTypes"
                 :loading="hospitalProcedureTypeStore.loading" :rules="requiredRules.hospitalProcedureType"
                 :error-messages="getServerErrors('hospitalProcedureType')" :disabled="!isCreate" />
+            </v-col>
+            <v-col cols="12" lg="12" v-if="!belongsToGroup">
+              <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-category') }}</div>
+              <TextField :model-value="selectedHospitalProcedureCategoryName" disabled />
             </v-col>
             <v-col cols="12" lg="12" v-if="belongsToGroup">
               <div class="font-weight-bold text-caption mb-1">

@@ -97,6 +97,11 @@ const dialogValue = computed({
           </v-col>
 
           <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-category') }}</div>
+            <div>{{ props.data?.hospitalProcedureType?.categoryName || '-' }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type-definition') }}</div>
             <div>{{ getLimitTypeLabel(props.data?.limitTypeDefinition || '') || '-' }}</div>
           </v-col>

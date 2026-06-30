@@ -163,6 +163,7 @@ export type InvoiceItemInsertType = {
     description: string;
     companyAllowedHospitalProcedure: string | undefined;
     companyAllowedHospitalProcedureLabel?: string;
+    companyAllowedHospitalProcedureCategoryName?: string;
     invoice: string | undefined;
     totalAmount: number;
     flag?: InvoiceItemFlag;

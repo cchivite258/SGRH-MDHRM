@@ -359,12 +359,11 @@ export const historyHeader: TableHeaderType[] = [
 export const hospitalProcedureHeader: TableHeaderType[] = [
   //{ title: "id" },
   { title: "procedure-type", key: "hospitalProcedureType", sortable: true },
+  { title: "hospital-procedure-category", key: "hospitalProcedureType.categoryName", sortable: true },
   { title: "procedure-group", key: "hospitalProcedureGroup", sortable: false },
   { title: "limit-type-definition", key: "limitTypeDefinition", sortable: true },
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
   { title: "percentage", key: "percentage", sortable: true },
-  { title: "limit-type", key: "limitType", sortable: true },
-  { title: "frequency-interval", key: "frequencyInterval", sortable: true },
   { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
   { title: "action", sortable: false, align: "center" }
 ];

@@ -197,9 +197,12 @@ const fetchHospitalProcedureTypes = async ({ page, itemsPerPage: perPage, sortBy
 const fetchCategory = async () => {
   if (!categoryId.value) return;
 
+  const requestedCategoryId = categoryId.value;
   loadingCategory.value = true;
   try {
-    const response = await hospitalProcedureCategoryService.getHospitalProcedureCategoryById(categoryId.value);
+    const response = await hospitalProcedureCategoryService.getHospitalProcedureCategoryById(requestedCategoryId);
+    if (categoryId.value !== requestedCategoryId) return;
+
     const category = (response as any)?.data ?? response;
 
     form.value = {
@@ -217,12 +220,22 @@ const extractProcedureTypeId = (relation: HospitalProcedureCategoryTypesListing)
   return relation.hospitalProcedureType?.id ?? relation.hospitalProcedureTypeId ?? null;
 };
 
+const resetProcedureTypeSelection = () => {
+  currentRelations.value = [];
+  selectedHospitalProcedureTypes.value = [];
+  selectedHospitalProcedureTypeIds.value = [];
+};
+
 const fetchRelations = async () => {
   if (!categoryId.value) return;
 
+  const requestedCategoryId = categoryId.value;
+  resetProcedureTypeSelection();
   loadingRelations.value = true;
   try {
-    const { content } = await hospitalProcedureCategoryTypesService.getHospitalProcedureCategoryTypesByCategory(categoryId.value);
+    const { content } = await hospitalProcedureCategoryTypesService.getHospitalProcedureCategoryTypesByCategory(requestedCategoryId);
+    if (categoryId.value !== requestedCategoryId) return;
+
     currentRelations.value = content || [];
     selectedHospitalProcedureTypeIds.value = currentRelations.value
       .map((item) => extractProcedureTypeId(item))
@@ -310,6 +323,19 @@ const onSave = async () => {
 const onBack = () => {
   router.push({ path: "/baseTable/hospitalprocedurecategory/list" });
 };
+
+watch(categoryId, async (newCategoryId, oldCategoryId) => {
+  if (!newCategoryId || newCategoryId === oldCategoryId) return;
+
+  resetProcedureTypeSelection();
+
+  try {
+    await fetchCategory();
+    await fetchRelations();
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
+  }
+});
 
 onMounted(async () => {
   try {
