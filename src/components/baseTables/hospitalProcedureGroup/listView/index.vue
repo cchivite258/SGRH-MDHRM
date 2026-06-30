@@ -13,6 +13,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import { hospitalProcedureGroupService } from "@/app/http/httpServiceProvider";
 import { useHospitalProcedureGroupStore } from "@/store/baseTables/hospitalProcedureGroupStore";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import type { OptionType } from "@/app/common/types/option.type";
 import { HospitalProcedureGroupListing, HospitalProcedureGroupOption } from "@/components/baseTables/hospitalProcedureGroup/types";
 import { listViewHeader } from "@/components/baseTables/hospitalProcedureGroup/listView/utils";
 
@@ -33,6 +34,12 @@ const currentPage = ref(1);
 const selectedHospitalProcedureGroups = ref<any[]>([]);
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const actionOptions = computed<OptionType[]>(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-edit-and-group-procedures"), value: "edit", icon: "ph-pencil-simple" },
+  { title: t("t-delete"), value: "delete", icon: "ph-trash" }
+]);
 
 const loadingList = computed(() => hospitalProcedureGroupStore.loading);
 const totalItems = computed(() => hospitalProcedureGroupStore.pagination.totalElements);
@@ -160,7 +167,7 @@ const onConfirmDelete = async () => {
   <ListingPageShell
     class="base-table-listing-page"
     :title="$t('t-hospital-procedure-group-list')"
-    subtitle="Consulte, pesquise e faça a gestão dos grupos de procedimentos hospitalares registados."
+    :subtitle="$t('t-hospital-procedure-group-list-subtitle')"
     :action-label="$t('t-add-hospital-procedure-group')"
     :page="currentPage"
     :items-per-page="itemsPerPage"
@@ -200,7 +207,12 @@ const onConfirmDelete = async () => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="base-table-listing-page__actions-cell">
-            <TableActionMenu @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+            <TableActionMenu
+              :menu-items="actionOptions"
+              @onEdit="onCreateEditClick(item)"
+              @onView="onViewClick(item)"
+              @onDelete="onDelete(item.id)"
+            />
           </td>
         </tr>
       </template>
@@ -215,7 +227,7 @@ const onConfirmDelete = async () => {
               {{ $t('t-search-not-found-message') }}
             </div>
             <div class="base-table-listing-page__empty-subtitle mt-1">
-              Ajuste a pesquisa e tente novamente.
+              {{ $t('t-adjust-search-and-try-again') }}
             </div>
           </td>
         </tr>

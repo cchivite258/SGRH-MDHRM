@@ -24,6 +24,7 @@ import CountryService from "@/app/http/services/baseTables/country/countryServic
 import CurrencyService from "@/app/http/services/baseTables/currency/currencyService";
 import HospitalProcedureTypeService from "@/app/http/services/baseTables/hospitalProcedureType/hospitalProcedureTypeService";
 import HospitalProcedureCategoryService from "@/app/http/services/baseTables/hospitalProcedureCategory/hospitalProcedureCategoryService";
+import HospitalProcedureCategoryTypesService from "@/app/http/services/baseTables/hospitalProcedureCategoryTypes/hospitalProcedureCategoryTypesService";
 import HospitalProcedureGroupService from "@/app/http/services/baseTables/hospitalProcedureGroup/hospitalProcedureGroupService";
 import HospitalProcedureGroupingService from "@/app/http/services/baseTables/hospitalProcedureGrouping/hospitalProcedureGroupingService";
 import InstitutionTypeService from "@/app/http/services/baseTables/institutionTypes/institutionTypeService";
@@ -94,6 +95,7 @@ const countryService = new CountryService();
 const currencyService = new CurrencyService();
 const hospitalProcedureTypeService = new HospitalProcedureTypeService();
 const hospitalProcedureCategoryService = new HospitalProcedureCategoryService();
+const hospitalProcedureCategoryTypesService = new HospitalProcedureCategoryTypesService();
 const hospitalProcedureGroupService = new HospitalProcedureGroupService();
 const hospitalProcedureGroupingService = new HospitalProcedureGroupingService();
 const institutionTypeService = new InstitutionTypeService();
@@ -116,6 +118,7 @@ export {
     currencyService, 
     hospitalProcedureTypeService, 
     hospitalProcedureCategoryService,
+    hospitalProcedureCategoryTypesService,
     hospitalProcedureGroupService,
     hospitalProcedureGroupingService,
     institutionTypeService, 

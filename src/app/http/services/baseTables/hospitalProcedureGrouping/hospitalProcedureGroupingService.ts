@@ -1,5 +1,6 @@
 import HttpService from "@/app/http/httpService";
 import type {
+  HospitalProcedureGroupingByCategoryInsert,
   HospitalProcedureGroupingInsert,
   HospitalProcedureGroupingListing
 } from "@/components/baseTables/hospitalProcedureGrouping/types";
@@ -60,6 +61,15 @@ export default class HospitalProcedureGroupingService extends HttpService {
       await this.post("/administration/setup/hospital-procedure-grouping", data);
     } catch (error) {
       console.error("Erro ao criar hospital-procedure-grouping:", error);
+      throw error;
+    }
+  }
+
+  async createHospitalProcedureGroupingByCategory(data: HospitalProcedureGroupingByCategoryInsert): Promise<void> {
+    try {
+      await this.post("/administration/setup/hospital-procedure-grouping/by-category", data);
+    } catch (error) {
+      console.error("Erro ao criar hospital-procedure-grouping por categoria:", error);
       throw error;
     }
   }

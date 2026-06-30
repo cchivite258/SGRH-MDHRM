@@ -108,7 +108,7 @@ const fetchProcedures = async ({ page, itemsPerPage, sortBy, search }: {
       sortColumn: sortBy[0]?.key || 'createdAt',
       direction: sortBy[0]?.order || 'asc',
       query_value: search,
-      query_props: "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
+      query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
     }
   );
 };
@@ -262,6 +262,7 @@ onBeforeUnmount(() => {
                 :disabled="!item.enabled"
               />
             </td>
+            <td>{{ item.hospitalProcedureType?.code || '-' }}</td>
             <td>{{ item.hospitalProcedureType?.name || 'N/A' }}</td>
             <td>{{ getDisplayAllocatedBalance(item) }}</td>
             <td>{{ getDisplayUsedBalance(item) }}</td>

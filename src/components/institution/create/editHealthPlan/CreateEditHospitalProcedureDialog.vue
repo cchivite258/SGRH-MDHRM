@@ -248,7 +248,7 @@ const requiredRules = {
     (v: number | null) => {
       if (!hasUsageLimit.value) return true;
       if (v === undefined || v === null) return t('t-please-enter-allowed-frequency-use');
-      return Number(v) > 0 || t('t-allowed-frequency-use-minimum');
+      return Number(v) >= 0 || t('t-allowed-frequency-use-minimum');
     }
   ],
 
@@ -257,7 +257,7 @@ const requiredRules = {
 const hospitalProceduresTypes = computed(() => {
   return (hospitalProcedureTypeStore.hospital_procedure_types_dropdown || []).map((item: HospitalProcedureTypeListing) => ({
     value: item.id,
-    label: item.name,
+    label: item.code ? `${item.code} - ${item.name}` : item.name,
   }));
 });
 
@@ -509,7 +509,7 @@ onMounted(async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-allowed-frequency-use') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model.number="allowedFrequencyUse" type="number"
+              <TextField v-model.number="allowedFrequencyUse" type="number" min="0"
                 :placeholder="$t('t-enter-allowed-frequency-use')"
                 :rules="applyServerErrorsToRules('allowedFrequencyUse', requiredRules.allowedFrequencyUse)"
                 :error-messages="getServerErrors('allowedFrequencyUse')" />

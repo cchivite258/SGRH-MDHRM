@@ -39,9 +39,9 @@ const onOptionClick = (value: string) => {
       </div>
 
     </template>
-    <v-list v-model="selectedOption" density="compact" width="190" :lines="false">
+    <v-list v-model="selectedOption" density="compact" width="240" :lines="false">
       <v-list-item v-for="option in menuItems" :key="'menu-item-' + option.value" class="list-menu-with-icon__item"
-        :to="option.to" height="32" min-height="32" @click="onOptionClick(option.value)">
+        :to="option.to" min-height="36" @click="onOptionClick(option.value)">
         <div class="list-menu-with-icon__content">
           <i class="text-muted list-menu-with-icon__item-icon" :class="option.icon"></i>
           <span class="list-menu-with-icon__item-title">{{ option.title }}</span>
@@ -73,6 +73,7 @@ const onOptionClick = (value: string) => {
 .list-menu-with-icon__item-title {
   display: block;
   line-height: 1.2;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 </style>

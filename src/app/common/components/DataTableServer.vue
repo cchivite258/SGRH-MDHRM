@@ -10,6 +10,9 @@
       <template #body="{ items }">
         <slot name="body" :items="items" />
       </template>
+      <template v-if="$slots['header.data-table-select']" #[`header.data-table-select`]="slotProps">
+        <slot name="header.data-table-select" v-bind="slotProps" />
+      </template>
 
       <!-- Paginação customizada -->
       <template #bottom>

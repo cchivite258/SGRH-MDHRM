@@ -38,6 +38,7 @@ const dialogValue = computed({
 });
 
 const id = ref(formData.value.id || "");
+const code = ref(formData.value.code || "");
 const name = ref(formData.value.name || "");
 const description = ref(formData.value.description || "");
 const enabled = ref(formData.value.enabled);
@@ -46,6 +47,7 @@ const errorMessage = computed(() => prop.error);
 const { t } = useI18n();
 
 const requiredRules = {
+  code: [(v: string) => !!v?.trim() || t("t-please-enter-code-hospital-procedure-type")],
   name: [(v: string) => !!v?.trim() || t("t-please-enter-name-hospital-procedure-type")],
 };
 
@@ -62,11 +64,13 @@ const onSubmit = async () => {
 
   const data = {
     ...(!isCreate.value && { id: id.value }),
+    code: code.value,
     name: name.value,
     description: description.value,
     enabled: enabled.value
   };
   normalizeObjectStringFieldsInPlace(data as Record<string, any>, {
+    code: "trimToEmpty",
     name: "trimToEmpty",
     description: "trimToNull"
   });
@@ -83,7 +87,7 @@ const onSubmit = async () => {
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" width="500" scrollable>
+  <v-dialog v-model="dialogValue" width="720" max-width="95vw" scrollable>
     <v-form ref="form" @submit.prevent="onSubmit">
       <Card :title="isCreate ? $t('t-add-hospital-procedure-type') : $t('t-edit-hospital-procedure-type')"
         title-class="py-0" style="overflow: hidden">
@@ -92,25 +96,31 @@ const onSubmit = async () => {
         </template>
         <v-divider />
 
-        <v-card-text class="overflow-y-auto" :style="{ 'max-height': isCreate ? '70vh' : '45vh' }">
+        <v-card-text class="overflow-y-auto" :style="{ 'max-height': '70vh' }">
           <v-alert v-if="errorMessage" :text="errorMessage" type="error" variant="tonal" color="danger" class="mb-4"
             density="compact" />
 
           <v-row>
-            <v-col cols="12" lg="12">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-code') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model="code" :placeholder="$t('t-enter-code')" :rules="requiredRules.code" />
+            </v-col>
+            <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField v-model="name" :placeholder="$t('t-enter-name')" :rules="requiredRules.name" />
             </v-col>
-            <v-col cols="12" lg="12">
+            <v-col cols="12" lg="12" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-description') }}
               </div>
               <TextArea v-model="description" :placeholder="$t('t-enter-description')" hide-details />
             </v-col>
           </v-row>
-          <v-row class="">
+          <v-row >
             <v-col cols="12" lg="12" class="">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

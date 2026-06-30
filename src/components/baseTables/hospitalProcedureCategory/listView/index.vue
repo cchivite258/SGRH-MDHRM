@@ -1,5 +1,6 @@
 ﻿<script lang="ts" setup>
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
@@ -13,11 +14,13 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import { hospitalProcedureCategoryService } from "@/app/http/httpServiceProvider";
 import { useHospitalProcedureCategoryStore } from "@/store/baseTables/hospitalProcedureCategoryStore";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import type { OptionType } from "@/app/common/types/option.type";
 import { HospitalProcedureCategoryListing, HospitalProcedureCategoryOption } from "@/components/baseTables/hospitalProcedureCategory/types";
 import { listViewHeader } from "@/components/baseTables/hospitalProcedureCategory/listView/utils";
 
 const { t } = useI18n();
 const toast = useToast();
+const router = useRouter();
 const hospitalProcedureCategoryStore = useHospitalProcedureCategoryStore();
 
 const dialog = ref(false);
@@ -33,6 +36,12 @@ const currentPage = ref(1);
 const selectedHospitalProcedureCategories = ref<any[]>([]);
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const actionOptions = computed<OptionType[]>(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-edit-and-categorize-documents"), value: "edit", icon: "ph-pencil-simple" },
+  { title: t("t-delete"), value: "delete", icon: "ph-trash" }
+]);
 
 const loadingList = computed(() => hospitalProcedureCategoryStore.loading);
 const totalItems = computed(() => hospitalProcedureCategoryStore.pagination.totalElements);
@@ -98,11 +107,10 @@ const onCreateEditClick = (data: HospitalProcedureCategoryListing | null) => {
       description: "",
       enabled: true
     };
+    dialog.value = true;
   } else {
-    hospitalProcedureCategoryData.value = data;
+    router.push(`/baseTable/hospitalprocedurecategory/group-procedure-types/${data.id}`);
   }
-
-  dialog.value = true;
 };
 
 const onSubmit = async (data: HospitalProcedureCategoryListing, callbacks?: {
@@ -181,7 +189,7 @@ const onConfirmDelete = async () => {
   <ListingPageShell
     class="base-table-listing-page"
     :title="$t('t-hospital-procedure-category-list')"
-    subtitle="Consulte, pesquise e faca a gestao das categorias de procedimentos hospitalares registadas."
+    :subtitle="$t('t-hospital-procedure-category-list-subtitle')"
     :action-label="$t('t-add-hospital-procedure-category')"
     :page="currentPage"
     :items-per-page="itemsPerPage"
@@ -219,7 +227,12 @@ const onConfirmDelete = async () => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="AcÃ§Ã£o" class="base-table-listing-page__actions-cell">
-            <TableActionMenu @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+            <TableActionMenu
+              :menu-items="actionOptions"
+              @onEdit="onCreateEditClick(item)"
+              @onView="onViewClick(item)"
+              @onDelete="onDelete(item.id)"
+            />
           </td>
         </tr>
       </template>
@@ -234,7 +247,7 @@ const onConfirmDelete = async () => {
               {{ $t('t-search-not-found-message') }}
             </div>
             <div class="base-table-listing-page__empty-subtitle mt-1">
-              Ajuste a pesquisa e tente novamente.
+              {{ $t('t-adjust-search-and-try-again') }}
             </div>
           </td>
         </tr>
