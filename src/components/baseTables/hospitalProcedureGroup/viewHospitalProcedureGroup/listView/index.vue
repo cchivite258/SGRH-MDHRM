@@ -20,7 +20,8 @@ const loadingRelations = ref(false);
 const searchQuery = ref("");
 const itemsPerPage = ref(10);
 const selectedHospitalProcedureTypeIds = ref<(string | number)[]>([]);
-const searchProps = "name,description";
+const searchProps = "code,name,description";
+const currentGroupRelations = ref<HospitalProcedureGroupingListing[]>([]);
 
 const form = ref({
   id: "",
@@ -31,6 +32,19 @@ const form = ref({
 
 const totalItems = computed(() => hospitalProcedureTypeStore.pagination.totalElements);
 const loadingList = computed(() => hospitalProcedureTypeStore.loading || loadingRelations.value);
+
+const categoryByProcedureTypeId = computed<Record<string, string>>(() =>
+  (currentGroupRelations.value || []).reduce<Record<string, string>>((acc, relation) => {
+    const typeId = relation.hospitalProcedureType?.id ?? relation.hospitalProcedureTypeId;
+    const categoryName = relation.hospitalProcedureType?.categoryName;
+
+    if (typeId != null && categoryName) {
+      acc[String(typeId)] = categoryName;
+    }
+
+    return acc;
+  }, {})
+);
 
 const isIdSelected = (id: string | number) => selectedHospitalProcedureTypeIds.value.some(item => String(item) === String(id));
 
@@ -75,6 +89,8 @@ const fetchRelations = async () => {
       const byNested = item.hospitalProcedureGroup?.id != null && String(item.hospitalProcedureGroup.id) === groupId.value;
       return byDirect || byNested;
     });
+
+    currentGroupRelations.value = groupRelations;
 
     selectedHospitalProcedureTypeIds.value = groupRelations
       .map((item: HospitalProcedureGroupingListing) => item.hospitalProcedureTypeId ?? item.hospitalProcedureType?.id)
@@ -138,7 +154,9 @@ onMounted(async () => {
               >
                 <template #body="{ items }">
                   <tr v-for="item in items as HospitalProcedureTypeListing[]" :key="item.id" height="50">
+                    <td>{{ item.code || '-' }}</td>
                     <td>{{ item.name }}</td>
+                    <td>{{ categoryByProcedureTypeId[String(item.id)] || item.categoryName || '-' }}</td>
                     <td>{{ item.description }}</td>
                   </tr>
                 </template>

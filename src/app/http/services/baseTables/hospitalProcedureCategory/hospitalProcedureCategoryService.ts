@@ -19,6 +19,18 @@ interface ServiceResponse<T> {
 }
 
 export default class HospitalProcedureCategoryService extends HttpService {
+  async getHospitalProcedureCategoryById(id: string | number): Promise<HospitalProcedureCategoryResponse> {
+    try {
+      const response = await this.get<ApiResponse<HospitalProcedureCategoryResponse>>(
+        `/administration/setup/hospital-procedure-categories/${id}`
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("âŒ Erro ao buscar hospital-procedure-category por ID:", error);
+      throw this.handleError(error);
+    }
+  }
 
   async getHospitalProcedureCategories(
     page: number = 0,

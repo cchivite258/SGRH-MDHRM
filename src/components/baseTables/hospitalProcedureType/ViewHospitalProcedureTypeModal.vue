@@ -34,12 +34,14 @@ const dialogValue = computed({
 });
 
 const id = ref(formData.value.id || "");
+const code = ref(formData.value.code || "");
 const name = ref(formData.value.name || "");
 const description = ref(formData.value.description || "");
 const enabled = ref(formData.value.enabled || "");
 
 
 const formErrors = ref<Record<string, string>>({
+  code: '',
   name: '',
   description: '',
 });
@@ -73,6 +75,7 @@ const onSubmit = () => {
 
   const data = {
     ...(!isCreate.value && { id: id.value }),
+    code: code.value,
     name: name.value,
     description: description.value,
     enabled: enabled.value
@@ -107,6 +110,15 @@ const onSubmit = () => {
             <Status :status="enabled ? 'enabled' : 'disabled'" />
           </v-col>
           <v-col class="mt-n6" cols="12" lg="12">
+            <div class="font-weight-bold text-caption mb-1">
+              {{ $t('t-code') }}
+            </div>
+            <div>{{ code || '-' }}</div>
+            <div v-if="formErrors.code" class="text-red text-extra-small pt-1">
+              {{ formErrors.code }}
+            </div>
+          </v-col>
+          <v-col cols="12" lg="12">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-name') }} 
             </div>

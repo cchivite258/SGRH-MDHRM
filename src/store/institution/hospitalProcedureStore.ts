@@ -205,7 +205,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       id: string | null,
       page?: number,
       size?: number,
-      sortColumn: string = 'createdAt',
+      sortColumn: string = 'categoryName',
       direction: string = 'asc',
       query_value?: string,
       query_props?: string
@@ -217,7 +217,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       const actualSize = size ?? this.pagination.itemsPerPage;
 
       try {
-        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
+        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
           id,
           actualPage,
           actualSize,

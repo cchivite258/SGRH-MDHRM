@@ -56,7 +56,7 @@ const hospitalProcedureFormData = ref<HospitalProcedureInsertType | HospitalProc
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const globalSearchProps = ["hospitalProcedureType.name"];
+const globalSearchProps = ["hospitalProcedureType.code", "hospitalProcedureType.name", "hospitalProcedureType.categoryName"];
 const loading = ref(false);
 
 // Computed properties
@@ -149,7 +149,7 @@ const getHealthPlanIdFromRoute = () => {
   return typeof id === 'string' ? id : Array.isArray(id) ? id[0] : null;
 };
 
-const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
+const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, search }: FetchParams) => {
   const planIdFromRoute = getHealthPlanIdFromRoute();
   if (!planIdFromRoute) return;
   const trimmedSearch = search.trim();
@@ -170,8 +170,8 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
     planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
-    sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc',
+    'categoryName',
+    'asc',
     query_value,
     query_props
   );
@@ -315,17 +315,6 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
 const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
 const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "-" : getDisplayOptionalNumber(value);
 
-const getUsageLimitTypeLabel = (value?: string | null) => {
-  const labels: Record<string, string> = {
-    NONE: t("t-limit-type-none"),
-    DAY: t("t-limit-type-day"),
-    MONTH: t("t-limit-type-month"),
-    YEAR: t("t-limit-type-year")
-  };
-
-  return labels[value || "NONE"] || value || "-";
-};
-
 const getSalaryComponentLabel = (value: string | undefined) => {
   const option = salaryComponentOptions.find(opt => opt.value === value);
   return option ? option.label : value;
@@ -436,7 +425,10 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                       <v-checkbox :model-value="selectedHospitalProcedures.some(selected => selected.id === item.id)"
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
-                    <td>{{ item.hospitalProcedureType.name }}</td>
+                    <td class="procedure-type-cell">
+                      {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : '' }}{{ item.hospitalProcedureType?.name || '-' }}
+                    </td>
+                    <td class="procedure-category-cell">{{ item.hospitalProcedureType?.categoryName || '-' }}</td>
                     <td>
                       <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
                         <span class="group-dot" />
@@ -449,8 +441,6 @@ const getSalaryComponentLabel = (value: string | undefined) => {
                     <td>{{ getDisplayLimitType(item) }}</td>
                     <td>{{ getDisplayFixedAmount(item) }}</td>
                     <td>{{ getDisplayPercentage(item) }}</td>
-                    <td>{{ getUsageLimitTypeLabel(item.limitType) }}</td>
-                    <td>{{ getDisplayOptionalNumber(item.frequencyInterval) }}</td>
                     <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
                     <td>
                       <TableActionView @onView="onViewClick(item)" />
@@ -460,7 +450,7 @@ const getSalaryComponentLabel = (value: string | undefined) => {
 
                 <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
-                    <td :colspan="hospitalProcedureHeader.length" class="text-center py-10">
+                    <td :colspan="hospitalProcedureHeader.length + 1" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">
                         <i class="ph-magnifying-glass" style="font-size: 30px" />
                       </v-avatar>
@@ -529,5 +519,16 @@ const getSalaryComponentLabel = (value: string | undefined) => {
 .group-state {
   font-size: 0.66rem;
   color: rgba(var(--v-theme-on-surface), 0.52);
+}
+
+.procedure-type-cell {
+  width: 24%;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.procedure-category-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 </style>

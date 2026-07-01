@@ -53,10 +53,11 @@ const pagination = ref({
   totalPages: 0
 });
 
-const dependentSearchProps = "hospitalProcedureType.name";
+const dependentSearchProps = "hospitalProcedureType.code,hospitalProcedureType.name";
 const includes = "employeeHealthPlan,contractHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent";
 
 const headers: DataTableHeaderType[] = [
+  { title: "hospital-procedure-type-code", key: "hospitalProcedureType.code", sortable: true },
   { title: "hospital-procedure-type-name", key: "hospitalProcedureType.name", sortable: true },
   { title: "hospital-procedure-group", key: "hospitalProcedureGroup.name", sortable: true },
   { title: "allocated-balance", key: "allocatedBalance", sortable: true },
@@ -491,6 +492,7 @@ onMounted(async () => {
                 @update:model-value="toggleSelection(item)"
               />
             </td>
+            <td>{{ item.hospitalProcedureType?.code || '-' }}</td>
             <td>{{ item.hospitalProcedureType?.name || 'N/A' }}</td>
             <td>{{ item.hospitalProcedureGroup?.name || '-' }}</td>
             <td>{{ formatCurrency(getDisplayValue(item, 'allocated')) }}</td>
@@ -544,7 +546,7 @@ onMounted(async () => {
 
       <v-card-text class="overflow-y-auto" style="max-height: 70vh">
         <div class="font-weight-bold text-caption mb-3">
-          {{ selectedPlanLimit?.hospitalProcedureType?.name || '-' }}
+          {{ selectedPlanLimit?.hospitalProcedureType?.code ? `${selectedPlanLimit.hospitalProcedureType.code} - ` : '' }}{{ selectedPlanLimit?.hospitalProcedureType?.name || '-' }}
         </div>
 
         <v-progress-linear v-if="extractLoading" indeterminate color="primary" class="mb-3" />

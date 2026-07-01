@@ -1,5 +1,6 @@
 export type HospitalProcedureTypeInsert = {
   id: string;
+  code: string;
   name: string;
   description: string;
   enabled: boolean;
@@ -7,12 +8,16 @@ export type HospitalProcedureTypeInsert = {
 
 export type HospitalProcedureTypeListing = {
   id: string;
+  code: string;
   name: string;
   description: string;
+  categoryName?: string | null;
+  categoryId?: string | number | null;
   enabled: boolean;
 };
 
 export type HospitalProcedureTypeUpdate = {
+  code?: string;
   name?: string;
   description?: string;
   enabled: boolean;
@@ -20,6 +25,7 @@ export type HospitalProcedureTypeUpdate = {
 
 export type HospitalProcedureTypeResponse = {
   id: string;
+  code: string;
   name: string;
   description: string;
   enabled: boolean;

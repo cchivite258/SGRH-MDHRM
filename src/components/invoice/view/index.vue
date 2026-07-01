@@ -121,7 +121,10 @@ const loadInvoiceData = async (id: string) => {
         ...item,
         taxRate: item.taxRate?.id || '',
         companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure?.id || '',
-        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
+        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.code
+          ? `${item.companyAllowedHospitalProcedure.hospitalProcedureType.code} - ${item.companyAllowedHospitalProcedure.hospitalProcedureType.name}`
+          : item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
+        companyAllowedHospitalProcedureCategoryName: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.categoryName || '',
         invoice: item.invoice?.id || ''
       }));
     }

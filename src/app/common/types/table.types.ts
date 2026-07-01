@@ -5,6 +5,7 @@ export type TableHeaderType = {
   key?: string;
   sortable?: boolean;
   value?: string;
+  width?: string | number;
 };
 
 export type DataTableHeaderType = {
@@ -13,6 +14,7 @@ export type DataTableHeaderType = {
   isCheck?: boolean;
   key?: string;
   sortable?: boolean;
+  width?: string | number;
 };
 
 export type TableConfigType = {

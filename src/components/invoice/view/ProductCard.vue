@@ -9,6 +9,7 @@ import { useToast } from 'vue-toastification';
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import ProcedureCategorySelect from "@/components/invoice/ProcedureCategorySelect.vue";
 import Table from "@/app/common/components/Table.vue";
 
 // Stores
@@ -100,7 +101,8 @@ const lastProceduresLoadKey = ref("");
 const companyAllowedHospitalProcedures = computed(() => {
   const options = hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
     value: item.id,
-    label: item.hospitalProcedureType.name
+    label: (item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ${item.hospitalProcedureType.name}` : item.hospitalProcedureType?.name) || "-",
+    categoryName: item.hospitalProcedureType?.categoryName || "-"
   }));
 
   const fallbackOptions = invoiceItems.value
@@ -111,7 +113,8 @@ const companyAllowedHospitalProcedures = computed(() => {
     )
     .map(item => ({
       value: item.companyAllowedHospitalProcedure as string,
-      label: item.companyAllowedHospitalProcedureLabel as string
+      label: item.companyAllowedHospitalProcedureLabel as string,
+      categoryName: item.companyAllowedHospitalProcedureCategoryName || "-"
     }));
 
   return [...options, ...fallbackOptions];
@@ -274,17 +277,24 @@ const removeItem = (id: string) => {
 };
 
 const prepareItemsForSubmission = (): InvoiceItemInsertType[] => {
-  return invoiceItems.value.map(item => ({
-    ...item,
-    id: props.isEditMode ? item.originalId : undefined,
-    taxRate: item.taxRate || '',
-    companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || '',
-    description: item.description || '',
-    unitPrice: item.unitPrice || 0,
-    quantity: item.quantity || 0,
-    invoice: item.invoice || '',
-    totalAmount: calculateLineTotal(item).total
-  }));
+  return invoiceItems.value.map(item => {
+    const payload = { ...item };
+    delete payload.originalId;
+    delete payload.companyAllowedHospitalProcedureLabel;
+    delete payload.companyAllowedHospitalProcedureCategoryName;
+
+    return {
+      ...payload,
+      id: props.isEditMode ? item.originalId : undefined,
+      taxRate: item.taxRate || '',
+      companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || '',
+      description: item.description || '',
+      unitPrice: item.unitPrice || 0,
+      quantity: item.quantity || 0,
+      invoice: item.invoice || '',
+      totalAmount: calculateLineTotal(item).total
+    };
+  });
 };
 
 // =============================================
@@ -393,12 +403,13 @@ onMounted(() => {
 
           <!-- Procedimento -->
           <td style="width: 30%" class="pt-4">
-            <MenuSelect 
+            <ProcedureCategorySelect
               v-model="item.companyAllowedHospitalProcedure" 
               :items="companyAllowedHospitalProcedures"
               :rules="requiredRules.companyAllowedHospitalProcedure" 
               :placeholder="$t('t-select-procedure')"
-              item-value="value" 
+              :procedure-title="$t('t-hospital-procedure')"
+              :category-title="$t('t-hospital-procedure-category')"
               class="w-100" 
               disabled
             />
