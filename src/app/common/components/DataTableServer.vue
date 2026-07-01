@@ -149,7 +149,8 @@ const processedHeadersWithSelect = computed<DataTableHeader[]>(() => {
       title: header.title,
       sortable: header.sortable !== false,
       align,
-      value: header.value
+      value: header.value,
+      width: header.width
     } satisfies DataTableHeader;
   });
 

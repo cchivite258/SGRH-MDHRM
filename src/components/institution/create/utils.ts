@@ -358,7 +358,7 @@ export const historyHeader: TableHeaderType[] = [
 
 export const hospitalProcedureHeader: TableHeaderType[] = [
   //{ title: "id" },
-  { title: "procedure-type", key: "hospitalProcedureType", sortable: true },
+  { title: "procedure-type", key: "hospitalProcedureType", sortable: true, width: "24%" },
   { title: "hospital-procedure-category", key: "hospitalProcedureType.categoryName", sortable: true },
   { title: "procedure-group", key: "hospitalProcedureGroup", sortable: false },
   { title: "limit-type-definition", key: "limitTypeDefinition", sortable: true },

@@ -435,7 +435,7 @@ onMounted(async () => {
               </v-checkbox>
             </v-col>
           </v-row>
-          <v-row class="mt-n3">
+          <v-row class="mt-n6">
             <v-col cols="12" lg="12" v-if="!belongsToGroup">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-hospital-procedure-type') }} <i class="ph-asterisk ph-xs text-danger" />
@@ -444,7 +444,7 @@ onMounted(async () => {
                 :loading="hospitalProcedureTypeStore.loading" :rules="requiredRules.hospitalProcedureType"
                 :error-messages="getServerErrors('hospitalProcedureType')" :disabled="!isCreate" />
             </v-col>
-            <v-col cols="12" lg="12" v-if="!belongsToGroup">
+            <v-col cols="12" lg="12" v-if="!belongsToGroup" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-category') }}</div>
               <TextField :model-value="selectedHospitalProcedureCategoryName" disabled />
             </v-col>

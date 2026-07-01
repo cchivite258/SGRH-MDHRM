@@ -204,7 +204,7 @@ interface FetchParams {
   search: string;
 }
 
-const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, search }: FetchParams) => {
+const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, search }: FetchParams) => {
   const planIdFromRoute = getHealthPlanIdFromRoute();
   if (!planIdFromRoute) return;
 
@@ -226,8 +226,8 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, sortBy, searc
     planIdFromRoute,
     page - 1, // Ajuste para API que começa em 0
     itemsPerPage,
-    sortBy[0]?.key || 'createdAt',
-    sortBy[0]?.order || 'asc',
+    'categoryName',
+    'asc',
     query_value,
     query_props
   );
@@ -602,10 +602,10 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
                       <v-checkbox :model-value="selectedHospitalProcedures.some(selected => selected.id === item.id)"
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
-                    <td>
+                    <td class="procedure-type-cell">
                       {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : '' }}{{ item.hospitalProcedureType?.name || '-' }}
                     </td>
-                    <td>{{ item.hospitalProcedureType?.categoryName || '-' }}</td>
+                    <td class="procedure-category-cell">{{ item.hospitalProcedureType?.categoryName || '-' }}</td>
                     <td>
                       <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
                         <span class="group-dot" />
@@ -704,5 +704,16 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
 .group-state {
   font-size: 0.66rem;
   color: rgba(var(--v-theme-on-surface), 0.52);
+}
+
+.procedure-type-cell {
+  width: 24%;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.procedure-category-cell {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 </style>
