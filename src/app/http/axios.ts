@@ -9,6 +9,9 @@ import {
 import router from "@/router";
 import { useAuthStore } from "@/store/authStore";
 
+// Instância usada por todos os serviços da aplicação.
+// Uma chamada como axiosInstance.get("/users") será enviada para:
+// `${appConfigs.baseUrl}/users`.
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: appConfigs.baseUrl,
   headers: {
@@ -16,11 +19,17 @@ const axiosInstance: AxiosInstance = axios.create({
   },
 });
 
+// Campo interno que marca uma request que já foi repetida depois de renovar o
+// token. Sem esta marca, uma resposta 401/403 poderia criar um ciclo infinito.
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean };
 
-// Evita multiplos refresh em paralelo quando varias requests falham ao mesmo tempo.
+// Guarda a renovação que estiver em curso. Se várias requests receberem 401/403
+// ao mesmo tempo, todas aguardam esta mesma Promise em vez de enviarem vários
+// refresh tokens para a API.
 let refreshPromise: Promise<string | null> | null = null;
 
+// Logger auxiliar do fluxo de autenticação. Está desativado neste momento.
+// Para diagnosticar o fluxo, basta voltar a ativar os console.log abaixo.
 const logAuthFlow = (step: string, payload?: unknown) => {
   // const timestamp = new Date().toISOString();
   // if (payload !== undefined) {
@@ -33,6 +42,8 @@ const logAuthFlow = (step: string, payload?: unknown) => {
 
 logAuthFlow("axios.ts loaded (interceptors active)");
 
+// Oculta a maior parte do token antes de o escrever nos logs. Um token completo
+// nunca deve ser exposto na consola.
 const maskToken = (token: string | null | undefined) => {
   if (!token) {
     return null;
@@ -43,11 +54,14 @@ const maskToken = (token: string | null | undefined) => {
   return `${token.slice(0, 6)}...${token.slice(-4)}`;
 };
 
+// Identifica endpoints de autenticação. Erros nestas rotas não devem tentar
+// renovar o token, porque o próprio refresh poderia voltar a chamar-se em ciclo.
 const isAuthRequest = (url?: string) => {
   const normalizedUrl = url || "";
   return normalizedUrl.includes("/auth/login") || normalizedUrl.includes("/auth/refresh-token");
 };
 
+// Obtém a página para onde o utilizador deve regressar depois de iniciar sessão.
 const getCurrentRedirectPath = () => {
   const fullPath = router.currentRoute.value.fullPath || "/";
 
@@ -59,6 +73,8 @@ const getCurrentRedirectPath = () => {
   return fullPath;
 };
 
+// Termina a sessão local e envia o utilizador para o login, conservando a rota
+// atual no parâmetro `redirect`.
 const redirectToSignIn = async () => {
   const authStore = useAuthStore();
   // Limpa sessao local antes de redirecionar para forcar novo login.
@@ -72,6 +88,8 @@ const redirectToSignIn = async () => {
   }
 };
 
+// Só considera o refresh definitivamente inválido quando a API responde 401 ou
+// 403. Erros de rede ou falhas 5xx não apagam imediatamente a sessão local.
 const isRefreshAuthError = (error: unknown) => {
   if (!axios.isAxiosError(error)) {
     return false;
@@ -81,6 +99,7 @@ const isRefreshAuthError = (error: unknown) => {
   return refreshStatus === 401 || refreshStatus === 403;
 };
 
+// Troca o refresh token guardado por um novo par de access/refresh tokens.
 const refreshAccessToken = async () => {
   const refreshToken = getRefreshToken();
   logAuthFlow("Refresh token check", {
@@ -94,16 +113,27 @@ const refreshAccessToken = async () => {
   }
 
   logAuthFlow("Calling /auth/refresh-token");
-  const { data } = await axios.post(`${appConfigs.baseUrl}auth/refresh-token`, { refreshToken });
+
+  // Usa o axios base, sem os interceptors desta instância. Assim, esta chamada
+  // não recebe o access token expirado e não entra no interceptor de resposta.
+  // O Axios combina o baseURL e a rota garantindo a barra entre `v1` e `auth`.
+  const { data } = await axios.post(
+    "/auth/refresh-token",
+    { refreshToken },
+    { baseURL: appConfigs.baseUrl }
+  );
   const newAccessToken = data?.data?.token as string | undefined;
   const newRefreshToken = data?.data?.refreshToken as string | undefined;
 
+  // A renovação só é válida quando a API devolve os dois tokens esperados.
   if (!newAccessToken || !newRefreshToken) {
     throw new Error("Resposta invalida do refresh token");
   }
 
   setAccessToken(newAccessToken);
   setRefreshToken(newRefreshToken);
+
+  // Mantém o Pinia sincronizado com o valor persistido no localStorage.
   useAuthStore().setToken(newAccessToken);
 
   logAuthFlow("Refresh success", {
@@ -114,6 +144,8 @@ const refreshAccessToken = async () => {
   return newAccessToken;
 };
 
+// INTERCEPTOR DE REQUEST
+// Executa antes de cada chamada feita através de axiosInstance.
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
@@ -125,6 +157,7 @@ axiosInstance.interceptors.request.use(
     });
 
     if (token) {
+      // Envia o access token no formato esperado pela API.
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -133,6 +166,9 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// INTERCEPTOR DE RESPONSE
+// Respostas com sucesso passam diretamente. Nos erros, verifica se é possível
+// renovar o token e repetir automaticamente a request original.
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -142,7 +178,7 @@ axiosInstance.interceptors.response.use(
 
     logAuthFlow("Response error intercepted", { status, requestUrl });
 
-    // Nao tenta refresh em endpoints de auth para evitar loops.
+    // Não tenta refresh em endpoints de autenticação para evitar ciclos.
     if (!originalRequest || isAuthRequest(originalRequest.url)) {
       logAuthFlow("Skipping refresh for auth endpoint or missing request config", {
         requestUrl,
@@ -151,39 +187,44 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    // A API usa 401/403 para indicar que o access token já não autoriza a
+    // operação. `_retry` garante apenas uma tentativa por request.
     if ((status === 401 || status === 403) && !originalRequest._retry) {
-      // Garante uma unica tentativa de replay por request.
       originalRequest._retry = true;
       logAuthFlow("Starting refresh flow for unauthorized response", { status, requestUrl });
 
       try {
         if (!refreshPromise) {
+          // A primeira request inicia a renovação.
           logAuthFlow("Creating refreshPromise");
           refreshPromise = refreshAccessToken().finally(() => {
+            // Liberta a referência para permitir uma renovação futura.
             refreshPromise = null;
             logAuthFlow("refreshPromise cleared");
           });
         } else {
+          // As restantes requests aguardam a renovação que já está em curso.
           logAuthFlow("Reusing existing refreshPromise");
         }
 
         const newAccessToken = await refreshPromise;
 
         if (!newAccessToken) {
-          // Sem refresh valido, forca login.
+          // Não existe refresh token local: a aplicação exige novo login.
           logAuthFlow("Refresh returned null token -> redirect to login");
           await redirectToSignIn();
           return Promise.reject(error);
         }
 
-        // Reenvia a request original com o novo access token.
+        // Substitui o token expirado e reenvia exatamente a request que falhou.
         logAuthFlow("Retrying original request with refreshed token", { requestUrl });
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.error("[AUTH_FLOW] Error while refreshing token:", refreshError);
 
-        // So manda para login se o refresh token for rejeitado (expirado/invalido).
+        // Redireciona para login apenas se o refresh token foi rejeitado. Uma
+        // falha temporária da rede/servidor é devolvida à chamada original.
         if (isRefreshAuthError(refreshError)) {
           logAuthFlow("Refresh rejected with 401/403 -> redirect to login");
           await redirectToSignIn();
@@ -195,6 +236,8 @@ axiosInstance.interceptors.response.use(
       }
     }
 
+    // Qualquer erro que não seja tratado acima continua para o serviço/componente
+    // que fez a chamada, onde poderá ser apresentado ao utilizador.
     return Promise.reject(error);
   }
 );
