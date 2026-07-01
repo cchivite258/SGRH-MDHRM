@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref } from "vue";
-import { HospitalProcedureTypeInsert } from "@/components/baseTables/hospitalProcedureType/types";
-import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import { statusOptions } from "@/components/realEstate/agent/utils";
-import { colors } from "@/components/ui/utils";
+import { InstitutionTypeListing } from "@/components/baseTables/institutionTypes/types";
 import { useI18n } from "vue-i18n";
 import Status from "@/app/common/components/Status.vue";
 
@@ -16,7 +13,7 @@ const prop = defineProps({
     default: false,
   },
   data: {
-    type: Object as PropType<HospitalProcedureTypeInsert>,
+    type: Object as PropType<InstitutionTypeListing>,
     required: true,
   },
 });

@@ -182,7 +182,9 @@ export type InvoiceItemListingType = {
         id: string;
         hospitalProcedureType:{
             id: string;
+            code?: string;
             name: string;
+            categoryName?: string | null;
         }
     };
     invoice: {
