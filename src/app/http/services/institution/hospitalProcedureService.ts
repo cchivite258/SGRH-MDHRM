@@ -188,6 +188,49 @@ export default class HospitalProcedureService extends HttpService {
     }
   }
 
+  async getHospitalProcedureByHealthPlanFull(
+    id: string | null,
+    page: number = 0,
+    size: number = 10,
+    sortColumn: string = 'categoryName',
+    direction: string = 'asc',
+    query_value?: string,
+    query_props?: string
+  ): Promise<{ content: HospitalProcedureListingType[], meta: any }> {
+    try {
+      const queryParams = [
+        `id=${id}`,
+        `page=${page}`,
+        `size=${size}`,
+        `sortColumn=${sortColumn}`,
+        `direction=${direction}`
+      ];
+
+      if (query_value && query_props) {
+        queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+        queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+        queryParams.push(`query_operator=OR`);
+      }
+
+      const includesToUse = 'contractHealthPlan,hospitalProcedureType,hospitalProcedureGroup';
+      queryParams.push(`includes=${includesToUse}`);
+
+      const queryString = queryParams.join('&');
+      const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}/in-health-plan-full?${queryString}`;
+
+      console.log('URL da requisiÃƒÂ§ÃƒÂ£o:', url);
+      const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
+      return {
+        content: getContent(response).map((item: any) => normalizeHospitalProcedure(item)) as HospitalProcedureListingType[],
+        meta: getMeta(response)
+      };
+
+    } catch (error) {
+      console.error("Ã¢ÂÅ’ Erro ao buscar procedimentos hospitalares:", error);
+      throw error;
+    }
+  }
+
   async getHospitalProcedures(
     page: number = 0,
     size: number = 10,
