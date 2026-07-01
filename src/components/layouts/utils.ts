@@ -230,6 +230,7 @@ export const menuItems: MenuItemType[] = [
       { label: "countries", link: "/baseTable/country/list" },
       { label: "currencies", link: "/baseTable/currency/list" },
       { label: "hospital_procedure_types", link: "/baseTable/hospitalproceduretype/list" },
+      { label: "hospital_procedure_categories", link: "/baseTable/hospitalprocedurecategory/list" },
       { label: "hospital_procedure_groups", link: "/baseTable/hospitalproceduregroup/list" },
       { label: "institution-types", link: "/baseTable/institutiontype/list" },
       { label: "leave-reason", link: "/baseTable/leavereason/list" },

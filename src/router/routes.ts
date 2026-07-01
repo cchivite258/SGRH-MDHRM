@@ -364,6 +364,18 @@ const baseTableRoutes = [
     meta: { title: "HospitalProcedureTypeListView", authRequired: true },
   },
   {
+    path: `${baseTablePrefix}/hospitalprocedurecategory/list`,
+    name: "HospitalProcedureCategoryListView",
+    component: () => import("@/views/baseTables/hospitalProcedureCategory/ListView.vue"),
+    meta: { title: "HospitalProcedureCategoryListView", authRequired: true },
+  },
+  {
+    path: `${baseTablePrefix}/hospitalprocedurecategory/group-procedure-types/:id`,
+    name: "ManageHospitalProcedureCategoryTypes",
+    component: () => import("@/views/baseTables/manageHospitalProcedureCategoryTypes/ListView.vue"),
+    meta: { title: "ManageHospitalProcedureCategoryTypes", authRequired: true },
+  },
+  {
     path: `${baseTablePrefix}/hospitalproceduregroup/list`,
     name: "HospitalProcedureGroupListView",
     component: () => import("@/views/baseTables/hospitalProcedureGroup/ListView.vue"),

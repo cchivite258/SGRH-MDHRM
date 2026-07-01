@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -8,22 +8,24 @@ import ListingPageShell from "@/app/common/components/listing/ListingPageShell.v
 import ListingSearchCard from "@/app/common/components/listing/ListingSearchCard.vue";
 import Status from "@/app/common/components/Status.vue";
 import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
-import CreateUpdateHospitalProcedureGroupModal from "@/components/baseTables/hospitalProcedureGroup/CreateUpdateHospitalProcedureGroupModal.vue";
+import CreateUpdateHospitalProcedureCategoryModal from "@/components/baseTables/hospitalProcedureCategory/CreateUpdateHospitalProcedureCategoryModal.vue";
+import ViewHospitalProcedureCategoryModal from "@/components/baseTables/hospitalProcedureCategory/ViewHospitalProcedureCategoryModal.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
-import { hospitalProcedureGroupService } from "@/app/http/httpServiceProvider";
-import { useHospitalProcedureGroupStore } from "@/store/baseTables/hospitalProcedureGroupStore";
+import { hospitalProcedureCategoryService } from "@/app/http/httpServiceProvider";
+import { useHospitalProcedureCategoryStore } from "@/store/baseTables/hospitalProcedureCategoryStore";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 import type { OptionType } from "@/app/common/types/option.type";
-import { HospitalProcedureGroupListing, HospitalProcedureGroupOption } from "@/components/baseTables/hospitalProcedureGroup/types";
-import { listViewHeader } from "@/components/baseTables/hospitalProcedureGroup/listView/utils";
+import { HospitalProcedureCategoryListing, HospitalProcedureCategoryOption } from "@/components/baseTables/hospitalProcedureCategory/types";
+import { listViewHeader } from "@/components/baseTables/hospitalProcedureCategory/listView/utils";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
-const hospitalProcedureGroupStore = useHospitalProcedureGroupStore();
+const hospitalProcedureCategoryStore = useHospitalProcedureCategoryStore();
 
 const dialog = ref(false);
-const hospitalProcedureGroupData = ref<HospitalProcedureGroupListing | null>(null);
+const viewDialog = ref(false);
+const hospitalProcedureCategoryData = ref<HospitalProcedureCategoryListing | null>(null);
 const deleteDialog = ref(false);
 const deleteId = ref<string | null>(null);
 const deleteLoading = ref(false);
@@ -31,18 +33,18 @@ const searchQuery = ref("");
 const searchProps = "name,description";
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
-const selectedHospitalProcedureGroups = ref<any[]>([]);
+const selectedHospitalProcedureCategories = ref<any[]>([]);
 const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const actionOptions = computed<OptionType[]>(() => [
   { title: t("t-view"), value: "view", icon: "ph-eye" },
-  { title: t("t-edit-and-group-procedures"), value: "edit", icon: "ph-pencil-simple" },
+  { title: t("t-edit-and-categorize-documents"), value: "edit", icon: "ph-pencil-simple" },
   { title: t("t-delete"), value: "delete", icon: "ph-trash" }
 ]);
 
-const loadingList = computed(() => hospitalProcedureGroupStore.loading);
-const totalItems = computed(() => hospitalProcedureGroupStore.pagination.totalElements);
+const loadingList = computed(() => hospitalProcedureCategoryStore.loading);
+const totalItems = computed(() => hospitalProcedureCategoryStore.pagination.totalElements);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
 
 const handleApiError = (error: any) => {
@@ -50,8 +52,10 @@ const handleApiError = (error: any) => {
     clearTimeout(alertTimeout);
     alertTimeout = null;
   }
+
   const message = getApiErrorMessages(error, t("t-message-save-error"))[0] || t("t-message-save-error");
   errorMsg.value = message;
+
   alertTimeout = setTimeout(() => {
     errorMsg.value = "";
     alertTimeout = null;
@@ -65,12 +69,12 @@ onBeforeUnmount(() => {
   }
 });
 
-watch(selectedHospitalProcedureGroups, newSelection => {
-  console.log("Grupos de procedimentos selecionados:", newSelection);
+watch(selectedHospitalProcedureCategories, newSelection => {
+  console.log("Categorias de procedimentos selecionadas:", newSelection);
 }, { deep: true });
 
-const fetchHospitalProcedureGroups = async ({ page, itemsPerPage, sortBy, search }: HospitalProcedureGroupOption) => {
-  await hospitalProcedureGroupStore.fetchHospitalProcedureGroups(
+const fetchHospitalProcedureCategories = async ({ page, itemsPerPage, sortBy, search }: HospitalProcedureCategoryOption) => {
+  await hospitalProcedureCategoryStore.fetchHospitalProcedureCategories(
     page - 1,
     itemsPerPage,
     sortBy[0]?.key || "name",
@@ -80,24 +84,24 @@ const fetchHospitalProcedureGroups = async ({ page, itemsPerPage, sortBy, search
   );
 };
 
-const toggleSelection = (item: HospitalProcedureGroupListing) => {
-  const index = selectedHospitalProcedureGroups.value.findIndex(selected => selected.id === item.id);
+const toggleSelection = (item: HospitalProcedureCategoryListing) => {
+  const index = selectedHospitalProcedureCategories.value.findIndex(selected => selected.id === item.id);
   if (index === -1) {
-    selectedHospitalProcedureGroups.value = [...selectedHospitalProcedureGroups.value, item];
+    selectedHospitalProcedureCategories.value = [...selectedHospitalProcedureCategories.value, item];
   } else {
-    selectedHospitalProcedureGroups.value = selectedHospitalProcedureGroups.value.filter(selected => selected.id !== item.id);
+    selectedHospitalProcedureCategories.value = selectedHospitalProcedureCategories.value.filter(selected => selected.id !== item.id);
   }
 };
 
 watch(dialog, (newVal: boolean) => {
   if (!newVal) {
-    hospitalProcedureGroupData.value = null;
+    hospitalProcedureCategoryData.value = null;
   }
 });
 
-const onCreateEditClick = (data: HospitalProcedureGroupListing | null) => {
+const onCreateEditClick = (data: HospitalProcedureCategoryListing | null) => {
   if (!data) {
-    hospitalProcedureGroupData.value = {
+    hospitalProcedureCategoryData.value = {
       id: "-1",
       name: "",
       description: "",
@@ -105,23 +109,24 @@ const onCreateEditClick = (data: HospitalProcedureGroupListing | null) => {
     };
     dialog.value = true;
   } else {
-    router.push(`/baseTable/edit-hospital-procedure-group/${data.id}`);
+    router.push(`/baseTable/hospitalprocedurecategory/group-procedure-types/${data.id}`);
   }
 };
 
-const onSubmit = async (data: HospitalProcedureGroupListing, callbacks?: {
+const onSubmit = async (data: HospitalProcedureCategoryListing, callbacks?: {
   onSuccess?: () => void,
   onFinally?: () => void
 }) => {
   try {
     if (!data.id) {
-      await hospitalProcedureGroupService.createHospitalProcedureGroup(data);
+      await hospitalProcedureCategoryService.createHospitalProcedureCategory(data);
       toast.success(t('t-toast-message-created'));
     } else {
-      await hospitalProcedureGroupService.updateHospitalProcedureGroup(data.id, data);
+      await hospitalProcedureCategoryService.updateHospitalProcedureCategory(data.id, data);
       toast.success(t('t-toast-message-update'));
     }
-    await fetchHospitalProcedureGroups({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
+
+    await fetchHospitalProcedureCategories({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
     callbacks?.onSuccess?.();
   } catch (error) {
     getApiErrorMessages(error, t('t-message-save-error')).forEach(message => toast.error(message));
@@ -131,9 +136,25 @@ const onSubmit = async (data: HospitalProcedureGroupListing, callbacks?: {
   }
 };
 
-const onViewClick = (data: HospitalProcedureGroupListing | null) => {
-  if (!data) return;
-  router.push(`/baseTable/view-hospital-procedure-group/${data.id}`);
+watch(viewDialog, (newVal: boolean) => {
+  if (!newVal) {
+    hospitalProcedureCategoryData.value = null;
+  }
+});
+
+const onViewClick = (data: HospitalProcedureCategoryListing | null) => {
+  if (!data) {
+    hospitalProcedureCategoryData.value = {
+      id: "-1",
+      name: "",
+      description: "",
+      enabled: true
+    };
+  } else {
+    hospitalProcedureCategoryData.value = data;
+  }
+
+  viewDialog.value = true;
 };
 
 watch(deleteDialog, (newVal: boolean) => {
@@ -149,9 +170,10 @@ const onDelete = (id: string) => {
 
 const onConfirmDelete = async () => {
   deleteLoading.value = true;
+
   try {
-    await hospitalProcedureGroupService.deleteHospitalProcedureGroup(deleteId.value!);
-    await fetchHospitalProcedureGroups({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
+    await hospitalProcedureCategoryService.deleteHospitalProcedureCategory(deleteId.value!);
+    await fetchHospitalProcedureCategories({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
     getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach(message => toast.error(message));
@@ -166,9 +188,9 @@ const onConfirmDelete = async () => {
 <template>
   <ListingPageShell
     class="base-table-listing-page"
-    :title="$t('t-hospital-procedure-group-list')"
-    :subtitle="$t('t-hospital-procedure-group-list-subtitle')"
-    :action-label="$t('t-add-hospital-procedure-group')"
+    :title="$t('t-hospital-procedure-category-list')"
+    :subtitle="$t('t-hospital-procedure-category-list-subtitle')"
+    :action-label="$t('t-add-hospital-procedure-category')"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -177,7 +199,7 @@ const onConfirmDelete = async () => {
     @action="onCreateEditClick(null)"
   >
     <template #filters>
-      <ListingSearchCard v-model="searchQuery" :placeholder="$t('t-search-for-hospital-procedure-group')" />
+      <ListingSearchCard v-model="searchQuery" :placeholder="$t('t-search-for-hospital-procedure-category')" />
     </template>
 
     <template #pagination-summary>
@@ -188,25 +210,23 @@ const onConfirmDelete = async () => {
       {{ $t("t-results") }}
     </template>
 
-    <DataTableServer v-model="selectedHospitalProcedureGroups" v-model:page="currentPage"
+    <DataTableServer v-model="selectedHospitalProcedureCategories" v-model:page="currentPage"
       :headers="listViewHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
-      :items="hospitalProcedureGroupStore.hospital_procedure_groups" :items-per-page="itemsPerPage"
+      :items="hospitalProcedureCategoryStore.hospital_procedure_categories" :items-per-page="itemsPerPage"
       :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-      item-value="id" :show-pagination="false" @load-items="fetchHospitalProcedureGroups">
+      item-value="id" :show-pagination="false" @load-items="fetchHospitalProcedureCategories">
       <template #body="{ items }">
-        <tr v-for="item in items as HospitalProcedureGroupListing[]" :key="item.id" class="base-table-listing-page__row">
+        <tr v-for="item in items as HospitalProcedureCategoryListing[]" :key="item.id" class="base-table-listing-page__row">
           <td data-label="">
-            <v-checkbox :model-value="selectedHospitalProcedureGroups.some(selected => selected.id === item.id)"
+            <v-checkbox :model-value="selectedHospitalProcedureCategories.some(selected => selected.id === item.id)"
               @update:model-value="toggleSelection(item)" hide-details density="compact" />
           </td>
-          <td data-label="Nome" class="base-table-listing-page__primary-cell cursor-pointer" @click="onViewClick(item)">
-            {{ item.name }}
-          </td>
-          <td data-label="Descrição">{{ item.description }}</td>
+          <td data-label="Nome" class="base-table-listing-page__primary-cell">{{ item.name }}</td>
+          <td data-label="DescriÃ§Ã£o">{{ item.description }}</td>
           <td data-label="Disponibilidade">
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
-          <td data-label="Acção" class="base-table-listing-page__actions-cell">
+          <td data-label="AcÃ§Ã£o" class="base-table-listing-page__actions-cell">
             <TableActionMenu
               :menu-items="actionOptions"
               @onEdit="onCreateEditClick(item)"
@@ -217,7 +237,7 @@ const onConfirmDelete = async () => {
         </tr>
       </template>
 
-      <template v-if="!hospitalProcedureGroupStore.hospital_procedure_groups.length" #body>
+      <template v-if="!hospitalProcedureCategoryStore.hospital_procedure_categories.length" #body>
         <tr>
           <td :colspan="listViewHeader.length + 1" class="base-table-listing-page__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="base-table-listing-page__empty-avatar">
@@ -235,8 +255,11 @@ const onConfirmDelete = async () => {
     </DataTableServer>
   </ListingPageShell>
 
-  <CreateUpdateHospitalProcedureGroupModal v-if="hospitalProcedureGroupData" v-model="dialog" :data="hospitalProcedureGroupData"
-    :error="errorMsg" @onSubmit="onSubmit" />
+  <CreateUpdateHospitalProcedureCategoryModal v-if="hospitalProcedureCategoryData" v-model="dialog" :data="hospitalProcedureCategoryData"
+    :error="errorMsg" @onSubmit="onSubmit"/>
+
+  <ViewHospitalProcedureCategoryModal v-if="hospitalProcedureCategoryData" v-model="viewDialog"
+    :data="hospitalProcedureCategoryData" />
 
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
@@ -312,3 +335,5 @@ const onConfirmDelete = async () => {
 .base-table-listing-page__empty-title { color: #0f172a; font-size: 0.98rem; font-weight: 700; }
 .base-table-listing-page__empty-subtitle { color: #64748b; font-size: 0.82rem; }
 </style>
+
+

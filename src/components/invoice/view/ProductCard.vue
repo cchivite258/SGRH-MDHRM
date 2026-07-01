@@ -100,7 +100,7 @@ const lastProceduresLoadKey = ref("");
 const companyAllowedHospitalProcedures = computed(() => {
   const options = hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
     value: item.id,
-    label: item.hospitalProcedureType.name
+    label: item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ${item.hospitalProcedureType.name}` : item.hospitalProcedureType?.name
   }));
 
   const fallbackOptions = invoiceItems.value

@@ -111,11 +111,11 @@ export default class HospitalProcedureTypeService extends HttpService {
   async updateHospitalProcedureType(id: string, data: HospitalProcedureTypeUpdate): Promise<HospitalProcedureTypeResponse> {
     try {
       const payload = {
+        code: data.code,
         name: data.name,
         description: data.description,
         enabled: data.enabled
       };
-      console.log("payload hospitalprocedure", payload)
 
       const response = await this.put<HospitalProcedureTypeResponse>(`/administration/setup/hospital-procedure-types/${id}`, payload);
       return response;

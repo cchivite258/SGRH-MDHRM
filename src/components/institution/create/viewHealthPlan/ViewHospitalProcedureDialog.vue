@@ -63,7 +63,7 @@ const dialogValue = computed({
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" width="500" >
+  <v-dialog v-model="dialogValue" width="760" max-width="95vw" scrollable>
     <Card :title="$t('t-view-hospital-procedure')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
@@ -71,40 +71,37 @@ const dialogValue = computed({
 
       <v-divider />
 
-      <v-card-text>
+      <v-card-text class="overflow-y-auto" style="max-height: calc(90vh - 132px)">
         <v-row>
-          <v-col cols="12">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-type-code') }}</div>
+            <div>{{ props.data?.hospitalProcedureType?.code || '-' }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-hospital-procedure-type') }}</div>
             <div>{{ props.data?.hospitalProcedureType?.name || '-' }}</div>
           </v-col>
-        </v-row>
 
-        <v-row class="mt-3">
-          <v-col cols="12">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type-definition') }}</div>
             <div>{{ getLimitTypeLabel(props.data?.limitTypeDefinition || '') || '-' }}</div>
           </v-col>
-        </v-row>
 
-        <v-row class="mt-3">
-          <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'FIXED_AMOUNT' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'FIXED_AMOUNT'">
+          <v-col cols="12" lg="6" v-if="props.data?.limitTypeDefinition === 'FIXED_AMOUNT'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-fixed-amount') }}</div>
             <div>{{ props.data?.fixedAmount || '0' }}</div>
           </v-col>
-          <v-col :cols="12" :lg="props.data?.limitTypeDefinition === 'PERCENTAGE' ? 12 : 6" v-if="props.data?.limitTypeDefinition === 'PERCENTAGE'">
+          <v-col cols="12" lg="6" v-if="props.data?.limitTypeDefinition === 'PERCENTAGE'">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-percentage') }}</div>
             <div>{{ props.data?.percentage || '0' }}</div>
           </v-col>
-        </v-row>
 
-        <v-row class="mt-3">
-          <v-col cols="12">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type') }}</div>
             <div>{{ getUsageLimitTypeLabel(props.data?.limitType) }}</div>
           </v-col>
-        </v-row>
 
-        <v-row class="mt-3">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-frequency-interval') }}</div>
             <div>{{ getDisplayOptionalNumber(props.data?.frequencyInterval) }}</div>

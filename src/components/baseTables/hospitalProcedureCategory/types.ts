@@ -1,37 +1,31 @@
-export type HospitalProcedureTypeInsert = {
+﻿export type HospitalProcedureCategoryInsert = {
   id: string;
-  code: string;
   name: string;
   description: string;
   enabled: boolean;
 };
 
-export type HospitalProcedureTypeListing = {
+export type HospitalProcedureCategoryListing = {
   id: string;
-  code: string;
   name: string;
   description: string;
-  categoryName?: string | null;
-  categoryId?: string | number | null;
   enabled: boolean;
 };
 
-export type HospitalProcedureTypeUpdate = {
-  code?: string;
+export type HospitalProcedureCategoryUpdate = {
   name?: string;
   description?: string;
   enabled: boolean;
 };
 
-export type HospitalProcedureTypeResponse = {
+export type HospitalProcedureCategoryResponse = {
   id: string;
-  code: string;
   name: string;
   description: string;
   enabled: boolean;
 };
 
-export type HospitalProcedureTypeOption = {
+export type HospitalProcedureCategoryOption = {
   page: number;
   itemsPerPage: number;
   sortBy: { key: string; order: 'asc' | 'desc' }[];

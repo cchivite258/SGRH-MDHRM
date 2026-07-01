@@ -78,6 +78,7 @@ export const salaryReviewHeader: DataTableHeaderType[] = [
 ];
 
 export const hospitalProcedureBalanceHeader: DataTableHeaderType[] = [
+  { title: "hospital-procedure-type-code", key: "hospitalProcedureType.code", sortable: true },
   { title: "hospital-procedure-type-name", key: "hospitalProcedureType.name", sortable: true },
   { title: "allocated-balance", key: "allocatedBalance", sortable: true },
   { title: "used-balance", key: "usedBalance", sortable: true },

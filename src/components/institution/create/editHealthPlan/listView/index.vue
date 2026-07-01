@@ -68,7 +68,7 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const globalSearchProps = ["hospitalProcedureType.name"];
+const globalSearchProps = ["hospitalProcedureType.code", "hospitalProcedureType.name"];
 const loading = ref(false);
 
 // Computed properties
@@ -613,7 +613,9 @@ const getUsageLimitTypeLabel = (value?: string | null) => {
                       <v-checkbox :model-value="selectedHospitalProcedures.some(selected => selected.id === item.id)"
                         @update:model-value="toggleSelection(item)" hide-details density="compact" />
                     </td>
-                    <td>{{ item.hospitalProcedureType.name }}</td>
+                    <td>
+                      {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : '' }}{{ item.hospitalProcedureType?.name || '-' }}
+                    </td>
                     <td>
                       <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
                         <span class="group-dot" />

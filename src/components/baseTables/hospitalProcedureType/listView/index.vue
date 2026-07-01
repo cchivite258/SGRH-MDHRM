@@ -27,7 +27,7 @@ const deleteDialog = ref(false);
 const deleteId = ref<string | null>(null);
 const deleteLoading = ref(false);
 const searchQuery = ref("");
-const searchProps = "name,description";
+const searchProps = "code,name,description";
 const itemsPerPage = ref(10);
 const currentPage = ref(1);
 const selectedHospitalProcedureTypes = ref<any[]>([]);
@@ -94,6 +94,7 @@ const onCreateEditClick = (data: HospitalProcedureTypeListing | null) => {
   if (!data) {
     hospitalProcedureTypeData.value = {
       id: "-1",
+      code: "",
       name: "",
       description: "",
       enabled: true
@@ -138,6 +139,7 @@ const onViewClick = (data: HospitalProcedureTypeListing | null) => {
   if (!data) {
     hospitalProcedureTypeData.value = {
       id: "-1",
+      code: "",
       name: "",
       description: "",
       enabled: true
@@ -213,6 +215,7 @@ const onConfirmDelete = async () => {
             <v-checkbox :model-value="selectedHospitalProcedureTypes.some(selected => selected.id === item.id)"
               @update:model-value="toggleSelection(item)" hide-details density="compact" />
           </td>
+          <td data-label="Código">{{ item.code || '-' }}</td>
           <td data-label="Nome" class="base-table-listing-page__primary-cell">{{ item.name }}</td>
           <td data-label="Descrição">{{ item.description }}</td>
           <td data-label="Disponibilidade">

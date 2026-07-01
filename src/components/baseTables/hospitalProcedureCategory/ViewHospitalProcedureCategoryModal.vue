@@ -1,9 +1,6 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import { PropType, computed, ref } from "vue";
-import { HospitalProcedureTypeInsert } from "@/components/baseTables/hospitalProcedureType/types";
-import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import { statusOptions } from "@/components/realEstate/agent/utils";
-import { colors } from "@/components/ui/utils";
+import { HospitalProcedureCategoryInsert } from "@/components/baseTables/hospitalProcedureCategory/types";
 import { useI18n } from "vue-i18n";
 import Status from "@/app/common/components/Status.vue";
 
@@ -16,7 +13,7 @@ const prop = defineProps({
     default: false,
   },
   data: {
-    type: Object as PropType<HospitalProcedureTypeInsert>,
+    type: Object as PropType<HospitalProcedureCategoryInsert>,
     required: true,
   },
 });
@@ -34,14 +31,12 @@ const dialogValue = computed({
 });
 
 const id = ref(formData.value.id || "");
-const code = ref(formData.value.code || "");
 const name = ref(formData.value.name || "");
 const description = ref(formData.value.description || "");
 const enabled = ref(formData.value.enabled || "");
 
 
 const formErrors = ref<Record<string, string>>({
-  code: '',
   name: '',
   description: '',
 });
@@ -49,7 +44,7 @@ const formErrors = ref<Record<string, string>>({
 
 const { t } = useI18n();
 
-// Função de validação geral
+// FunÃ§Ã£o de validaÃ§Ã£o geral
 const validateForm = () => {
   let isValid = true;
 
@@ -75,7 +70,6 @@ const onSubmit = () => {
 
   const data = {
     ...(!isCreate.value && { id: id.value }),
-    code: code.value,
     name: name.value,
     description: description.value,
     enabled: enabled.value
@@ -94,7 +88,7 @@ const onSubmit = () => {
 </script>
 <template>
   <v-dialog v-model="dialogValue" width="500" scrollable>
-    <Card :title="$t('t-view-hospital-procedure-type')"
+    <Card :title="$t('t-view-hospital-procedure-category')"
       title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
@@ -110,15 +104,6 @@ const onSubmit = () => {
             <Status :status="enabled ? 'enabled' : 'disabled'" />
           </v-col>
           <v-col class="mt-n6" cols="12" lg="12">
-            <div class="font-weight-bold text-caption mb-1">
-              {{ $t('t-code') }}
-            </div>
-            <div>{{ code || '-' }}</div>
-            <div v-if="formErrors.code" class="text-red text-extra-small pt-1">
-              {{ formErrors.code }}
-            </div>
-          </v-col>
-          <v-col cols="12" lg="12">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-name') }} 
             </div>
@@ -155,3 +140,5 @@ const onSubmit = () => {
   font-size: 0.70rem;
 }
 </style>
+
+

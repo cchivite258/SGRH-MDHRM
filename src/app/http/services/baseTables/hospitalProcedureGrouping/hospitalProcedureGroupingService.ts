@@ -1,5 +1,6 @@
 import HttpService from "@/app/http/httpService";
 import type {
+  HospitalProcedureGroupingByCategoryInsert,
   HospitalProcedureGroupingInsert,
   HospitalProcedureGroupingListing
 } from "@/components/baseTables/hospitalProcedureGrouping/types";
@@ -13,10 +14,15 @@ export default class HospitalProcedureGroupingService extends HttpService {
   async getHospitalProcedureGroupings(
     query_value?: string | number,
     query_props?: string,
-    includes?: string
+    includes?: string,
+    page: number = 0,
+    size: number = 10000000
   ): Promise<{ content: HospitalProcedureGroupingListing[]; meta: any }> {
     try {
-      const queryParams: string[] = [];
+      const queryParams: string[] = [
+        `page=${page}`,
+        `size=${size}`
+      ];
 
       if (query_value !== undefined && query_value !== null && query_value !== "" && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
@@ -55,6 +61,15 @@ export default class HospitalProcedureGroupingService extends HttpService {
       await this.post("/administration/setup/hospital-procedure-grouping", data);
     } catch (error) {
       console.error("Erro ao criar hospital-procedure-grouping:", error);
+      throw error;
+    }
+  }
+
+  async createHospitalProcedureGroupingByCategory(data: HospitalProcedureGroupingByCategoryInsert): Promise<void> {
+    try {
+      await this.post("/administration/setup/hospital-procedure-grouping/by-category", data);
+    } catch (error) {
+      console.error("Erro ao criar hospital-procedure-grouping por categoria:", error);
       throw error;
     }
   }
