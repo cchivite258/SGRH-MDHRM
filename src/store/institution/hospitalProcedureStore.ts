@@ -10,6 +10,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
     hospital_procedure_for_dropdown: [] as HospitalProcedureListingType[],
     hospital_procedure_of_plan: [] as HospitalProcedureListingType[],
     hospital_procedure_of_plan_scoped: [] as HospitalProcedureListingType[],
+    hospital_procedure_of_plan_full_scoped: [] as HospitalProcedureListingType[],
     activeHealthPlan: null as any,
     pagination: { 
       totalElements: 0,
@@ -217,7 +218,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
       const actualSize = size ?? this.pagination.itemsPerPage;
 
       try {
-        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
+        const { content, meta } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
           id,
           actualPage,
           actualSize,
@@ -239,6 +240,44 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
         console.error("❌ Erro ao buscar procedimentos hospitalares:", err);
         this.hospital_procedure_of_plan_scoped = [];
         this.pagination.totalElements = 0;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchHospitalProceduresOfPlanScopedFull(
+      id: string | null,
+      page?: number,
+      size?: number,
+      sortColumn: string = 'categoryName',
+      direction: string = 'asc',
+      query_value?: string,
+      query_props?: string
+    ) {
+      this.loading = true;
+      this.error = null;
+
+      const actualPage = page ?? this.pagination.currentPage;
+      const actualSize = size ?? this.pagination.itemsPerPage;
+
+      try {
+        const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
+          id,
+          actualPage,
+          actualSize,
+          sortColumn,
+          direction,
+          query_value,
+          query_props
+        );
+
+        this.hospital_procedure_of_plan_full_scoped = content;
+        return content;
+      } catch (err: any) {
+        this.error = err.message || 'Erro ao buscar procedimentos hospitalares';
+        console.error("âŒ Erro ao buscar procedimentos hospitalares:", err);
+        this.hospital_procedure_of_plan_full_scoped = [];
+        throw err;
       } finally {
         this.loading = false;
       }

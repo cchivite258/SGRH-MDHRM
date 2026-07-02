@@ -5,6 +5,7 @@ import { HealthPlanInsertType, HospitalProcedureListingType, HospitalProcedureIn
 import { CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
 import TableActionView from "@/app/common/components/TableActionView.vue";
 import ViewHospitalProcedureDialog from "@/components/institution/create/editHealthPlan/ViewHospitalProcedureDialog.vue";
+import HealthPlanPreviewDialog from "@/components/institution/create/HealthPlanPreviewDialog.vue";
 import { useRouter } from "vue-router";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 import { useHospitalProcedureStore } from "@/store/institution/hospitalProcedureStore";
@@ -27,6 +28,7 @@ import {
 // Utils
 import { hospitalProcedureHeader } from "@/components/institution/create/utils";
 import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
+import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
 
 // Store para periodos de cobertura
 const { t } = useI18n();
@@ -58,10 +60,37 @@ const itemsPerPage = ref(10);
 const searchQuery = ref("");
 const globalSearchProps = ["hospitalProcedureType.code", "hospitalProcedureType.name", "hospitalProcedureType.categoryName"];
 const loading = ref(false);
+const healthPlanData = ref<any>(null);
+const healthPlanPreviewDialog = ref(false);
+const healthPlanConsultLoading = ref(false);
+const healthPlanPdfExporting = ref(false);
+const healthPlanPreviewProcedures = ref<HospitalProcedureListingType[]>([]);
 
 // Computed properties
 const loadingList = computed(() => hospitalProcedureStore.loading);
 const totalItems = computed(() => hospitalProcedureStore.pagination.totalElements);
+
+const selectedCoveragePeriod = computed(() => {
+  const coveragePeriod = healthPlanFormData.value.coveragePeriod as any;
+  if (coveragePeriod && typeof coveragePeriod === "object") return coveragePeriod;
+
+  const matchingPeriod = coveragePeriods.value.find(item => String(item.value) === String(coveragePeriod));
+  return matchingPeriod
+    ? { id: matchingPeriod.value, name: matchingPeriod.label }
+    : healthPlanData.value?.coveragePeriod;
+});
+
+const healthPlanPreviewData = computed(() => ({
+  ...healthPlanData.value,
+  ...healthPlanFormData.value,
+  coveragePeriod: selectedCoveragePeriod.value,
+  company: healthPlanData.value?.company || { id: healthPlanFormData.value.company },
+  companyName: healthPlanData.value?.company?.name || healthPlanData.value?.companyName
+}));
+
+const healthPlanPreviewContextLabel = computed(() =>
+  healthPlanData.value?.company?.name || healthPlanData.value?.companyName || undefined
+);
 
 // Formulário do plano de saúde
 const healthPlanFormData = ref<HealthPlanInsertType>({
@@ -102,6 +131,7 @@ onMounted(async () => {
       const healthPlan = healthplanResponse.data;
 
       if (healthPlan) {
+        healthPlanData.value = healthPlan;
 
         // Carrega períodos de cobertura
         await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, 10000000);
@@ -175,6 +205,59 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, search }: Fet
     query_value,
     query_props
   );
+};
+
+const onConsultHealthPlan = async () => {
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
+
+  healthPlanConsultLoading.value = true;
+
+  try {
+    const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
+      planIdFromRoute,
+      0,
+      1000000000,
+      "categoryName",
+      "asc"
+    );
+
+    healthPlanPreviewProcedures.value = content;
+    healthPlanPreviewDialog.value = true;
+  } catch (error) {
+    console.error("Erro ao consultar plano:", error);
+    toast.error(t("t-message-load-error"));
+  } finally {
+    healthPlanConsultLoading.value = false;
+  }
+};
+
+const onExportHealthPlanPdf = async () => {
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
+
+  healthPlanPdfExporting.value = true;
+
+  try {
+    const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
+      planIdFromRoute,
+      0,
+      1000000000,
+      "categoryName",
+      "asc"
+    );
+
+    await exportHealthPlanToPdf({
+      healthPlan: healthPlanPreviewData.value,
+      procedures: content,
+      contextLabel: healthPlanPreviewContextLabel.value
+    });
+  } catch (error) {
+    console.error("Erro ao exportar plano de saude:", error);
+    toast.error(t("t-message-save-error"));
+  } finally {
+    healthPlanPdfExporting.value = false;
+  }
 };
 
 const toggleSelection = (item: HospitalProcedureListingType) => {
@@ -400,6 +483,14 @@ const getSalaryComponentLabel = (value: string | undefined) => {
     <v-card-text class="mt-6">
       <Card :title="$t('t-hospital-procedure-list')" title-class="pt-0">
         <template #title-action>
+          <v-btn
+            color="primary"
+            variant="tonal"
+            :loading="healthPlanConsultLoading"
+            @click="onConsultHealthPlan"
+          >
+            <i class="ph-first-aid-kit me-1" /> {{ $t('t-consult-health-plan') }}
+          </v-btn>
         </template>
       </Card>
 
@@ -477,6 +568,16 @@ const getSalaryComponentLabel = (value: string | undefined) => {
     </v-card-text>
   </Card>
 
+
+  <HealthPlanPreviewDialog
+    v-model="healthPlanPreviewDialog"
+    :health-plan="healthPlanPreviewData"
+    :procedures="healthPlanPreviewProcedures"
+    :loading="healthPlanConsultLoading"
+    :exporting="healthPlanPdfExporting"
+    :context-label="healthPlanPreviewContextLabel"
+    @export="onExportHealthPlanPdf"
+  />
 
   <ViewHospitalProcedureDialog v-if="hospitalProcedureFormData" v-model="viewDialog"
     :data="hospitalProcedureFormData" />
