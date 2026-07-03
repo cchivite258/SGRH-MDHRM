@@ -996,5 +996,6 @@
   "t-parameter-type-months-before-expiration": "Months before expiration",
   "t-parameter-type-years-before-expiration": "Years before expiration",
   "t-no-alert-parameters-found": "No parameters defined",
-  "t-alert-parameter-not-removable": "This parameter cannot be deleted"
+  "t-alert-parameter-not-removable": "This parameter cannot be deleted",
+  "t-alert-parameter-exists": "This parameter already exists"
 }

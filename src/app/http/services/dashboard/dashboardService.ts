@@ -12,6 +12,7 @@ type ApiResponse<T> = {
   meta?: Record<string, any>;
 };
 
+//-------------------------------
 const DASHBOARD_ENDPOINT = "/dashboard";
 
 const getResponseData = <T>(response: ApiResponse<T> | T): T => {

@@ -6,6 +6,7 @@ import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore"
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import type { CoveragePeriodListingType, InstitutionListingType } from "@/components/institution/types";
 
+//----------------------------------------
 type SelectOption = {
   label: string;
   value: string | number;

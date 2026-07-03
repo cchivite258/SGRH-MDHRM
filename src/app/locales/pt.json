@@ -1520,5 +1520,6 @@
   "t-parameter-type-months-before-expiration": "Meses antes da expiração",
   "t-parameter-type-years-before-expiration": "Anos antes da expiração",
   "t-no-alert-parameters-found": "Nenhum parâmetro definido",
-  "t-alert-parameter-not-removable": "Este parâmetro não pode ser eliminado"
+  "t-alert-parameter-not-removable": "Este parâmetro não pode ser eliminado",
+  "t-alert-parameter-exists": "Este parâmetro já existe"
 }
