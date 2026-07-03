@@ -44,4 +44,20 @@ export default class DashboardService extends HttpService {
     );
     return getResponseData(response);
   }
+
+  async getRevenueTrend(payload: DashboardMetricPayload): Promise<Record<string, any>> {
+    const response = await this.post<ApiResponse<Record<string, any>>>(
+      `${DASHBOARD_ENDPOINT}/revenue-trend`,
+      payload
+    );
+    return getResponseData(response);
+  }
+
+  async getHealthcareServiceUseTrends(payload: DashboardMetricPayload): Promise<Record<string, any>> {
+    const response = await this.post<ApiResponse<Record<string, any>>>(
+      `${DASHBOARD_ENDPOINT}/healthcare-service-use-trends`,
+      payload
+    );
+    return getResponseData(response);
+  }
 }
