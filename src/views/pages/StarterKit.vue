@@ -190,7 +190,7 @@ const getCardDetail = (card: DashboardCard) => {
   if (card.key === "networkUtilization") {
     return t("t-dashboard-network-utilization-detail", {
       network: formatCurrency(card.data.totalNetworkUtilizationFee),
-      total: formatCurrency(card.data.totalRevenue)
+      total: formatCurrency(card.data.totalBilled ?? card.data.totalRevenue)
     });
   }
 
