@@ -6,6 +6,8 @@ import { CoveragePeriodListingType, HealthPlanListingType } from "@/components/i
 import TableAction from "@/app/common/components/TableAction.vue";
 import CreateEditHospitalProcedureDialog from "@/components/institution/create/editHealthPlan/CreateEditHospitalProcedureDialog.vue";
 import ViewHospitalProcedureDialog from "@/components/institution/create/editHealthPlan/ViewHospitalProcedureDialog.vue";
+import HealthPlanPreviewDialog from "@/components/institution/create/HealthPlanPreviewDialog.vue";
+import HealthPlanHospitalProcedureGroupedRows from "@/components/institution/create/HealthPlanHospitalProcedureGroupedRows.vue";
 import { useRouter } from "vue-router";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
@@ -29,7 +31,7 @@ import {
 
 // Utils
 import { hospitalProcedureHeader } from "@/components/institution/create/utils";
-import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
+import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
 
 // Store para periodos de cobertura
 const { t } = useI18n();
@@ -68,12 +70,45 @@ const deleteId = ref<string | undefined>(undefined);
 const selectedHospitalProcedures = ref<HospitalProcedureListingType[]>([]);
 const itemsPerPage = ref(10);
 const searchQuery = ref("");
-const globalSearchProps = ["hospitalProcedureType.code", "hospitalProcedureType.name", "hospitalProcedureType.categoryName"];
+const globalSearchProps = ["hospitalProcedureType.code", "hospitalProcedureType.name", "hospitalProcedureType.categoryName", "hospitalProcedureGroup.name"];
 const loading = ref(false);
+const healthPlanData = ref<any>(null);
+const healthPlanPreviewDialog = ref(false);
+const healthPlanConsultLoading = ref(false);
+const healthPlanPdfExporting = ref(false);
+const healthPlanPreviewProcedures = ref<HospitalProcedureListingType[]>([]);
 
 // Computed properties
 const loadingList = computed(() => hospitalProcedureStore.loading);
 const totalItems = computed(() => hospitalProcedureStore.pagination.totalElements);
+const visibleHospitalProcedureHeader = computed(() =>
+  hospitalProcedureHeader.filter(item =>
+    item.key !== "hospitalProcedureType.categoryName" && item.key !== "hospitalProcedureGroup"
+  )
+);
+const hospitalProcedureTableColumnCount = computed(() => visibleHospitalProcedureHeader.value.length + 1);
+
+const selectedCoveragePeriod = computed(() => {
+  const coveragePeriod = healthPlanFormData.value.coveragePeriod as any;
+  if (coveragePeriod && typeof coveragePeriod === "object") return coveragePeriod;
+
+  const matchingPeriod = coveragePeriods.value.find(item => String(item.value) === String(coveragePeriod));
+  return matchingPeriod
+    ? { id: matchingPeriod.value, name: matchingPeriod.label }
+    : healthPlanData.value?.coveragePeriod;
+});
+
+const healthPlanPreviewData = computed(() => ({
+  ...healthPlanData.value,
+  ...healthPlanFormData.value,
+  coveragePeriod: selectedCoveragePeriod.value,
+  company: healthPlanData.value?.company || { id: healthPlanFormData.value.company },
+  companyName: healthPlanData.value?.company?.name || healthPlanData.value?.companyName
+}));
+
+const healthPlanPreviewContextLabel = computed(() =>
+  healthPlanData.value?.company?.name || healthPlanData.value?.companyName || undefined
+);
 
 // Formulário do plano de saúde
 const healthPlanFormData = ref<HealthPlanInsertType>({
@@ -161,6 +196,7 @@ onMounted(async () => {
       const healthPlan = healthplanResponse.data;
 
       if (healthPlan) {
+        healthPlanData.value = healthPlan;
 
         // Carrega períodos de cobertura
         await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, 10000000);
@@ -231,6 +267,59 @@ const fetchHospitalProceduresOfPlan = async ({ page, itemsPerPage, search }: Fet
     query_value,
     query_props
   );
+};
+
+const onConsultHealthPlan = async () => {
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
+
+  healthPlanConsultLoading.value = true;
+
+  try {
+    const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
+      planIdFromRoute,
+      0,
+      1000000000,
+      "categoryName",
+      "asc"
+    );
+
+    healthPlanPreviewProcedures.value = content;
+    healthPlanPreviewDialog.value = true;
+  } catch (error) {
+    console.error("Erro ao consultar plano:", error);
+    toast.error(t("t-message-load-error"));
+  } finally {
+    healthPlanConsultLoading.value = false;
+  }
+};
+
+const onExportHealthPlanPdf = async () => {
+  const planIdFromRoute = getHealthPlanIdFromRoute();
+  if (!planIdFromRoute) return;
+
+  healthPlanPdfExporting.value = true;
+
+  try {
+    const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
+      planIdFromRoute,
+      0,
+      1000000000,
+      "categoryName",
+      "asc"
+    );
+
+    await exportHealthPlanToPdf({
+      healthPlan: healthPlanPreviewData.value,
+      procedures: content,
+      contextLabel: healthPlanPreviewContextLabel.value
+    });
+  } catch (error) {
+    console.error("Erro ao exportar plano de saude:", error);
+    toast.error(t("t-message-save-error"));
+  } finally {
+    healthPlanPdfExporting.value = false;
+  }
 };
 
 const toggleSelection = (item: HospitalProcedureListingType) => {
@@ -436,11 +525,6 @@ const handleSubmit = async () => {
 /**
  * Prepara dados para criação/edição
  */
-const getLimitTypeLabel = (value: string) => {
-  const option = limitTypeDefinitionOptions.find(opt => opt.value === value);
-  return option ? option.label : value;
-};
-
 const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
   if (!item.belongsToGroup) return "Sem grupo";
 
@@ -456,24 +540,6 @@ const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
 
   return matchingGroup?.name || "Grupo sem nome";
 };
-
-const getDisplayFixedAmount = (item: HospitalProcedureListingType) => {
-  const value = item.belongsToGroup ? item.groupFixedAmount : item.fixedAmount;
-  return value ?? "-";
-};
-
-const getDisplayPercentage = (item: HospitalProcedureListingType) => {
-  const value = item.belongsToGroup ? item.groupPercentage : item.percentage;
-  return value !== null && value !== undefined ? `${value}%` : "-";
-};
-
-const getDisplayLimitType = (item: HospitalProcedureListingType) => {
-  const limitType = item.belongsToGroup ? item.hospitalProcedureGroupLimit : item.limitTypeDefinition;
-  return getLimitTypeLabel(limitType || "");
-};
-
-const getDisplayOptionalNumber = (value?: number | null) => value ?? "-";
-const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "-" : getDisplayOptionalNumber(value);
 
 </script>
 
@@ -572,7 +638,16 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
     <v-card-text>
       <Card :title="$t('t-hospital-procedure-list')" title-class="pt-0">
         <template #title-action>
-          <div>
+          <div class="d-flex align-center flex-wrap justify-end ga-2">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              :loading="healthPlanConsultLoading"
+              @click="onConsultHealthPlan"
+            >
+              <i class="ph-first-aid-kit me-1" /> {{ $t('t-consult-health-plan') }}
+            </v-btn>
+
             <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
               <i class="ph-plus-circle me-1" /> {{ $t('t-add-hospital-procedure') }}
             </v-btn>
@@ -592,43 +667,31 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
                 </v-row>
               </v-card-text>
               <DataTableServer v-model="selectedHospitalProcedures"
-                :headers="hospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
+                :headers="visibleHospitalProcedureHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
                 :items="hospitalProcedureStore.hospital_procedure_of_plan_scoped" :items-per-page="itemsPerPage"
                 :total-items="totalItems" :loading="loadingList" :search-query="searchQuery" :search-props="globalSearchProps.join(',')"
                 @load-items="fetchHospitalProceduresOfPlan" item-value="id" show-select>
                 <template #body="{ items }">
-                  <tr v-for="item in items as HospitalProcedureListingType[]" :key="item.id" height="50">
-                    <td>
-                      <v-checkbox :model-value="selectedHospitalProcedures.some(selected => selected.id === item.id)"
-                        @update:model-value="toggleSelection(item)" hide-details density="compact" />
-                    </td>
-                    <td class="procedure-type-cell">
-                      {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : '' }}{{ item.hospitalProcedureType?.name || '-' }}
-                    </td>
-                    <td class="procedure-category-cell">{{ item.hospitalProcedureType?.categoryName || '-' }}</td>
-                    <td>
-                      <div class="group-cell" :class="{ 'group-cell--grouped': item.belongsToGroup }">
-                        <span class="group-dot" />
-                        <div class="group-text">
-                          <span class="group-name">{{ getHospitalProcedureGroupName(item) }}</span>
-                          <span class="group-state">{{ item.belongsToGroup ? 'Agrupado' : 'Individual' }}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{{ getDisplayLimitType(item) }}</td>
-                    <td>{{ getDisplayFixedAmount(item) }}</td>
-                    <td>{{ getDisplayPercentage(item) }}</td>
-                    <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
-                    <td>
-                      <TableAction @onEdit="onCreateEditClick(item)" @onView="onViewClick(item)"
-                        @onDelete="onDelete(item.id)" />
-                    </td>
-                  </tr>
+                  <HealthPlanHospitalProcedureGroupedRows
+                    :items="items as HospitalProcedureListingType[]"
+                    :selected-procedures="selectedHospitalProcedures"
+                    :colspan="hospitalProcedureTableColumnCount"
+                    :group-options="hospitalProcedureGroupStore.hospital_procedure_groups_dropdown"
+                    @toggle-selection="toggleSelection"
+                  >
+                    <template #action="{ item }">
+                      <TableAction
+                        @onEdit="onCreateEditClick(item)"
+                        @onView="onViewClick(item)"
+                        @onDelete="onDelete(item.id)"
+                      />
+                    </template>
+                  </HealthPlanHospitalProcedureGroupedRows>
                 </template>
 
                 <template v-if="hospitalProcedureStore.hospital_procedure_of_plan_scoped.length === 0" #body>
                   <tr>
-                    <td :colspan="hospitalProcedureHeader.length + 1" class="text-center py-10">
+                    <td :colspan="hospitalProcedureTableColumnCount" class="text-center py-10">
                       <v-avatar size="80" color="primary" variant="tonal">
                         <i class="ph-magnifying-glass" style="font-size: 30px" />
                       </v-avatar>
@@ -656,6 +719,15 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
   </Card>
 
 
+  <HealthPlanPreviewDialog
+    v-model="healthPlanPreviewDialog"
+    :health-plan="healthPlanPreviewData"
+    :procedures="healthPlanPreviewProcedures"
+    :loading="healthPlanConsultLoading"
+    :exporting="healthPlanPdfExporting"
+    :context-label="healthPlanPreviewContextLabel"
+    @export="onExportHealthPlanPdf"
+  />
 
   <CreateEditHospitalProcedureDialog v-if="hospitalProcedureFormData" v-model="dialog" :data="hospitalProcedureFormData"
     @onSubmit="onSubmitHospitalProcedure" />
@@ -667,53 +739,3 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 ? "
     @onConfirm="onConfirmDelete" />
 </template>
 
-<style scoped>
-.group-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.group-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(var(--v-theme-on-surface), 0.35);
-  flex-shrink: 0;
-}
-
-.group-cell--grouped .group-dot {
-  background: rgb(var(--v-theme-info));
-}
-
-.group-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.02;
-}
-
-.group-name {
-  font-size: 0.78rem;
-  color: rgba(var(--v-theme-on-surface), 0.82);
-}
-
-.group-cell--grouped .group-name {
-  font-weight: 600;
-}
-
-.group-state {
-  font-size: 0.66rem;
-  color: rgba(var(--v-theme-on-surface), 0.52);
-}
-
-.procedure-type-cell {
-  width: 24%;
-  white-space: normal;
-  overflow-wrap: break-word;
-}
-
-.procedure-category-cell {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-</style>

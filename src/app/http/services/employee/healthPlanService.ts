@@ -30,7 +30,7 @@ const normalizeEmployeeHealthPlan = <T extends Record<string, any>>(item: T): T 
   companyHealthPlanId: item.companyHealthPlanId ?? item.contractHealthPlanId
 });
 
-const EMPLOYEE_HEALTH_PLAN_INCLUDES = 'usages,employee';
+const EMPLOYEE_HEALTH_PLAN_INCLUDES = 'usages,employee,contractHealthPlan,companyHealthPlan';
 
 export default class EmployeeHealthPlanService extends HttpService {
   async getHealthPlansByEmployee(
@@ -50,7 +50,7 @@ export default class EmployeeHealthPlanService extends HttpService {
         `direction=${direction}`
       ];
 
-      console.log('ID recebido em getHealthPlansByEmployee:', id);
+      console.log('[getHealthPlansByEmployee] employeeId usado apenas para listar planos do colaborador:', id);
 
       if (query_value) {
         query_value = id + ',' + query_value;
@@ -145,6 +145,7 @@ export default class EmployeeHealthPlanService extends HttpService {
     query_props?: string
   ): Promise<{ content: ExpensePerProcedureType[], meta: any }> {
     try {
+      console.log('[by-employee-health-plan] employeeHealthPlanId enviado para consultar limites:', id);
       const queryParams = [
         `id=${id}`,
         `page=${page}`,
@@ -158,7 +159,7 @@ export default class EmployeeHealthPlanService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'hospitalProcedureType';
+      const includesToUse = 'employeeHealthPlan,contractHealthPlanHospitalProcedures,companyHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
