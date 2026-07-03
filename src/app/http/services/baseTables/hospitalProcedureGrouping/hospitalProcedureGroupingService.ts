@@ -6,9 +6,31 @@ import type {
 } from "@/components/baseTables/hospitalProcedureGrouping/types";
 
 interface ApiResponse<T> {
-  data: T;
+  data?: T | { content?: T; meta?: any; metadata?: any };
+  content?: T;
   meta?: any;
+  metadata?: any;
 }
+
+const getContent = <T>(response: ApiResponse<T[]>): T[] => {
+  const rawContent = response.content ?? response.data;
+
+  if (Array.isArray(rawContent)) return rawContent;
+  if (rawContent && typeof rawContent === "object" && "content" in rawContent) {
+    return rawContent.content ?? [];
+  }
+
+  return [];
+};
+
+const getMeta = (response: ApiResponse<any>): any => {
+  if (response.metadata || response.meta) return response.metadata ?? response.meta;
+  if (response.data && typeof response.data === "object" && !Array.isArray(response.data)) {
+    return (response.data as { metadata?: any; meta?: any }).metadata ?? (response.data as { meta?: any }).meta ?? {};
+  }
+
+  return {};
+};
 
 export default class HospitalProcedureGroupingService extends HttpService {
   async getHospitalProcedureGroupings(
@@ -38,8 +60,8 @@ export default class HospitalProcedureGroupingService extends HttpService {
         `/administration/setup/hospital-procedure-grouping${queryString}`
       );
       return {
-        content: response.data || [],
-        meta: response.meta || {}
+        content: getContent(response),
+        meta: getMeta(response)
       };
     } catch (error) {
       console.error("Erro ao buscar hospital-procedure-grouping:", error);
