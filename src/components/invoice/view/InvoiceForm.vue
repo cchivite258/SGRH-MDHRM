@@ -320,16 +320,17 @@ const filteredPlanProcedures = computed(() => {
 
   return activePlanProcedures.value.filter((procedure) => {
     const procedureType = procedure.hospitalProcedureType || {};
+    const procedureRecord = procedure as any;
     const searchable = [
       procedureType.code,
       procedureType.name,
       procedureType.categoryName,
       getProcedureGroupName(procedure),
-      procedure.limitTypeDefinition,
-      procedure.limitType,
+      procedureRecord.limitTypeDefinition,
+      procedureRecord.limitType,
       procedure.allocatedBalance,
       procedure.usedBalance,
-      (procedure as any).totalUsedBalance,
+      procedureRecord.totalUsedBalance,
       procedure.remainingBalance,
       procedure.groupAllocatedBalance,
       procedure.groupUsedBalance,
