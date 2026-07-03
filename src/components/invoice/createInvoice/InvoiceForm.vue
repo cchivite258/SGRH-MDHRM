@@ -245,10 +245,16 @@ const planAllocatedBalance = computed(() =>
 );
 
 const planUsedBalance = computed(() =>
-  Number(employeeActiveHealthPlan.value?.usedBalance ?? activePlanProcedures.value.reduce(
-    (total, procedure) => total + getBalanceValue(procedure, "usedBalance", "groupUsedBalance"),
-    0
-  ))
+  Number(firstDefined(
+    employeeActiveHealthPlan.value?.totalUsedBalance,
+    activePlanProcedures.value[0]?.employeeHealthPlan?.totalUsedBalance,
+    (activePlanProcedures.value[0] as any)?.totalUsedBalance,
+    employeeActiveHealthPlan.value?.usedBalance,
+    activePlanProcedures.value.reduce(
+      (total, procedure) => total + getBalanceValue(procedure, "usedBalance", "groupUsedBalance"),
+      0
+    )
+  ) || 0)
 );
 
 const planRemainingBalance = computed(() =>
@@ -274,6 +280,7 @@ const filteredPlanProcedures = computed(() => {
       procedure.limitType,
       procedure.allocatedBalance,
       procedure.usedBalance,
+      (procedure as any).totalUsedBalance,
       procedure.remainingBalance,
       procedure.groupAllocatedBalance,
       procedure.groupUsedBalance,
@@ -520,7 +527,7 @@ const getProcedureAllocatedBalance = (procedure: ExpensePerProcedureType) =>
   getBalanceValue(procedure, "allocatedBalance", "groupAllocatedBalance");
 
 const getProcedureUsedBalance = (procedure: ExpensePerProcedureType) =>
-  getBalanceValue(procedure, "usedBalance", "groupUsedBalance");
+  (procedure as any).totalUsedBalance ?? 0;
 
 const getProcedureRemainingBalance = (procedure: ExpensePerProcedureType) =>
   getBalanceValue(procedure, "remainingBalance", "groupRemainingBalance");
@@ -550,7 +557,7 @@ const onConsultHealthPlan = async () => {
         sortColumn: "createdAt",
         direction: "asc",
         query_value: "",
-        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
+        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
       }
     );
 
