@@ -24,6 +24,17 @@ type DashboardCard = {
   errorKey: string | null;
 };
 
+type TrendChart = {
+  key: string;
+  titleKey: string;
+  seriesNameKey: string;
+  color: string;
+  labels: string[];
+  values: number[];
+  loading: boolean;
+  errorKey: string | null;
+};
+
 const { t } = useI18n();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
@@ -64,6 +75,29 @@ const cards = ref<DashboardCard[]>([
     color: "info",
     value: null,
     data: null,
+    loading: false,
+    errorKey: null
+  }
+]);
+
+const trendCharts = ref<TrendChart[]>([
+  {
+    key: "revenueTrend",
+    titleKey: "t-dashboard-revenue-trend-title",
+    seriesNameKey: "t-dashboard-revenue-trend-series",
+    color: "#2563eb",
+    labels: [],
+    values: [],
+    loading: false,
+    errorKey: null
+  },
+  {
+    key: "healthcareServiceUseTrend",
+    titleKey: "t-dashboard-healthcare-service-use-trend-title",
+    seriesNameKey: "t-dashboard-healthcare-service-use-trend-series",
+    color: "#2e7d32",
+    labels: [],
+    values: [],
     loading: false,
     errorKey: null
   }
@@ -142,7 +176,7 @@ const getCardDetail = (card: DashboardCard) => {
 
   if (card.key === "budgetExecution") {
     return t("t-dashboard-budget-execution-detail", {
-      executed: formatCurrency(card.data.totalRevenue),
+      executed: formatCurrency(card.data.totalBilled ?? card.data.totalRevenue),
       budget: formatCurrency(card.data.totalBudget)
     });
   }
@@ -157,7 +191,7 @@ const getCardDetail = (card: DashboardCard) => {
   if (card.key === "networkUtilization") {
     return t("t-dashboard-network-utilization-detail", {
       network: formatCurrency(card.data.totalNetworkUtilizationFee),
-      total: formatCurrency(card.data.totalRevenue)
+      total: formatCurrency(card.data.totalBilled ?? card.data.totalRevenue)
     });
   }
 
@@ -168,6 +202,133 @@ const getMetricValue = (data: Record<string, any> | null, field: string) => {
   const value = Number(data?.[field]);
   return Number.isFinite(value) ? value : null;
 };
+
+const formatTrendLabel = (value: string) => {
+  const [year, month] = value.split("-");
+  if (!year || !month) return value;
+
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("pt-MZ", {
+    month: "short",
+    year: "numeric"
+  }).format(date);
+};
+
+const normalizeTrendDetails = (details: unknown) => {
+  if (!Array.isArray(details)) return { labels: [], values: [] };
+
+  const entries = details
+    .flatMap((item) => Object.entries((item ?? {}) as Record<string, unknown>))
+    .map(([period, value]) => ({
+      period,
+      value: Number(value)
+    }))
+    .filter((item) => Number.isFinite(item.value))
+    .sort((a, b) => a.period.localeCompare(b.period));
+
+  return {
+    labels: entries.map((item) => formatTrendLabel(item.period)),
+    values: entries.map((item) => item.value)
+  };
+};
+
+const setAllTrendChartsLoading = (loading: boolean) => {
+  trendCharts.value = trendCharts.value.map((chart) => ({
+    ...chart,
+    loading,
+    errorKey: loading ? null : chart.errorKey
+  }));
+};
+
+const resetTrendCharts = () => {
+  trendCharts.value = trendCharts.value.map((chart) => ({
+    ...chart,
+    labels: [],
+    values: [],
+    loading: false,
+    errorKey: null
+  }));
+};
+
+const setTrendChartResult = (
+  key: string,
+  data: Record<string, any> | null,
+  errorKey: string | null = null
+) => {
+  const normalized = normalizeTrendDetails(data?.details);
+
+  trendCharts.value = trendCharts.value.map((chart) =>
+    chart.key === key
+      ? {
+          ...chart,
+          labels: normalized.labels,
+          values: normalized.values,
+          loading: false,
+          errorKey
+        }
+      : chart
+  );
+};
+
+const getTrendChartSeries = (chart: TrendChart) => [
+  {
+    name: t(chart.seriesNameKey),
+    data: chart.values
+  }
+];
+
+const getTrendChartOptions = (chart: TrendChart) => ({
+  chart: {
+    type: "line",
+    toolbar: { show: false },
+    zoom: { enabled: false },
+    fontFamily: "inherit"
+  },
+  colors: [chart.color],
+  dataLabels: {
+    enabled: false
+  },
+  stroke: {
+    curve: "smooth",
+    width: 3
+  },
+  grid: {
+    borderColor: "#edf1f5",
+    strokeDashArray: 3
+  },
+  markers: {
+    size: 4,
+    strokeWidth: 2,
+    hover: { size: 6 }
+  },
+  xaxis: {
+    categories: chart.labels,
+    labels: {
+      style: {
+        colors: "#6b7280",
+        fontSize: "12px"
+      }
+    },
+    axisBorder: { color: "#e5e7eb" },
+    axisTicks: { color: "#e5e7eb" }
+  },
+  yaxis: {
+    labels: {
+      formatter: (value: number) => Number(value).toLocaleString("pt-MZ"),
+      style: {
+        colors: "#6b7280",
+        fontSize: "12px"
+      }
+    }
+  },
+  tooltip: {
+    y: {
+      formatter: (value: number) => Number(value).toLocaleString("pt-MZ")
+    }
+  }
+});
 
 const setAllCardsLoading = (loading: boolean) => {
   cards.value = cards.value.map((card) => ({
@@ -185,6 +346,11 @@ const resetCardValues = () => {
     loading: false,
     errorKey: null
   }));
+};
+
+const resetDashboardData = () => {
+  resetCardValues();
+  resetTrendCharts();
 };
 
 const setCardResult = (
@@ -208,7 +374,7 @@ const setCardResult = (
 
 const loadCoveragePeriodsForContract = async (contractId: string | number | null) => {
   selectedCoveragePeriodId.value = null;
-  resetCardValues();
+  resetDashboardData();
 
   if (contractId === null) {
     coveragePeriodStore.coverage_periods_for_dropdown = [];
@@ -235,7 +401,7 @@ const loadCoveragePeriodsForContract = async (contractId: string | number | null
 
 const loadDashboardCards = async () => {
   if (!hasDashboardSelection.value) {
-    resetCardValues();
+    resetDashboardData();
     return;
   }
 
@@ -245,34 +411,54 @@ const loadDashboardCards = async () => {
   };
 
   setAllCardsLoading(true);
+  setAllTrendChartsLoading(true);
   dashboardErrorKey.value = null;
 
-  const results = await Promise.allSettled([
+  const cardResults = await Promise.allSettled([
     dashboardService.getPercentageOfBudgetExecution(payload),
     dashboardService.getPercentageOfBudgetExecutionByBeneficiaries(payload),
     dashboardService.getNetworkUtilizationFee(payload)
   ]);
 
+  const trendResults = await Promise.allSettled([
+    dashboardService.getRevenueTrend(payload),
+    dashboardService.getHealthcareServiceUseTrends(payload)
+  ]);
+
   setCardResult(
     "budgetExecution",
-    results[0].status === "fulfilled" ? results[0].value : null,
+    cardResults[0].status === "fulfilled" ? cardResults[0].value : null,
     "percentageOfBudgetExecution",
-    results[0].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
+    cardResults[0].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
   );
   setCardResult(
     "beneficiariesUsage",
-    results[1].status === "fulfilled" ? results[1].value : null,
+    cardResults[1].status === "fulfilled" ? cardResults[1].value : null,
     "percentageOfBeneficiariesWithRevenue",
-    results[1].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
+    cardResults[1].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
   );
   setCardResult(
     "networkUtilization",
-    results[2].status === "fulfilled" ? results[2].value : null,
+    cardResults[2].status === "fulfilled" ? cardResults[2].value : null,
     "percentageOfNetworkUtilizationFee",
-    results[2].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
+    cardResults[2].status === "rejected" ? "t-dashboard-error-loading-indicator" : null
   );
 
-  if (results.some((result) => result.status === "rejected")) {
+  setTrendChartResult(
+    "revenueTrend",
+    trendResults[0].status === "fulfilled" ? trendResults[0].value : null,
+    trendResults[0].status === "rejected" ? "t-dashboard-error-loading-trend" : null
+  );
+  setTrendChartResult(
+    "healthcareServiceUseTrend",
+    trendResults[1].status === "fulfilled" ? trendResults[1].value : null,
+    trendResults[1].status === "rejected" ? "t-dashboard-error-loading-trend" : null
+  );
+
+  if (
+    cardResults.some((result) => result.status === "rejected") ||
+    trendResults.some((result) => result.status === "rejected")
+  ) {
     dashboardErrorKey.value = "t-dashboard-some-indicators-not-loaded";
   }
 };
@@ -408,6 +594,53 @@ onMounted(async () => {
             <div class="dashboard-metric-card__description">
               {{ getCardDetail(card) }}
             </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-4">
+      <v-col
+        v-for="chart in trendCharts"
+        :key="chart.key"
+        cols="12"
+        lg="6"
+      >
+        <v-card class="dashboard-trend-card" elevation="0">
+          <v-card-text>
+            <div class="dashboard-trend-card__header">
+              <h5>{{ $t(chart.titleKey) }}</h5>
+              <v-progress-circular
+                v-if="chart.loading"
+                indeterminate
+                size="22"
+                width="3"
+                :color="chart.color"
+              />
+            </div>
+
+            <v-alert
+              v-if="chart.errorKey"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              {{ $t(chart.errorKey) }}
+            </v-alert>
+
+            <div v-if="chart.values.length === 0 && !chart.loading && !chart.errorKey" class="dashboard-trend-card__empty">
+              {{ $t("t-dashboard-no-trend-data") }}
+            </div>
+
+            <apexchart
+              v-else
+              class="dashboard-trend-card__chart"
+              height="270"
+              type="line"
+              :series="getTrendChartSeries(chart)"
+              :options="getTrendChartOptions(chart)"
+            />
           </v-card-text>
         </v-card>
       </v-col>
@@ -600,6 +833,43 @@ onMounted(async () => {
   color: #4b5563;
   font-size: 0.76rem;
   line-height: 1.35;
+}
+
+.dashboard-trend-card {
+  border: 1px solid #e9edf3;
+  border-radius: 8px !important;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.045) !important;
+}
+
+.dashboard-trend-card :deep(.v-card-text) {
+  padding: 20px 22px 16px;
+}
+
+.dashboard-trend-card__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.dashboard-trend-card__header h5 {
+  color: #111827;
+  font-size: 0.98rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dashboard-trend-card__empty {
+  align-items: center;
+  color: #6b7280;
+  display: flex;
+  font-size: 0.86rem;
+  height: 270px;
+  justify-content: center;
+}
+
+.dashboard-trend-card__chart {
+  min-height: 270px;
 }
 
 @media (max-width: 959px) {
