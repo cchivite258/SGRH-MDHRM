@@ -50,6 +50,7 @@ import InvoiceReferenceReportService from "@/app/http/services/ammReports/invoic
 import HospitalProcedureTrendReportService from "@/app/http/services/ammReports/hospitalProcedureTrendReportService";
 import EmployeeHealthPlanLimitsTrendReportService from "@/app/http/services/ammReports/employeeHealthPlanLimitsTrendReportService";
 import EmployeeFrequencyTrendReportService from "@/app/http/services/ammReports/employeeFrequencyTrendReportService";
+import DashboardService from "@/app/http/services/dashboard/dashboardService";
 
 // FakeBackendService is used for mocking API responses
 import FakeBackendService from "@/app/http/services/fakeBackendService";
@@ -89,6 +90,7 @@ const invoiceReferenceReportService = new InvoiceReferenceReportService();
 const hospitalProcedureTrendReportService = new HospitalProcedureTrendReportService();
 const employeeHealthPlanLimitsTrendReportService = new EmployeeHealthPlanLimitsTrendReportService();
 const employeeFrequencyTrendReportService = new EmployeeFrequencyTrendReportService();
+const dashboardService = new DashboardService();
 
 //BASETABLES
 const countryService = new CountryService();
@@ -157,5 +159,6 @@ export {
     invoiceReferenceReportService,
     hospitalProcedureTrendReportService,
     employeeHealthPlanLimitsTrendReportService,
-    employeeFrequencyTrendReportService
+    employeeFrequencyTrendReportService,
+    dashboardService
 };
