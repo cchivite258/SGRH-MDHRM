@@ -86,7 +86,11 @@ const getProcedureGroupIdentity = (procedure: HospitalProcedureListingType) => {
 const procedureUsesGroupLimit = (procedure: HospitalProcedureListingType) => {
   const item = procedure as any;
   const source = getProcedureSource(procedure);
-  return Boolean(item.belongsToGroup ?? source.belongsToGroup);
+  return Boolean(
+    item.belongsToGroup
+    || source.belongsToGroup
+    || firstDefined(source.groupFixedAmount, item.groupFixedAmount, source.groupPercentage, item.groupPercentage, source.hospitalProcedureGroupLimit, item.hospitalProcedureGroupLimit)
+  );
 };
 
 const getProcedureFixedAmount = (procedure: HospitalProcedureListingType) => {
@@ -275,21 +279,33 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
       [{ content: group, colSpan: groupColSpan, styles: { fillColor: SOFT_BLUE, textColor: BRAND_BLUE, fontStyle: "bold" } }]
     ];
 
-    if (includeBalances && groupUsesGroupLimit(groupProcedures)) {
-      rows.push([
-        {
-          content: "Limite do grupo",
-          colSpan: 2,
-          styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
-        },
-        formatMoney(getGroupFixedAmount(groupProcedures)),
-        formatPercent(getGroupPercentage(groupProcedures)),
-        formatMoney(getGroupAllocatedBalance(groupProcedures)),
-        formatMoney(getGroupUsedBalance(groupProcedures)),
-        formatMoney(getGroupRemainingBalance(groupProcedures)),
-        getGroupLimitLabel(groupProcedures),
-        getGroupFrequencyLabel(groupProcedures)
-      ]);
+    if (groupUsesGroupLimit(groupProcedures)) {
+      rows.push(includeBalances
+        ? [
+          {
+            content: "Limite do grupo",
+            colSpan: 2,
+            styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
+          },
+          formatMoney(getGroupFixedAmount(groupProcedures)),
+          formatPercent(getGroupPercentage(groupProcedures)),
+          formatMoney(getGroupAllocatedBalance(groupProcedures)),
+          formatMoney(getGroupUsedBalance(groupProcedures)),
+          formatMoney(getGroupRemainingBalance(groupProcedures)),
+          getGroupLimitLabel(groupProcedures),
+          getGroupFrequencyLabel(groupProcedures)
+        ]
+        : [
+          {
+            content: "Limite do grupo",
+            colSpan: 2,
+            styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
+          },
+          formatMoney(getGroupFixedAmount(groupProcedures)),
+          formatPercent(getGroupPercentage(groupProcedures)),
+          getGroupLimitLabel(groupProcedures),
+          getGroupFrequencyLabel(groupProcedures)
+        ]);
     }
 
     Object.entries(categoryMap).forEach(([category, categoryProcedures]) => {
@@ -302,17 +318,24 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
       ]);
 
       categoryProcedures.forEach((procedure) => {
-        if (includeBalances && procedureUsesGroupLimit(procedure)) {
+        if (procedureUsesGroupLimit(procedure)) {
           rows.push([
             getProcedureCode(procedure),
             getProcedureName(procedure),
             "-",
             "-",
-            "-",
-            hasProcedureTotalUsedBalance(procedure) ? formatMoney(getProcedureTotalUsedBalance(procedure)) : "-",
-            "-",
-            "-",
-            "-"
+            ...(includeBalances
+              ? [
+                "-",
+                hasProcedureTotalUsedBalance(procedure) ? formatMoney(getProcedureTotalUsedBalance(procedure)) : "-",
+                "-",
+                "-",
+                "-"
+              ]
+              : [
+                "-",
+                "-"
+              ])
           ]);
           return;
         }
