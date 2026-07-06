@@ -381,33 +381,63 @@ const firstDefined = (...values: DisplayValue[]): DisplayValue =>
   values.find(value => value !== null && value !== undefined && value !== "");
 
 const procedureUsesGroupLimit = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return Boolean(
-    source.belongsToGroup
-    || firstDefined(source.groupFixedAmount, source.groupPercentage, source.hospitalProcedureGroupLimit)
+    item.belongsToGroup
+    || source.belongsToGroup
+    || firstDefined(source.groupFixedAmount, item.groupFixedAmount, source.groupPercentage, item.groupPercentage, source.hospitalProcedureGroupLimit, item.hospitalProcedureGroupLimit)
   );
 };
 
 const getProcedureFixedAmount = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupFixedAmount, source.fixedAmount)
-    : firstDefined(source.fixedAmount, source.groupFixedAmount);
+    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount, source.fixedAmount, item.fixedAmount)
+    : firstDefined(source.fixedAmount, item.fixedAmount, source.groupFixedAmount, item.groupFixedAmount);
 };
 
 const getProcedurePercentage = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupPercentage, source.percentage)
-    : firstDefined(source.percentage, source.groupPercentage);
+    ? firstDefined(source.groupPercentage, item.groupPercentage, source.percentage, item.percentage)
+    : firstDefined(source.percentage, item.percentage, source.groupPercentage, item.groupPercentage);
 };
 
-const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) =>
-  getLimitTypeDefinitionLabel(procedureUsesGroupLimit(procedure)
-    ? getProcedureSource(procedure).hospitalProcedureGroupLimit
-    : getProcedureSource(procedure).limitTypeDefinition)
-  || getTranslatedEnum("t-limit-type", getProcedureSource(procedure).limitType)
-  || "-";
+const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
+  const source = getProcedureSource(procedure);
+  const limitType = procedureUsesGroupLimit(procedure)
+    ? firstDefined(source.hospitalProcedureGroupLimit, item.hospitalProcedureGroupLimit)
+    : firstDefined(source.limitTypeDefinition, item.limitTypeDefinition);
+
+  return getLimitTypeDefinitionLabel(limitType as string | null | undefined)
+    || getTranslatedEnum("t-limit-type", source.limitType || item.limitType)
+    || "-";
+};
+
+const getGroupLimitProcedure = (procedures: HospitalProcedureListingType[]) =>
+  procedures.find(procedure => procedureUsesGroupLimit(procedure)) || procedures[0];
+
+const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
+  procedures.some(procedure => procedureUsesGroupLimit(procedure));
+
+const getGroupFixedAmount = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureFixedAmount(procedure) : null;
+};
+
+const getGroupPercentage = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedurePercentage(procedure) : null;
+};
+
+const getGroupLimitLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureLimitLabel(procedure) : "-";
+};
 
 const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   const source = getProcedureSource(procedure);
@@ -419,6 +449,11 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   return limitTypeLabel
     ? `${allowedFrequencyUse}/${frequencyInterval} ${limitTypeLabel}`
     : `${allowedFrequencyUse}/${frequencyInterval}`;
+};
+
+const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
 };
 
 const onConsultHealthPlan = async () => {
@@ -868,6 +903,14 @@ onBeforeUnmount(() => {
                   </td>
                 </tr>
 
+                <tr v-if="groupUsesGroupLimit(group.procedures)" class="group-limit-row">
+                  <td colspan="2">Limite do grupo</td>
+                  <td>{{ formatPlanMoney(getGroupFixedAmount(group.procedures)) }}</td>
+                  <td>{{ formatPlanPercent(getGroupPercentage(group.procedures)) }}</td>
+                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
+                  <td>{{ getGroupFrequencyLabel(group.procedures) }}</td>
+                </tr>
+
                 <template
                   v-for="category in group.categories"
                   :key="`${group.group}-${category.category}`"
@@ -895,10 +938,10 @@ onBeforeUnmount(() => {
                     <td>
                       <div class="font-weight-medium">{{ getProcedureName(procedure) }}</div>
                     </td>
-                    <td>{{ formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
-                    <td>{{ formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
-                    <td>{{ getProcedureLimitLabel(procedure) }}</td>
-                    <td>{{ getFrequencyLabel(procedure) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getProcedureLimitLabel(procedure) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getFrequencyLabel(procedure) }}</td>
                   </tr>
                 </template>
               </template>
@@ -1015,6 +1058,19 @@ onBeforeUnmount(() => {
   line-height: 1.4;
   padding: 12px 14px;
   vertical-align: middle;
+}
+
+.group-limit-row td {
+  background: rgba(var(--v-theme-primary), 0.045);
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.86);
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.group-limit-row td:first-child {
+  color: rgb(var(--v-theme-primary));
+  text-transform: uppercase;
 }
 
 .category-row td {

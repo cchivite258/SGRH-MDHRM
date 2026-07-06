@@ -10,7 +10,6 @@ import { useEmployeeStore } from "@/store/employee/employeeStore";
 import { useCurrencyStore } from "@/store/baseTables/currencyStore";
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
 import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
-import { useHospitalProcedureStore } from "@/store/institution/hospitalProcedureStore";
 import { useHospitalProcedureBalanceStore } from "@/store/employee/hospitalProcedureBalanceStore";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import { useI18n } from "vue-i18n";
@@ -64,7 +63,6 @@ const employeeStore = useEmployeeStore();
 const currencyStore = useCurrencyStore();
 const dependentStore = useDependentEmployeeStore();
 const healthPlanStore = useHealthPlanStore();
-const hospitalProcedureStore = useHospitalProcedureStore();
 const hospitalProcedureBalanceStore = useHospitalProcedureBalanceStore();
 
 // Refs
@@ -218,6 +216,18 @@ const getProcedureGroupName = (procedure: HospitalProcedureListingType | Expense
   return typeof group === "object" ? group.name || "-" : String(group);
 };
 
+const getProcedureGroupIdentity = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
+  const item = procedure as any;
+  const source = getProcedureSource(procedure);
+  return String(firstDefined(
+    item.hospitalProcedureGroupId,
+    source.hospitalProcedureGroupId,
+    item.hospitalProcedureGroup?.id,
+    source.hospitalProcedureGroup?.id,
+    getProcedureGroupName(procedure)
+  ));
+};
+
 const getProcedureSource = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
   const item = procedure as any;
   return item.companyHealthPlanHospitalProcedures
@@ -239,26 +249,34 @@ const getProcedureIdentity = (procedure: HospitalProcedureListingType | ExpenseP
   ));
 };
 
-const belongsToInvoiceMember = (procedure: ExpensePerProcedureType) => {
-  const item = procedure as any;
+const getNumberValue = (value: number | string | null | undefined) =>
+  Number(value || 0);
 
-  if (invoiceData.value.isEmployeeInvoice) {
-    return item.isEmployee !== false && !item.dependentId;
-  }
+const mergeProcedureLimit = (existing: ExpensePerProcedureType, incoming: ExpensePerProcedureType) => {
+  const current = existing as any;
+  const next = incoming as any;
+  const currentUsages = Array.isArray(current.employeeHospitalProcedurePlanUsages) ? current.employeeHospitalProcedurePlanUsages : [];
+  const nextUsages = Array.isArray(next.employeeHospitalProcedurePlanUsages) ? next.employeeHospitalProcedurePlanUsages : [];
 
-  if (!invoiceData.value.dependent) return true;
-  return item.dependentId === invoiceData.value.dependent
-    || item.dependent?.id === invoiceData.value.dependent;
+  return {
+    ...existing,
+    ...incoming,
+    usedBalance: getNumberValue(existing.usedBalance) + getNumberValue(incoming.usedBalance),
+    groupUsedBalance: Math.max(getNumberValue(existing.groupUsedBalance), getNumberValue(incoming.groupUsedBalance)),
+    totalUsedBalance: getNumberValue(current.totalUsedBalance) + getNumberValue(next.totalUsedBalance),
+    employeeHospitalProcedurePlanUsages: [...currentUsages, ...nextUsages]
+  } as ExpensePerProcedureType;
 };
 
 const getInvoiceMemberProcedureLimits = (procedures: ExpensePerProcedureType[]) => {
-  const memberProcedures = procedures.filter(belongsToInvoiceMember);
-  const scopedProcedures = memberProcedures.length ? memberProcedures : procedures;
   const uniqueProcedures = new Map<string, ExpensePerProcedureType>();
 
-  scopedProcedures.forEach((procedure) => {
+  procedures.forEach((procedure) => {
     const key = getProcedureIdentity(procedure);
-    if (!uniqueProcedures.has(key)) {
+    const existingProcedure = uniqueProcedures.get(key);
+    if (existingProcedure) {
+      uniqueProcedures.set(key, mergeProcedureLimit(existingProcedure, procedure));
+    } else {
       uniqueProcedures.set(key, procedure);
     }
   });
@@ -267,11 +285,9 @@ const getInvoiceMemberProcedureLimits = (procedures: ExpensePerProcedureType[]) 
 };
 
 const procedureUsesGroupLimit = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
-  return Boolean(
-    source.belongsToGroup
-    || firstDefined(source.groupFixedAmount, source.groupPercentage, source.hospitalProcedureGroupLimit)
-  );
+  return Boolean(item.belongsToGroup ?? source.belongsToGroup);
 };
 
 const getBalanceValue = (
@@ -280,8 +296,8 @@ const getBalanceValue = (
   groupKey: keyof Pick<ExpensePerProcedureType, "groupAllocatedBalance" | "groupUsedBalance" | "groupRemainingBalance">
 ) => {
   const value = procedureUsesGroupLimit(procedure)
-    ? firstDefined(procedure[groupKey] as DisplayValue, procedure[individualKey] as DisplayValue)
-    : firstDefined(procedure[individualKey] as DisplayValue, procedure[groupKey] as DisplayValue);
+    ? procedure[groupKey] as DisplayValue
+    : procedure[individualKey] as DisplayValue;
 
   return Number(value || 0);
 };
@@ -294,16 +310,13 @@ const planAllocatedBalance = computed(() =>
 );
 
 const planUsedBalance = computed(() =>
-  Number(firstDefined(
-    employeeActiveHealthPlan.value?.totalUsedBalance,
-    activePlanProcedures.value[0]?.employeeHealthPlan?.totalUsedBalance,
-    (activePlanProcedures.value[0] as any)?.totalUsedBalance,
-    employeeActiveHealthPlan.value?.usedBalance,
-    activePlanProcedures.value.reduce(
-      (total, procedure) => total + getBalanceValue(procedure, "usedBalance", "groupUsedBalance"),
-      0
-    )
-  ) || 0)
+  activePlanProcedures.value.length
+    ? getPlanUsedBalanceTotal(activePlanProcedures.value)
+    : Number(firstDefined(
+      employeeActiveHealthPlan.value?.totalUsedBalance,
+      activePlanProcedures.value[0]?.employeeHealthPlan?.totalUsedBalance,
+      employeeActiveHealthPlan.value?.usedBalance
+    ) || 0)
 );
 
 const planRemainingBalance = computed(() =>
@@ -436,25 +449,30 @@ const getLimitTypeDefinitionLabel = (value: string | null | undefined) =>
   value ? limitTypeDefinitionOptions.find(option => option.value === value)?.label || humanizeEnum(value) : "";
 
 const getProcedureFixedAmount = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupFixedAmount, source.fixedAmount)
-    : firstDefined(source.fixedAmount, source.groupFixedAmount);
+    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount)
+    : firstDefined(source.fixedAmount, item.fixedAmount);
 };
 
 const getProcedurePercentage = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupPercentage, source.percentage)
-    : firstDefined(source.percentage, source.groupPercentage);
+    ? firstDefined(source.groupPercentage, item.groupPercentage)
+    : firstDefined(source.percentage, item.percentage);
 };
 
-const getProcedureLimitLabel = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) =>
-  getLimitTypeDefinitionLabel(procedureUsesGroupLimit(procedure)
-    ? getProcedureSource(procedure).hospitalProcedureGroupLimit
-    : getProcedureSource(procedure).limitTypeDefinition)
-  || getTranslatedEnum("t-limit-type", getProcedureSource(procedure).limitType)
-  || "-";
+const getProcedureLimitLabel = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
+  const item = procedure as any;
+  const source = getProcedureSource(procedure);
+  const limitType = procedureUsesGroupLimit(procedure)
+    ? firstDefined(source.hospitalProcedureGroupLimit, item.hospitalProcedureGroupLimit)
+    : firstDefined(source.limitTypeDefinition, item.limitTypeDefinition);
+
+  return getLimitTypeDefinitionLabel(limitType as string | null | undefined) || "-";
+};
 
 const getFrequencyLabel = (procedure: HospitalProcedureListingType | ExpensePerProcedureType | any) => {
   const source = getProcedureSource(procedure);
@@ -474,18 +492,79 @@ const formatPlanBalance = (value: number | string | null | undefined) =>
 const getProcedureAllocatedBalance = (procedure: ExpensePerProcedureType) =>
   getBalanceValue(procedure, "allocatedBalance", "groupAllocatedBalance");
 
+const getProcedureTotalUsedBalance = (procedure: ExpensePerProcedureType) =>
+  Number(firstDefined((procedure as any).totalUsedBalance) || 0);
+
+const hasProcedureTotalUsedBalance = (procedure: ExpensePerProcedureType) =>
+  getProcedureTotalUsedBalance(procedure) !== 0;
+
 const getProcedureUsedBalance = (procedure: ExpensePerProcedureType) =>
-  (procedure as any).totalUsedBalance ?? 0;
+  getProcedureTotalUsedBalance(procedure);
 
 const getProcedureRemainingBalance = (procedure: ExpensePerProcedureType) =>
   getBalanceValue(procedure, "remainingBalance", "groupRemainingBalance");
 
-const getContractHealthPlanId = () =>
-  employeeActiveHealthPlan.value?.contractHealthPlanId
-  || employeeActiveHealthPlan.value?.companyHealthPlanId
-  || employeeActiveHealthPlan.value?.contractHealthPlan?.id
-  || employeeActiveHealthPlan.value?.companyHealthPlan?.id
-  || activeHealthPlan.value?.id;
+const groupUsesGroupLimit = (procedures: ExpensePerProcedureType[]) =>
+  procedures.some(procedure => procedureUsesGroupLimit(procedure));
+
+const getGroupLimitProcedure = (procedures: ExpensePerProcedureType[]) =>
+  procedures.find(procedure => procedureUsesGroupLimit(procedure)) || procedures[0];
+
+const getGroupFixedAmount = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureFixedAmount(procedure) : null;
+};
+
+const getGroupPercentage = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedurePercentage(procedure) : null;
+};
+
+const getGroupAllocatedBalance = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureAllocatedBalance(procedure) : null;
+};
+
+const getGroupUsedBalance = (procedures: ExpensePerProcedureType[]) => {
+  const groupUsedBalances = procedures.map(procedure => Number(procedure.groupUsedBalance || 0));
+  return groupUsedBalances.find(value => value !== 0) || 0;
+};
+
+const getGroupRemainingBalance = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureRemainingBalance(procedure) : null;
+};
+
+const getGroupLimitLabel = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureLimitLabel(procedure) : "-";
+};
+
+const getGroupFrequencyLabel = (procedures: ExpensePerProcedureType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
+};
+
+const getPlanUsedBalanceTotal = (procedures: ExpensePerProcedureType[]) => {
+  const groupedProcedures = new Map<string, ExpensePerProcedureType[]>();
+  let total = 0;
+
+  procedures.forEach((procedure) => {
+    if (procedureUsesGroupLimit(procedure)) {
+      const groupKey = getProcedureGroupIdentity(procedure);
+      groupedProcedures.set(groupKey, [...(groupedProcedures.get(groupKey) || []), procedure]);
+      return;
+    }
+
+    total += getProcedureTotalUsedBalance(procedure);
+  });
+
+  groupedProcedures.forEach((groupProcedures) => {
+    total += Number(getGroupUsedBalance(groupProcedures) || 0);
+  });
+
+  return total;
+};
 
 const onConsultHealthPlan = async () => {
   if (!invoiceData.value.employee) {
@@ -505,7 +584,7 @@ const onConsultHealthPlan = async () => {
         sortColumn: "createdAt",
         direction: "asc",
         query_value: "",
-        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,frequencyInterval,lastUsageDate,allowedFrequencyUse"
+        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,belongsToGroup,frequencyInterval,lastUsageDate,allowedFrequencyUse,contractHealthPlanHospitalProcedures.fixedAmount,contractHealthPlanHospitalProcedures.percentage,contractHealthPlanHospitalProcedures.limitTypeDefinition,contractHealthPlanHospitalProcedures.belongsToGroup,contractHealthPlanHospitalProcedures.groupFixedAmount,contractHealthPlanHospitalProcedures.groupPercentage,contractHealthPlanHospitalProcedures.hospitalProcedureGroupLimit,companyHealthPlanHospitalProcedures.fixedAmount,companyHealthPlanHospitalProcedures.percentage,companyHealthPlanHospitalProcedures.limitTypeDefinition,companyHealthPlanHospitalProcedures.belongsToGroup,companyHealthPlanHospitalProcedures.groupFixedAmount,companyHealthPlanHospitalProcedures.groupPercentage,companyHealthPlanHospitalProcedures.hospitalProcedureGroupLimit"
       }
     );
 
@@ -531,28 +610,23 @@ const onConsultHealthPlan = async () => {
 };
 
 const onExportHealthPlanPdf = async () => {
-  const contractHealthPlanId = getContractHealthPlanId();
-  if (!contractHealthPlanId || !activeHealthPlan.value) {
+  if (!activePlanProcedures.value.length || !employeeActiveHealthPlan.value) {
     toast.error(t("t-no-active-health-plan"));
     return;
   }
 
   healthPlanPdfExporting.value = true;
   try {
-    const fullPlanProcedures = await hospitalProcedureStore.fetchHospitalProceduresOfPlanScopedFull(
-      contractHealthPlanId,
-      0,
-      1000000000,
-      "categoryName",
-      "asc"
-    );
-
     await exportHealthPlanToPdf({
-      healthPlan: activeHealthPlan.value,
-      procedures: fullPlanProcedures,
+      healthPlan: {
+        ...activeHealthPlan.value,
+        ...employeeActiveHealthPlan.value
+      },
+      procedures: activePlanProcedures.value as any,
       contextLabel: employees.value.find(item => item.value === invoiceData.value.employee)?.label
         || invoiceData.value.employeeLabel
-        || undefined
+        || undefined,
+      showUsageBalances: true
     });
   } catch (error) {
     console.error("Erro ao exportar plano de saude:", error);
@@ -945,15 +1019,15 @@ onMounted(async () => {
           <v-table density="compact" fixed-header height="560" class="procedure-table">
             <thead>
               <tr>
-                <th style="width: 9%">Codigo</th>
-                <th>{{ $t('t-procedures') }}</th>
-                <th style="width: 11%">{{ $t('t-fixed-amount') }}</th>
-                <th style="width: 9%">{{ $t('t-percentage') }}</th>
-                <th style="width: 11%">Alocado</th>
-                <th style="width: 10%">Gasto</th>
-                <th style="width: 12%">Remanescente</th>
-                <th style="width: 13%">{{ $t('t-limit-type') }}</th>
-                <th style="width: 11%">{{ $t('t-frequency-interval') }}</th>
+                                            <th style="width: 7%">Codigo</th>
+                                            <th style="width: 22%">{{ $t('t-procedures') }}</th>
+                                            <th style="width: 10%">{{ $t('t-fixed-amount') }}</th>
+                                            <th style="width: 8%">{{ $t('t-percentage') }}</th>
+                                            <th style="width: 10%">Alocado</th>
+                                            <th style="width: 9%">Gasto</th>
+                                            <th style="width: 11%">Remanescente</th>
+                                            <th style="width: 12%">{{ $t('t-limit-type') }}</th>
+                                            <th style="width: 11%">{{ $t('t-frequency-interval') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -970,6 +1044,16 @@ onMounted(async () => {
                       </v-chip>
                     </div>
                   </td>
+                </tr>
+                <tr v-if="groupUsesGroupLimit(group.procedures)" class="group-limit-row">
+                  <td colspan="2">Limite do grupo</td>
+                  <td>{{ formatPlanMoney(getGroupFixedAmount(group.procedures)) }}</td>
+                  <td>{{ formatPlanPercent(getGroupPercentage(group.procedures)) }}</td>
+                  <td>{{ formatPlanBalance(getGroupAllocatedBalance(group.procedures)) }}</td>
+                  <td>{{ formatPlanBalance(getGroupUsedBalance(group.procedures)) }}</td>
+                  <td>{{ formatPlanBalance(getGroupRemainingBalance(group.procedures)) }}</td>
+                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
+                  <td>{{ getGroupFrequencyLabel(group.procedures) }}</td>
                 </tr>
 
                 <template v-for="category in group.categories" :key="`${group.group}-${category.category}`">
@@ -992,13 +1076,26 @@ onMounted(async () => {
                     <td>
                       <div class="font-weight-medium">{{ getProcedureName(procedure) }}</div>
                     </td>
-                    <td>{{ formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
-                    <td>{{ formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
-                    <td>{{ formatPlanBalance(getProcedureAllocatedBalance(procedure)) }}</td>
-                    <td>{{ formatPlanBalance(getProcedureUsedBalance(procedure)) }}</td>
-                    <td>{{ formatPlanBalance(getProcedureRemainingBalance(procedure)) }}</td>
-                    <td>{{ getProcedureLimitLabel(procedure) }}</td>
-                    <td>{{ getFrequencyLabel(procedure) }}</td>
+                    <template v-if="procedureUsesGroupLimit(procedure)">
+                      <td class="text-muted">-</td>
+                      <td class="text-muted">-</td>
+                      <td class="text-muted">-</td>
+                      <td :class="{ 'text-muted': !hasProcedureTotalUsedBalance(procedure) }">
+                        {{ hasProcedureTotalUsedBalance(procedure) ? formatPlanBalance(getProcedureTotalUsedBalance(procedure)) : '-' }}
+                      </td>
+                      <td class="text-muted">-</td>
+                      <td class="text-muted">-</td>
+                      <td class="text-muted">-</td>
+                    </template>
+                    <template v-else>
+                      <td>{{ formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
+                      <td>{{ formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
+                      <td>{{ formatPlanBalance(getProcedureAllocatedBalance(procedure)) }}</td>
+                      <td>{{ formatPlanBalance(getProcedureUsedBalance(procedure)) }}</td>
+                      <td>{{ formatPlanBalance(getProcedureRemainingBalance(procedure)) }}</td>
+                      <td>{{ getProcedureLimitLabel(procedure) }}</td>
+                      <td>{{ getFrequencyLabel(procedure) }}</td>
+                    </template>
                   </tr>
                 </template>
               </template>
@@ -1108,6 +1205,20 @@ onMounted(async () => {
   line-height: 1.4;
   padding: 12px 14px;
   vertical-align: middle;
+}
+
+.group-limit-row td {
+  background: rgba(var(--v-theme-primary), 0.035);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.84);
+  font-weight: 700;
+  padding: 9px 14px;
+  vertical-align: middle;
+}
+
+.group-limit-row td:first-child {
+  color: rgb(var(--v-theme-primary));
+  text-transform: uppercase;
 }
 
 .category-row td {
