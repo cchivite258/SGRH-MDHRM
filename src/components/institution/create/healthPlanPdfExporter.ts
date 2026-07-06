@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import type { UserOptions } from "jspdf-autotable";
 import { amountFormate } from "@/app/common/amountFormate";
 import i18n from "@/plugins/i18n";
 import type { HospitalProcedureListingType } from "@/components/institution/types";
@@ -12,6 +13,7 @@ type ExportHealthPlanPdfOptions = {
   procedures: HospitalProcedureListingType[];
   contextLabel?: string;
   fileName?: string;
+  showUsageBalances?: boolean;
 };
 
 const BRAND_BLUE: [number, number, number] = [31, 58, 147];
@@ -69,34 +71,51 @@ const getProcedureSource = (procedure: HospitalProcedureListingType) => {
     || item;
 };
 
-const procedureUsesGroupLimit = (procedure: HospitalProcedureListingType) => {
+const getProcedureGroupIdentity = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
-  return Boolean(
-    source.belongsToGroup
-    || firstDefined(source.groupFixedAmount, source.groupPercentage, source.hospitalProcedureGroupLimit)
-  );
+  return String(firstDefined(
+    item.hospitalProcedureGroupId,
+    source.hospitalProcedureGroupId,
+    item.hospitalProcedureGroup?.id,
+    source.hospitalProcedureGroup?.id,
+    getProcedureGroupName(procedure)
+  ));
+};
+
+const procedureUsesGroupLimit = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
+  const source = getProcedureSource(procedure);
+  return Boolean(item.belongsToGroup ?? source.belongsToGroup);
 };
 
 const getProcedureFixedAmount = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupFixedAmount, source.fixedAmount)
-    : firstDefined(source.fixedAmount, source.groupFixedAmount);
+    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount)
+    : firstDefined(source.fixedAmount, item.fixedAmount);
 };
 
 const getProcedurePercentage = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupPercentage, source.percentage)
-    : firstDefined(source.percentage, source.groupPercentage);
+    ? firstDefined(source.groupPercentage, item.groupPercentage)
+    : firstDefined(source.percentage, item.percentage);
 };
 
-const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) =>
-  getLimitTypeDefinitionLabel(procedureUsesGroupLimit(procedure)
-    ? getProcedureSource(procedure).hospitalProcedureGroupLimit
-    : getProcedureSource(procedure).limitTypeDefinition)
-  || getTranslatedEnum("t-limit-type", getProcedureSource(procedure).limitType)
-  || "-";
+const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) => {
+  const item = procedure as any;
+  const source = getProcedureSource(procedure);
+  const limitType = procedureUsesGroupLimit(procedure)
+    ? firstDefined(source.hospitalProcedureGroupLimit, item.hospitalProcedureGroupLimit)
+    : firstDefined(source.limitTypeDefinition, item.limitTypeDefinition);
+
+  return getLimitTypeDefinitionLabel(limitType as string | null | undefined)
+    || getTranslatedEnum("t-limit-type", source.limitType || item.limitType)
+    || "-";
+};
 
 const formatMoney = (value: DisplayValue) => {
   if (value === null || value === undefined || value === "") return "-";
@@ -120,6 +139,107 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
     : `${allowedFrequencyUse}/${frequencyInterval}`;
 };
 
+const hasBalanceColumns = (procedures: HospitalProcedureListingType[]) =>
+  procedures.some((procedure) => {
+    const item = procedure as any;
+    return firstDefined(
+      item.allocatedBalance,
+      item.usedBalance,
+      item.totalUsedBalance,
+      item.remainingBalance,
+      item.groupAllocatedBalance,
+      item.groupUsedBalance,
+      item.groupRemainingBalance
+    ) !== undefined;
+  });
+
+const getBalanceValue = (
+  procedure: HospitalProcedureListingType,
+  individualKey: "allocatedBalance" | "usedBalance" | "remainingBalance",
+  groupKey: "groupAllocatedBalance" | "groupUsedBalance" | "groupRemainingBalance"
+) => {
+  const item = procedure as any;
+  const value = procedureUsesGroupLimit(procedure)
+    ? item[groupKey] as DisplayValue
+    : item[individualKey] as DisplayValue;
+
+  return Number(value || 0);
+};
+
+const getProcedureAllocatedBalance = (procedure: HospitalProcedureListingType) =>
+  getBalanceValue(procedure, "allocatedBalance", "groupAllocatedBalance");
+
+const getProcedureRemainingBalance = (procedure: HospitalProcedureListingType) =>
+  getBalanceValue(procedure, "remainingBalance", "groupRemainingBalance");
+
+const getProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
+  Number(firstDefined((procedure as any).totalUsedBalance) || 0);
+
+const hasProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
+  getProcedureTotalUsedBalance(procedure) !== 0;
+
+const getGroupLimitProcedure = (procedures: HospitalProcedureListingType[]) =>
+  procedures.find(procedure => procedureUsesGroupLimit(procedure)) || procedures[0];
+
+const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
+  procedures.some(procedure => procedureUsesGroupLimit(procedure));
+
+const getGroupFixedAmount = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureFixedAmount(procedure) : null;
+};
+
+const getGroupPercentage = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedurePercentage(procedure) : null;
+};
+
+const getGroupAllocatedBalance = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureAllocatedBalance(procedure) : null;
+};
+
+const getGroupUsedBalance = (procedures: HospitalProcedureListingType[]) => {
+  const groupUsedBalances = procedures.map(procedure => Number((procedure as any).groupUsedBalance || 0));
+  return groupUsedBalances.find(value => value !== 0) || 0;
+};
+
+const getGroupRemainingBalance = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureRemainingBalance(procedure) : null;
+};
+
+const getGroupLimitLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getProcedureLimitLabel(procedure) : "-";
+};
+
+const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
+};
+
+const getPlanUsedBalanceTotal = (procedures: HospitalProcedureListingType[]) => {
+  const groupedProcedures = new Map<string, HospitalProcedureListingType[]>();
+  let total = 0;
+
+  procedures.forEach((procedure) => {
+    if (procedureUsesGroupLimit(procedure)) {
+      const groupKey = getProcedureGroupIdentity(procedure);
+      groupedProcedures.set(groupKey, [...(groupedProcedures.get(groupKey) || []), procedure]);
+      return;
+    }
+
+    total += getProcedureTotalUsedBalance(procedure);
+  });
+
+  groupedProcedures.forEach((groupProcedures) => {
+    total += Number(getGroupUsedBalance(groupProcedures) || 0);
+  });
+
+  return total;
+};
+
 const getPlanName = (healthPlan: any) =>
   healthPlan?.coveragePeriod?.name
   || healthPlan?.coveragePeriodName
@@ -134,7 +254,8 @@ const safeFileName = (value: string) =>
     .replace(/^_+|_+$/g, "")
     .toLowerCase();
 
-const buildGroupedRows = (procedures: HospitalProcedureListingType[]) => {
+const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBalances: boolean) => {
+  const groupColSpan = includeBalances ? 9 : 6;
   const groupMap = procedures.reduce((groups, procedure) => {
     const group = getProcedureGroupName(procedure);
     if (!groups[group]) groups[group] = [];
@@ -151,27 +272,71 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[]) => {
     }, {} as Record<string, HospitalProcedureListingType[]>);
 
     const rows: any[] = [
-      [{ content: group, colSpan: 6, styles: { fillColor: SOFT_BLUE, textColor: BRAND_BLUE, fontStyle: "bold" } }]
+      [{ content: group, colSpan: groupColSpan, styles: { fillColor: SOFT_BLUE, textColor: BRAND_BLUE, fontStyle: "bold" } }]
     ];
+
+    if (includeBalances && groupUsesGroupLimit(groupProcedures)) {
+      rows.push([
+        {
+          content: "Limite do grupo",
+          colSpan: 2,
+          styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
+        },
+        formatMoney(getGroupFixedAmount(groupProcedures)),
+        formatPercent(getGroupPercentage(groupProcedures)),
+        formatMoney(getGroupAllocatedBalance(groupProcedures)),
+        formatMoney(getGroupUsedBalance(groupProcedures)),
+        formatMoney(getGroupRemainingBalance(groupProcedures)),
+        getGroupLimitLabel(groupProcedures),
+        getGroupFrequencyLabel(groupProcedures)
+      ]);
+    }
 
     Object.entries(categoryMap).forEach(([category, categoryProcedures]) => {
       rows.push([
         {
           content: `${category} - ${categoryProcedures.length} ${tr("t-procedures", "procedimentos").toLowerCase()}`,
-          colSpan: 6,
+          colSpan: groupColSpan,
           styles: { fillColor: [245, 246, 248], textColor: [70, 70, 70], fontStyle: "bold" }
         }
       ]);
 
       categoryProcedures.forEach((procedure) => {
-        rows.push([
-          getProcedureCode(procedure),
-          getProcedureName(procedure),
-          formatMoney(getProcedureFixedAmount(procedure)),
-          formatPercent(getProcedurePercentage(procedure)),
-          getProcedureLimitLabel(procedure),
-          getFrequencyLabel(procedure)
-        ]);
+        if (includeBalances && procedureUsesGroupLimit(procedure)) {
+          rows.push([
+            getProcedureCode(procedure),
+            getProcedureName(procedure),
+            "-",
+            "-",
+            "-",
+            hasProcedureTotalUsedBalance(procedure) ? formatMoney(getProcedureTotalUsedBalance(procedure)) : "-",
+            "-",
+            "-",
+            "-"
+          ]);
+          return;
+        }
+
+        rows.push(includeBalances
+          ? [
+            getProcedureCode(procedure),
+            getProcedureName(procedure),
+            formatMoney(getProcedureFixedAmount(procedure)),
+            formatPercent(getProcedurePercentage(procedure)),
+            formatMoney(getProcedureAllocatedBalance(procedure)),
+            formatMoney(getProcedureTotalUsedBalance(procedure)),
+            formatMoney(getProcedureRemainingBalance(procedure)),
+            getProcedureLimitLabel(procedure),
+            getFrequencyLabel(procedure)
+          ]
+          : [
+            getProcedureCode(procedure),
+            getProcedureName(procedure),
+            formatMoney(getProcedureFixedAmount(procedure)),
+            formatPercent(getProcedurePercentage(procedure)),
+            getProcedureLimitLabel(procedure),
+            getFrequencyLabel(procedure)
+          ]);
       });
     });
 
@@ -183,7 +348,8 @@ export const exportHealthPlanToPdf = async ({
   healthPlan,
   procedures,
   contextLabel,
-  fileName
+  fileName,
+  showUsageBalances
 }: ExportHealthPlanPdfOptions) => {
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -192,6 +358,47 @@ export const exportHealthPlanToPdf = async ({
   const contentWidth = pageWidth - (margin * 2);
   const planName = getPlanName(healthPlan);
   const generatedAt = new Date().toLocaleString("pt-PT");
+  const includeBalances = showUsageBalances ?? hasBalanceColumns(procedures);
+  const tableHead = includeBalances
+    ? [[
+      tr("t-code", "Codigo"),
+      tr("t-procedures", "Procedimentos"),
+      tr("t-fixed-amount", "Valor fixo"),
+      tr("t-percentage", "Percentagem"),
+      "Alocado",
+      "Gasto",
+      "Remanescente",
+      tr("t-limit-type", "Tipo de limite"),
+      tr("t-frequency-interval", "Intervalo de frequencia")
+    ]]
+    : [[
+      tr("t-code", "Codigo"),
+      tr("t-procedures", "Procedimentos"),
+      tr("t-fixed-amount", "Valor fixo"),
+      tr("t-percentage", "Percentagem"),
+      tr("t-limit-type", "Tipo de limite"),
+      tr("t-frequency-interval", "Intervalo de frequencia")
+    ]];
+  const columnStyles: NonNullable<UserOptions["columnStyles"]> = includeBalances
+    ? {
+      0: { cellWidth: 17 },
+      1: { cellWidth: 54 },
+      2: { cellWidth: 27 },
+      3: { cellWidth: 21 },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 27 },
+      6: { cellWidth: 30 },
+      7: { cellWidth: 35 },
+      8: { cellWidth: 34 }
+    }
+    : {
+      0: { cellWidth: 24 },
+      1: { cellWidth: 98 },
+      2: { cellWidth: 36 },
+      3: { cellWidth: 27 },
+      4: { cellWidth: 42 },
+      5: { cellWidth: 46 }
+    };
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(16);
@@ -209,12 +416,19 @@ export const exportHealthPlanToPdf = async ({
   pdf.setDrawColor(215, 215, 215);
   pdf.line(margin, 27, pageWidth - margin, 27);
 
-  const cards = [
-    [tr("t-health-plan-limit", "Limite do plano"), getHealthPlanLimitLabel(healthPlan?.healthPlanLimit)],
-    [tr("t-fixed-amount", "Valor fixo"), formatMoney(healthPlan?.fixedAmount)],
-    [tr("t-percentage", "Percentagem"), formatPercent(healthPlan?.companyContributionPercentage)],
-    [tr("t-procedures", "Procedimentos"), String(procedures.length)]
-  ];
+  const cards = includeBalances
+    ? [
+      ["Alocado", formatMoney(healthPlan?.allocatedBalance)],
+      ["Gasto", formatMoney(getPlanUsedBalanceTotal(procedures))],
+      ["Remanescente", formatMoney(healthPlan?.remainingBalance)],
+      [tr("t-procedures", "Procedimentos"), String(procedures.length)]
+    ]
+    : [
+      [tr("t-health-plan-limit", "Limite do plano"), getHealthPlanLimitLabel(healthPlan?.healthPlanLimit)],
+      [tr("t-fixed-amount", "Valor fixo"), formatMoney(healthPlan?.fixedAmount)],
+      [tr("t-percentage", "Percentagem"), formatPercent(healthPlan?.companyContributionPercentage)],
+      [tr("t-procedures", "Procedimentos"), String(procedures.length)]
+    ];
 
   const cardGap = 4;
   const cardWidth = (contentWidth - (cardGap * 3)) / 4;
@@ -237,15 +451,8 @@ export const exportHealthPlanToPdf = async ({
     startY: 58,
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
-    head: [[
-      tr("t-code", "Codigo"),
-      tr("t-procedures", "Procedimentos"),
-      tr("t-fixed-amount", "Valor fixo"),
-      tr("t-percentage", "Percentagem"),
-      tr("t-limit-type", "Tipo de limite"),
-      tr("t-frequency-interval", "Intervalo de frequencia")
-    ]],
-    body: buildGroupedRows(procedures),
+    head: tableHead,
+    body: buildGroupedRows(procedures, includeBalances),
     styles: {
       fontSize: 7,
       cellPadding: 1.8,
@@ -259,16 +466,9 @@ export const exportHealthPlanToPdf = async ({
       fontStyle: "bold",
       fontSize: 7.5
     },
-    columnStyles: {
-      0: { cellWidth: 24 },
-      1: { cellWidth: 98 },
-      2: { cellWidth: 36 },
-      3: { cellWidth: 27 },
-      4: { cellWidth: 42 },
-      5: { cellWidth: 46 }
-    },
+    columnStyles,
     didParseCell: (data: any) => {
-      if (data.section === "body" && Array.isArray(data.row.raw) && data.row.raw[0]?.colSpan === 6) {
+      if (data.section === "body" && Array.isArray(data.row.raw) && data.row.raw[0]?.colSpan === (includeBalances ? 9 : 6)) {
         data.cell.styles.cellPadding = 2.4;
         data.cell.styles.fontSize = 7.4;
       }

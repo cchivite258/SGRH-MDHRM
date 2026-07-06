@@ -554,10 +554,11 @@ onMounted(async () => {
       {{ $t(dashboardErrorKey) }}
     </v-alert>
 
-    <v-row>
+    <v-row class="dashboard-metric-row">
       <v-col
         v-for="card in cards"
         :key="card.key"
+        class="dashboard-metric-col"
         cols="12"
         md="4"
       >
@@ -715,13 +716,24 @@ onMounted(async () => {
   min-width: 118px;
 }
 
+.dashboard-metric-row {
+  align-items: stretch;
+}
+
+.dashboard-metric-col {
+  display: flex;
+}
+
 .dashboard-metric-card {
   border: 1px solid #e9edf3;
   border-radius: 8px !important;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.055) !important;
+  display: flex;
+  height: 100%;
   min-height: 166px;
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+  width: 100%;
 }
 
 .dashboard-metric-card:hover {
@@ -742,6 +754,9 @@ onMounted(async () => {
 }
 
 .dashboard-metric-card :deep(.v-card-text) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 20px 22px;
 }
 
