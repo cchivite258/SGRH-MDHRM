@@ -13,6 +13,15 @@ export type InvoiceListingType = {
         name: string;
         description?: string;
     };
+    coveragePeriod?: {
+        id?: string | number;
+        name?: string;
+        contract?: {
+            id: string | number;
+            name: string;
+            description?: string;
+        };
+    };
     invoiceStatus: string;
     employee: {
         id: string;
@@ -76,6 +85,15 @@ export type InvoiceResponseType = {
         id: string | number;
         name: string;
         description?: string;
+    };
+    coveragePeriod?: {
+        id?: string | number;
+        name?: string;
+        contract?: {
+            id: string | number;
+            name: string;
+            description?: string;
+        };
     };
     invoiceStatus: string;
     employee: {

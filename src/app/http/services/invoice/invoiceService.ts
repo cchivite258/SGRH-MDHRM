@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
+        params.append('query_props', 'employee.contract.name,invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -54,7 +54,7 @@ export default class InvoiceService extends HttpService {
         params.append('query_operator', logicalOperator);
       }
 
-      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,coveragePeriod';
+      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,contract,coveragePeriod';
       params.append(`includes`, includesToUse);
 
       const url = `/amm/invoices?${params.toString()}`;
