@@ -1390,6 +1390,7 @@
   "t-cel-detailed-table": "MAPA DE CONTROLO DOS LIMITES",
   "t-cel-limit-amount": "Limite de AMM",
   "t-cel-limit-fixed-amount": "Valor fixo",
+  "t-cel-global-limit": "Limite Global",
   "t-cel-base-salary-lower": "do salário base",
   "t-cel-gross-salary-lower": "do salário bruto",
   "t-cel-total-limit": "Limite Total",

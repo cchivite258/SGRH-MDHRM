@@ -837,6 +837,7 @@
   "t-gross-salary": "Gross Salary",
   "t-cel-limit-amount": "MAM Limit",
   "t-cel-limit-fixed-amount": "Fixed amount",
+  "t-cel-global-limit": "Global Limit",
   "t-cel-base-salary-lower": "of base salary",
   "t-cel-gross-salary-lower": "of gross salary",
   "t-cel-total-limit": "Total Limit",
