@@ -58,8 +58,11 @@ export default class EmployeeHealthPlanService extends HttpService {
         query_value = String(id);
       }
 
-      if (query_value && query_props) {
+      if (query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+      }
+
+      if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
@@ -98,8 +101,11 @@ export default class EmployeeHealthPlanService extends HttpService {
         `direction=${direction}`
       ];
 
-      if (query_value && query_props) {
+      if (query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+      }
+
+      if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
@@ -154,8 +160,11 @@ export default class EmployeeHealthPlanService extends HttpService {
         `direction=${direction}`
       ];
 
-      if (query_value && query_props) {
+      if (query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
+      }
+
+      if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 

@@ -997,5 +997,8 @@
   "t-parameter-type-years-before-expiration": "Years before expiration",
   "t-no-alert-parameters-found": "No parameters defined",
   "t-alert-parameter-not-removable": "This parameter cannot be deleted",
-  "t-alert-parameter-exists": "This parameter already exists"
+  "t-alert-parameter-exists": "This parameter already exists",
+  "t-degree-of-kinship": "Degree of Kinship",
+  "t-please-select-degree-of-kinship": "Please select the degree of kinship",
+  "t-please-enter-degree-of-kinship": "Please enter the degree of kinship"
 }
