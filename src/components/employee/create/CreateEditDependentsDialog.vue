@@ -188,7 +188,7 @@ const requiredRules = {
     (v: Date | string | null) => !!v || t('t-please-enter-birth-date'),
   ],
   relationship: [
-    (v: string) => !!v || t('t-please-enter-relationship'),
+    (v: string) => !!v || t('t-please-select-degree-of-kinship'),
   ],
   idCardNumber: [
     (v: string) => !!v || t('t-please-enter-id-card-number'),
@@ -613,7 +613,7 @@ const onSubmit = async () => {
           <v-row class="mt-n6">
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-relationship') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-degree-of-kinship') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="relationship" :items="relationshipOptions"
                 :rules="requiredRules.relationship" :error-messages="getServerErrors('relationship')" />

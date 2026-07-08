@@ -1521,5 +1521,8 @@
   "t-parameter-type-years-before-expiration": "Anos antes da expiração",
   "t-no-alert-parameters-found": "Nenhum parâmetro definido",
   "t-alert-parameter-not-removable": "Este parâmetro não pode ser eliminado",
-  "t-alert-parameter-exists": "Este parâmetro já existe"
+  "t-alert-parameter-exists": "Este parâmetro já existe",
+  "t-degree-of-kinship": "Grau de Parentesco",
+  "t-please-select-degree-of-kinship": "Por favor, seleccione o grau de parentesco",
+  "t-select-degree-of-kinship": "Seleccione o grau de parentesco"
 }

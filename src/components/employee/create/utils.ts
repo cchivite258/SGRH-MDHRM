@@ -99,7 +99,7 @@ export const nationalityOptions: MenuSelectItemType[] = [
 ];
 
 export const relationshipOptions: MenuSelectItemType[] = [
-  { value: "", label: "Selecione o Relacionamento" },
+  { value: "", label: "Selecione o Grau de Parentesco" },
   {
     label: "Esposo(a)",
     value: "SPOUSE"
