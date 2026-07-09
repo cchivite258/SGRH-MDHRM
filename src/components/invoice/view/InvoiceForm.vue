@@ -22,6 +22,7 @@ import type { ExpensePerProcedureType } from "@/components/employee/types";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import Status from "@/app/common/components/Status.vue";
 
 // Composables
 const { t } = useI18n();
@@ -192,6 +193,8 @@ const activeHealthPlan = computed(() =>
 );
 
 const activePlanProcedures = computed(() => employeePlanProcedureLimits.value || []);
+
+const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
 
 type DisplayValue = number | string | null | undefined;
 
@@ -788,17 +791,26 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form">
-    <div class="d-flex align-center justify-end flex-wrap ga-2 mb-4">
-      <v-btn
-        color="secondary"
-        variant="tonal"
-        @click="onNewInvoice"
-      >
-        <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+    <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-4">
+      <v-btn color="secondary" variant="outlined" @click="onBack">
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-list') }}
       </v-btn>
+
+      <div class="d-flex align-center justify-end flex-wrap ga-2">
+        <v-btn
+          color="primary"
+          variant="tonal"
+          @click="onNewInvoice"
+        >
+          <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+        </v-btn>
+      </div>
     </div>
 
     <v-card elevation="0" class="position-relative h-100 d-block">
+      <v-card-title class="d-flex justify-start px-6 pt-4 pb-0">
+        <Status :status="invoiceStatus" />
+      </v-card-title>
 
       <v-card-text>
         <v-row class="mt-4 pt-16 pt-md-0">

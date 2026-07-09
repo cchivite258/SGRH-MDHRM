@@ -1004,26 +1004,32 @@ onMounted(async () => {
   <v-form ref="form" @submit.prevent="submitInvoice">
     <div
       v-if="isEditMode"
-      class="d-flex align-center justify-end flex-wrap ga-2 mb-4"
+      class="d-flex align-center justify-space-between flex-wrap ga-2 mb-4"
     >
-      <v-btn
-        color="secondary"
-        variant="tonal"
-        @click="onNewInvoice"
-      >
-        <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+      <v-btn color="secondary" variant="outlined" @click="onBack">
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-list') }}
       </v-btn>
 
-      <v-btn
-        v-if="canPostInvoice"
-        color="info"
-        variant="elevated"
-        :loading="postLoading"
-        :disabled="loading"
-        @click="openPostDialog"
-      >
-        <i class="ph-check-circle me-1" /> {{ $t('t-post-invoice') }}
-      </v-btn>
+      <div class="d-flex align-center justify-end flex-wrap ga-2">
+        <v-btn
+          color="primary"
+          variant="tonal"
+          @click="onNewInvoice"
+        >
+          <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+        </v-btn>
+
+        <v-btn
+          v-if="canPostInvoice"
+          color="secondary"
+          variant="elevated"
+          :loading="postLoading"
+          :disabled="loading"
+          @click="openPostDialog"
+        >
+          <i class="ph-check-circle me-1" /> {{ $t('t-post-invoice') }}
+        </v-btn>
+      </div>
     </div>
 
     <v-card elevation="0" class="position-relative h-100 d-block">
