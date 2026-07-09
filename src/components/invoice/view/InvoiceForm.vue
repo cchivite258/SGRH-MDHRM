@@ -572,10 +572,20 @@ const onConsultHealthPlan = async () => {
     return;
   }
 
+  if (!invoiceData.value.isEmployeeInvoice && !invoiceData.value.dependent) {
+    toast.error(t("t-dependent-required"));
+    return;
+  }
+
   healthPlanConsultLoading.value = true;
   healthPlanProcedureSearch.value = "";
 
   try {
+    const memberFilters = {
+      isEmployee: invoiceData.value.isEmployeeInvoice,
+      dependentId: invoiceData.value.isEmployeeInvoice ? undefined : invoiceData.value.dependent
+    };
+
     await hospitalProcedureBalanceStore.fetchProcedures(
       invoiceData.value.employee,
       {
@@ -583,8 +593,7 @@ const onConsultHealthPlan = async () => {
         size: 1000000000,
         sortColumn: "createdAt",
         direction: "asc",
-        query_value: "",
-        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,belongsToGroup,frequencyInterval,lastUsageDate,allowedFrequencyUse,contractHealthPlanHospitalProcedures.fixedAmount,contractHealthPlanHospitalProcedures.percentage,contractHealthPlanHospitalProcedures.limitTypeDefinition,contractHealthPlanHospitalProcedures.belongsToGroup,contractHealthPlanHospitalProcedures.groupFixedAmount,contractHealthPlanHospitalProcedures.groupPercentage,contractHealthPlanHospitalProcedures.hospitalProcedureGroupLimit,companyHealthPlanHospitalProcedures.fixedAmount,companyHealthPlanHospitalProcedures.percentage,companyHealthPlanHospitalProcedures.limitTypeDefinition,companyHealthPlanHospitalProcedures.belongsToGroup,companyHealthPlanHospitalProcedures.groupFixedAmount,companyHealthPlanHospitalProcedures.groupPercentage,companyHealthPlanHospitalProcedures.hospitalProcedureGroupLimit"
+        memberFilters
       }
     );
 
@@ -673,6 +682,11 @@ const handleItemsReady = (items: InvoiceItemInsertType[]) => {
 const onBack = () => {
   institutionStore.clearDraft();
   router.push('/invoices/list');
+};
+
+const onNewInvoice = () => {
+  invoiceStore.clearDraft();
+  router.push('/invoices/create');
 };
 
 // Watchers
@@ -774,6 +788,16 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form">
+    <div class="d-flex align-center justify-end flex-wrap ga-2 mb-4">
+      <v-btn
+        color="secondary"
+        variant="tonal"
+        @click="onNewInvoice"
+      >
+        <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+      </v-btn>
+    </div>
+
     <v-card elevation="0" class="position-relative h-100 d-block">
 
       <v-card-text>
@@ -821,7 +845,7 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
-        <v-row class="mt-n6">
+        <v-row class="mt-n12">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-invoice-number') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.invoiceNumber" :placeholder="$t('t-enter-invoice-number')"

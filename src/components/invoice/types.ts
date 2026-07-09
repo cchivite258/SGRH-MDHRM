@@ -159,6 +159,7 @@ export type InvoiceInsertType = {
     notes?: string;
     coveragePeriod?: any;
     invoiceAttachment?: any;
+    invoiceStatus?: string;
     companyLabel?: string;
     serviceProviderLabel?: string;
     employeeLabel?: string;

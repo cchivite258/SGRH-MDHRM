@@ -32,6 +32,10 @@ const props = defineProps({
     type: [String, Array] as PropType<string | string[]>,
     default: "",
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "update:error"]);
@@ -96,6 +100,7 @@ const onClear = () => {
     :chips="multiple"
     :multiple="multiple"
     :placeholder="placeholder"
+    :disabled="disabled"
     clear-icon="ph-x"
     :item-height="30"
     @click:clear="onClear"

@@ -497,7 +497,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-n3" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-rate') }}:</span>
           </v-col>
@@ -506,9 +506,9 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-divider class="my-4" />
+        <v-divider class="my-4 mt-n3" />
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-0" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-total-amount') }}:</span>
           </v-col>
