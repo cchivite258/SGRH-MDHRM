@@ -27,7 +27,7 @@ const invoiceStore = useInvoiceStore()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
+const searchProps = "employee.contract.name,invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
 const postDialog = ref(false)
 const postFlaggedDialog = ref(false)
 const postId = ref<string | null>(null)
@@ -271,6 +271,10 @@ const formatAmount = (amount: number | string) => {
   }).format(num)
 }
 
+const getContractName = (invoice: InvoiceListingType) => {
+  return invoice.contract?.name || invoice.coveragePeriod?.contract?.name || "N/A"
+}
+
 const getInvoiceAlerts = (invoice: InvoiceListingType) => {
   const alerts: string[] = []
 
@@ -348,6 +352,9 @@ onBeforeRouteLeave(() => {
               density="compact"
               @update:model-value="toggleSelection(item)"
             />
+          </td>
+          <td data-label="Contrato">
+            {{ getContractName(item) }}
           </td>
           <td data-label="Factura" class="invoice-listing-table__primary-cell cursor-pointer" @click="onView(item.id)">
             <div class="d-flex align-center ga-2">

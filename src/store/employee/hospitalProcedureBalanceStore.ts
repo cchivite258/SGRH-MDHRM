@@ -2,6 +2,41 @@ import { defineStore } from 'pinia';
 import { healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 import type { HealthPlanListingType, ExpensePerProcedureType } from '@/components/employee/types';
 
+type ProcedureMemberFilters = {
+  isEmployee?: boolean;
+  dependentId?: string;
+};
+
+type ProcedureFetchParams = {
+  page: number;
+  size: number;
+  sortColumn?: string;
+  direction?: string;
+  query_value?: string;
+  query_props?: string;
+  memberFilters?: ProcedureMemberFilters;
+};
+
+const buildMemberFilterQuery = (memberFilters?: ProcedureMemberFilters) => {
+  const props: string[] = [];
+  const values: string[] = [];
+
+  if (typeof memberFilters?.isEmployee === 'boolean') {
+    props.push('isEmployee');
+    values.push(String(memberFilters.isEmployee));
+  }
+
+  if (memberFilters?.isEmployee === false && memberFilters.dependentId) {
+    props.push('dependent.id');
+    values.push(memberFilters.dependentId);
+  }
+
+  return {
+    query_props: props.join(','),
+    query_value: values.join(',')
+  };
+};
+
 export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_balance', {
   state: () => ({
     allHealthPlans: [] as HealthPlanListingType[],
@@ -88,7 +123,8 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
       sortColumn = 'createdAt',
       direction = 'asc',
       query_value?: string,
-      query_props?: string
+      query_props?: string,
+      memberFilters?: ProcedureMemberFilters
     ) {
       console.log('fetchProceduresForActivePlan - Plano ativo ID:', this.activeHealthPlan?.id);
       
@@ -102,14 +138,18 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
       this.error = null;
 
       try {
+        const memberQuery = buildMemberFilterQuery(memberFilters);
+        const requestQueryProps = memberQuery.query_props || query_props;
+        const requestQueryValue = memberQuery.query_value || query_value;
+
         const { content, meta } = await healthPlanEmployeeService.getHospitalProcedureBalancebyEmployee(
           this.activeHealthPlan.id,
           page,
           size,
           sortColumn,
           direction,
-          query_value,
-          query_props
+          requestQueryValue,
+          requestQueryProps
         );
 
         this.expensePerProcedure = content;
@@ -143,6 +183,7 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
         direction?: string;
         query_value?: string;
         query_props?: string;
+        memberFilters?: ProcedureMemberFilters;
       }
     ) {
       // Primeiro carrega o plano ativo
@@ -157,7 +198,8 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
           params.sortColumn || 'createdAt',
           params.direction || 'asc',
           params.query_value,
-          params.query_props || "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance"
+          params.query_props || "hospitalProcedureType.name,allocatedBalance,usedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance",
+          params.memberFilters
         );
       }
     },
@@ -167,14 +209,7 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
      */
     async fetchProcedures(
       employeeId: string,
-      { page = 0, size = 10, sortColumn = 'createdAt', direction = 'asc', query_value, query_props }: {
-        page: number;
-        size: number;
-        sortColumn?: string;
-        direction?: string;
-        query_value?: string;
-        query_props?: string;
-      }
+      { page = 0, size = 10, sortColumn = 'createdAt', direction = 'asc', query_value, query_props, memberFilters }: ProcedureFetchParams
     ) {
       // Se o employee mudou, recarrega o plano ativo primeiro
       if (this.currentEmployeeId !== employeeId || !this.isInitialized) {
@@ -189,7 +224,8 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
           sortColumn,
           direction,
           query_value,
-          query_props
+          query_props,
+          memberFilters
         );
       } else {
         // Se não há plano ativo, limpa os procedimentos

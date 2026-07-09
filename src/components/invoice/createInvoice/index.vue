@@ -66,7 +66,8 @@ const invoiceData = reactive<InvoiceInsertType>({
   company: '',
   authorizedBy: '',
   invoiceReferenceNumber: '',
-  coveragePeriod: undefined
+  coveragePeriod: undefined,
+  invoiceStatus: undefined
 });
 
 const resetInvoiceData = () => {
@@ -84,7 +85,8 @@ const resetInvoiceData = () => {
     company: '',
     authorizedBy: '',
     invoiceReferenceNumber: '',
-    coveragePeriod: undefined
+    coveragePeriod: undefined,
+    invoiceStatus: undefined
   });
 
   invoiceItems.value = [];
@@ -515,7 +517,7 @@ onMounted(() => {
       <v-col cols="12" xl="9">
         <InvoiceForm v-model="invoiceData" :is-edit-mode="isEditMode" :loading="loading" :initial-items="invoiceItems"
           @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)"
-          @invoiceAttachmentUploaded="loadInvoiceData" />
+          @invoiceAttachmentUploaded="loadInvoiceData" @invoice-posted="loadInvoiceData" />
       </v-col>
     </v-row>
   </v-container>

@@ -22,6 +22,7 @@ import type { ExpensePerProcedureType } from "@/components/employee/types";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import Status from "@/app/common/components/Status.vue";
 
 // Composables
 const { t } = useI18n();
@@ -192,6 +193,8 @@ const activeHealthPlan = computed(() =>
 );
 
 const activePlanProcedures = computed(() => employeePlanProcedureLimits.value || []);
+
+const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
 
 type DisplayValue = number | string | null | undefined;
 
@@ -572,10 +575,20 @@ const onConsultHealthPlan = async () => {
     return;
   }
 
+  if (!invoiceData.value.isEmployeeInvoice && !invoiceData.value.dependent) {
+    toast.error(t("t-dependent-required"));
+    return;
+  }
+
   healthPlanConsultLoading.value = true;
   healthPlanProcedureSearch.value = "";
 
   try {
+    const memberFilters = {
+      isEmployee: invoiceData.value.isEmployeeInvoice,
+      dependentId: invoiceData.value.isEmployeeInvoice ? undefined : invoiceData.value.dependent
+    };
+
     await hospitalProcedureBalanceStore.fetchProcedures(
       invoiceData.value.employee,
       {
@@ -583,8 +596,7 @@ const onConsultHealthPlan = async () => {
         size: 1000000000,
         sortColumn: "createdAt",
         direction: "asc",
-        query_value: "",
-        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,belongsToGroup,frequencyInterval,lastUsageDate,allowedFrequencyUse,contractHealthPlanHospitalProcedures.fixedAmount,contractHealthPlanHospitalProcedures.percentage,contractHealthPlanHospitalProcedures.limitTypeDefinition,contractHealthPlanHospitalProcedures.belongsToGroup,contractHealthPlanHospitalProcedures.groupFixedAmount,contractHealthPlanHospitalProcedures.groupPercentage,contractHealthPlanHospitalProcedures.hospitalProcedureGroupLimit,companyHealthPlanHospitalProcedures.fixedAmount,companyHealthPlanHospitalProcedures.percentage,companyHealthPlanHospitalProcedures.limitTypeDefinition,companyHealthPlanHospitalProcedures.belongsToGroup,companyHealthPlanHospitalProcedures.groupFixedAmount,companyHealthPlanHospitalProcedures.groupPercentage,companyHealthPlanHospitalProcedures.hospitalProcedureGroupLimit"
+        memberFilters
       }
     );
 
@@ -673,6 +685,11 @@ const handleItemsReady = (items: InvoiceItemInsertType[]) => {
 const onBack = () => {
   institutionStore.clearDraft();
   router.push('/invoices/list');
+};
+
+const onNewInvoice = () => {
+  invoiceStore.clearDraft();
+  router.push('/invoices/create');
 };
 
 // Watchers
@@ -774,7 +791,26 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form">
+    <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-4">
+      <v-btn color="secondary" variant="outlined" @click="onBack">
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-list') }}
+      </v-btn>
+
+      <div class="d-flex align-center justify-end flex-wrap ga-2">
+        <v-btn
+          color="primary"
+          variant="tonal"
+          @click="onNewInvoice"
+        >
+          <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+        </v-btn>
+      </div>
+    </div>
+
     <v-card elevation="0" class="position-relative h-100 d-block">
+      <v-card-title class="d-flex justify-start px-6 pt-4 pb-0">
+        <Status :status="invoiceStatus" />
+      </v-card-title>
 
       <v-card-text>
         <v-row class="mt-4 pt-16 pt-md-0">
@@ -821,7 +857,7 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
-        <v-row class="mt-n6">
+        <v-row class="mt-n12">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-invoice-number') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.invoiceNumber" :placeholder="$t('t-enter-invoice-number')"

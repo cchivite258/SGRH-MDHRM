@@ -40,6 +40,10 @@ const props = defineProps({
     type: [String, Array] as PropType<string | string[]>,
     default: "",
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "update:error"]);
@@ -111,6 +115,7 @@ const onClear = () => {
     item-value="value"
     single-line
     :placeholder="placeholder"
+    :disabled="disabled"
     clear-icon="ph-x"
     :item-height="36"
     @click:clear="onClear"

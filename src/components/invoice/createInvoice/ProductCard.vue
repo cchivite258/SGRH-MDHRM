@@ -72,6 +72,10 @@ const props = defineProps({
   isEditMode: {
     type: Boolean,
     default: false
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -298,6 +302,8 @@ const handleError = (messageKey: string, error: unknown) => {
 // ITEM MANAGEMENT
 // =============================================
 const addItem = () => {
+  if (props.disabled) return;
+
   invoiceItems.value.push({
     id: Date.now().toString(),
     companyAllowedHospitalProcedure: "",
@@ -311,6 +317,8 @@ const addItem = () => {
 };
 
 const removeItem = (id: string) => {
+  if (props.disabled) return;
+
   const index = invoiceItems.value.findIndex(item => item.id === id);
   if (index !== -1) {
     invoiceItems.value.splice(index, 1);
@@ -465,25 +473,25 @@ onMounted(() => {
             <ProcedureCategorySelect v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
               :rules="requiredRules.companyAllowedHospitalProcedure" :placeholder="$t('t-select-procedure')"
               :procedure-title="$t('t-hospital-procedure')" :category-title="$t('t-hospital-procedure-category')"
-              class="w-100" />
+              :disabled="disabled" class="w-100" />
           </td>
 
           <!-- Preço Unitário -->
           <td style="width: 10%" class="pt-4 px-1">
             <TextField v-model.number="item.unitPrice" :rules="requiredRules.unitPrice"
-              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" class="compact-input" />
+              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" :disabled="disabled" class="compact-input" />
           </td>
 
           <!-- Quantidade -->
           <td style="width: 5%" class="pt-4 px-1">
             <TextField v-model.number="item.quantity" :placeholder="$t('t-quantity')" type="number" min="0"
-              :rules="requiredRules.quantity" class="compact-input" />
+              :rules="requiredRules.quantity" :disabled="disabled" class="compact-input" />
           </td>
 
           <!-- Taxa -->
           <td style="width: 12%" class="pt-4 px-1">
             <MenuSelect v-model="item.taxRate" :items="taxRates" :rules="requiredRules.taxRate"
-              :placeholder="$t('t-select-tax-rate')" item-value="value" class="w-100" />
+              :placeholder="$t('t-select-tax-rate')" item-value="value" :disabled="disabled" class="w-100" />
           </td>
 
           <!-- Total -->
@@ -494,12 +502,12 @@ onMounted(() => {
           <!-- Descrição -->
           <td style="width: 25%" class="pt-4">
             <TextArea v-model="item.description" :placeholder="$t('t-description')" class="description-field" rows="1"
-              auto-grow />
+              :disabled="disabled" auto-grow />
           </td>
 
           <!-- Ações -->
           <td style="width: 5%" class="pt-4 px-1 text-center">
-            <v-btn icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
+            <v-btn v-if="!disabled" icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
               <i class="ph-trash"></i>
             </v-btn>
           </td>
@@ -508,7 +516,7 @@ onMounted(() => {
     </Table>
 
     <!-- Botão para Adicionar Item -->
-    <v-btn color="secondary" @click="addItem" class="mt-2">
+    <v-btn v-if="!disabled" color="secondary" @click="addItem" class="mt-2">
       <i class="ph-plus me-2"></i> {{ $t("t-add-invoice-item") }}
     </v-btn>
 
@@ -526,7 +534,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-n3" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-rate') }}:</span>
           </v-col>
@@ -535,7 +543,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-divider class="my-4" />
+        <v-divider class="my-4 mt-n3" />
 
         <v-row class="d-flex align-center mb-2" no-gutters>
           <v-col cols="6">
