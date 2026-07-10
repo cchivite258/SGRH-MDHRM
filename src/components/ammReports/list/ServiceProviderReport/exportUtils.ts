@@ -29,6 +29,13 @@ export class ServiceProviderReportExporter {
     return locale === 'en' ? 'en-US' : 'pt-PT';
   }
 
+  private static normalizePdfText(value: string): string {
+    return value
+      .replace(/[^\x20-\x7E\u00C0-\u00FF]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
   private static getCurrentDateTime(): string {
     return new Date().toLocaleDateString(this.localeCode(), {
       day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -121,7 +128,11 @@ export class ServiceProviderReportExporter {
 
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(this.tr('t-spr-report-subtitle'), margin, currentY + 6);
+    const subtitle = this.normalizePdfText(`${this.tr('t-report')} #100003 - ${this.tr('t-report-by-service-provider')}`);
+    if (typeof (pdf as any).setCharSpace === 'function') {
+      (pdf as any).setCharSpace(0);
+    }
+    pdf.text(subtitle, margin, currentY + 6);
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'bold');
@@ -138,7 +149,7 @@ export class ServiceProviderReportExporter {
 
     const gap = 5;
     const cardWidth = (contentWidth - (gap * 2)) / 3;
-    const cardHeight = 40;
+    const cardHeight = 30;
 
     const drawCard = (
       x: number,
@@ -149,7 +160,7 @@ export class ServiceProviderReportExporter {
       lines: string[],
       headlineColor: [number, number, number] = [55, 71, 79]
     ) => {
-      const maxTextWidth = cardWidth - 18;
+      const maxTextWidth = cardWidth - 16;
       const fitSingleLine = (text: string, fontSize: number): string => {
         pdf.setFontSize(fontSize);
         let output = text || '';
@@ -171,38 +182,37 @@ export class ServiceProviderReportExporter {
       pdf.setFillColor(255, 255, 255);
       pdf.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
       pdf.setFillColor(iconBg[0], iconBg[1], iconBg[2]);
-      pdf.roundedRect(x + 4, y + 4, 8, 8, 1.5, 1.5, 'F');
+      pdf.roundedRect(x + 4, y + 4, 6, 6, 1.2, 1.2, 'F');
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
+      pdf.setFontSize(6.6);
       pdf.setTextColor(120, 120, 120);
-      pdf.text(fitSingleLine(title, 7), x + 14, y + 7);
+      pdf.text(fitSingleLine(title, 6.6), x + 12, y + 6.6);
 
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(10);
+      pdf.setFontSize(8.5);
       pdf.setTextColor(headlineColor[0], headlineColor[1], headlineColor[2]);
-      const headlineLines = fitMultiLines(headline, 10, 2);
-      const headlineStartY = y + 12;
-      const headlineLineHeight = 4.2;
-      pdf.text(headlineLines, x + 14, headlineStartY);
+      const headlineLines = fitMultiLines(headline, 8.5, 2);
+      const headlineStartY = y + 10.8;
+      const headlineLineHeight = 3.6;
+      pdf.text(headlineLines, x + 12, headlineStartY);
 
-      const dividerY = Math.min(headlineStartY + ((headlineLines.length - 1) * headlineLineHeight) + 3, y + cardHeight - 12);
+      const dividerY = Math.min(headlineStartY + ((headlineLines.length - 1) * headlineLineHeight) + 2.2, y + cardHeight - 10);
       pdf.setDrawColor(236, 239, 244);
       pdf.line(x + 3, dividerY, x + cardWidth - 3, dividerY);
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7);
+      pdf.setFontSize(6.4);
       pdf.setTextColor(90, 90, 90);
-      let lineY = dividerY + 5;
+      let lineY = dividerY + 4;
       lines.forEach((line) => {
-        const contentLines = fitMultiLines(line, 7, 2);
+        const contentLines = fitMultiLines(line, 6.4, 1);
         contentLines.forEach((contentLine) => {
-          if (lineY <= (y + cardHeight - 3)) {
+          if (lineY <= (y + cardHeight - 2.5)) {
             pdf.text(contentLine, x + 4, lineY);
-            lineY += 4.2;
+            lineY += 3.6;
           }
         });
-        lineY += 0.8;
       });
     };
 
@@ -259,7 +269,7 @@ export class ServiceProviderReportExporter {
 
     autoTable(pdf, {
       startY: currentY + 5,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [[
         this.tr('t-procedure'),
         this.tr('t-total-invoices'),

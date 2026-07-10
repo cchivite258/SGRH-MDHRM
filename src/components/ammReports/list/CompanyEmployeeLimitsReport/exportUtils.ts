@@ -386,7 +386,7 @@ export class CompanyEmployeeLimitsReportExporter {
 
     autoTable(pdf, {
       startY: cardsY + cardHeight + 6,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [headers],
       body,
       styles: { fontSize: 6.2, cellPadding: 1.2, lineWidth: 0.1, lineColor: [220, 220, 220] },

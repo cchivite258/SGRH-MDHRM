@@ -234,7 +234,7 @@ export class EmployeeHealthPlanLimitsTrendReportExporter {
 
     autoTable(pdf, {
       startY: cardsY + cardHeight + 6,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [[
         this.tr("t-employee"),
         this.tr("t-employee-number"),
