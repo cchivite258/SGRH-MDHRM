@@ -25,7 +25,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
-import { dependentEmployeeService, employeeService } from "@/app/http/httpServiceProvider";
+import { dependentEmployeeService, employeeService, healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
@@ -293,16 +293,46 @@ const onViewClick = (data: DependentInsertType | DependentListingType) => {
   viewDialog.value = true;
 };
 
-const onConsultPlan = (data: DependentListingType) => {
+const getActiveHealthPlanId = async () => {
+  if (!employeeId.value) return null;
+
+  const { content } = await healthPlanEmployeeService.getHealthPlansByEmployee(
+    employeeId.value,
+    0,
+    1000,
+    "createdAt",
+    "asc",
+    "",
+    "employee.id"
+  );
+
+  return content.find(plan => plan.status === "ACTIVE")?.id || null;
+};
+
+const onConsultPlan = async (data: DependentListingType) => {
   if (!employeeId.value) return;
 
-  router.push({
-    name: "ViewDependentHealthPlan",
-    params: {
-      employeeId: employeeId.value,
-      dependentId: data.id
+  try {
+    const activeHealthPlanId = await getActiveHealthPlanId();
+
+    if (!activeHealthPlanId) {
+      toast.error(t("t-no-active-health-plan"));
+      return;
     }
-  });
+
+    router.push({
+      name: "EditEmployeeHealthPlan",
+      params: { id: activeHealthPlanId },
+      query: {
+        employeeId: employeeId.value,
+        isEmployee: "false",
+        dependentId: data.id
+      }
+    });
+  } catch (error) {
+    toast.error(t("t-message-load-error"));
+    console.error("Erro ao consultar plano do dependente:", error);
+  }
 };
 
 const onActionSelect = (action: string, item: DependentListingType) => {

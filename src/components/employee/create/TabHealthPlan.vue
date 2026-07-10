@@ -226,9 +226,5 @@ onBeforeUnmount(() => {
       <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-dependents') }} 
     </v-btn>
 
-    <v-btn color="secondary" variant="elevated" class="me-2" @click="$emit('onStepChange', 6)">
-      {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
-    </v-btn>
-    
   </v-card-actions>
 </template>

@@ -23,7 +23,6 @@ import Step2 from "@/components/employee/view/TabInstitution&Classification.vue"
 import Step3 from "@/components/employee/view/TabSalaryReview.vue";
 import Step4 from "@/components/employee/view/TabDependents.vue";
 import Step5 from "@/components/employee/view/TabHealthPlan.vue";
-import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -283,7 +282,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber);
+      onStepChange(tabNumber === 2 ? 1 : tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -388,11 +387,6 @@ onBeforeUnmount(() => {
 
   <FormCard v-if="step === 5" class="employee-form-section">
       <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
-
-  </FormCard>
-
-  <FormCard v-if="step === 6" class="employee-form-section">
-      <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
 
   </FormCard>
 
