@@ -364,7 +364,7 @@ export const hospitalProcedureHeader: TableHeaderType[] = [
   { title: "limit-type-definition", key: "limitTypeDefinition", sortable: true },
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
   { title: "percentage", key: "percentage", sortable: true },
-  { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
+  { title: "allowed-frequency-use-frequency", key: "allowedFrequencyUse", sortable: true },
   { title: "action", sortable: false, align: "center" }
 ];
 

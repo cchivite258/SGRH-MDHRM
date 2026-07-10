@@ -31,6 +31,9 @@ const getLimitTypeLabel = (value: string | undefined) => {
   return option ? option.label : value;
 };
 
+const firstDefined = (...values: Array<string | number | null | undefined>) =>
+  values.find(value => value !== null && value !== undefined && value !== "");
+
 const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
   if (!item.belongsToGroup) return "Sem grupo";
 
@@ -96,7 +99,38 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
   return getLimitTypeLabel(limitType || "") || "-";
 };
 
-const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || value == null ? "-" : value;
+const getDisplayUsageFrequency = (item: HospitalProcedureListingType) => {
+  const allowedFrequencyUse = firstDefined(item.allowedFrequencyUse);
+  const frequencyInterval = firstDefined(item.frequencyInterval);
+  if (!allowedFrequencyUse && !frequencyInterval) return "-";
+  return `${allowedFrequencyUse || "-"}/${frequencyInterval || "-"}`;
+};
+
+const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
+  procedures.some(procedure => procedure.belongsToGroup);
+
+const getGroupLimitProcedure = (procedures: HospitalProcedureListingType[]) =>
+  procedures.find(procedure => procedure.belongsToGroup) || procedures[0];
+
+const getGroupLimitType = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayLimitType(procedure) : "-";
+};
+
+const getGroupFixedAmount = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayFixedAmount(procedure) : "-";
+};
+
+const getGroupPercentage = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayPercentage(procedure) : "-";
+};
+
+const getGroupUsageFrequency = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayUsageFrequency(procedure) : "-";
+};
 </script>
 
 <template>
@@ -113,6 +147,15 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
           </v-chip>
         </div>
       </td>
+    </tr>
+
+    <tr v-if="groupUsesGroupLimit(group.procedures)" class="procedure-group-limit-row">
+      <td colspan="2">Limite do grupo</td>
+      <td>{{ getGroupLimitType(group.procedures) }}</td>
+      <td>{{ getGroupFixedAmount(group.procedures) }}</td>
+      <td>{{ getGroupPercentage(group.procedures) }}</td>
+      <td>{{ getGroupUsageFrequency(group.procedures) }}</td>
+      <td></td>
     </tr>
 
     <template
@@ -150,10 +193,18 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
         <td class="procedure-type-cell">
           {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : "" }}{{ item.hospitalProcedureType?.name || "-" }}
         </td>
-        <td>{{ getDisplayLimitType(item) }}</td>
-        <td>{{ getDisplayFixedAmount(item) }}</td>
-        <td>{{ getDisplayPercentage(item) }}</td>
-        <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
+        <template v-if="item.belongsToGroup">
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+        </template>
+        <template v-else>
+          <td>{{ getDisplayLimitType(item) }}</td>
+          <td>{{ getDisplayFixedAmount(item) }}</td>
+          <td>{{ getDisplayPercentage(item) }}</td>
+          <td>{{ getDisplayUsageFrequency(item) }}</td>
+        </template>
         <td>
           <slot name="action" :item="item" />
         </td>
@@ -180,6 +231,20 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
   line-height: 1.4;
   padding: 11px 14px;
   vertical-align: middle;
+}
+
+.procedure-group-limit-row td {
+  background: rgba(var(--v-theme-primary), 0.035);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.84);
+  font-weight: 700;
+  padding: 9px 14px;
+  vertical-align: middle;
+}
+
+.procedure-group-limit-row td:first-child {
+  color: rgb(var(--v-theme-primary));
+  text-transform: uppercase;
 }
 
 .procedure-row td {

@@ -168,16 +168,16 @@ const getProcedureFixedAmount = (procedure: HospitalProcedureListingType) => {
   const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount, source.fixedAmount, item.fixedAmount)
-    : firstDefined(source.fixedAmount, item.fixedAmount, source.groupFixedAmount, item.groupFixedAmount);
+    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount)
+    : firstDefined(source.fixedAmount, item.fixedAmount);
 };
 
 const getProcedurePercentage = (procedure: HospitalProcedureListingType) => {
   const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupPercentage, item.groupPercentage, source.percentage, item.percentage)
-    : firstDefined(source.percentage, item.percentage, source.groupPercentage, item.groupPercentage);
+    ? firstDefined(source.groupPercentage, item.groupPercentage)
+    : firstDefined(source.percentage, item.percentage);
 };
 
 const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) => {
@@ -219,10 +219,7 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   const frequencyInterval = firstDefined(source.frequencyInterval, procedure.frequencyInterval);
   if (!allowedFrequencyUse || !frequencyInterval) return "-";
 
-  const limitTypeLabel = getTranslatedEnum("t-limit-type", source.limitType || (procedure as any).limitType);
-  return limitTypeLabel
-    ? `${allowedFrequencyUse}/${frequencyInterval} ${limitTypeLabel}`
-    : `${allowedFrequencyUse}/${frequencyInterval}`;
+  return `${allowedFrequencyUse}/${frequencyInterval}`;
 };
 
 const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
@@ -331,12 +328,12 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
           <v-table density="compact" fixed-header height="560" class="procedure-table">
             <thead>
               <tr>
-                <th style="width: 12%">Codigo</th>
+                <th style="width: 12%">{{ $t('t-code') }}</th>
                 <th>{{ $t('t-procedures') }}</th>
+                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
                 <th style="width: 15%">{{ $t('t-fixed-amount') }}</th>
                 <th style="width: 12%">{{ $t('t-percentage') }}</th>
-                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
-                <th style="width: 14%">{{ $t('t-frequency-interval') }}</th>
+                <th style="width: 18%">{{ $t('t-allowed-frequency-use-frequency') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -360,9 +357,9 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
 
                 <tr v-if="groupUsesGroupLimit(group.procedures)" class="group-limit-row">
                   <td colspan="2">Limite do grupo</td>
+                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
                   <td>{{ formatPlanMoney(getGroupFixedAmount(group.procedures)) }}</td>
                   <td>{{ formatPlanPercent(getGroupPercentage(group.procedures)) }}</td>
-                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
                   <td>{{ getGroupFrequencyLabel(group.procedures) }}</td>
                 </tr>
 
@@ -393,9 +390,9 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                     <td>
                       <div class="font-weight-medium">{{ getProcedureName(procedure) }}</div>
                     </td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getProcedureLimitLabel(procedure) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
-                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getProcedureLimitLabel(procedure) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getFrequencyLabel(procedure) }}</td>
                   </tr>
                 </template>

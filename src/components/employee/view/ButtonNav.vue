@@ -23,8 +23,7 @@ const tabs = [
   { value: 1, label: 't-general-information' },
   { value: 3, label: 't-salary-review' },
   { value: 4, label: 't-dependents' },
-  { value: 5, label: 't-health-plan' },
-  { value: 6, label: 't-expenses-per-procedure' }
+  { value: 5, label: 't-health-plan' }
 ];
 </script>
 

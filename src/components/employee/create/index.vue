@@ -24,7 +24,6 @@ import Step2 from "@/components/employee/create/TabInstitution&Classification.vu
 import Step3 from "@/components/employee/create/TabSalaryReview.vue";
 import Step4 from "@/components/employee/create/TabDependents.vue";
 import Step5 from "@/components/employee/create/TabHealthPlan.vue";
-import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -97,7 +96,7 @@ const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
 const canUseHeaderSave = computed(() => step.value === 1);
 const headerSaveLabel = computed(() => t('t-save-and-proceed'));
-const employeeFormSteps = [1, 3, 4, 5, 6];
+const employeeFormSteps = [1, 3, 4, 5];
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -395,7 +394,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber);
+      onStepChange(tabNumber === 2 ? 1 : tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -541,10 +540,6 @@ onBeforeUnmount(() => {
 
   <FormCard v-if="step === 5" class="employee-form-section">
     <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
-  </FormCard>
-
-  <FormCard v-if="step === 6" class="employee-form-section">
-    <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
   </FormCard>
 
   <div v-if="step === 1" class="employee-form-footer-actions">

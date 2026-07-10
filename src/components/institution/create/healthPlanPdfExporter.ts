@@ -14,6 +14,11 @@ type ExportHealthPlanPdfOptions = {
   contextLabel?: string;
   fileName?: string;
   showUsageBalances?: boolean;
+  isEmployee?: boolean;
+  mainMemberName?: string;
+  dependentName?: string;
+  allocatedBalance?: DisplayValue;
+  remainingBalance?: DisplayValue;
 };
 
 const BRAND_BLUE: [number, number, number] = [31, 58, 147];
@@ -137,10 +142,7 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   const frequencyInterval = firstDefined(source.frequencyInterval, procedure.frequencyInterval);
   if (!allowedFrequencyUse || !frequencyInterval) return "-";
 
-  const limitTypeLabel = getTranslatedEnum("t-limit-type", source.limitType || (procedure as any).limitType);
-  return limitTypeLabel
-    ? `${allowedFrequencyUse}/${frequencyInterval} ${limitTypeLabel}`
-    : `${allowedFrequencyUse}/${frequencyInterval}`;
+  return `${allowedFrequencyUse}/${frequencyInterval}`;
 };
 
 const hasBalanceColumns = (procedures: HospitalProcedureListingType[]) =>
@@ -177,7 +179,7 @@ const getProcedureRemainingBalance = (procedure: HospitalProcedureListingType) =
   getBalanceValue(procedure, "remainingBalance", "groupRemainingBalance");
 
 const getProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
-  Number(firstDefined((procedure as any).totalUsedBalance) || 0);
+  Number(firstDefined((procedure as any).totalUsedBalance, (procedure as any).usedBalance) || 0);
 
 const hasProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
   getProcedureTotalUsedBalance(procedure) !== 0;
@@ -205,7 +207,10 @@ const getGroupAllocatedBalance = (procedures: HospitalProcedureListingType[]) =>
 
 const getGroupUsedBalance = (procedures: HospitalProcedureListingType[]) => {
   const groupUsedBalances = procedures.map(procedure => Number((procedure as any).groupUsedBalance || 0));
-  return groupUsedBalances.find(value => value !== 0) || 0;
+  const groupUsedBalance = groupUsedBalances.find(value => value !== 0);
+  if (groupUsedBalance !== undefined) return groupUsedBalance;
+
+  return procedures.reduce((total, procedure) => total + getProcedureTotalUsedBalance(procedure), 0);
 };
 
 const getGroupRemainingBalance = (procedures: HospitalProcedureListingType[]) => {
@@ -287,12 +292,12 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
             colSpan: 2,
             styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
           },
+          getGroupLimitLabel(groupProcedures),
           formatMoney(getGroupFixedAmount(groupProcedures)),
           formatPercent(getGroupPercentage(groupProcedures)),
           formatMoney(getGroupAllocatedBalance(groupProcedures)),
           formatMoney(getGroupUsedBalance(groupProcedures)),
           formatMoney(getGroupRemainingBalance(groupProcedures)),
-          getGroupLimitLabel(groupProcedures),
           getGroupFrequencyLabel(groupProcedures)
         ]
         : [
@@ -301,9 +306,9 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
             colSpan: 2,
             styles: { fillColor: [246, 249, 255], textColor: BRAND_BLUE, fontStyle: "bold" }
           },
+          getGroupLimitLabel(groupProcedures),
           formatMoney(getGroupFixedAmount(groupProcedures)),
           formatPercent(getGroupPercentage(groupProcedures)),
-          getGroupLimitLabel(groupProcedures),
           getGroupFrequencyLabel(groupProcedures)
         ]);
     }
@@ -324,16 +329,15 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
             getProcedureName(procedure),
             "-",
             "-",
+            "-",
             ...(includeBalances
               ? [
                 "-",
                 hasProcedureTotalUsedBalance(procedure) ? formatMoney(getProcedureTotalUsedBalance(procedure)) : "-",
                 "-",
-                "-",
                 "-"
               ]
               : [
-                "-",
                 "-"
               ])
           ]);
@@ -344,20 +348,20 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
           ? [
             getProcedureCode(procedure),
             getProcedureName(procedure),
+            getProcedureLimitLabel(procedure),
             formatMoney(getProcedureFixedAmount(procedure)),
             formatPercent(getProcedurePercentage(procedure)),
             formatMoney(getProcedureAllocatedBalance(procedure)),
             formatMoney(getProcedureTotalUsedBalance(procedure)),
             formatMoney(getProcedureRemainingBalance(procedure)),
-            getProcedureLimitLabel(procedure),
             getFrequencyLabel(procedure)
           ]
           : [
             getProcedureCode(procedure),
             getProcedureName(procedure),
+            getProcedureLimitLabel(procedure),
             formatMoney(getProcedureFixedAmount(procedure)),
             formatPercent(getProcedurePercentage(procedure)),
-            getProcedureLimitLabel(procedure),
             getFrequencyLabel(procedure)
           ]);
       });
@@ -372,7 +376,12 @@ export const exportHealthPlanToPdf = async ({
   procedures,
   contextLabel,
   fileName,
-  showUsageBalances
+  showUsageBalances,
+  isEmployee = true,
+  mainMemberName,
+  dependentName,
+  allocatedBalance,
+  remainingBalance
 }: ExportHealthPlanPdfOptions) => {
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -382,44 +391,45 @@ export const exportHealthPlanToPdf = async ({
   const planName = getPlanName(healthPlan);
   const generatedAt = new Date().toLocaleString("pt-PT");
   const includeBalances = showUsageBalances ?? hasBalanceColumns(procedures);
+  const isDependentPlan = isEmployee === false;
   const tableHead = includeBalances
     ? [[
       tr("t-code", "Codigo"),
       tr("t-procedures", "Procedimentos"),
+      tr("t-limit-type", "Tipo de limite"),
       tr("t-fixed-amount", "Valor fixo"),
       tr("t-percentage", "Percentagem"),
       "Alocado",
       "Gasto",
       "Remanescente",
-      tr("t-limit-type", "Tipo de limite"),
-      tr("t-frequency-interval", "Intervalo de frequencia")
+      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia")
     ]]
     : [[
       tr("t-code", "Codigo"),
       tr("t-procedures", "Procedimentos"),
+      tr("t-limit-type", "Tipo de limite"),
       tr("t-fixed-amount", "Valor fixo"),
       tr("t-percentage", "Percentagem"),
-      tr("t-limit-type", "Tipo de limite"),
-      tr("t-frequency-interval", "Intervalo de frequencia")
+      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia")
     ]];
   const columnStyles: NonNullable<UserOptions["columnStyles"]> = includeBalances
     ? {
       0: { cellWidth: 17 },
       1: { cellWidth: 54 },
-      2: { cellWidth: 27 },
+      2: { cellWidth: 35 },
       3: { cellWidth: 21 },
       4: { cellWidth: 28 },
       5: { cellWidth: 27 },
       6: { cellWidth: 30 },
-      7: { cellWidth: 35 },
+      7: { cellWidth: 27 },
       8: { cellWidth: 34 }
     }
     : {
       0: { cellWidth: 24 },
       1: { cellWidth: 98 },
-      2: { cellWidth: 36 },
-      3: { cellWidth: 27 },
-      4: { cellWidth: 42 },
+      2: { cellWidth: 42 },
+      3: { cellWidth: 36 },
+      4: { cellWidth: 27 },
       5: { cellWidth: 46 }
     };
 
@@ -432,18 +442,41 @@ export const exportHealthPlanToPdf = async ({
   pdf.setFontSize(9);
   pdf.setTextColor(95, 95, 95);
   pdf.text(`Periodo: ${planName}`, margin, 22);
-  if (contextLabel) {
+  if (contextLabel && !isDependentPlan && !mainMemberName) {
     pdf.text(contextLabel, pageWidth - margin, 22, { align: "right" });
   }
 
+  let dividerY = 27;
+  let cardsY = 32;
+  let tableStartY = 58;
+
+  if (mainMemberName || isDependentPlan) {
+    pdf.text(`${tr("t-main-member", "Membro Principal")}: ${mainMemberName || contextLabel || "-"}`, margin, 28);
+    if (isDependentPlan) {
+      pdf.text(`${tr("t-dependent", "Dependente")}: ${dependentName || contextLabel || "-"}`, pageWidth - margin, 28, { align: "right" });
+    }
+    dividerY = 33;
+    cardsY = 38;
+    tableStartY = 64;
+  }
+
   pdf.setDrawColor(215, 215, 215);
-  pdf.line(margin, 27, pageWidth - margin, 27);
+  pdf.line(margin, dividerY, pageWidth - margin, dividerY);
 
   const cards = includeBalances
     ? [
-      ["Alocado", formatMoney(healthPlan?.allocatedBalance)],
-      ["Gasto", formatMoney(getPlanUsedBalanceTotal(procedures))],
-      ["Remanescente", formatMoney(healthPlan?.remainingBalance)],
+      [
+        isDependentPlan ? tr("t-global-allocated-balance", "Saldo Global Alocado") : tr("t-allocated-balance", "Alocado"),
+        formatMoney(allocatedBalance ?? healthPlan?.allocatedBalance)
+      ],
+      [
+        isDependentPlan ? tr("t-dependent-used-balance", "Valor Gasto pelo Dependente") : tr("t-used-balance", "Gasto"),
+        formatMoney(getPlanUsedBalanceTotal(procedures))
+      ],
+      [
+        isDependentPlan ? tr("t-global-remaining-balance", "Saldo Global Remanescente") : tr("t-remaining-balance", "Remanescente"),
+        formatMoney(remainingBalance ?? healthPlan?.remainingBalance)
+      ],
       [tr("t-procedures", "Procedimentos"), String(procedures.length)]
     ]
     : [
@@ -459,19 +492,19 @@ export const exportHealthPlanToPdf = async ({
     const x = margin + (index * (cardWidth + cardGap));
     pdf.setDrawColor(222, 226, 232);
     pdf.setFillColor(249, 250, 252);
-    pdf.roundedRect(x, 32, cardWidth, 18, 2, 2, "FD");
+    pdf.roundedRect(x, cardsY, cardWidth, 18, 2, 2, "FD");
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(7.5);
     pdf.setTextColor(110, 110, 110);
-    pdf.text(label, x + 4, 39);
+    pdf.text(label, x + 4, cardsY + 7);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(10);
     pdf.setTextColor(35, 35, 35);
-    pdf.text(String(value || "-"), x + 4, 46);
+    pdf.text(String(value || "-"), x + 4, cardsY + 14);
   });
 
   autoTable(pdf, {
-    startY: 58,
+    startY: tableStartY,
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     head: tableHead,
