@@ -855,6 +855,8 @@
   "t-enter-salary-change-notes": "Enter the salary change notes",
   "t-please-enter-salary-change-notes": "Please enter the salary change notes",
   "t-notes": "Notes",
+  "t-enter-notes": "Enter the notes",
+  "t-please-enter-notes": "Please enter the notes",
   "t-salary-updated-success": "Base salary updated successfully",
   "t-gross-salary": "Gross Salary",
   "t-cel-limit-amount": "MAM Limit",

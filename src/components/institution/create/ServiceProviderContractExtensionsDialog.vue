@@ -86,7 +86,8 @@ const pagination = ref({
 const extensionForm = ref<ServiceProviderContractExtensionPayloadType>({
   id: undefined,
   serviceProviderId: "",
-  contractEndDate: new Date().toISOString().split("T")[0]
+  contractEndDate: new Date().toISOString().split("T")[0],
+  notes: ""
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -123,6 +124,9 @@ const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => st
 const requiredRules = {
   contractEndDate: [
     (v: Date | string | null) => !!v || t("t-please-enter-contract-end-date")
+  ],
+  notes: [
+    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
   ]
 };
 
@@ -181,7 +185,8 @@ const resetForm = () => {
   extensionForm.value = {
     id: undefined,
     serviceProviderId: props.serviceProviderId || "",
-    contractEndDate: new Date().toISOString().split("T")[0]
+    contractEndDate: new Date().toISOString().split("T")[0],
+    notes: ""
   };
   serverErrors.value = {};
   errorMsg.value = "";
@@ -218,7 +223,8 @@ const onSubmit = async () => {
     formLoading.value = true;
     const payload: ServiceProviderContractExtensionPayloadType = {
       serviceProviderId: props.serviceProviderId,
-      contractEndDate: extensionForm.value.contractEndDate
+      contractEndDate: extensionForm.value.contractEndDate,
+      notes: extensionForm.value.notes.trim()
     };
 
     const response = extensionForm.value.id
@@ -310,6 +316,7 @@ watch(viewDialog, (isOpen) => {
               <tr v-for="item in items as ServiceProviderContractExtensionType[]" :key="item.id" height="50">
                 <td>{{ formateDate(item.contractStartDate || undefined) || '-' }}</td>
                 <td>{{ formateDate(item.contractEndDate || undefined) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
                 </td>
@@ -367,6 +374,18 @@ watch(viewDialog, (isOpen) => {
                 format="dd/MM/yyyy"
               />
             </v-col>
+            <v-col cols="12">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextArea
+                v-model="extensionForm.notes"
+                :placeholder="$t('t-enter-notes')"
+                :rules="applyServerErrorsToRules('notes', requiredRules.notes)"
+                rows="3"
+                hide-details="auto"
+              />
+            </v-col>
           </v-row>
         </v-card-text>
 
@@ -405,6 +424,10 @@ watch(viewDialog, (isOpen) => {
           <v-col cols="12">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
             <Status :status="selectedExtension?.status || 'INACTIVE'" />
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
+            <div>{{ selectedExtension?.notes || '-' }}</div>
           </v-col>
         </v-row>
       </v-card-text>
