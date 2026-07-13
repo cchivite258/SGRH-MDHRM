@@ -62,7 +62,8 @@ const effectiveDatePicker = ref<{ validate: () => boolean } | null>(null);
 
 const salaryForm = ref<EmployeeBaseSalaryUpdateType>({
   newBaseSalary: 0,
-  starDate: new Date().toISOString().split("T")[0]
+  starDate: new Date().toISOString().split("T")[0],
+  notes: ""
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -82,6 +83,10 @@ const salaryRules = [
 
 const effectiveDateRules = [
   (v: Date | string | null) => !!v || t("t-please-enter-effective-date")
+];
+
+const notesRules = [
+  (v: string | null) => !!String(v || "").trim() || t("t-please-enter-salary-change-notes")
 ];
 
 const clearErrorLater = () => {
@@ -144,7 +149,8 @@ const fetchEmployeeData = async () => {
 const openDialog = () => {
   salaryForm.value = {
     newBaseSalary: currentBaseSalary.value,
-    starDate: new Date().toISOString().split("T")[0]
+    starDate: new Date().toISOString().split("T")[0],
+    notes: ""
   };
   dialog.value = true;
 };
@@ -167,7 +173,8 @@ const submitSalaryUpdate = async () => {
     localLoading.value = true;
     const response = await employeeService.updateBaseSalary(props.employeeId, {
       newBaseSalary: Number(salaryForm.value.newBaseSalary),
-      starDate: salaryForm.value.starDate ? String(salaryForm.value.starDate).split("T")[0] : undefined
+      starDate: salaryForm.value.starDate ? String(salaryForm.value.starDate).split("T")[0] : undefined,
+      notes: salaryForm.value.notes?.trim() || ""
     });
 
     if (response.status === "error") {
@@ -263,6 +270,7 @@ onBeforeUnmount(() => {
                 <td>{{ formatCurrency(item.baseSalary || 0) }}</td>
                 <td>{{ formateDate(item.startDate || item.stardDate) }}</td>
                 <td>{{ formateDate(item.endDate) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
                 </td>
@@ -339,6 +347,19 @@ onBeforeUnmount(() => {
                 :rules="effectiveDateRules"
                 :teleport="true"
                 format="dd/MM/yyyy"
+              />
+            </v-col>
+
+            <v-col cols="12">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-salary-change-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextArea
+                v-model="salaryForm.notes"
+                :placeholder="$t('t-enter-salary-change-notes')"
+                :rules="notesRules"
+                rows="3"
+                hide-details="auto"
               />
             </v-col>
           </v-row>

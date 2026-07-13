@@ -189,6 +189,7 @@ export type EmployeeBaseSalaryTrackType = {
   startDate?: string | undefined;
   endDate?: string | undefined;
   baseSalary: number | null;
+  notes?: string | undefined;
   status?: string | undefined;
   employeeId?: string | undefined;
 };
@@ -196,6 +197,7 @@ export type EmployeeBaseSalaryTrackType = {
 export type EmployeeBaseSalaryUpdateType = {
   newBaseSalary: number | null;
   starDate?: string;
+  notes: string;
 };
 
 export type EmployeeTerminationType = {
