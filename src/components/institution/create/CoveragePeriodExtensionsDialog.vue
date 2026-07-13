@@ -88,7 +88,8 @@ const extensionForm = ref<CoveragePeriodExtensionPayloadType>({
   id: undefined,
   coveragePeriodId: "",
   endDate: new Date().toISOString().split("T")[0],
-  budgetAmount: undefined
+  budgetAmount: undefined,
+  notes: ""
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -169,6 +170,9 @@ const requiredRules = {
       if (v === null || v === undefined || v === "") return true;
       return Number(v) >= 0 || t("t-min-zero-amount");
     }
+  ],
+  notes: [
+    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
   ]
 };
 
@@ -228,7 +232,8 @@ const resetForm = () => {
     id: undefined,
     coveragePeriodId: props.coveragePeriodId || "",
     endDate: getDefaultEndDate(),
-    budgetAmount: undefined
+    budgetAmount: undefined,
+    notes: ""
   };
   serverErrors.value = {};
   errorMsg.value = "";
@@ -255,7 +260,8 @@ const openEditDialog = async (item: CoveragePeriodExtensionType) => {
       id: extension.id,
       coveragePeriodId: extension.coveragePeriodId || props.coveragePeriodId || "",
       endDate: extension.endDate,
-      budgetAmount: extension.budgetAmount ?? undefined
+      budgetAmount: extension.budgetAmount ?? undefined,
+      notes: extension.notes || ""
     };
     formDialog.value = true;
   } catch (error) {
@@ -292,7 +298,8 @@ const onSubmit = async () => {
         extensionForm.value.budgetAmount === null ||
         extensionForm.value.budgetAmount === undefined
           ? undefined
-          : Number(extensionForm.value.budgetAmount)
+          : Number(extensionForm.value.budgetAmount),
+      notes: extensionForm.value.notes.trim()
     };
 
     const response = extensionForm.value.id
@@ -385,6 +392,7 @@ watch(viewDialog, (isOpen) => {
               <tr v-for="item in items as CoveragePeriodExtensionType[]" :key="item.id" height="50">
                 <td>{{ formateDate(item.startDate || undefined) || '-' }}</td>
                 <td>{{ formateDate(item.endDate || undefined) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
                 </td>
@@ -442,7 +450,7 @@ watch(viewDialog, (isOpen) => {
                 format="dd/MM/yyyy"
               />
             </v-col>
-            <v-col cols="12">
+            <v-col cols="12" class="mt-n1">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-budget-amount') }}
               </div>
@@ -451,6 +459,18 @@ watch(viewDialog, (isOpen) => {
                 :placeholder="$t('t-enter-budget-amount')"
                 type="number"
                 :rules="applyServerErrorsToRules('budgetAmount', requiredRules.budgetAmount)"
+              />
+            </v-col>
+            <v-col cols="12" class="mt-n7">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextArea
+                v-model="extensionForm.notes"
+                :placeholder="$t('t-enter-notes')"
+                :rules="applyServerErrorsToRules('notes', requiredRules.notes)"
+                rows="3"
+                hide-details="auto"
               />
             </v-col>
           </v-row>
@@ -495,6 +515,10 @@ watch(viewDialog, (isOpen) => {
           <v-col cols="12" md="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-budget-amount') }}</div>
             <div>{{ selectedExtension?.budgetAmount ?? '-' }}</div>
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
+            <div>{{ selectedExtension?.notes || '-' }}</div>
           </v-col>
         </v-row>
       </v-card-text>

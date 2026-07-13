@@ -1031,6 +1031,8 @@
   "t-enter-salary-change-notes": "Insira as notas da alteração salarial",
   "t-please-enter-salary-change-notes": "Por favor, insira as notas da alteração salarial",
   "t-notes": "Notas",
+  "t-enter-notes": "Insira as notas",
+  "t-please-enter-notes": "Por favor, insira as notas",
   "t-salary-updated-success": "Salário base actualizado com sucesso",
   "t-add-health-plan": "Adicionar Plano de Saúde",
   "t-edit-health-plan": "Editar Plano de Saúde",

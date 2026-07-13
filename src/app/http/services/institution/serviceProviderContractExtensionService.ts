@@ -33,7 +33,8 @@ const formatDateForApi = (value: Date | string | null): string | null => {
 
 const toPayload = (data: ServiceProviderContractExtensionPayloadType) => ({
     serviceProviderId: data.serviceProviderId,
-    contractEndDate: formatDateForApi(data.contractEndDate)
+    contractEndDate: formatDateForApi(data.contractEndDate),
+    notes: data.notes
 });
 
 export default class ServiceProviderContractExtensionService extends HttpService {

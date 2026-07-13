@@ -283,12 +283,14 @@ export type ServiceProviderContractExtensionPayloadType = {
     id?: string | number;
     serviceProviderId: string | number;
     contractEndDate: Date | string | null;
+    notes: string;
 };
 
 export type ServiceProviderContractExtensionType = {
     id: string | number;
     contractStartDate: Date | string | null;
     contractEndDate: Date | string | null;
+    notes?: string | null;
     status: string;
     serviceProviderId: string | number;
     serviceProvider?: ServiceProviderListingType["serviceProvider"];
@@ -375,6 +377,7 @@ export type CoveragePeriodExtensionPayloadType = {
     coveragePeriodId: string | number;
     endDate: Date | string | null;
     budgetAmount?: number | null;
+    notes: string;
 };
 
 export type CoveragePeriodExtensionType = {
@@ -382,6 +385,7 @@ export type CoveragePeriodExtensionType = {
     startDate: Date | string | null;
     endDate: Date | string | null;
     budgetAmount?: number | null;
+    notes?: string | null;
     status: string;
     coveragePeriodId: string | number;
     coveragePeriod?: CoveragePeriodListingType;
