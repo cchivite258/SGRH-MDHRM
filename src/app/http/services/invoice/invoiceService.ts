@@ -196,10 +196,11 @@ export default class InvoiceService extends HttpService {
     };
   }
 
-  async postInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async postInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/post`
+        `/amm/invoices/${id}/post`,
+        { notes }
       );
       console.log('Resposta ao post da factura:------------------------', response);
 
@@ -211,10 +212,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async postFlaggedInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async postFlaggedInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/post-flagged`
+        `/amm/invoices/${id}/post-flagged`,
+        { notes }
       );
       console.log('Resposta ao post flagged da factura:------------------------', response);
 
@@ -226,10 +228,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async cancelInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async cancelInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/cancel`
+        `/amm/invoices/${id}/cancel`,
+        { notes }
       );
       console.log('Resposta ao cancel da factura:------------------------', response);
 

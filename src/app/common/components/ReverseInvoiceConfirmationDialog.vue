@@ -13,7 +13,7 @@ const prop = defineProps({
   },
   width: {
     type: Number,
-    default: 550,
+    default: 440,
   },
   loading: {
     type: Boolean,
@@ -41,9 +41,9 @@ const dialogValue = computed({
         @click="dialogValue = false"
       />
 
-      <v-card-text class="text-center ma-md-5">
+      <v-card-text class="text-center mx-4 my-5">
         <div class="text-warning">
-          <i class="ph ph-arrow-counter-clockwise ph-4x" />
+          <i class="ph ph-arrow-counter-clockwise ph-3x" />
         </div>
         <div class="mt-4">
           <h4 class="text-h6 font-weight-bold">
@@ -54,7 +54,7 @@ const dialogValue = computed({
           </p>
         </div>
       </v-card-text>
-      <v-card-actions class="d-flex justify-center mt-4 mb-7">
+      <v-card-actions class="d-flex justify-center mt-2 mb-5">
         <v-btn @click="dialogValue = false" class="me-2" flat variant="tonal">
           {{ $t('t-close') }}
         </v-btn>

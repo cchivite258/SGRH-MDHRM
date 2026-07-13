@@ -57,7 +57,16 @@ const props = defineProps({
 });
 
 // Modifique a lógica para usar o prop institutionId
-const institutionId = ref(props.institutionId);
+const toSingleString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString;
+  }
+  return undefined;
+};
+
+const institutionId = computed(() => props.institutionId || toSingleString(route.params.id) || toSingleString(route.query.institutionId));
 
 // Estado do componente
 const searchQuery = ref("")
@@ -77,6 +86,16 @@ const periodId = ref<string | null>(null);
 // Computed properties
 const loading = computed(() => employeeStore.loading);
 const totalItems = computed(() => employeeStore.companyEmployeesPagination.totalElements);
+const employeeReturnTo = computed(() => {
+  if (!institutionId.value && route.path.startsWith("/institution/")) {
+    return route.fullPath;
+  }
+
+  if (!institutionId.value) return "/employee/list";
+
+  const institutionRoute = props.isViewMode ? "view" : "edit";
+  return `/institution/${institutionRoute}/${institutionId.value}?tab=7`;
+});
 
 interface FetchParams {
   page: number;
@@ -120,7 +139,24 @@ const toggleSelection = (item: EmployeeListingType) => {
 const onCreateClick = (data: EmployeeInsertType | EmployeeListingType | null) => {
   router.push({
     path: '/employee/create',
-    query: { institutionId: institutionId.value }
+    query: {
+      institutionId: institutionId.value,
+      returnTo: employeeReturnTo.value
+    }
+  });
+};
+
+const goToEmployeeView = (id: string) => {
+  router.push({
+    path: `/employee/view/${id}`,
+    query: { returnTo: employeeReturnTo.value }
+  });
+};
+
+const goToEmployeeEdit = (id: string) => {
+  router.push({
+    path: `/employee/edit/${id}`,
+    query: { returnTo: employeeReturnTo.value }
   });
 };
 
@@ -234,14 +270,14 @@ onBeforeUnmount(() => {
                 size="small"
                 variant="tonal"
                 color="primary"
-                @click="router.push(`/employee/view/${item.id}`)"
+                @click="goToEmployeeView(item.id)"
               >
                 <i class="ph-eye" />
               </v-btn>
               <TableAction
                 v-else
-                @on-view="() => router.push(`/employee/view/${item.id}`)"
-                @onEdit="() => router.push(`/employee/edit/${item.id}`)"
+                @on-view="() => goToEmployeeView(item.id)"
+                @onEdit="() => goToEmployeeEdit(item.id)"
                 @onDelete="() => openDeleteDialog(item.id)"
               />
             </td>

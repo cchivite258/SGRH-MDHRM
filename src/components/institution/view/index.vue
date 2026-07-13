@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
@@ -92,6 +92,29 @@ const goToNextStep = () => {
 
   step.value += 1;
 };
+
+const toSingleString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString;
+  }
+  return undefined;
+};
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    const tabValue = toSingleString(newTab);
+    if (!tabValue) return;
+
+    const tabNumber = Number(tabValue);
+    if (!isNaN(tabNumber) && tabNumber >= 1 && tabNumber <= totalSteps) {
+      step.value = tabNumber;
+    }
+  },
+  { immediate: true }
+);
 
 const formatUser = (user: { firstName?: string | null; lastName?: string | null; email?: string | null }) => {
   const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();

@@ -17,6 +17,7 @@ import CreateEditAttachmentDialog from "@/components/invoice/createInvoice/Creat
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import PostInvoiceConfirmationDialog from "@/app/common/components/PostInvoiceConfirmationDialog.vue";
+import ReverseInvoiceNotesDialog from "@/app/common/components/ReverseInvoiceNotesDialog.vue";
 import Status from "@/app/common/components/Status.vue";
 
 // Stores
@@ -106,6 +107,7 @@ const deleteDialog = ref(false);
 const deleteId = ref<string | null>(null);
 const deleteLoading = ref(false);
 const postDialog = ref(false);
+const postNotesDialog = ref(false);
 const postLoading = ref(false);
 const healthPlanDialog = ref(false);
 const healthPlanConsultLoading = ref(false);
@@ -916,12 +918,17 @@ const openPostDialog = () => {
   postDialog.value = true;
 };
 
-const postInvoice = async () => {
+const openPostNotesDialog = () => {
+  postDialog.value = false;
+  postNotesDialog.value = true;
+};
+
+const postInvoice = async (notes: string) => {
   if (!invoiceData.value.id) return;
 
   postLoading.value = true;
   try {
-    await invoiceService.postInvoice(invoiceData.value.id);
+    await invoiceService.postInvoice(invoiceData.value.id, notes);
     toast.success(t("t-toast-message-post"));
     emit("invoice-posted", invoiceData.value.id);
   } catch (error) {
@@ -929,6 +936,7 @@ const postInvoice = async () => {
   } finally {
     postLoading.value = false;
     postDialog.value = false;
+    postNotesDialog.value = false;
   }
 };
 
@@ -1223,7 +1231,17 @@ onMounted(async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" @onConfirm="onConfirmDelete"
     :loading="deleteLoading" />
 
-  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="postInvoice" />
+  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="openPostNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="postNotesDialog"
+    :loading="postLoading"
+    title-key="t-post-invoice-notes-title"
+    placeholder-key="t-post-invoice-notes-placeholder"
+    required-key="t-post-invoice-notes-required"
+    submit-key="t-submit-post"
+    submit-color="info"
+    @onConfirm="postInvoice"
+  />
 
   <v-dialog v-model="healthPlanDialog" max-width="1180" scrollable>
     <v-card class="health-plan-preview" elevation="12">
