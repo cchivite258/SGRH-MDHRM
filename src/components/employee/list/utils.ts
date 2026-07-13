@@ -74,6 +74,7 @@ export const salaryReviewHeader: DataTableHeaderType[] = [
   { title: "base-salary", key: "baseSalary", sortable: true },
   { title: "start-date", key: "startDate", sortable: true },
   { title: "end-date", key: "endDate", sortable: true },
+  { title: "notes", key: "notes", sortable: false },
   { title: "status", key: "status", sortable: true }
 ];
 
