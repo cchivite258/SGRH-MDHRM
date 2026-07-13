@@ -66,8 +66,22 @@ const resolveRelationId = (value: unknown): string | number | undefined => {
   return undefined;
 };
 
+const getRouteQueryString = (value: unknown): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString || null;
+  }
+  return null;
+};
+
+const getReturnToRoute = (): string | null => {
+  const returnTo = getRouteQueryString(route.query.returnTo);
+  return returnTo?.startsWith("/") ? returnTo : null;
+};
+
 const goBackToList = () => {
-  router.push('/employee/list');
+  router.push(getReturnToRoute() || '/employee/list');
 };
 
 // Refs
@@ -319,7 +333,7 @@ const saveEmployee = async (isFinalStep: boolean = false) => {
     // Redirecionamento ou próxima etapa
     if (isFinalStep) {
       await employeeStore.fetchEmployees();
-      router.push('/employee/list');
+      goBackToList();
     } else {
       step.value++;
     }

@@ -15,11 +15,34 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false
+  },
+  titleKey: {
+    type: String,
+    default: "t-reverse-invoice-notes-title"
+  },
+  labelKey: {
+    type: String,
+    default: "t-invoice-action-notes-label"
+  },
+  placeholderKey: {
+    type: String,
+    default: "t-reverse-invoice-notes-placeholder"
+  },
+  requiredKey: {
+    type: String,
+    default: "t-reverse-invoice-notes-required"
+  },
+  submitKey: {
+    type: String,
+    default: "t-submit-reverse"
+  },
+  submitColor: {
+    type: String,
+    default: "warning"
   }
 });
 
 const notes = ref("");
-const showError = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 
 const dialogValue = computed({
@@ -34,12 +57,11 @@ const dialogValue = computed({
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     notes.value = "";
-    showError.value = false;
   }
 });
 
 const requiredRules = {
-  notes: [(value: string) => !!value?.trim() || t('t-reverse-invoice-notes-required')]
+  notes: [(value: string) => !!value?.trim() || t(props.requiredKey)]
 };
 
 const submit = async () => {
@@ -48,7 +70,6 @@ const submit = async () => {
   const { valid } = await form.value.validate();
   const trimmedNotes = notes.value.trim();
   if (!valid || !trimmedNotes) {
-    showError.value = true;
     toast.error(t("t-validation-error"));
     return;
   }
@@ -59,9 +80,9 @@ const submit = async () => {
 <template>
   <v-dialog v-model="dialogValue" width="500" scrollable>
     <v-form ref="form" @submit.prevent="submit">
-      <Card :title="$t('t-reverse-invoice-notes-title')" title-class="py-0" style="overflow: hidden">
+      <Card :title="$t(titleKey)" title-class="py-0" style="overflow: hidden">
         <template #title-action>
-          <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
+          <v-btn type="button" icon="ph-x" variant="plain" @click="dialogValue = false" />
         </template>
 
         <v-divider />
@@ -70,17 +91,14 @@ const submit = async () => {
           <v-row>
             <v-col cols="12" lg="12">
               <div class="font-weight-bold text-caption mb-1">
-                {{ t('t-reverse-invoice-notes-label') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ t(labelKey) }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextArea
                 v-model="notes"
-                :placeholder="$t('t-reverse-invoice-notes-placeholder')"
+                :placeholder="$t(placeholderKey)"
                 :rules="requiredRules.notes"
                 hide-details="auto"
               />
-              <div v-if="showError" class="text-danger text-caption mt-1">
-                {{ $t('t-reverse-invoice-notes-required') }}
-              </div>
             </v-col>
           </v-row>
         </v-card-text>
@@ -89,11 +107,11 @@ const submit = async () => {
 
         <v-card-actions class="d-flex justify-end">
           <div>
-            <v-btn color="danger" class="me-1" @click="dialogValue = false">
+            <v-btn type="button" color="danger" class="me-1" @click="dialogValue = false">
               <i class="ph-x me-1" /> {{ $t("t-close") }}
             </v-btn>
-            <v-btn color="warning" variant="elevated" @click="submit" :loading="loading" :disabled="loading">
-              {{ $t('t-submit-reverse') }}
+            <v-btn type="submit" :color="submitColor" variant="elevated" :loading="loading" :disabled="loading">
+              {{ $t(submitKey) }}
             </v-btn>
           </div>
         </v-card-actions>

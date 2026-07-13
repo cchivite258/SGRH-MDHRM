@@ -275,12 +275,20 @@ export default class HospitalProcedureService extends HttpService {
 
   async createHospitalProcedure(hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
-      const payload = this.removeNullUndefinedAndEmptyFields({
+      const rawPayload = {
         ...hospitalProcedureData,
+        fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
+        percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
+        groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
+        limitType: hospitalProcedureData.limitType || "NONE",
+        frequencyInterval: toOptionalNumber(hospitalProcedureData.frequencyInterval),
+        allowedFrequencyUse: toOptionalNumber(hospitalProcedureData.allowedFrequencyUse) ?? 0,
         contractHealthPlan: hospitalProcedureData.companyHealthPlan,
         companyHealthPlan: undefined,
         company: undefined
-      });
+      };
+      const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
       const response = await this.post<ApiResponse<HospitalProcedureListingType>>(CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT, payload);
       return {
         status: 'success',

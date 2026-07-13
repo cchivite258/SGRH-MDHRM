@@ -69,6 +69,20 @@ const getRouteEmployeeId = (): string | null => {
   return null;
 };
 
+const getRouteQueryString = (value: unknown): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString || null;
+  }
+  return null;
+};
+
+const getReturnToRoute = (): string | null => {
+  const returnTo = getRouteQueryString(route.query.returnTo);
+  return returnTo?.startsWith("/") ? returnTo : null;
+};
+
 const resolveRelationId = (value: unknown): string | number | undefined => {
   if (value == null) return undefined;
   if (typeof value === "string" || typeof value === "number") return value;
@@ -354,7 +368,7 @@ const terminateEmployeeContract = async (terminationDate: string) => {
 };
 
 const goBackToList = () => {
-  router.push('/employee/list');
+  router.push(getReturnToRoute() || '/employee/list');
 };
 
 const goToNextAvailableStep = () => {
@@ -470,7 +484,7 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     // Redirecionamento ou próxima etapa
     if (isFinalStep) {
       await employeeStore.fetchEmployees();
-      router.push('/employee/list');
+      goBackToList();
     } else {
       goToNextAvailableStep();
     }

@@ -36,3 +36,12 @@ const fieldValue = computed({
     :disabled="prop.disabled"
   />
 </template>
+
+<style scoped>
+:deep(.v-messages__message) {
+  font-size: 0.65rem;
+  color: #ff5252;
+  line-height: 1.2;
+  margin-top: -3px;
+}
+</style>

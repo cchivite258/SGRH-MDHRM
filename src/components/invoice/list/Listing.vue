@@ -29,12 +29,15 @@ const isDarkMode = computed(() => layoutStore.mode === "dark")
 const searchQuery = ref("")
 const searchProps = "employee.contract.name,invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
 const postDialog = ref(false)
+const postNotesDialog = ref(false)
 const postFlaggedDialog = ref(false)
+const postFlaggedNotesDialog = ref(false)
 const postId = ref<string | null>(null)
 const postFlaggedId = ref<string | null>(null)
 const postLoading = ref(false)
 const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
+const cancelNotesDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
 const reverseDialog = ref(false)
@@ -83,12 +86,17 @@ const openPostFlaggedDialog = (id: string) => {
   postFlaggedDialog.value = true
 }
 
-const postFlaggedInvoice = async () => {
+const openPostFlaggedNotesDialog = () => {
+  postFlaggedDialog.value = false
+  postFlaggedNotesDialog.value = true
+}
+
+const postFlaggedInvoice = async (notes: string) => {
   if (!postFlaggedId.value) return
 
   postFlaggedLoading.value = true
   try {
-    await invoiceService.postFlaggedInvoice(postFlaggedId.value)
+    await invoiceService.postFlaggedInvoice(postFlaggedId.value, notes)
     toast.success(t("t-toast-message-post"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -101,6 +109,7 @@ const postFlaggedInvoice = async () => {
   } finally {
     postFlaggedLoading.value = false
     postFlaggedDialog.value = false
+    postFlaggedNotesDialog.value = false
   }
 }
 
@@ -109,12 +118,17 @@ const openPostDialog = (id: string) => {
   postDialog.value = true
 }
 
-const postInvoice = async () => {
+const openPostNotesDialog = () => {
+  postDialog.value = false
+  postNotesDialog.value = true
+}
+
+const postInvoice = async (notes: string) => {
   if (!postId.value) return
 
   postLoading.value = true
   try {
-    await invoiceService.postInvoice(postId.value)
+    await invoiceService.postInvoice(postId.value, notes)
     toast.success(t("t-toast-message-post"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -127,6 +141,7 @@ const postInvoice = async () => {
   } finally {
     postLoading.value = false
     postDialog.value = false
+    postNotesDialog.value = false
   }
 }
 
@@ -135,12 +150,17 @@ const openCancelDialog = (id: string) => {
   cancelDialog.value = true
 }
 
-const cancelInvoice = async () => {
+const openCancelNotesDialog = () => {
+  cancelDialog.value = false
+  cancelNotesDialog.value = true
+}
+
+const cancelInvoice = async (notes: string) => {
   if (!cancelId.value) return
 
   cancelLoading.value = true
   try {
-    await invoiceService.cancelInvoice(cancelId.value)
+    await invoiceService.cancelInvoice(cancelId.value, notes)
     toast.success(t("t-toast-message-cancel"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -153,6 +173,7 @@ const cancelInvoice = async () => {
   } finally {
     cancelLoading.value = false
     cancelDialog.value = false
+    cancelNotesDialog.value = false
   }
 }
 
@@ -403,9 +424,42 @@ onBeforeRouteLeave(() => {
     </DataTableServer>
   </ListingPageShell>
 
-  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="postInvoice" />
-  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" :loading="postFlaggedLoading" @onConfirm="postFlaggedInvoice" />
-  <CancelInvoiceConfirmationDialog v-model="cancelDialog" :loading="cancelLoading" @onConfirm="cancelInvoice" />
+  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="openPostNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="postNotesDialog"
+    :loading="postLoading"
+    title-key="t-post-invoice-notes-title"
+    placeholder-key="t-post-invoice-notes-placeholder"
+    required-key="t-post-invoice-notes-required"
+    submit-key="t-submit-post"
+    submit-color="info"
+    @onConfirm="postInvoice"
+  />
+
+  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" :loading="postFlaggedLoading" @onConfirm="openPostFlaggedNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="postFlaggedNotesDialog"
+    :loading="postFlaggedLoading"
+    title-key="t-post-flagged-invoice-notes-title"
+    placeholder-key="t-post-flagged-invoice-notes-placeholder"
+    required-key="t-post-flagged-invoice-notes-required"
+    submit-key="t-submit-post"
+    submit-color="info"
+    @onConfirm="postFlaggedInvoice"
+  />
+
+  <CancelInvoiceConfirmationDialog v-model="cancelDialog" :loading="cancelLoading" @onConfirm="openCancelNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="cancelNotesDialog"
+    :loading="cancelLoading"
+    title-key="t-cancel-invoice-notes-title"
+    placeholder-key="t-cancel-invoice-notes-placeholder"
+    required-key="t-cancel-invoice-notes-required"
+    submit-key="t-submit-cancel"
+    submit-color="danger"
+    @onConfirm="cancelInvoice"
+  />
+
   <ReverseInvoiceConfirmationDialog v-model="reverseDialog" :loading="reverseLoading" @onConfirm="openReverseNotesDialog" />
   <ReverseInvoiceNotesDialog v-model="reverseNotesDialog" :loading="reverseLoading" @onConfirm="reverseInvoice" />
 </template>
