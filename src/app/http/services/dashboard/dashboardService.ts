@@ -61,4 +61,20 @@ export default class DashboardService extends HttpService {
     );
     return getResponseData(response);
   }
+
+  async getDistributionOfRevenueByServiceProvider(payload: DashboardMetricPayload): Promise<Record<string, any>> {
+    const response = await this.post<ApiResponse<Record<string, any>>>(
+      `${DASHBOARD_ENDPOINT}/distribution-of-revenue-by-service-provider`,
+      payload
+    );
+    return getResponseData(response);
+  }
+
+  async getDistributionOfRevenueFromServiceProvidersContracts(payload: DashboardMetricPayload): Promise<Record<string, any>> {
+    const response = await this.post<ApiResponse<Record<string, any>>>(
+      `${DASHBOARD_ENDPOINT}/distribuition-of-revenue-from-service-providers-contracts`,
+      payload
+    );
+    return getResponseData(response);
+  }
 }
