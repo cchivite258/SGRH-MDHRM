@@ -107,7 +107,7 @@ const loadInstitutionData = async (id: string) => {
     institutionData.enabled = data.enabled;
     basicDataValidated.value = true;
   } catch (error) {
-    toast.error(t("t-error-loading-institution"));
+    getApiErrorMessages(error, t("t-error-loading-institution")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }

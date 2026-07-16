@@ -290,12 +290,15 @@ const handleError = (message: string, error: any) => {
 /**
  * Valida e envia o formulário
  */
-const validateForm = async () => {
+const validateForm = async (options: { showToast?: boolean } = {}) => {
   if (!form2.value) return false;
+  const showToast = options.showToast !== false;
 
   const { valid } = await form2.value.validate();
   if (!valid) {
-    toast.error(t('t-validation-error'));
+    if (showToast) {
+      toast.error(t('t-validation-error'));
+    }
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
       errorMsg.value = "";

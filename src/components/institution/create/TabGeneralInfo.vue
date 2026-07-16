@@ -10,6 +10,7 @@ import type { EntityListingType } from "@/components/entities/types";
 import { InstitutionInsertType } from "@/components/institution/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -154,7 +155,7 @@ onMounted(async () => {
     companyDetails.value = response.content || [];
     applySelectedEntityToForm();
   } catch (error) {
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
   }
 });
 </script>

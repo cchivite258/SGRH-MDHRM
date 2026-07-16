@@ -19,6 +19,7 @@ import Status from "@/app/common/components/Status.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { formateDate } from "@/app/common/dateFormate";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -84,8 +85,8 @@ onMounted(async () => {
         search: ""
       });
     } catch (e) {
-      toast.error(t('t-message-load-error'));
       console.error("Erro ao carregar dados do departamento:", e);
+      getApiErrorMessages(e, t('t-message-load-error')).forEach((message) => toast.error(message));
     }
   }
 });

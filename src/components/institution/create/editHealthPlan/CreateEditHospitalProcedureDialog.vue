@@ -397,6 +397,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load procedimentos hospitalares:", error);
     errorMsg.value = "Falha ao carregar procedimentos hospitalares";
+    errorMsg.value = getFirstApiErrorMessage(error, t("t-message-load-error")) || t("t-message-load-error");
     setTimeout(() => errorMsg.value = "", 5000);
   }
 });

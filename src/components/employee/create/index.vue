@@ -94,8 +94,8 @@ const resolveRelationId = (value: unknown): string | number | undefined => {
 
 // Refs
 const step = ref(1);
-const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
-const step2Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
+const step1Ref = ref<{ validateForm: (options?: { showToast?: boolean }) => Promise<boolean> } | null>(null);
+const step2Ref = ref<{ validateForm: (options?: { showToast?: boolean }) => Promise<boolean> } | null>(null);
 const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
@@ -383,10 +383,13 @@ const goToNextAvailableStep = () => {
 
 const onHeaderSave = async () => {
   if (step.value === 1) {
-    const isGeneralInfoValid = await step1Ref.value?.validateForm();
-    const isInstitutionValid = await step2Ref.value?.validateForm();
+    const isGeneralInfoValid = await step1Ref.value?.validateForm({ showToast: false });
+    const isInstitutionValid = await step2Ref.value?.validateForm({ showToast: false });
 
-    if (!isGeneralInfoValid || !isInstitutionValid) return;
+    if (!isGeneralInfoValid || !isInstitutionValid) {
+      toast.error(t('t-validation-error'));
+      return;
+    }
 
     await saveEmployee({ ...employeeData }, false);
   }
@@ -464,7 +467,8 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
         employeeStore.setCurrentEmployeeId(response.data.id);
         basicDataValidated.value = true;
       } else {
-        throw new Error(response?.error?.message || t('t-error-creating-employee'));
+        handleApiError(response?.error || new Error(t('t-error-creating-employee')));
+        return;
       }
     }
 

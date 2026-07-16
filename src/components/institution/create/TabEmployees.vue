@@ -27,6 +27,7 @@ import { formateDate } from "@/app/common/dateFormate";
 import { useEmployeeStore } from "@/store/employee/employeeStore";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { employeeService } from "@/app/http/httpServiceProvider"
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Types
 import type {
@@ -205,7 +206,7 @@ const deleteEmployee = async () => {
     toast.success(t('t-toast-message-deleted'))
     await employeeStore.fetchCompanyEmployees(institutionId.value, 0, itemsPerPage.value)
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-error'))
+    getApiErrorMessages(error, t('t-toast-message-deleted-error')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false
     deleteDialog.value = false

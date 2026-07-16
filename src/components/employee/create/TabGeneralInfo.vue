@@ -307,8 +307,9 @@ const onBack = () => {
 /**
  * Valida e envia o formulário
  */
-const validateForm = async () => {
+const validateForm = async (options: { showToast?: boolean } = {}) => {
   if (!form.value) return false;
+  const showToast = options.showToast !== false;
 
   try {
     // Forçar validação dos date pickers
@@ -322,7 +323,9 @@ const validateForm = async () => {
     const { valid } = await form.value.validate();
 
     if (!valid) {
-      toast.error(t('t-validation-error'));
+      if (showToast) {
+        toast.error(t('t-validation-error'));
+      }
       errorMsg.value = t('t-please-correct-errors');
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";

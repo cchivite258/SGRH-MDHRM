@@ -7,6 +7,7 @@ import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import { getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 
 const { t } = useI18n();
@@ -126,7 +127,7 @@ const onSubmit = async () => {
     onSuccess: () => dialogValue.value = false,
     onError: (error: { error?: ApiErrorResponse }) => {
       // Mostra mensagem específica para erro 409
-      errorMsg.value = error.error?.message || t('t-message-save-error');
+      errorMsg.value = getFirstApiErrorMessage(error, t('t-message-save-error')) || t('t-message-save-error');
 
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
