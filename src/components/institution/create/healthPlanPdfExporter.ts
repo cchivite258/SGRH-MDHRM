@@ -5,6 +5,7 @@ import { amountFormate } from "@/app/common/amountFormate";
 import i18n from "@/plugins/i18n";
 import type { HospitalProcedureListingType } from "@/components/institution/types";
 import { healthPlanLimitOptions, limitTypeDefinitionOptions } from "@/components/institution/create/utils";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 
 type DisplayValue = number | string | null | undefined;
 
@@ -265,21 +266,7 @@ const safeFileName = (value: string) =>
 
 const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBalances: boolean) => {
   const groupColSpan = includeBalances ? 9 : 6;
-  const groupMap = procedures.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, HospitalProcedureListingType[]>);
-
-  return Object.entries(groupMap).flatMap(([group, groupProcedures]) => {
-    const categoryMap = groupProcedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, HospitalProcedureListingType[]>);
-
+  return groupHealthPlanProcedures(procedures, tr("t-procedures", "Procedimentos")).flatMap(({ group, procedures: groupProcedures, categories }) => {
     const rows: any[] = [
       [{ content: group, colSpan: groupColSpan, styles: { fillColor: SOFT_BLUE, textColor: BRAND_BLUE, fontStyle: "bold" } }]
     ];
@@ -313,7 +300,7 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
         ]);
     }
 
-    Object.entries(categoryMap).forEach(([category, categoryProcedures]) => {
+    categories.forEach(({ category, procedures: categoryProcedures }) => {
       rows.push([
         {
           content: `${category} - ${categoryProcedures.length} ${tr("t-procedures", "procedimentos").toLowerCase()}`,
@@ -391,6 +378,7 @@ export const exportHealthPlanToPdf = async ({
   const planName = getPlanName(healthPlan);
   const generatedAt = new Date().toLocaleString("pt-PT");
   const includeBalances = showUsageBalances ?? hasBalanceColumns(procedures);
+  const orderedProcedures = orderHealthPlanProcedures(procedures, tr("t-procedures", "Procedimentos"));
   const isDependentPlan = isEmployee === false;
   const tableHead = includeBalances
     ? [[
@@ -477,13 +465,13 @@ export const exportHealthPlanToPdf = async ({
         isDependentPlan ? tr("t-global-remaining-balance", "Saldo Global Remanescente") : tr("t-remaining-balance", "Remanescente"),
         formatMoney(remainingBalance ?? healthPlan?.remainingBalance)
       ],
-      [tr("t-procedures", "Procedimentos"), String(procedures.length)]
+      [tr("t-procedures", "Procedimentos"), String(orderedProcedures.length)]
     ]
     : [
       [tr("t-health-plan-limit", "Limite do plano"), getHealthPlanLimitLabel(healthPlan?.healthPlanLimit)],
       [tr("t-fixed-amount", "Valor fixo"), formatMoney(healthPlan?.fixedAmount)],
       [tr("t-percentage", "Percentagem"), formatPercent(healthPlan?.companyContributionPercentage)],
-      [tr("t-procedures", "Procedimentos"), String(procedures.length)]
+      [tr("t-procedures", "Procedimentos"), String(orderedProcedures.length)]
     ];
 
   const cardGap = 4;
@@ -508,7 +496,7 @@ export const exportHealthPlanToPdf = async ({
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     head: tableHead,
-    body: buildGroupedRows(procedures, includeBalances),
+    body: buildGroupedRows(orderedProcedures, includeBalances),
     styles: {
       fontSize: 7,
       cellPadding: 1.8,

@@ -24,7 +24,8 @@ export const useHealthPlanEmployeeStore = defineStore('healthPlans', {
       sortColumn: string = 'createdAt',
       direction: string = 'asc',
       query_value?: string,
-      query_props?: string
+      query_props?: string,
+      useQueryOperator: boolean = true
     ) {
       this.loading = true;
       this.error = null;
@@ -40,7 +41,8 @@ export const useHealthPlanEmployeeStore = defineStore('healthPlans', {
           sortColumn,
           direction,
           query_value,
-          query_props
+          query_props,
+          useQueryOperator
         );
 
         this.healthPlans = content;

@@ -16,6 +16,7 @@ import type {
   EmployeeHospitalProcedurePlanUsageType,
   HealthPlanListingType
 } from "@/components/employee/types";
+import { orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -335,7 +336,7 @@ const fetchDependentPlan = async ({
       }
     }
 
-    planLimits.value = responseContent;
+    planLimits.value = orderHealthPlanProcedures(responseContent, t("t-procedures"));
     dependentInfo.value = responseContent[0]?.dependent || dependentInfo.value;
     activeHealthPlan.value = responseContent[0]?.employeeHealthPlan || activeHealthPlan.value;
     resolvedEmployeeHealthPlanId.value = responseContent.length > 0

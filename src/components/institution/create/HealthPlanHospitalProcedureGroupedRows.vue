@@ -52,8 +52,50 @@ const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
 const getProcedureCategoryName = (item: HospitalProcedureListingType) =>
   item.hospitalProcedureType?.categoryName || t("t-procedures");
 
+const compareText = (left: string, right: string) =>
+  left.localeCompare(right, undefined, { sensitivity: "base", numeric: true });
+
+const getProcedureCode = (item: HospitalProcedureListingType) =>
+  item.hospitalProcedureType?.code || item.hospitalProcedureType?.name || "";
+
+const hasDisplayValue = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return false;
+  const numericValue = Number(String(value).replace(",", "."));
+  return Number.isNaN(numericValue) ? true : numericValue !== 0;
+};
+
+const hasProcedureValues = (item: HospitalProcedureListingType) =>
+  item.belongsToGroup
+    ? [item.groupFixedAmount, item.groupPercentage, item.allowedFrequencyUse, item.frequencyInterval].some(hasDisplayValue)
+    : [item.fixedAmount, item.percentage, item.allowedFrequencyUse, item.frequencyInterval].some(hasDisplayValue);
+
+const getCategoryKey = (item: HospitalProcedureListingType) =>
+  `${getHospitalProcedureGroupName(item)}::${getProcedureCategoryName(item)}`;
+
+const orderedItems = computed(() => {
+  const categoryValueMap = props.items.reduce((map, item) => {
+    const categoryKey = getCategoryKey(item);
+    map.set(categoryKey, (map.get(categoryKey) || false) || hasProcedureValues(item));
+    return map;
+  }, new Map<string, boolean>());
+
+  return [...props.items].sort((left, right) => {
+    const groupComparison = compareText(getHospitalProcedureGroupName(left), getHospitalProcedureGroupName(right));
+    if (groupComparison !== 0) return groupComparison;
+
+    const leftHasValues = categoryValueMap.get(getCategoryKey(left)) || false;
+    const rightHasValues = categoryValueMap.get(getCategoryKey(right)) || false;
+    if (leftHasValues !== rightHasValues) return leftHasValues ? -1 : 1;
+
+    const categoryComparison = compareText(getProcedureCategoryName(left), getProcedureCategoryName(right));
+    if (categoryComparison !== 0) return categoryComparison;
+
+    return compareText(getProcedureCode(left), getProcedureCode(right));
+  });
+});
+
 const groupedProcedures = computed<ProcedureGroup[]>(() => {
-  const groupMap: Record<string, HospitalProcedureListingType[]> = props.items.reduce((groups, procedure) => {
+  const groupMap: Record<string, HospitalProcedureListingType[]> = orderedItems.value.reduce((groups, procedure) => {
     const group = getHospitalProcedureGroupName(procedure);
     if (!groups[group]) groups[group] = [];
 
@@ -61,7 +103,7 @@ const groupedProcedures = computed<ProcedureGroup[]>(() => {
     return groups;
   }, {} as Record<string, HospitalProcedureListingType[]>);
 
-  return Object.entries(groupMap).map(([group, procedures]: [string, HospitalProcedureListingType[]]) => {
+  return Object.entries(groupMap).sort(([leftGroup], [rightGroup]) => compareText(leftGroup, rightGroup)).map(([group, procedures]: [string, HospitalProcedureListingType[]]) => {
     const categoryMap: Record<string, HospitalProcedureListingType[]> = procedures.reduce((categories, procedure) => {
       const category = getProcedureCategoryName(procedure);
       if (!categories[category]) categories[category] = [];
@@ -73,10 +115,17 @@ const groupedProcedures = computed<ProcedureGroup[]>(() => {
     return {
       group,
       procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]: [string, HospitalProcedureListingType[]]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
+      categories: Object.entries(categoryMap)
+        .sort(([leftCategory, leftProcedures], [rightCategory, rightProcedures]) => {
+          const leftHasValues = leftProcedures.some(hasProcedureValues);
+          const rightHasValues = rightProcedures.some(hasProcedureValues);
+          if (leftHasValues !== rightHasValues) return leftHasValues ? -1 : 1;
+          return compareText(leftCategory, rightCategory);
+        })
+        .map(([category, categoryProcedures]: [string, HospitalProcedureListingType[]]) => ({
+          category,
+          procedures: [...categoryProcedures].sort((left, right) => compareText(getProcedureCode(left), getProcedureCode(right)))
+        }))
     };
   });
 });

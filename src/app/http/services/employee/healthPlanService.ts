@@ -40,7 +40,8 @@ export default class EmployeeHealthPlanService extends HttpService {
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,
-    query_props?: string
+    query_props?: string,
+    useQueryOperator: boolean = true
   ): Promise<{ content: HealthPlanListingType[], meta: any }> {
     try {
       const queryParams = [
@@ -66,7 +67,7 @@ export default class EmployeeHealthPlanService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      if (query_props && query_value) {
+      if (useQueryOperator && query_props && query_value) {
         queryParams.push(`query_operator=AND`);
       }
 

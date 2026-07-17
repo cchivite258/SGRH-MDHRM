@@ -22,6 +22,7 @@ import type { ExpensePerProcedureType } from "@/components/employee/types";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 import Status from "@/app/common/components/Status.vue";
 
 // Composables
@@ -192,7 +193,7 @@ const activeHealthPlan = computed(() =>
   || employeeActiveHealthPlan.value
 );
 
-const activePlanProcedures = computed(() => employeePlanProcedureLimits.value || []);
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(employeePlanProcedureLimits.value || [], t("t-procedures")));
 
 const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
 const invoiceActionReasonName = computed(() => {
@@ -371,32 +372,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, ExpensePerProcedureType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, ExpensePerProcedureType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 const activePlanCoveragePeriod = computed(() =>
@@ -621,7 +597,7 @@ const onConsultHealthPlan = async () => {
     }
 
     employeeActiveHealthPlan.value = content[0]?.employeeHealthPlan || activeEmployeeHealthPlan;
-    employeePlanProcedureLimits.value = content;
+    employeePlanProcedureLimits.value = orderHealthPlanProcedures(content, t("t-procedures"));
     healthPlanDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano activo:", error);
@@ -644,7 +620,7 @@ const onExportHealthPlanPdf = async () => {
         ...activeHealthPlan.value,
         ...employeeActiveHealthPlan.value
       },
-      procedures: activePlanProcedures.value as any,
+      procedures: orderHealthPlanProcedures(activePlanProcedures.value, t("t-procedures")) as any,
       contextLabel: employees.value.find(item => item.value === invoiceData.value.employee)?.label
         || invoiceData.value.employeeLabel
         || undefined,
