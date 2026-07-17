@@ -1,7 +1,12 @@
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { formateDate } from "@/app/common/dateFormate";
+import { useToast } from "vue-toastification";
+import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { reasonService } from "@/app/http/httpServiceProvider";
+import type { ReasonListing } from "@/components/baseTables/reason/types";
+
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -16,14 +21,31 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "onConfirm", terminationDate: string): void;
+  (e: "onConfirm", payload: { terminationDate: string; reasonId: string | number }): void;
   (e: "clear-server-error", field: string): void;
 }>();
 
 const { t } = useI18n();
+const toast = useToast();
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const terminationDate = ref<string | null>(formateDate(new Date(), "yyyy-mm-dd"));
-const terminationDateMenu = ref(false);
+const terminationDateInput = ref<HTMLInputElement | null>(null);
+const terminationDateError = ref("");
+
+const getTodayInputValue = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const terminationForm = ref({
+  terminationDate: getTodayInputValue(),
+  reasonId: "" as string | number
+});
+const reasons = ref<ReasonListing[]>([]);
+const reasonsLoading = ref(false);
+const step = ref<"confirm" | "form">("confirm");
 
 const dialogValue = computed({
   get() {
@@ -49,58 +71,103 @@ const closeDialog = () => {
   dialogValue.value = false;
 };
 
-const dateFromValue = (value: string | null) => {
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00`);
-  return isNaN(date.getTime()) ? null : date;
+const openFormStep = () => {
+  step.value = "form";
+  terminationForm.value = {
+    terminationDate: getTodayInputValue(),
+    reasonId: ""
+  };
+  terminationDateError.value = "";
+  fetchReasons();
 };
 
-const pickerDate = computed(() => dateFromValue(terminationDate.value) || new Date());
+const reasonOptions = computed(() =>
+  reasons.value
+    .filter(reason => reason.enabled)
+    .map(reason => ({
+      label: reason.name,
+      value: reason.id
+    }))
+);
 
-const formattedTerminationDate = computed(() => {
-  const date = dateFromValue(terminationDate.value);
-  return date ? formateDate(date, "dd/MM/yyyy") : "";
-});
-
-const terminationDateRules = [
-  () => !!terminationDate.value || t("t-please-enter-termination-date"),
-  () => {
-    if (!terminationDate.value) return true;
-    return !!dateFromValue(terminationDate.value) || t("t-invalid-date");
-  }
+const reasonRules = [
+  (value: string | number | null) => !!value || t("t-please-select-reason")
 ];
 
-const selectTerminationDate = (value: Date | string | Date[] | string[] | null) => {
-  const selectedValue = Array.isArray(value) ? value[0] : value;
-  if (!selectedValue) return;
-
-  terminationDate.value = formateDate(selectedValue, "yyyy-mm-dd");
-  terminationDateMenu.value = false;
+const fetchReasons = async () => {
+  reasonsLoading.value = true;
+  try {
+    const { content } = await reasonService.getReasonsByType("EMPLOYEE_TERMINATION");
+    reasons.value = content;
+  } catch (error) {
+    reasons.value = [];
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  } finally {
+    reasonsLoading.value = false;
+  }
 };
 
-const clearTerminationDate = () => {
-  terminationDate.value = null;
+const openTerminationCalendar = () => {
+  const input = terminationDateInput.value as (HTMLInputElement & { showPicker?: () => void }) | null;
+  if (!input || input.disabled) return;
+
+  input.focus();
+  try {
+    input.showPicker?.();
+  } catch {
+    // Some browsers only allow showPicker during a direct user activation.
+  }
+};
+
+const validateTerminationDate = () => {
+  if (!terminationForm.value.terminationDate) {
+    terminationDateError.value = t("t-please-enter-termination-date");
+    return false;
+  }
+
+  const date = new Date(`${terminationForm.value.terminationDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    terminationDateError.value = t("t-invalid-date");
+    return false;
+  }
+
+  terminationDateError.value = "";
+  return true;
 };
 
 const confirm = async () => {
   const formResult = await form.value?.validate();
-  if (!formResult?.valid || !terminationDate.value) return;
+  const isTerminationDateValid = validateTerminationDate();
 
-  emit("onConfirm", formateDate(terminationDate.value, "yyyy-mm-dd"));
+  if (!formResult?.valid || !isTerminationDateValid || !terminationForm.value.terminationDate || !terminationForm.value.reasonId) return;
+
+  emit("onConfirm", {
+    terminationDate: String(terminationForm.value.terminationDate).split("T")[0],
+    reasonId: terminationForm.value.reasonId
+  });
 };
 
 watch(dialogValue, (isOpen) => {
-  if (isOpen && !terminationDate.value) {
-    terminationDate.value = formateDate(new Date(), "yyyy-mm-dd");
+  if (isOpen) {
+    step.value = "confirm";
+    terminationForm.value = {
+      terminationDate: getTodayInputValue(),
+      reasonId: ""
+    };
+    terminationDateError.value = "";
   }
 });
 
-watch(terminationDate, () => emit("clear-server-error", "terminationDate"));
+watch(() => terminationForm.value.terminationDate, () => {
+  terminationDateError.value = "";
+  emit("clear-server-error", "terminationDate");
+});
+watch(() => terminationForm.value.reasonId, () => emit("clear-server-error", "reasonId"));
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" :width="width" persistent :retain-focus="false">
-    <v-card>
+  <v-dialog v-model="dialogValue" :width="step === 'confirm' ? 500 : 700" persistent :retain-focus="false">
+    <v-card v-if="step === 'confirm'">
       <v-btn
         variant="text"
         class="confirm-close-icon"
@@ -109,87 +176,149 @@ watch(terminationDate, () => emit("clear-server-error", "terminationDate"));
         @click="closeDialog"
       />
 
-      <v-card-text class="px-8 px-md-10 pt-7 pb-0">
-        <div class="text-center">
-          <div class="text-danger">
-            <i class="ph ph-user-minus ph-3x" />
-          </div>
-          <div class="mt-3">
-            <h4 class="text-h6 font-weight-bold">
-              {{ $t("t-dialog-title-confirm-terminate-contract") }}
-            </h4>
-            <p class="text-muted mx-4 mb-0 text-subtitle-1">
-              {{ $t("t-dialog-text-confirm-terminate-contract") }}
-            </p>
-          </div>
+      <v-card-text class="text-center px-7 pt-8 pb-4">
+        <div class="text-danger">
+          <i class="ph ph-user-minus ph-3x" />
         </div>
-
-        <v-form ref="form" class="mt-4" @submit.prevent="confirm">
-          <div class="font-weight-bold mb-2">
-            {{ $t("t-termination-date") }} <i class="ph-asterisk ph-xs text-danger" />
-          </div>
-          <v-menu
-            v-model="terminationDateMenu"
-            :close-on-content-click="false"
-            location="bottom center"
-            :offset="8"
-          >
-            <template #activator="{ props: menuProps }">
-              <v-text-field
-                v-bind="menuProps"
-                :model-value="formattedTerminationDate"
-                :placeholder="$t('t-enter-termination-date')"
-                :rules="applyServerErrorsToRules('terminationDate', terminationDateRules)"
-                :error-messages="getServerErrors('terminationDate')"
-                variant="solo"
-                density="compact"
-                class="text-field-component termination-date-field"
-                prepend-inner-icon="ph-calendar"
-                append-inner-icon="ph-x"
-                readonly
-                @click:append-inner.stop="clearTerminationDate"
-              />
-            </template>
-
-            <v-date-picker
-              :model-value="pickerDate"
-              color="primary"
-              hide-header
-              width="360"
-              @update:model-value="selectTerminationDate"
-            />
-          </v-menu>
-        </v-form>
+        <div class="mt-3">
+          <h4 class="text-h6 font-weight-bold">
+            {{ $t("t-dialog-title-confirm-terminate-contract") }}
+          </h4>
+          <p class="text-muted mx-4 mb-0 text-subtitle-1">
+            {{ $t("t-dialog-text-confirm-terminate-contract") }}
+          </p>
+        </div>
       </v-card-text>
 
-      <v-card-actions class="d-flex justify-center mt-3 mb-6">
+      <v-card-actions class="d-flex justify-center pt-1 pb-6">
         <v-btn class="me-2" flat variant="tonal" :disabled="loading" @click="closeDialog">
           {{ $t("t-close") }}
         </v-btn>
-        <v-btn
-          color="danger"
-          flat
-          variant="elevated"
-          :loading="loading"
-          :disabled="loading"
-          @click="confirm"
-        >
+        <v-btn color="danger" flat variant="elevated" :loading="loading" :disabled="loading" @click="openFormStep">
           {{ $t("t-yes-terminate-contract") }}
         </v-btn>
       </v-card-actions>
     </v-card>
+
+    <v-form v-else ref="form" @submit.prevent="confirm">
+      <Card :title="$t('t-termination-data')" title-class="py-0" style="overflow: hidden">
+        <template #title-action>
+          <v-btn icon="ph-x" variant="plain" :disabled="loading" @click="closeDialog" />
+        </template>
+
+        <v-divider />
+
+        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
+          <v-row>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-termination-date") }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              
+              <div>
+                <div
+                  class="native-date-field"
+                  :class="{ 'native-date-field--error': terminationDateError || getServerErrors('terminationDate').length }"
+                  @click="openTerminationCalendar"
+                >
+                  <i class="ph-calendar native-date-field__icon" />
+                  <input
+                    ref="terminationDateInput"
+                    v-model="terminationForm.terminationDate"
+                    type="date"
+                    class="native-date-field__input"
+                    :disabled="loading"
+                    :aria-label="$t('t-termination-date')"
+                    @focus="terminationDateError = ''"
+                    @blur="validateTerminationDate"
+                  />
+                </div>
+                <div
+                  v-if="terminationDateError || getServerErrors('terminationDate').length"
+                  class="native-date-field__error"
+                >
+                  {{ terminationDateError || getServerErrors('terminationDate')[0] }}
+                </div>
+              </div>
+            </v-col>
+
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-reason") }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuSelect
+                v-model="terminationForm.reasonId"
+                :items="reasonOptions"
+                :placeholder="$t('t-select-reason')"
+                :rules="applyServerErrorsToRules('reasonId', reasonRules)"
+                :disabled="loading || reasonsLoading"
+              />
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="d-flex justify-end">
+          <div>
+            <v-btn type="button" color="danger" class="me-1" :disabled="loading" @click="closeDialog">
+              <i class="ph-x me-1" /> {{ $t("t-close") }}
+            </v-btn>
+            <v-btn color="danger" variant="elevated" :loading="loading" :disabled="loading" @click="confirm">
+              {{ $t("t-submit-termination") }}
+            </v-btn>
+          </div>
+        </v-card-actions>
+      </Card>
+    </v-form>
   </v-dialog>
 </template>
 
 <style scoped>
-.termination-date-field :deep(.v-messages__message) {
-  color: #ff5252;
+.native-date-field {
+  align-items: center;
+  background-color: var(--tb-secondary-bg);
+  border: thin solid var(--tb-border-color);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  height: 2.63rem;
+  padding: 0 12px;
+  width: 100%;
 }
 
-.termination-date-field :deep(.v-field--error .v-icon),
-.termination-date-field :deep(.v-field--error .v-field__prepend-inner),
-.termination-date-field :deep(.v-field--error .v-field__append-inner) {
-  color: #ff5252 !important;
-  opacity: 1;
+.native-date-field--error {
+  border-color: #ff5252 !important;
+}
+
+.native-date-field__icon {
+  color: #6c757d;
+  font-size: 16px;
+  margin-right: 8px;
+  pointer-events: none;
+}
+
+.native-date-field__input {
+  background: transparent;
+  border: 0;
+  color: var(--tb-body-color);
+  cursor: pointer;
+  flex: 1;
+  font-size: 12px;
+  height: 100%;
+  outline: none;
+  min-width: 0;
+}
+
+.native-date-field__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.native-date-field__error {
+  color: #ff5252;
+  font-size: 0.65rem;
+  margin-left: 15px;
+  margin-top: 4px;
 }
 </style>

@@ -237,6 +237,7 @@ export const menuItems: MenuItemType[] = [
       { label: "languages", link: "/baseTable/languages/list" },
       { label: "tax-rates", link: "/baseTable/tax-rates/list" },
       { label: "provider-types", link: "/baseTable/provider-types/list" },
+      { label: "reasons", link: "/baseTable/reasons/list" },
     ],
   },
   /*{

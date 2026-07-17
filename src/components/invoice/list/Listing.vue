@@ -16,6 +16,7 @@ import { formateDate } from "@/app/common/dateFormate"
 import { invoiceService } from "@/app/http/httpServiceProvider"
 import AdvancedFilter from "@/components/invoice/list/AdvancedFilter.vue"
 import { invoiceHeader, Options } from "@/components/invoice/list/utils"
+import type { ReasonType } from "@/components/baseTables/reason/types"
 import type { InvoiceListingType } from "@/components/invoice/types"
 import { useInvoiceStore } from "@/store/invoice/invoiceStore"
 
@@ -47,6 +48,12 @@ const reverseLoading = ref(false)
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedInvoices = ref<any[]>([])
+type InvoiceActionReasonPayload = { notes: string; reasonId: string }
+const invoiceReasonTypes = {
+  postFlagged: "INVOICE_POSTING_FLAGGED" as ReasonType,
+  cancel: "INVOICE_CANCELATION" as ReasonType,
+  reverse: "INVOICE_REVERSAL" as ReasonType,
+}
 
 const resetListingFilters = () => {
   invoiceStore.clearFilters()
@@ -91,12 +98,12 @@ const openPostFlaggedNotesDialog = () => {
   postFlaggedNotesDialog.value = true
 }
 
-const postFlaggedInvoice = async (notes: string) => {
+const postFlaggedInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
   if (!postFlaggedId.value) return
 
   postFlaggedLoading.value = true
   try {
-    await invoiceService.postFlaggedInvoice(postFlaggedId.value, notes)
+    await invoiceService.postFlaggedInvoice(postFlaggedId.value, notes, reasonId)
     toast.success(t("t-toast-message-post"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -155,12 +162,12 @@ const openCancelNotesDialog = () => {
   cancelNotesDialog.value = true
 }
 
-const cancelInvoice = async (notes: string) => {
+const cancelInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
   if (!cancelId.value) return
 
   cancelLoading.value = true
   try {
-    await invoiceService.cancelInvoice(cancelId.value, notes)
+    await invoiceService.cancelInvoice(cancelId.value, notes, reasonId)
     toast.success(t("t-toast-message-cancel"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -187,12 +194,12 @@ const openReverseNotesDialog = () => {
   reverseNotesDialog.value = true
 }
 
-const reverseInvoice = async (notes: string) => {
+const reverseInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
   if (!reverseId.value) return
 
   reverseLoading.value = true
   try {
-    await invoiceService.reverseInvoice(reverseId.value, notes)
+    await invoiceService.reverseInvoice(reverseId.value, notes, reasonId)
     toast.success(t("t-toast-message-reverse"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -445,6 +452,7 @@ onBeforeRouteLeave(() => {
     required-key="t-post-flagged-invoice-notes-required"
     submit-key="t-submit-post"
     submit-color="info"
+    :reason-type="invoiceReasonTypes.postFlagged"
     @onConfirm="postFlaggedInvoice"
   />
 
@@ -457,11 +465,17 @@ onBeforeRouteLeave(() => {
     required-key="t-cancel-invoice-notes-required"
     submit-key="t-submit-cancel"
     submit-color="danger"
+    :reason-type="invoiceReasonTypes.cancel"
     @onConfirm="cancelInvoice"
   />
 
   <ReverseInvoiceConfirmationDialog v-model="reverseDialog" :loading="reverseLoading" @onConfirm="openReverseNotesDialog" />
-  <ReverseInvoiceNotesDialog v-model="reverseNotesDialog" :loading="reverseLoading" @onConfirm="reverseInvoice" />
+  <ReverseInvoiceNotesDialog
+    v-model="reverseNotesDialog"
+    :loading="reverseLoading"
+    :reason-type="invoiceReasonTypes.reverse"
+    @onConfirm="reverseInvoice"
+  />
 </template>
 
 <style scoped>

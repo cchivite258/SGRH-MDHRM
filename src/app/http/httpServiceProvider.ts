@@ -32,6 +32,7 @@ import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leave
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
+import ReasonService from "@/app/http/services/baseTables/reason/reasonService";
 import BudgetService from "@/app/http/services/institution/budgetService";
 import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
 import ScheduledParameterService from "@/app/http/services/settings/scheduledParameterService";
@@ -105,6 +106,7 @@ const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
 const providerTypeService = new ProviderTypeService();
+const reasonService = new ReasonService();
 const alertConfigurationService = new AlertConfigurationService();
 const scheduledParameterService = new ScheduledParameterService();
 
@@ -139,6 +141,7 @@ export {
     invoiceService,
     dependentEmployeeService,
     taxRateTypeService,
+    reasonService,
     invoiceItemService,
     coveragePeriodsService,
     healthPlanService,

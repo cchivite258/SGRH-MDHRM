@@ -1,3 +1,10 @@
+export type InvoiceReasonSummary = {
+    id?: string | number;
+    name?: string;
+    type?: string;
+    description?: string | null;
+} | string;
+
 export type InvoiceListingType = {
     id: string ;
     invoiceNumber: string;
@@ -60,6 +67,9 @@ export type InvoiceListingType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     flag?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
@@ -131,6 +141,9 @@ export type InvoiceResponseType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
     createdAt: Date ;
@@ -157,6 +170,9 @@ export type InvoiceInsertType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     coveragePeriod?: any;
     invoiceAttachment?: any;
     invoiceStatus?: string;

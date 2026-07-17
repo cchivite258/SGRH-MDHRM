@@ -131,14 +131,14 @@ const sendEmployeeExtractNotification = async () => {
   }
 }
 
-const terminateEmployeeContract = async (terminationDate: string) => {
+const terminateEmployeeContract = async (payload: { terminationDate: string; reasonId: string | number }) => {
   if (!terminateEmployeeId.value) return
 
   terminateLoading.value = true
   terminateFieldErrors.value = {}
 
   try {
-    const response = await employeeService.terminateEmployee(terminateEmployeeId.value, { terminationDate })
+    const response = await employeeService.terminateEmployee(terminateEmployeeId.value, payload)
 
     if (response.status === "error") {
       terminateFieldErrors.value = getApiValidationErrors(response.error)

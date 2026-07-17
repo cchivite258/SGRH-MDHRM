@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,contract,coveragePeriod,invoiceAttachment`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,contract,coveragePeriod,invoiceAttachment,reason`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 
@@ -212,11 +212,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async postFlaggedInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+  async postFlaggedInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
         `/amm/invoices/${id}/post-flagged`,
-        { notes }
+        { notes, reasonId }
       );
       console.log('Resposta ao post flagged da factura:------------------------', response);
 
@@ -228,11 +228,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async cancelInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+  async cancelInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
         `/amm/invoices/${id}/cancel`,
-        { notes }
+        { notes, reasonId }
       );
       console.log('Resposta ao cancel da factura:------------------------', response);
 
@@ -244,11 +244,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async reverseInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+  async reverseInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.post<{ data: InvoiceResponseType; meta: any }>(
         `/amm/invoices/${id}/reverse`,
-        { notes }
+        { notes, reasonId }
       );
       //console.log('Resposta ao reverse da factura:------------------------', response);
 
