@@ -609,8 +609,8 @@ const onConfirmDelete = async () => {
     await reloadCoveragePeriods();
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;

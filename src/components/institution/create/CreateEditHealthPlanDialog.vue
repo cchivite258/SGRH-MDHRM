@@ -277,6 +277,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load períodos de cobertura:", error);
     errorMsg.value = "Falha ao carregar períodos de cobertura";
+    errorMsg.value = getFirstApiErrorMessage(error, t("t-message-load-error")) || t("t-message-load-error");
     setTimeout(() => errorMsg.value = "", 5000);
   }
 });

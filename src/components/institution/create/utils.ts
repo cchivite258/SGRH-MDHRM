@@ -225,14 +225,6 @@ export const serviceProviderHeader: TableHeaderType[] = [
   { title: "action", align: 'end' },
 ];
 
-export const serviceProviderContractExtensionHeader: DataTableHeaderType[] = [
-  { title: "contract-start-date", key: "contractStartDate", sortable: true },
-  { title: "contract-end-date", key: "contractEndDate", sortable: true },
-  { title: "notes", key: "notes", sortable: false },
-  { title: "status", key: "status", sortable: true },
-  { title: "action", sortable: false, align: "end" }
-];
-
 export const coveragePeriodExtensionHeader: DataTableHeaderType[] = [
   { title: "start-date", key: "startDate", sortable: true },
   { title: "end-date", key: "endDate", sortable: true },

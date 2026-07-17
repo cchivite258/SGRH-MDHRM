@@ -264,11 +264,12 @@ const canTerminateContract = computed(() => {
       <template #title-action>
         <v-btn
           v-if="canTerminateContract"
+          type="button"
           color="danger"
           variant="tonal"
           size="small"
           :disabled="loading"
-          @click="emit('terminate-contract')"
+          @click.stop.prevent="emit('terminate-contract')"
         >
           <i class="ph-user-minus me-2" />
           {{ $t('t-terminate-contract') }}

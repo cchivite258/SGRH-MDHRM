@@ -259,14 +259,14 @@ const clearTerminateFieldError = (field: string) => {
   terminateFieldErrors.value = next;
 };
 
-const terminateEmployeeContract = async (terminationDate: string) => {
+const terminateEmployeeContract = async (payload: { terminationDate: string; reasonId: string | number }) => {
   if (!employeeId.value) return;
 
   terminateLoading.value = true;
   terminateFieldErrors.value = {};
 
   try {
-    const response = await employeeService.terminateEmployee(employeeId.value, { terminationDate });
+    const response = await employeeService.terminateEmployee(employeeId.value, payload);
 
     if (response.status === "error") {
       terminateFieldErrors.value = getApiValidationErrors(response.error);
@@ -276,7 +276,7 @@ const terminateEmployeeContract = async (terminationDate: string) => {
       return;
     }
 
-    employeeData.terminationDate = response.data?.terminationDate || terminationDate;
+    employeeData.terminationDate = response.data?.terminationDate || payload.terminationDate;
     employeeData.enabled = response.data?.enabled ?? false;
     toast.success(t("t-toast-message-terminate-contract-success"));
     terminateDialog.value = false;

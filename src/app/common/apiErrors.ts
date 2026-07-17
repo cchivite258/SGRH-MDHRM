@@ -2,9 +2,9 @@ type ErrorMessagesMap = Record<string, string[] | string | null | undefined>;
 
 interface ApiErrorShape {
   message?: string;
-  error?: {
-    errors?: ErrorMessagesMap;
-  };
+  detail?: string;
+  errors?: ErrorMessagesMap;
+  error?: ApiErrorShape;
 }
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
@@ -21,11 +21,11 @@ const resolveApiPayload = (input: unknown): ApiErrorShape | null => {
   if (responseData) return responseData as ApiErrorShape;
 
   const nestedError = asRecord(root.error);
-  if (nestedError?.message || nestedError?.errors) {
+  if (nestedError?.message || nestedError?.detail || nestedError?.errors) {
     return nestedError as ApiErrorShape;
   }
 
-  if (root.message || root.error) {
+  if (root.message || root.detail || root.error) {
     return root as ApiErrorShape;
   }
 
@@ -52,17 +52,37 @@ const normalizeValidationErrors = (errors?: ErrorMessagesMap): Record<string, st
   }, {});
 };
 
+const resolveValidationErrors = (payload: ApiErrorShape | null): Record<string, string[]> => {
+  return normalizeValidationErrors(
+    payload?.error?.errors
+    ?? payload?.errors
+    ?? payload?.error?.error?.errors
+  );
+};
+
 export const getApiErrorMessages = (error: unknown, fallbackMessage?: string): string[] => {
   const payload = resolveApiPayload(error);
-  const validationErrors = normalizeValidationErrors(payload?.error?.errors);
+  const validationErrors = resolveValidationErrors(payload);
+
+  const validationMessages = Object.values(validationErrors).flat();
+  if (validationMessages.length > 0) {
+    return [validationMessages[0]];
+  }
 
   if (payload?.message && payload.message.trim().length > 0) {
     return [payload.message];
   }
 
-  const validationMessages = Object.values(validationErrors).flat();
-  if (validationMessages.length > 0) {
-    return [validationMessages[0]];
+  if (payload?.detail && payload.detail.trim().length > 0) {
+    return [payload.detail];
+  }
+
+  if (payload?.error?.message && payload.error.message.trim().length > 0) {
+    return [payload.error.message];
+  }
+
+  if (payload?.error?.detail && payload.error.detail.trim().length > 0) {
+    return [payload.error.detail];
   }
 
   if (typeof fallbackMessage === "string" && fallbackMessage.trim().length > 0) {
@@ -78,5 +98,5 @@ export const getFirstApiErrorMessage = (error: unknown, fallbackMessage?: string
 
 export const getApiValidationErrors = (error: unknown): Record<string, string[]> => {
   const payload = resolveApiPayload(error);
-  return normalizeValidationErrors(payload?.error?.errors);
+  return resolveValidationErrors(payload);
 };

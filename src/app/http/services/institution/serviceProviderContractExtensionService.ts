@@ -2,7 +2,7 @@ import HttpService from "@/app/http/httpService";
 import type {
     ServiceProviderContractExtensionPayloadType,
     ServiceProviderContractExtensionType
-} from "@/components/institution/types";
+} from "@/components/serviceProvider/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -34,6 +34,7 @@ const formatDateForApi = (value: Date | string | null): string | null => {
 const toPayload = (data: ServiceProviderContractExtensionPayloadType) => ({
     serviceProviderId: data.serviceProviderId,
     contractEndDate: formatDateForApi(data.contractEndDate),
+    reasonId: data.reasonId,
     notes: data.notes
 });
 

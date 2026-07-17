@@ -66,6 +66,10 @@ export default class EmployeeHealthPlanService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
+      if (query_props && query_value) {
+        queryParams.push(`query_operator=AND`);
+      }
+
       queryParams.push(`includes=${EMPLOYEE_HEALTH_PLAN_INCLUDES}`);
 
       const queryString = queryParams.join('&');
@@ -166,6 +170,10 @@ export default class EmployeeHealthPlanService extends HttpService {
 
       if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+      }
+
+      if (query_props && query_value) {
+        queryParams.push(`query_operator=AND`);
       }
 
       const includesToUse = 'employeeHealthPlan,contractHealthPlanHospitalProcedures,companyHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent';

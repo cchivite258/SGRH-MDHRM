@@ -166,8 +166,8 @@ onMounted(async () => {
         search: ""
       });
     } catch (e) {
-      toast.error(t('t-message-load-error'));
       console.error("Erro ao carregar dados dos procedimentos hospitalares:", e);
+      getApiErrorMessages(e, t('t-message-load-error')).forEach((message) => toast.error(message));
     }
   }
 });
@@ -232,7 +232,7 @@ const onConsultHealthPlan = async () => {
     healthPlanPreviewDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano:", error);
-    toast.error(t("t-message-load-error"));
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanConsultLoading.value = false;
   }
@@ -260,7 +260,7 @@ const onExportHealthPlanPdf = async () => {
     });
   } catch (error) {
     console.error("Erro ao exportar plano de saude:", error);
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanPdfExporting.value = false;
   }

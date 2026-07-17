@@ -195,6 +195,16 @@ const activeHealthPlan = computed(() =>
 const activePlanProcedures = computed(() => employeePlanProcedureLimits.value || []);
 
 const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
+const invoiceActionReasonName = computed(() => {
+  const data = invoiceData.value as any;
+  const reason = data.reason;
+
+  if (reason && typeof reason === "object") {
+    return reason.name || reason.description || reason.id || "";
+  }
+
+  return data.reasonName || reason || data.reasonId || "";
+});
 
 type DisplayValue = number | string | null | undefined;
 
@@ -917,8 +927,18 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
-        <v-row v-if="invoiceData.notes" class="mt-n6 mb-2">
-          <v-col cols="12">
+        <v-row v-if="invoiceActionReasonName || invoiceData.notes" class="mt-n9 mb-2">
+          <v-col v-if="invoiceActionReasonName" cols="12">
+            <div class="font-weight-bold">{{ $t('t-reason') }}</div>
+            <TextField
+              :model-value="invoiceActionReasonName"
+              :placeholder="$t('t-reason')"
+              hide-details
+              disabled
+            />
+          </v-col>
+
+          <v-col v-if="invoiceData.notes" cols="12" class="mt-n3">
             <div class="font-weight-bold">{{ $t('t-reverse-invoice-notes-label') }}</div>
             <TextArea
               v-model="invoiceData.notes"

@@ -4,8 +4,11 @@ import { ServiceProviderInsertType, ServiceProviderListingType } from "@/compone
 import { ServiceProviderListingForListType } from "@/components/serviceProvider/types";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useI18n } from "vue-i18n";
+import { useToast } from "vue-toastification";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
+const toast = useToast();
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
@@ -58,6 +61,7 @@ onMounted(async () => {
   try {
     await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
     console.error("Erro ao carregar provedores de serviço:", error);
   }
 });

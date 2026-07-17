@@ -481,7 +481,7 @@ const onConsultHealthPlan = async () => {
     healthPlanDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano activo:", error);
-    toast.error(t("t-no-active-health-plan"));
+    getApiErrorMessages(error, t("t-no-active-health-plan")).forEach((message) => toast.error(message));
   } finally {
     healthPlanConsultLoading.value = false;
   }
@@ -510,7 +510,7 @@ const onExportHealthPlanPdf = async () => {
     });
   } catch (error) {
     console.error("Erro ao exportar plano de saude:", error);
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanPdfExporting.value = false;
   }
@@ -671,8 +671,8 @@ const onConfirmDelete = async () => {
     );
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;

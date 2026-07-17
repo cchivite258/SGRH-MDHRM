@@ -6,7 +6,7 @@ import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import { getApiValidationErrors } from "@/app/common/apiErrors";
+import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
 const emit = defineEmits<{
@@ -129,6 +129,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load service providers:", error);
     errorMsg.value = "Falha ao carregar prestadores de serviço";
+    errorMsg.value = getFirstApiErrorMessage(error, t("t-message-load-error")) || t("t-message-load-error");
     setTimeout(() => errorMsg.value = "", 5000);
   }
 });

@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
-import ServiceProviderContractExtensionsDialog from "@/components/institution/create/ServiceProviderContractExtensionsDialog.vue";
+import ServiceProviderContractExtensionsDialog from "@/components/serviceProvider/create/ServiceProviderContractExtensionsDialog.vue";
 import type { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";

@@ -163,3 +163,31 @@ export type ServiceProviderListingForListType = {
   provinceId: string | undefined;
   countryId: string | undefined;
 };
+
+export type ServiceProviderContractExtensionPayloadType = {
+  id?: string | number;
+  serviceProviderId: string | number;
+  contractEndDate: Date | string | null;
+  reasonId: string | number;
+  notes: string;
+};
+
+export type ServiceProviderContractExtensionType = {
+  id: string | number;
+  contractStartDate: Date | string | null;
+  contractEndDate: Date | string | null;
+  reasonId?: string | number;
+  reason?: { id?: string | number; name?: string | null } | null;
+  notes?: string | null;
+  status: string;
+  serviceProviderId: string | number;
+  serviceProvider?: ServiceProviderListingType | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: Date | string | null;
+  updatedAt: Date | string | null;
+  deletedAt: Date | string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
