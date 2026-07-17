@@ -143,7 +143,7 @@ const submit = async () => {
                 :disabled="loading || reasonsLoading"
               />
             </v-col>
-            <v-col cols="12" lg="12" class="invoice-notes-dialog__field mt-n6">
+            <v-col cols="12" lg="12" class="invoice-notes-dialog__field">
               <div class="font-weight-bold text-caption mb-1">
                 {{ t(labelKey) }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -177,7 +177,7 @@ const submit = async () => {
 <style scoped>
 .invoice-notes-dialog__body {
   max-height: min(65vh, 520px);
-  padding: 16px 24px 12px;
+  padding: 20px 24px 12px;
 }
 
 .invoice-notes-dialog__row {

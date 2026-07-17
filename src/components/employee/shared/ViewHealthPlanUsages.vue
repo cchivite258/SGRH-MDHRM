@@ -10,6 +10,7 @@ import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 import type {
   DependentHospitalProcedurePlanUsedBalanceType,
   ExpensePerProcedureType,
@@ -263,9 +264,11 @@ const fetchMainMemberProcedureLimits = async ({ page, itemsPerPage, sortBy, sear
       memberFilterQuery.value.queryProps
     );
 
-    allMainMemberProcedureLimits.value = content;
+    allMainMemberProcedureLimits.value = orderHealthPlanProcedures(content);
 
-    const filteredContent = filterProcedureLimits(content, search || procedureSearchQuery.value);
+    const filteredContent = orderHealthPlanProcedures(
+      filterProcedureLimits(content, search || procedureSearchQuery.value)
+    );
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
 
@@ -299,8 +302,8 @@ const onExportMainMemberPlanPdf = async () => {
         memberFilterQuery.value.queryValue,
         memberFilterQuery.value.queryProps
       );
-      allMainMemberProcedureLimits.value = content;
-      procedures = content;
+      allMainMemberProcedureLimits.value = orderHealthPlanProcedures(content);
+      procedures = allMainMemberProcedureLimits.value;
     }
 
     if (!procedures.length) {
@@ -310,7 +313,7 @@ const onExportMainMemberPlanPdf = async () => {
 
     await exportHealthPlanToPdf({
       healthPlan: healthPlanFormData.value,
-      procedures: procedures as any,
+      procedures: orderHealthPlanProcedures(procedures) as any,
       contextLabel: mainMemberContextLabel.value,
       fileName: getMainMemberPlanFileName(),
       showUsageBalances: true,
@@ -514,32 +517,8 @@ const getGroupFrequencyUsageLabel = (procedures: ExpensePerProcedureType[]) => {
   return procedure ? getProcedureFrequencyUsageLabel(procedure) : "-";
 };
 
-const groupProcedureLimits = (procedures: ExpensePerProcedureType[]) => {
-  const groupMap = procedures.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, ExpensePerProcedureType[]>);
-
-  return Object.entries(groupMap).map(([group, groupProcedures]) => {
-    const categoryMap = groupProcedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, ExpensePerProcedureType[]>);
-
-    return {
-      group,
-      procedures: groupProcedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
-};
+const groupProcedureLimits = (procedures: ExpensePerProcedureType[]) =>
+  groupHealthPlanProcedures(procedures, t("t-procedures"));
 
 const getUsageBeneficiaryLabel = (item: UsagesListingType) => {
   if (item.isEmployee === true) return t("t-employee");

@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { amountFormate } from "@/app/common/amountFormate";
 import type { HospitalProcedureListingType } from "@/components/institution/types";
 import { healthPlanLimitOptions, limitTypeDefinitionOptions } from "@/components/institution/create/utils";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -34,7 +35,7 @@ const activePlanCoveragePeriod = computed(() =>
   || "-"
 );
 
-const activePlanProcedures = computed(() => props.procedures || []);
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(props.procedures || [], t("t-procedures")));
 
 const filteredPlanProcedures = computed(() => {
   const search = healthPlanProcedureSearch.value.trim().toLowerCase();
@@ -59,32 +60,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, HospitalProcedureListingType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, HospitalProcedureListingType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 const statusValue = computed(() =>

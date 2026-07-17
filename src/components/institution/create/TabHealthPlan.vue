@@ -46,6 +46,7 @@ import type {
 import { healthPlanHeader, healthPlanLimitOptions, limitTypeDefinitionOptions, salaryComponentOptions } from "@/components/institution/create/utils";
 import { healthPlanOptions as Options } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -95,7 +96,7 @@ const healthPlanProcedureSearch = ref("");
 const loadingList = computed(() => healthPlanStore.loading);
 const totalItems = computed(() => healthPlanStore.pagination.totalElements);
 const activeHealthPlan = computed(() => healthPlanStore.activeHealthPlan);
-const activePlanProcedures = computed(() => hospitalProcedureStore.hospital_procedure_of_plan_scoped || []);
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(hospitalProcedureStore.hospital_procedure_of_plan_scoped || [], t("t-procedures")));
 
 const activePlanCoveragePeriod = computed(() =>
   activeHealthPlan.value?.coveragePeriod?.name
@@ -127,32 +128,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, HospitalProcedureListingType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, HospitalProcedureListingType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 interface FetchParams {

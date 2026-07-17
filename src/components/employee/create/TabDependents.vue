@@ -303,7 +303,8 @@ const getActiveHealthPlanId = async () => {
     "createdAt",
     "asc",
     "",
-    "employee.id"
+    "employee.id",
+    false
   );
 
   return content.find(plan => plan.status === "ACTIVE")?.id || null;
