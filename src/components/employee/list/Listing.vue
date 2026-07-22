@@ -345,15 +345,15 @@ onBeforeRouteLeave(() => {
 
           <v-tooltip v-if="shouldHighlight(item)" location="top">
             <template #activator="{ props }">
-              <td v-bind="props" data-label="Telemóvel">
-                {{ item.phone || "N/A" }}
+              <td v-bind="props" data-label="Contrato">
+                {{ item.company?.name || "N/A" }}
               </td>
             </template>
             <span>{{ getAlertMessage(item) }}</span>
           </v-tooltip>
 
-          <td v-else data-label="Telemóvel">
-            {{ item.phone || "N/A" }}
+          <td v-else data-label="Contrato">
+            {{ item.company?.name || "N/A" }}
           </td>
 
           <v-tooltip v-if="shouldHighlight(item)" location="top">
@@ -381,7 +381,7 @@ onBeforeRouteLeave(() => {
 
       <template v-if="employeeStore.employees.length === 0" #body>
         <tr>
-          <td :colspan="employeeHeader.length" class="employee-listing-table__empty-state text-center py-10">
+          <td :colspan="employeeHeader.length + 1" class="employee-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="employee-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>
