@@ -19,6 +19,7 @@ import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue";
+import RehireEmployeeContractDialog from "@/app/common/components/RehireEmployeeContractDialog.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/create/TabSalaryReview.vue";
@@ -34,7 +35,7 @@ import { usePositionStore } from '@/store/institution/positionStore';
 
 // Services & Types
 import { employeeService } from "@/app/http/httpServiceProvider";
-import { EmployeeInsertType } from "../types";
+import type { EmployeeInsertType, EmployeeRehireType } from "../types";
 
 // Inicialização de stores
 const provinceStore = useProvinceStore();
@@ -104,6 +105,9 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 const terminateDialog = ref(false);
 const terminateLoading = ref(false);
 const terminateFieldErrors = ref<Record<string, string[]>>({});
+const rehireDialog = ref(false);
+const rehireLoading = ref(false);
+const rehireFieldErrors = ref<Record<string, string[]>>({});
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
@@ -329,11 +333,23 @@ const openTerminateDialog = () => {
   terminateDialog.value = true;
 };
 
+const openRehireDialog = () => {
+  rehireFieldErrors.value = {};
+  rehireDialog.value = true;
+};
+
 const clearTerminateFieldError = (field: string) => {
   if (!terminateFieldErrors.value[field]) return;
   const next = { ...terminateFieldErrors.value };
   delete next[field];
   terminateFieldErrors.value = next;
+};
+
+const clearRehireFieldError = (field: string) => {
+  if (!rehireFieldErrors.value[field]) return;
+  const next = { ...rehireFieldErrors.value };
+  delete next[field];
+  rehireFieldErrors.value = next;
 };
 
 const terminateEmployeeContract = async (payload: { terminationDate: string; reasonId: string | number }) => {
@@ -364,6 +380,36 @@ const terminateEmployeeContract = async (payload: { terminationDate: string; rea
     });
   } finally {
     terminateLoading.value = false;
+  }
+};
+
+const rehireEmployeeContract = async (payload: EmployeeRehireType) => {
+  if (!employeeId.value) return;
+
+  rehireLoading.value = true;
+  rehireFieldErrors.value = {};
+
+  try {
+    const response = await employeeService.rehireEmployee(employeeId.value, payload);
+
+    if (response.status === "error") {
+      rehireFieldErrors.value = getApiValidationErrors(response.error);
+      getApiErrorMessages(response.error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+        toast.error(message);
+      });
+      return;
+    }
+
+    toast.success(t("t-toast-message-rehire-contract-success"));
+    rehireDialog.value = false;
+    await loadEmployeeData(employeeId.value);
+  } catch (error) {
+    rehireFieldErrors.value = getApiValidationErrors(error);
+    getApiErrorMessages(error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+      toast.error(message);
+    });
+  } finally {
+    rehireLoading.value = false;
   }
 };
 
@@ -521,7 +567,7 @@ onBeforeUnmount(() => {
     @save="onHeaderSave"
   />
 
-  <ButtonNav v-model="step" class="employee-form-tabs" :employee-id="employeeId as string"
+  <ButtonNav v-model="step" class="employee-form-tabs" :employee-id="employeeId || ''"
     :basic-data-validated="basicDataValidated" />
 
   <!-- Barra de progresso para carregamento -->
@@ -544,7 +590,7 @@ onBeforeUnmount(() => {
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
       :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()"
-      :employee-id="employeeId" @terminate-contract="openTerminateDialog" />
+      :employee-id="employeeId" @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
   </FormCard>
 
   <FormCard v-if="step === 3" class="employee-form-section">
@@ -591,6 +637,15 @@ onBeforeUnmount(() => {
     :server-errors="terminateFieldErrors"
     @onConfirm="terminateEmployeeContract"
     @clear-server-error="clearTerminateFieldError"
+  />
+
+  <RehireEmployeeContractDialog
+    v-model="rehireDialog"
+    :loading="rehireLoading"
+    :server-errors="rehireFieldErrors"
+    :employee-data="employeeData"
+    @onConfirm="rehireEmployeeContract"
+    @clear-server-error="clearRehireFieldError"
   />
 </template>
 

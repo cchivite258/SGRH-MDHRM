@@ -208,6 +208,15 @@ export type EmployeeTerminationType = {
   reasonId: string | number;
 };
 
+export type EmployeeRehireType = {
+  newBaseSalary: number | null;
+  rehireDate: string;
+  endDate: string;
+  positionId: string | number;
+  departmentId: string | number;
+  notes: string;
+};
+
 
 export type EmployeeUpdateType = {
   employeeNumber: string;

@@ -52,6 +52,7 @@ const emit = defineEmits<{
   (e: 'save'): void;
   (e: 'update:modelValue', value: EmployeeInsertType): void;
   (e: 'terminate-contract'): void;
+  (e: 'rehire-contract'): void;
 }>();
 
 const props = withDefaults(defineProps<{
@@ -250,6 +251,10 @@ const canTerminateContract = computed(() => {
   return !!props.employeeId && !employeeData.value.terminationDate;
 });
 
+const canRehireContract = computed(() => {
+  return !!props.employeeId;
+});
+
 </script>
 
 <template>
@@ -262,18 +267,33 @@ const canTerminateContract = computed(() => {
       title-class="pb-0"
     >
       <template #title-action>
-        <v-btn
-          v-if="canTerminateContract"
-          type="button"
-          color="danger"
-          variant="tonal"
-          size="small"
-          :disabled="loading"
-          @click.stop.prevent="emit('terminate-contract')"
-        >
-          <i class="ph-user-minus me-2" />
-          {{ $t('t-terminate-contract') }}
-        </v-btn>
+        <div class="d-flex flex-wrap ga-2 justify-end">
+          <v-btn
+            v-if="canRehireContract"
+            type="button"
+            color="primary"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('rehire-contract')"
+          >
+            <i class="ph-user-plus me-2" />
+            {{ $t('t-rehire-contract') }}
+          </v-btn>
+
+          <v-btn
+            v-if="canTerminateContract"
+            type="button"
+            color="danger"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('terminate-contract')"
+          >
+            <i class="ph-user-minus me-2" />
+            {{ $t('t-terminate-contract') }}
+          </v-btn>
+        </div>
       </template>
 
       <!-- Mensagem de erro -->

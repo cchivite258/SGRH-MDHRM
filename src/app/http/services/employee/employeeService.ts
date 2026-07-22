@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType } from "@/components/employee/types";
+import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType, EmployeeRehireType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -386,6 +386,32 @@ export default class EmployeeService extends HttpService {
     try {
       const response = await this.put<ApiResponse<EmployeeResponseType>>(
         `${EMPLOYEES_ENDPOINT}/${id}/terminate`,
+        payload
+      );
+
+      return {
+        status: 'success',
+        data: normalizeEmployee((response.data ?? response.content ?? response) as any) as EmployeeResponseType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: 'error',
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: 'error',
+        error: this.createNetworkErrorResponse()
+      };
+    }
+  }
+
+  async rehireEmployee(id: string, payload: EmployeeRehireType): Promise<ServiceResponse<EmployeeResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<EmployeeResponseType>>(
+        `${EMPLOYEES_ENDPOINT}/${id}/rehire`,
         payload
       );
 
