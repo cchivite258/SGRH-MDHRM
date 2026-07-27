@@ -1,12 +1,14 @@
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { useDepartmentStore } from "@/store/institution/departmentStore";
 import { usePositionStore } from "@/store/institution/positionStore";
 import type { EmployeeInsertType, EmployeeRehireType } from "@/components/employee/types";
+import { contractDurationTypeOptions } from "@/components/employee/create/utils";
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -31,10 +33,8 @@ const positionStore = usePositionStore();
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const step = ref<"confirm" | "form">("confirm");
-const rehireDateInput = ref<HTMLInputElement | null>(null);
-const endDateInput = ref<HTMLInputElement | null>(null);
-const rehireDateError = ref("");
-const endDateError = ref("");
+const rehireDatePicker = ref<{ validate: () => boolean } | null>(null);
+const endDatePicker = ref<{ validate: () => boolean } | null>(null);
 
 const getTodayInputValue = () => {
   const today = new Date();
@@ -44,10 +44,21 @@ const getTodayInputValue = () => {
   return `${year}-${month}-${day}`;
 };
 
+const toInputDateValue = (value: Date | string | null | undefined) => {
+  if (!value) return "";
+  if (typeof value === "string") return value.split("T")[0] || "";
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
 const rehireForm = ref<EmployeeRehireType>({
   newBaseSalary: 0,
+  contractDurationType: "",
   rehireDate: getTodayInputValue(),
-  endDate: getTodayInputValue(),
+  endDate: "",
   positionId: "",
   departmentId: "",
   notes: ""
@@ -100,6 +111,10 @@ const positionRules = [
   (value: string | number | null) => !!value || t("t-please-select-position")
 ];
 
+const contractDurationTypeRules = [
+  (value: string | null) => !!value || t("t-please-select-contract-duration-type")
+];
+
 const closeDialog = () => {
   dialogValue.value = false;
 };
@@ -107,14 +122,13 @@ const closeDialog = () => {
 const resetForm = () => {
   rehireForm.value = {
     newBaseSalary: Number(props.employeeData.baseSalary ?? 0),
+    contractDurationType: props.employeeData.contractDurationType || "",
     rehireDate: getTodayInputValue(),
-    endDate: getTodayInputValue(),
+    endDate: "",
     departmentId: props.employeeData.department || "",
     positionId: props.employeeData.position || "",
     notes: ""
   };
-  rehireDateError.value = "";
-  endDateError.value = "";
 };
 
 const loadDepartments = async () => {
@@ -146,69 +160,36 @@ const openFormStep = async () => {
   }
 };
 
-const openNativeCalendar = (target: "rehireDate" | "endDate") => {
-  const input = (target === "rehireDate" ? rehireDateInput.value : endDateInput.value) as (HTMLInputElement & { showPicker?: () => void }) | null;
-  if (!input || input.disabled) return;
+const rehireDateRules = [
+  (value: Date | string | null) => !!toInputDateValue(value) || t("t-please-enter-rehire-date")
+];
 
-  input.focus();
-  try {
-    input.showPicker?.();
-  } catch {
-    // Some browsers only allow showPicker during a direct user activation.
+const endDateRules = [
+  (value: Date | string | null) => {
+    if (rehireForm.value.contractDurationType !== "FIXED_TERM") return true;
+    return !!toInputDateValue(value) || t("t-please-enter-contract-end-date");
+  },
+  (value: Date | string | null) => {
+    if (rehireForm.value.contractDurationType !== "FIXED_TERM") return true;
+    const endDate = toInputDateValue(value);
+    const rehireDate = toInputDateValue(rehireForm.value.rehireDate);
+    if (!endDate || !rehireDate) return true;
+    return endDate >= rehireDate || t("t-contract-end-date-must-be-after-start-date");
   }
-};
-
-const isValidInputDate = (value: string) => {
-  if (!value) return false;
-  return !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
-};
-
-const validateRehireDate = () => {
-  if (!rehireForm.value.rehireDate) {
-    rehireDateError.value = t("t-please-enter-rehire-date");
-    return false;
-  }
-
-  if (!isValidInputDate(rehireForm.value.rehireDate)) {
-    rehireDateError.value = t("t-invalid-date");
-    return false;
-  }
-
-  rehireDateError.value = "";
-  return true;
-};
-
-const validateEndDate = () => {
-  if (!rehireForm.value.endDate) {
-    endDateError.value = t("t-please-enter-contract-end-date");
-    return false;
-  }
-
-  if (!isValidInputDate(rehireForm.value.endDate)) {
-    endDateError.value = t("t-invalid-date");
-    return false;
-  }
-
-  if (rehireForm.value.rehireDate && rehireForm.value.endDate < rehireForm.value.rehireDate) {
-    endDateError.value = t("t-contract-end-date-must-be-after-start-date");
-    return false;
-  }
-
-  endDateError.value = "";
-  return true;
-};
+];
 
 const submit = async () => {
   const formResult = await form.value?.validate();
-  const isRehireDateValid = validateRehireDate();
-  const isEndDateValid = validateEndDate();
+  const isRehireDateValid = rehireDatePicker.value?.validate?.() ?? true;
+  const isEndDateValid = endDatePicker.value?.validate?.() ?? true;
 
   if (!formResult?.valid || !isRehireDateValid || !isEndDateValid) return;
 
   emit("onConfirm", {
     newBaseSalary: Number(rehireForm.value.newBaseSalary),
-    rehireDate: String(rehireForm.value.rehireDate).split("T")[0],
-    endDate: String(rehireForm.value.endDate).split("T")[0],
+    contractDurationType: rehireForm.value.contractDurationType,
+    rehireDate: toInputDateValue(rehireForm.value.rehireDate),
+    endDate: toInputDateValue(rehireForm.value.endDate),
     departmentId: rehireForm.value.departmentId,
     positionId: rehireForm.value.positionId,
     notes: rehireForm.value.notes?.trim() || ""
@@ -240,13 +221,22 @@ watch(() => rehireForm.value.departmentId, async (newDepartmentId, oldDepartment
 
 watch(() => rehireForm.value.positionId, () => emit("clear-server-error", "positionId"));
 watch(() => rehireForm.value.newBaseSalary, () => emit("clear-server-error", "newBaseSalary"));
-watch(() => rehireForm.value.rehireDate, () => {
-  rehireDateError.value = "";
-  emit("clear-server-error", "rehireDate");
-});
-watch(() => rehireForm.value.endDate, () => {
-  endDateError.value = "";
+watch(() => rehireForm.value.contractDurationType, async () => {
+  emit("clear-server-error", "contractDurationType");
   emit("clear-server-error", "endDate");
+  await nextTick();
+  endDatePicker.value?.validate?.();
+});
+watch(() => rehireForm.value.rehireDate, async () => {
+  emit("clear-server-error", "rehireDate");
+  await nextTick();
+  rehireDatePicker.value?.validate?.();
+  endDatePicker.value?.validate?.();
+});
+watch(() => rehireForm.value.endDate, async () => {
+  emit("clear-server-error", "endDate");
+  await nextTick();
+  endDatePicker.value?.validate?.();
 });
 watch(() => rehireForm.value.notes, () => emit("clear-server-error", "notes"));
 </script>
@@ -312,61 +302,44 @@ watch(() => rehireForm.value.notes, () => emit("clear-server-error", "notes"));
 
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t("t-rehire-date") }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t("t-contract-duration") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <div>
-                <div
-                  class="native-date-field"
-                  :class="{ 'native-date-field--error': rehireDateError || getServerErrors('rehireDate').length }"
-                  @click="openNativeCalendar('rehireDate')"
-                >
-                  <i class="ph-calendar native-date-field__icon" />
-                  <input
-                    ref="rehireDateInput"
-                    v-model="rehireForm.rehireDate"
-                    type="date"
-                    class="native-date-field__input"
-                    :disabled="loading"
-                    :aria-label="$t('t-rehire-date')"
-                    @focus="rehireDateError = ''"
-                    @blur="validateRehireDate"
-                  />
-                </div>
-                <div v-if="rehireDateError || getServerErrors('rehireDate').length" class="native-date-field__error">
-                  {{ rehireDateError || getServerErrors('rehireDate')[0] }}
-                </div>
-              </div>
+              <MenuSelect
+                v-model="rehireForm.contractDurationType"
+                :items="contractDurationTypeOptions"
+                :placeholder="$t('t-select-contract-duration-type')"
+                :rules="applyServerErrorsToRules('contractDurationType', contractDurationTypeRules)"
+                :error-messages="getServerErrors('contractDurationType')"
+                :disabled="loading"
+              />
             </v-col>
 
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t("t-contract-end-date") }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t("t-rehire-date") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <div>
-                <div
-                  class="native-date-field"
-                  :class="{ 'native-date-field--error': endDateError || getServerErrors('endDate').length }"
-                  @click="openNativeCalendar('endDate')"
-                >
-                  <i class="ph-calendar native-date-field__icon" />
-                  <input
-                    ref="endDateInput"
-                    v-model="rehireForm.endDate"
-                    type="date"
-                    class="native-date-field__input"
-                    :disabled="loading"
-                    :aria-label="$t('t-contract-end-date')"
-                    @focus="endDateError = ''"
-                    @blur="validateEndDate"
-                  />
-                </div>
-                <div v-if="endDateError || getServerErrors('endDate').length" class="native-date-field__error">
-                  {{ endDateError || getServerErrors('endDate')[0] }}
-                </div>
-              </div>
+              <MenuDatePicker
+                ref="rehireDatePicker"
+                v-model="rehireForm.rehireDate"
+                :placeholder="$t('t-enter-rehire-date')"
+                :rules="applyServerErrorsToRules('rehireDate', rehireDateRules)"
+              />
             </v-col>
 
-            <v-col cols="12" lg="6" class="">
+            <v-col cols="12" lg="4" class="mt-n6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t("t-contract-end-date") }}
+                <i v-if="rehireForm.contractDurationType === 'FIXED_TERM'" class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuDatePicker
+                ref="endDatePicker"
+                v-model="rehireForm.endDate"
+                :placeholder="$t('t-enter-contract-end-date')"
+                :rules="applyServerErrorsToRules('endDate', endDateRules)"
+              />
+            </v-col>
+
+            <v-col cols="12" lg="4" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-department") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -379,7 +352,7 @@ watch(() => rehireForm.value.notes, () => emit("clear-server-error", "notes"));
               />
             </v-col>
 
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="4" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-position") }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -423,52 +396,3 @@ watch(() => rehireForm.value.notes, () => emit("clear-server-error", "notes"));
     </v-form>
   </v-dialog>
 </template>
-
-<style scoped>
-.native-date-field {
-  align-items: center;
-  background-color: var(--tb-secondary-bg);
-  border: thin solid var(--tb-border-color);
-  border-radius: 3px;
-  cursor: pointer;
-  display: flex;
-  height: 2.63rem;
-  padding: 0 12px;
-  width: 100%;
-}
-
-.native-date-field--error {
-  border-color: #ff5252 !important;
-}
-
-.native-date-field__icon {
-  color: #6c757d;
-  font-size: 16px;
-  margin-right: 8px;
-  pointer-events: none;
-}
-
-.native-date-field__input {
-  background: transparent;
-  border: 0;
-  color: var(--tb-body-color);
-  cursor: pointer;
-  flex: 1;
-  font-size: 12px;
-  height: 100%;
-  min-width: 0;
-  outline: none;
-}
-
-.native-date-field__input:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.native-date-field__error {
-  color: #ff5252;
-  font-size: 0.65rem;
-  margin-left: 15px;
-  margin-top: 4px;
-}
-</style>

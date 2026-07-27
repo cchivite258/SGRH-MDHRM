@@ -34,6 +34,7 @@ const isTabDisabled = (tabNumber: number) => {
 
 const tabs = computed(() => [
   { value: 1, label: 't-general-information', disabled: isTabDisabled(1) },
+  { value: 2, label: 't-institution-and-classification', disabled: isTabDisabled(2) },
   { value: 3, label: 't-salary-review', disabled: isTabDisabled(3) },
   { value: 4, label: 't-dependents', disabled: isTabDisabled(4) },
   { value: 5, label: 't-health-plan', disabled: isTabDisabled(5) }

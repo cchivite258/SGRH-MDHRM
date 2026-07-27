@@ -98,6 +98,7 @@ const terminateFieldErrors = ref<Record<string, string[]>>({});
 const rehireDialog = ref(false);
 const rehireLoading = ref(false);
 const rehireFieldErrors = ref<Record<string, string[]>>({});
+const rehireTracksRefreshKey = ref(0);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null; // Timeout para mensagens de erro
 
 // Dados reativos do formulário
@@ -361,6 +362,7 @@ const rehireEmployeeContract = async (payload: EmployeeRehireType) => {
 
     toast.success(t("t-toast-message-rehire-contract-success"));
     rehireDialog.value = false;
+    rehireTracksRefreshKey.value += 1;
   } catch (error) {
     rehireFieldErrors.value = getApiValidationErrors(error);
     getApiErrorMessages(error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
@@ -377,7 +379,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber === 6 ? 5 : tabNumber);
+      onStepChange(tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -462,9 +464,10 @@ onBeforeUnmount(() => {
 
   </FormCard>
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 2" class="employee-form-section">
       <Step2 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
         :loading="loading" :show-actions="false" :employee-id="employeeId"
+        :rehire-tracks-refresh-key="rehireTracksRefreshKey"
         @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
 
   </FormCard>
@@ -472,7 +475,7 @@ onBeforeUnmount(() => {
   <FormCard v-if="step === 3" class="employee-form-section">
       <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
         :allow-edit="false"
-        :previous-step="1" previous-label-key="t-general-information" :next-step="4" />
+        :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" />
 
   </FormCard>
 

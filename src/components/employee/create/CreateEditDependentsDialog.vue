@@ -26,8 +26,8 @@ import {
   dependentDocumentTypeOptions
 } from "@/components/employee/create/utils";
 
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 
 type AttachmentUploadRow = {
   id: string;
@@ -77,14 +77,14 @@ const firstName = ref("");
 const middleName = ref("");
 const lastName = ref("");
 const gender = ref("");
-const birthDate = ref<Date | undefined>();
+const birthDate = ref("");
 const relationship = ref("");
 const isUnivesityStudent = ref(false);
 const employee = ref<string | { id: string; employeeNumber: string; firstName: string; lastName: string; }>("");
 const idCardNumber = ref("");
 const idCardIssuer = ref("");
-const idCardExpiryDate = ref<Date | undefined>();
-const idCardIssuanceDate = ref<Date | undefined>();
+const idCardExpiryDate = ref("");
+const idCardIssuanceDate = ref("");
 const isLifeTimeCard = ref(false);
 const enabled = ref(true);
 const attachmentUploads = ref<AttachmentUploadRow[]>([]);
@@ -93,15 +93,25 @@ const attachmentActionLoadingId = ref<string | null>(null);
 const downloadAttachmentLoadingId = ref<string | null>(null);
 const deleteAttachmentDialog = ref(false);
 const attachmentToDelete = ref<DependentAttachmentType | null>(null);
-const birthDatePicker = ref();
-const idCardExpiryDatePicker = ref();
-const idCardIssuanceDatePicker = ref();
+const birthDatePicker = ref<{ validate: () => boolean } | null>(null);
+const idCardExpiryDatePicker = ref<{ validate: () => boolean } | null>(null);
+const idCardIssuanceDatePicker = ref<{ validate: () => boolean } | null>(null);
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
   id: uuidv4(),
   dependentDocumentType: "",
   files: []
 });
+
+const toInputDateValue = (value: Date | string | null | undefined) => {
+  if (!value) return "";
+  if (typeof value === "string") return value.split("T")[0] || "";
+
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 watch(() => props.data, (newData) => {
   if (alertTimeout) {
@@ -124,7 +134,7 @@ watch(() => props.data, (newData) => {
   middleName.value = newData.middleName || "";
   lastName.value = newData.lastName || "";
   gender.value = newData.gender || "";
-  birthDate.value = newData.birthDate ? new Date(newData.birthDate) : undefined;
+  birthDate.value = toInputDateValue(newData.birthDate);
   relationship.value = newData.relationship || "";
   isUnivesityStudent.value = !!newData.isUnivesityStudent;
   employee.value = typeof newData.employee === 'string'
@@ -134,8 +144,8 @@ watch(() => props.data, (newData) => {
       : "";
   idCardNumber.value = newData.idCardNumber || "";
   idCardIssuer.value = newData.idCardIssuer || "";
-  idCardExpiryDate.value = newData.idCardExpiryDate ? new Date(newData.idCardExpiryDate) : undefined;
-  idCardIssuanceDate.value = newData.idCardIssuanceDate ? new Date(newData.idCardIssuanceDate) : undefined;
+  idCardExpiryDate.value = toInputDateValue(newData.idCardExpiryDate);
+  idCardIssuanceDate.value = toInputDateValue(newData.idCardIssuanceDate);
   isLifeTimeCard.value = !!newData.isLifeTimeCard;
   enabled.value = newData.enabled !== undefined ? newData.enabled : true;
 }, { immediate: true });
@@ -245,6 +255,9 @@ watch(serverErrors, async (errors) => {
   if (Object.keys(errors).length > 0) {
     await nextTick();
     await form.value?.validate();
+    birthDatePicker.value?.validate?.();
+    idCardIssuanceDatePicker.value?.validate?.();
+    idCardExpiryDatePicker.value?.validate?.();
   }
 }, { deep: true });
 
@@ -252,21 +265,37 @@ watch(firstName, () => delete serverErrors.value.firstName);
 watch(middleName, () => delete serverErrors.value.middleName);
 watch(lastName, () => delete serverErrors.value.lastName);
 watch(gender, () => delete serverErrors.value.gender);
-watch(birthDate, () => delete serverErrors.value.birthDate);
+watch(birthDate, async () => {
+  delete serverErrors.value.birthDate;
+  await nextTick();
+  birthDatePicker.value?.validate?.();
+});
 watch(relationship, () => delete serverErrors.value.relationship);
 watch(isUnivesityStudent, () => delete serverErrors.value.isUnivesityStudent);
 watch(idCardNumber, () => delete serverErrors.value.idCardNumber);
 watch(idCardIssuer, () => delete serverErrors.value.idCardIssuer);
-watch(idCardExpiryDate, () => delete serverErrors.value.idCardExpiryDate);
-watch(idCardIssuanceDate, () => delete serverErrors.value.idCardIssuanceDate);
-watch(isLifeTimeCard, (newValue, oldValue) => {
+watch(idCardExpiryDate, async () => {
+  delete serverErrors.value.idCardExpiryDate;
+  await nextTick();
+  idCardExpiryDatePicker.value?.validate?.();
+  idCardIssuanceDatePicker.value?.validate?.();
+});
+watch(idCardIssuanceDate, async () => {
+  delete serverErrors.value.idCardIssuanceDate;
+  await nextTick();
+  idCardIssuanceDatePicker.value?.validate?.();
+  idCardExpiryDatePicker.value?.validate?.();
+});
+watch(isLifeTimeCard, async (newValue, oldValue) => {
   delete serverErrors.value.isLifeTimeCard;
   delete serverErrors.value.idCardExpiryDate;
   if (newValue && !oldValue) {
-    idCardExpiryDate.value = undefined;
+    idCardExpiryDate.value = "";
   }
+  await nextTick();
+  idCardExpiryDatePicker.value?.validate?.();
 });
-watch(relationship, () => {
+watch(relationship, async () => {
   delete serverErrors.value.relationship;
   delete serverErrors.value.idCardExpiryDate;
   if (!canUseLifetimeIdCard.value) {
@@ -275,6 +304,8 @@ watch(relationship, () => {
   if (!canBeUniversityStudent.value) {
     isUnivesityStudent.value = false;
   }
+  await nextTick();
+  idCardExpiryDatePicker.value?.validate?.();
 }, { immediate: true });
 watch(attachmentUploads, () => delete serverErrors.value.attachmentUploads, { deep: true });
 
@@ -508,8 +539,8 @@ const onSubmit = async () => {
   if (!form.value) return;
   serverErrors.value = {};
   const isBirthDateValid = birthDatePicker.value?.validate?.() ?? true;
-  const isIdCardExpiryDateValid = idCardExpiryDatePicker.value?.validate?.() ?? true;
   const isIdCardIssuanceDateValid = idCardIssuanceDatePicker.value?.validate?.() ?? true;
+  const isIdCardExpiryDateValid = idCardExpiryDatePicker.value?.validate?.() ?? true;
 
   const { valid } = await form.value.validate();
 
@@ -577,7 +608,7 @@ const onSubmit = async () => {
 };
 </script>
 <template>
-  <v-dialog v-model="dialogValue" width="900">
+  <v-dialog v-model="dialogValue" width="900" persistent>
     <v-form ref="form" @submit.prevent="onSubmit">
       <Card :title="isCreate ? $t('t-add-dependent') : $t('t-edit-dependent')" title-class="py-0"
         style="overflow: hidden">
@@ -629,8 +660,12 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-birth-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="birthDatePicker" v-model="birthDate" :placeholder="$t('t-enter-birth-date')"
-                :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)" format="dd/MM/yyyy" />
+              <MenuDatePicker
+                ref="birthDatePicker"
+                v-model="birthDate"
+                :placeholder="$t('t-enter-birth-date')"
+                :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)"
+              />
             </v-col>
           </v-row>
           <v-row class="mt-n6">
@@ -665,19 +700,24 @@ const onSubmit = async () => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="idCardIssuanceDate"
+              <MenuDatePicker
+                ref="idCardIssuanceDatePicker"
+                v-model="idCardIssuanceDate"
                 :placeholder="$t('t-enter-id-card-issuance-date')"
                 :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
-                format="dd/MM/yyyy" />
+              />
             </v-col>
             <v-col cols="12" lg="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-id-card-expiry-date') }} <i v-if="!isLifeTimeCard" class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="idCardExpiryDate"
+              <MenuDatePicker
+                ref="idCardExpiryDatePicker"
+                v-model="idCardExpiryDate"
                 :placeholder="$t('t-enter-id-card-expiry-date')"
                 :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
-                format="dd/MM/yyyy" :disabled="isLifeTimeCard" />
+                :disabled="isLifeTimeCard"
+              />
             </v-col>
           </v-row>
           <v-row class="mt-3">

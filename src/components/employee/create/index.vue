@@ -95,7 +95,10 @@ const resolveRelationId = (value: unknown): string | number | undefined => {
 
 // Refs
 const step = ref(1);
-const step1Ref = ref<{ validateForm: (options?: { showToast?: boolean }) => Promise<boolean> } | null>(null);
+const step1Ref = ref<{
+  submitForm: () => Promise<void>;
+  validateForm: (options?: { showToast?: boolean }) => Promise<boolean>;
+} | null>(null);
 const step2Ref = ref<{ validateForm: (options?: { showToast?: boolean }) => Promise<boolean> } | null>(null);
 const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
@@ -108,13 +111,14 @@ const terminateFieldErrors = ref<Record<string, string[]>>({});
 const rehireDialog = ref(false);
 const rehireLoading = ref(false);
 const rehireFieldErrors = ref<Record<string, string[]>>({});
+const rehireTracksRefreshKey = ref(0);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
-const canUseHeaderSave = computed(() => step.value === 1);
-const headerSaveLabel = computed(() => t('t-save-and-proceed'));
-const employeeFormSteps = [1, 3, 4, 5];
+const canUseHeaderSave = computed(() => step.value === 1 || step.value === 2);
+const headerSaveLabel = computed(() => step.value === 1 ? t('t-proceed') : t('t-save-and-proceed'));
+const employeeFormSteps = [1, 2, 3, 4, 5];
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -328,6 +332,10 @@ const onSalaryUpdated = (value: number) => {
   employeeData.baseSalary = value;
 };
 
+const proceedFromGeneralInfo = async () => {
+  await step1Ref.value?.submitForm();
+};
+
 const openTerminateDialog = () => {
   terminateFieldErrors.value = {};
   terminateDialog.value = true;
@@ -403,6 +411,7 @@ const rehireEmployeeContract = async (payload: EmployeeRehireType) => {
     toast.success(t("t-toast-message-rehire-contract-success"));
     rehireDialog.value = false;
     await loadEmployeeData(employeeId.value);
+    rehireTracksRefreshKey.value += 1;
   } catch (error) {
     rehireFieldErrors.value = getApiValidationErrors(error);
     getApiErrorMessages(error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
@@ -429,10 +438,14 @@ const goToNextAvailableStep = () => {
 
 const onHeaderSave = async () => {
   if (step.value === 1) {
-    const isGeneralInfoValid = await step1Ref.value?.validateForm({ showToast: false });
+    await proceedFromGeneralInfo();
+    return;
+  }
+
+  if (step.value === 2) {
     const isInstitutionValid = await step2Ref.value?.validateForm({ showToast: false });
 
-    if (!isGeneralInfoValid || !isInstitutionValid) {
+    if (!isInstitutionValid) {
       toast.error(t('t-validation-error'));
       return;
     }
@@ -457,7 +470,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber === 6 ? 5 : tabNumber);
+      onStepChange(tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -472,6 +485,7 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     loading.value = true;
     errorMsg.value = "";
     apiFieldErrors.value = {};
+    const isEdit = !!employeeId.value;
     console.log('EmployeeInsertType:', payload);
 
     // Usa os dados recebidos do payload
@@ -501,7 +515,7 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     });
 
     let response;
-    if (employeeId.value) {
+    if (isEdit) {
       // Modo edição
       response = await employeeService.updateEmployee(employeeId.value, normalizedPayload);
     } else {
@@ -527,7 +541,7 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
 
 
     // Feedback de sucesso
-    toast.success(employeeId.value
+    toast.success(isEdit
       ? t('t-employee-updated-success')
       : t('t-employee-created-success'));
 
@@ -560,6 +574,8 @@ onBeforeUnmount(() => {
     :title="headerTitle"
     subtitle="Crie e organize os dados do colaborador em blocos claros."
     :save-label="headerSaveLabel"
+    save-icon="ph-arrow-right"
+    save-icon-position="end"
     :loading="loading"
     :show-save="canUseHeaderSave"
     :save-disabled="!canUseHeaderSave"
@@ -586,16 +602,17 @@ onBeforeUnmount(() => {
       :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
   </FormCard>
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 2" class="employee-form-section">
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
       :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()"
-      :employee-id="employeeId" @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
+      :employee-id="employeeId" :rehire-tracks-refresh-key="rehireTracksRefreshKey"
+      @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
   </FormCard>
 
   <FormCard v-if="step === 3" class="employee-form-section">
     <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-      :previous-step="1" previous-label-key="t-back-to-general-info" :next-step="4" @salaryUpdated="onSalaryUpdated" />
+      :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" @salaryUpdated="onSalaryUpdated" />
   </FormCard>
 
   <FormCard v-if="step === 4" class="employee-form-section">
@@ -606,16 +623,16 @@ onBeforeUnmount(() => {
     <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
   </FormCard>
 
-  <div v-if="step === 1" class="employee-form-footer-actions">
+  <div v-if="step === 1 || step === 2" class="employee-form-footer-actions">
     <v-btn
       class="employee-form-footer-actions__back"
       color="secondary"
       variant="outlined"
       :disabled="loading"
-      @click="goBackToList"
+      @click="step === 1 ? goBackToList() : onStepChange(1)"
     >
       <i class="ph-arrow-left me-2" />
-      {{ $t('t-back-to-list') }}
+      {{ step === 1 ? $t('t-back-to-list') : $t('t-back-to-general-info') }}
     </v-btn>
 
     <v-btn
@@ -623,11 +640,11 @@ onBeforeUnmount(() => {
       color="secondary"
       variant="elevated"
       :loading="loading"
-      :disabled="!canUseHeaderSave"
-      @click="onHeaderSave"
+      :disabled="loading"
+      @click="step === 1 ? proceedFromGeneralInfo() : onHeaderSave()"
     >
-      <i class="ph-floppy-disk me-2" />
-      {{ headerSaveLabel }}
+      {{ step === 1 ? $t('t-proceed') : headerSaveLabel }}
+      <i class="ph-arrow-right ms-2" />
     </v-btn>
   </div>
 
