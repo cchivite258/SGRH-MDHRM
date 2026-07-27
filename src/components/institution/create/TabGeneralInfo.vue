@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import ContractAttachments from "@/components/institution/create/ContractAttachments.vue";
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
 import type { EntityListingType } from "@/components/entities/types";
 import { InstitutionInsertType } from "@/components/institution/types";
@@ -35,6 +36,10 @@ const props = defineProps({
   showActions: {
     type: Boolean,
     default: true
+  },
+  institutionId: {
+    type: String,
+    default: ""
   }
 });
 
@@ -253,4 +258,10 @@ onMounted(async () => {
       </v-card-actions>
     </Card>
   </v-form>
+
+  <ContractAttachments
+    v-if="institutionId"
+    class="mt-4"
+    :contract-id="institutionId"
+  />
 </template>

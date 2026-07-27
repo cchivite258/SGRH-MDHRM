@@ -5,6 +5,7 @@ import { useI18n } from "vue-i18n";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import ServiceProviderContractExtensionsDialog from "@/components/serviceProvider/create/ServiceProviderContractExtensionsDialog.vue";
+import ServiceProviderAttachments from "@/components/serviceProvider/create/ServiceProviderAttachments.vue";
 import type { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
@@ -245,6 +246,12 @@ defineExpose({ submitForm, validateForm });
       :current-contract-end-date="serviceProviderData.contractEndDate || null"
     />
   </v-form>
+
+  <ServiceProviderAttachments
+    v-if="serviceProviderId"
+    class="mt-4"
+    :service-provider-id="serviceProviderId"
+  />
 </template>
 
 <style scoped>

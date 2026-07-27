@@ -40,7 +40,7 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (institutionId.value ? t("t-edit-institution") : t("t-add-institution")));
 const canUseHeaderSave = computed(() => step.value === 1);
-const headerSaveLabel = computed(() => t("t-save-and-proceed"));
+const headerSaveLabel = computed(() => institutionId.value ? t("t-save-and-proceed") : t("t-save"));
 
 const goBackToList = () => {
   router.push("/institution/list");
@@ -122,6 +122,7 @@ const saveInstitution = async () => {
   loading.value = true;
   errorMsg.value = "";
   apiFieldErrors.value = {};
+  const isNewInstitution = !institutionId.value;
 
   try {
     let response: any;
@@ -137,12 +138,14 @@ const saveInstitution = async () => {
         return;
       }
 
-      institutionId.value = response?.data?.id;
+      institutionId.value = response?.data?.id !== undefined && response?.data?.id !== null
+        ? String(response.data.id)
+        : undefined;
       basicDataValidated.value = true;
       toast.success(t("t-institution-created-success"));
     }
 
-    if (step.value === 1) {
+    if (step.value === 1 && !isNewInstitution) {
       step.value = 2;
     }
   } catch (error) {
@@ -189,7 +192,7 @@ onMounted(async () => {
   <ButtonNav
     v-model="step"
     class="institution-form-tabs"
-    :institution-id="institutionId as string"
+    :institution-id="institutionId || ''"
     :basic-data-validated="basicDataValidated"
   />
 
@@ -213,6 +216,7 @@ onMounted(async () => {
     <Step1
       ref="step1Ref"
       v-model="institutionData"
+      :institution-id="institutionId || ''"
       @save="saveInstitution"
       :loading="loading"
       :server-errors="apiFieldErrors"
