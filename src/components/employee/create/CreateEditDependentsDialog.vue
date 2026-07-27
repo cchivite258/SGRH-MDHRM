@@ -665,6 +665,7 @@ const onSubmit = async () => {
                 v-model="birthDate"
                 :placeholder="$t('t-enter-birth-date')"
                 :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)"
+                :error-messages="getServerErrors('birthDate')"
               />
             </v-col>
           </v-row>
@@ -705,6 +706,7 @@ const onSubmit = async () => {
                 v-model="idCardIssuanceDate"
                 :placeholder="$t('t-enter-id-card-issuance-date')"
                 :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
+                :error-messages="getServerErrors('idCardIssuanceDate')"
               />
             </v-col>
             <v-col cols="12" lg="4">
@@ -717,6 +719,7 @@ const onSubmit = async () => {
                 :placeholder="$t('t-enter-id-card-expiry-date')"
                 :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
                 :disabled="isLifeTimeCard"
+                :error-messages="getServerErrors('idCardExpiryDate')"
               />
             </v-col>
           </v-row>

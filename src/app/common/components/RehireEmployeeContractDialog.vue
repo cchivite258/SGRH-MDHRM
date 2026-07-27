@@ -58,7 +58,7 @@ const rehireForm = ref<EmployeeRehireType>({
   newBaseSalary: 0,
   contractDurationType: "",
   rehireDate: getTodayInputValue(),
-  endDate: "",
+  endDate: getTodayInputValue(),
   positionId: "",
   departmentId: "",
   notes: ""
@@ -124,7 +124,7 @@ const resetForm = () => {
     newBaseSalary: Number(props.employeeData.baseSalary ?? 0),
     contractDurationType: props.employeeData.contractDurationType || "",
     rehireDate: getTodayInputValue(),
-    endDate: "",
+    endDate: getTodayInputValue(),
     departmentId: props.employeeData.department || "",
     positionId: props.employeeData.position || "",
     notes: ""

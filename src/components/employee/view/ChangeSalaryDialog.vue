@@ -3,7 +3,7 @@ import { computed, ref, watch, type PropType } from "vue";
 import { useI18n } from "vue-i18n";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import type { EmployeeBaseSalaryUpdateType } from "@/components/employee/types";
 
 type ReasonOption = {
@@ -153,13 +153,12 @@ watch(dialogValue, (isOpen) => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-effective-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker
+              <MenuDatePicker
                 ref="effectiveDatePicker"
                 v-model="salaryForm.starDate"
                 :placeholder="$t('t-enter-effective-date')"
                 :rules="effectiveDateRules"
-                :teleport="true"
-                format="dd/MM/yyyy"
+                :disabled="loading"
               />
             </v-col>
 

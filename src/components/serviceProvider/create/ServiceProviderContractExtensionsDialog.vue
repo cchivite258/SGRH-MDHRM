@@ -6,7 +6,7 @@ import { useToast } from "vue-toastification";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { reasonService, serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
@@ -433,13 +433,12 @@ watch(viewDialog, (isOpen) => {
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker
+              <MenuDatePicker
                 ref="contractEndDatePickerRef"
                 v-model="extensionForm.contractEndDate"
                 :placeholder="$t('t-enter-contract-end-date')"
                 :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
-                :teleport="true"
-                format="dd/MM/yyyy"
+                :error-messages="getServerErrors('contractEndDate')"
               />
             </v-col>
             <v-col cols="12" class="mt-n2">
