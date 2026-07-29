@@ -79,6 +79,13 @@ const requiredRules = {
       endDate.setHours(0, 0, 0, 0);
       return endDate >= startDate || t("t-contract-end-date-must-be-after-start-date");
     }
+  ],
+  optionalPositiveNumber: [
+    (v: string | number | null | undefined) => v === null || v === undefined || v === "" || Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
+  ],
+  requiredPositiveNumber: [
+    (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" || t("t-required-field"),
+    (v: string | number | null | undefined) => Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
   ]
 };
 
@@ -113,6 +120,10 @@ watch(
 watch(() => serviceProviderData.value.contractStartDate, () => emit("clear-server-error", "contractStartDate"));
 watch(() => serviceProviderData.value.contractEndDate, () => emit("clear-server-error", "contractEndDate"));
 watch(() => serviceProviderData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
+watch(() => serviceProviderData.value.erpCode, () => emit("clear-server-error", "erpCode"));
+watch(() => serviceProviderData.value.isBusinessDays, () => emit("clear-server-error", "isBusinessDays"));
+watch(() => serviceProviderData.value.gracePeriod, () => emit("clear-server-error", "gracePeriod"));
+watch(() => serviceProviderData.value.maxDaysAfterService, () => emit("clear-server-error", "maxDaysAfterService"));
 
 const showError = () => {
   if (alertTimeout) {
@@ -184,8 +195,64 @@ defineExpose({ submitForm, validateForm });
 
       <v-card-text class="pt-0">
         <v-row class="mt-2">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-code') }}
+            </div>
+            <TextField :model-value="serviceProviderData.code || ''" :disabled="true" />
+          </v-col>
+
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-erp-code') }}
+            </div>
+            <TextField
+              v-model="serviceProviderData.erpCode"
+              :error-messages="getServerErrors('erpCode')"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-n2">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
+              {{ $t('t-is-business-days') }}
+            </div>
+            <v-checkbox v-model="serviceProviderData.isBusinessDays" density="compact" color="primary" class="d-inline-flex">
+              <template #label>
+                <span>{{ $t('t-count-business-days') }}</span>
+              </template>
+            </v-checkbox>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-max-days-after-service') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField
+              v-model="serviceProviderData.maxDaysAfterService"
+              type="number"
+              :placeholder="$t('t-enter-max-days-after-service')"
+              :rules="applyServerErrorsToRules('maxDaysAfterService', requiredRules.requiredPositiveNumber)"
+            />
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-grace-period') }}
+            </div>
+            <TextField
+              v-model="serviceProviderData.gracePeriod"
+              type="number"
+              :placeholder="$t('t-enter-grace-period')"
+              :rules="applyServerErrorsToRules('gracePeriod', requiredRules.optionalPositiveNumber)"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-2">
+          <v-col cols="12" lg="4" class="mt-n4">
+            <div class="font-weight-bold mb-2 " >
               {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker
@@ -198,7 +265,7 @@ defineExpose({ submitForm, validateForm });
             />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="4" class="mt-n4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -212,7 +279,7 @@ defineExpose({ submitForm, validateForm });
             />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="4" class="mt-n4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-responsible') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>

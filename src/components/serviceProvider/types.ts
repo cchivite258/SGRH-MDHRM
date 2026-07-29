@@ -1,5 +1,7 @@
 
 export type ServiceProviderUpdateType = {
+  code?: string | null;
+  erpCode?: string | null;
   name: string;
   description: string;
   address: string;
@@ -21,6 +23,9 @@ export type ServiceProviderUpdateType = {
     lastName?: string;
     email?: string;
   } | undefined;
+  isBusinessDays?: boolean | null;
+  gracePeriod?: number | null;
+  maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
     name: string
@@ -31,6 +36,8 @@ export type ServiceProviderUpdateType = {
 
 export type ServiceProviderResponseType = {
   id: string;
+  code?: string | null;
+  erpCode?: string | null;
   name: string;
   description: string;
   address: string;
@@ -52,6 +59,9 @@ export type ServiceProviderResponseType = {
     lastName?: string;
     email?: string;
   } | undefined;
+  isBusinessDays?: boolean | null;
+  gracePeriod?: number | null;
+  maxDaysAfterService?: number | null;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypes?: {
@@ -64,6 +74,8 @@ export type ServiceProviderResponseType = {
 
 export type ServiceProviderInsertType = {
   id?: string | undefined;
+  code?: string | null;
+  erpCode?: string | null;
   name: string;
   description: string;
   address: string;
@@ -85,6 +97,9 @@ export type ServiceProviderInsertType = {
     lastName?: string;
     email?: string;
   } | undefined;
+  isBusinessDays?: boolean | null;
+  gracePeriod?: number | null;
+  maxDaysAfterService?: number | null;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
   providerTypes?: {
@@ -98,6 +113,8 @@ export type ServiceProviderInsertType = {
 
 export type ServiceProviderListingType = {
   id: string;
+  code?: string | null;
+  erpCode?: string | null;
   name: string;
   description: string;
   address: string;
@@ -121,6 +138,9 @@ export type ServiceProviderListingType = {
     lastName?: string;
     email?: string;
   } | undefined;
+  isBusinessDays?: boolean | null;
+  gracePeriod?: number | null;
+  maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
     name: string
@@ -132,6 +152,8 @@ export type ServiceProviderListingType = {
 
 export type ServiceProviderListingForListType = {
   id: string;
+  code?: string | null;
+  erpCode?: string | null;
   name: string;
   description: string;
   address: string;
@@ -155,6 +177,9 @@ export type ServiceProviderListingForListType = {
     lastName?: string;
     email?: string;
   } | undefined;
+  isBusinessDays?: boolean | null;
+  gracePeriod?: number | null;
+  maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
     name: string
@@ -224,6 +249,7 @@ export type ServiceProviderDocumentType =
 
 export type ServiceProviderAttachmentType = {
   id: string;
+  serviceProviderAttachmentId?: string | number;
   serviceProviderId?: string | number;
   serviceProviderContractExtensionId?: string | number;
   serviceProviderDocumentType: ServiceProviderDocumentType;

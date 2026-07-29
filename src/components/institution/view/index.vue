@@ -42,6 +42,8 @@ const institutionId = ref<string | null>(
 );
 
 const institutionData = reactive<InstitutionInsertType & { institutionTypeName?: string }>({
+  code: null,
+  erpCode: null,
   name: "",
   companyDetailsId: undefined,
   responsibleId: undefined,
@@ -189,6 +191,17 @@ onMounted(async () => {
             <v-col cols="12">
               <div class="font-weight-bold mb-2">{{ $t("t-institution-name") }}</div>
               <div>{{ institutionData.name || "-" }}</div>
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">{{ $t("t-contract-code") }}</div>
+              <div>{{ institutionData.code || "-" }}</div>
+            </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">{{ $t("t-erp-code") }}</div>
+              <div>{{ institutionData.erpCode || "-" }}</div>
             </v-col>
           </v-row>
 

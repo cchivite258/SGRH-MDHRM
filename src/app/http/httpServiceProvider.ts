@@ -38,6 +38,7 @@ import ReasonService from "@/app/http/services/baseTables/reason/reasonService";
 import BudgetService from "@/app/http/services/institution/budgetService";
 import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
 import ScheduledParameterService from "@/app/http/services/settings/scheduledParameterService";
+import CodeConfigService from "@/app/http/services/settings/codeConfigService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -113,6 +114,7 @@ const providerTypeService = new ProviderTypeService();
 const reasonService = new ReasonService();
 const alertConfigurationService = new AlertConfigurationService();
 const scheduledParameterService = new ScheduledParameterService();
+const codeConfigService = new CodeConfigService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -155,6 +157,7 @@ export {
     providerTypeService,
     alertConfigurationService,
     scheduledParameterService,
+    codeConfigService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,

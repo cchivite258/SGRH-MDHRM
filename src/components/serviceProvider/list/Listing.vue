@@ -24,7 +24,7 @@ const serviceProviderStore = useServiceProviderStore()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "name,description,address,phone,email,website"
+const searchProps = "code,erpCode,name,description,address,phone,email,website"
 const deleteDialog = ref(false)
 const deleteId = ref<string | null>(null)
 const deleteLoading = ref(false)
@@ -180,6 +180,9 @@ onBeforeRouteLeave(() => {
               @update:model-value="toggleSelection(item)"
             />
           </td>
+          <td data-label="Código">
+            {{ item.code || "N/A" }}
+          </td>
           <td
             data-label="Nome"
             class="service-provider-listing-table__primary-cell cursor-pointer"
@@ -195,9 +198,6 @@ onBeforeRouteLeave(() => {
           </td>
           <td data-label="Telemóvel">
             {{ truncate(item.phone) || "N/A" }}
-          </td>
-          <td data-label="Email">
-            {{ truncate(item.email) || "N/A" }}
           </td>
           <td data-label="Disponibilidade">
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />

@@ -68,7 +68,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" width="500" >
+  <v-dialog v-model="dialogValue" width="760" >
     <Card :title="$t('t-view-contracted-service-provider')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
@@ -88,6 +88,23 @@ onMounted(async () => {
           <v-col cols="12">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-company') }}</div>
             <div>{{ props.data.company }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3">
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-is-business-days') }}</div>
+            <div>{{ props.data?.isBusinessDays ? $t('t-yes') : $t('t-no') }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-max-days-after-service') }}</div>
+            <div>{{ props.data?.maxDaysAfterService ?? "-" }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-grace-period') }}</div>
+            <div>{{ props.data?.gracePeriod ?? "-" }}</div>
           </v-col>
         </v-row>
       </v-card-text>

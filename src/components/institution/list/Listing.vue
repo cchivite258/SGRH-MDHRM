@@ -27,7 +27,7 @@ const institutionStore = useInstitutionStore()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name"
+const searchProps = "code,erpCode,name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name"
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedInstitutions = ref<any[]>([])
@@ -196,6 +196,7 @@ onBeforeRouteLeave(() => {
               @update:model-value="toggleSelection(item)"
             />
           </td>
+          <td data-label="Código">{{ item.code || "N/A" }}</td>
           <td
             data-label="Nome do Contrato"
             class="institution-listing-table__primary-cell cursor-pointer"
@@ -214,17 +215,6 @@ onBeforeRouteLeave(() => {
               :status="getInstitutionTypeColor(item.institutionType?.name)"
               :label="item.institutionType?.name || 'N/A'"
             />
-          </td>
-          <td data-label="Email">
-            <a
-              v-if="item.email"
-              class="institution-listing-table__contact-link"
-              :href="`mailto:${item.email}`"
-              @click.stop
-            >
-              {{ item.email }}
-            </a>
-            <span v-else>N/A</span>
           </td>
           <td data-label="Telemóvel">
             <a

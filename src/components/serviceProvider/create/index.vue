@@ -60,10 +60,26 @@ const goBackToList = () => {
 
 const onHeaderSave = async () => {
   const isGeneralInfoValid = await step1Ref.value?.validateForm();
-  const isContractValid = await step2Ref.value?.validateForm();
-  const isContactValid = await step3Ref.value?.validateForm();
+  if (!isGeneralInfoValid) {
+    step.value = 1;
+    return;
+  }
 
-  if (!isGeneralInfoValid || !isContractValid || !isContactValid) return;
+  basicDataValidated.value = true;
+
+  const isContractValid = await step2Ref.value?.validateForm();
+  if (!isContractValid) {
+    step.value = 2;
+    return;
+  }
+
+  contractDataValidated.value = true;
+
+  const isContactValid = await step3Ref.value?.validateForm();
+  if (!isContactValid) {
+    step.value = 3;
+    return;
+  }
 
   await saveServiceProvider(true);
 };
@@ -71,6 +87,8 @@ const onHeaderSave = async () => {
 // Dados reativos do formulário
 let serviceProviderData = reactive<ServiceProviderInsertType>({
   // Dados da primeira tab
+  code: null,
+  erpCode: null,
   name: '',
   description: '',
   address: '',
@@ -88,6 +106,9 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   responsibleId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
+  isBusinessDays: false,
+  gracePeriod: null,
+  maxDaysAfterService: null,
   enabled: true,
   countryId: undefined,
   provinceId: undefined
@@ -237,6 +258,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       phone: "trimToEmpty",
       email: "trimToNull",
       website: "trimToNull",
+      erpCode: "trimToNull",
       incomeTaxNumber: "trimToEmpty",
       personOfContactFullname1: "trimToNull",
       personOfContactPhone1: "trimToNull",
@@ -257,10 +279,20 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       response = await serviceProviderService.createServiceProvider(normalizedPayload);
       console.log('Response from createServiceProvider:', response);
 
+      if (response.status === 'error') {
+        handleApiError(response.error);
+        return;
+      }
+
       if (response?.data?.id !== undefined && response?.data?.id !== null) {
         const createdServiceProviderId = String(response.data.id);
         serviceProviderId.value = createdServiceProviderId;
         serviceProviderStore.setCurrentServiceProviderId(createdServiceProviderId);
+        const createdServiceProvider = await serviceProviderService.getServiceProviderById(createdServiceProviderId);
+        serviceProviderData.code = createdServiceProvider.data.code || null;
+        serviceProviderData.erpCode = createdServiceProvider.data.erpCode || serviceProviderData.erpCode || null;
+        normalizedPayload.code = serviceProviderData.code;
+        normalizedPayload.erpCode = serviceProviderData.erpCode;
         basicDataValidated.value = true;
         contractDataValidated.value = true;
       } else {
@@ -284,7 +316,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
         : t('t-service-provider-add-success')
     );
     // Redirecionamento ou próxima etapa
-    if (isFinalStep && wasEditing) {
+    if (isFinalStep) {
       await serviceProviderStore.fetchServiceProviders();
       router.push('/service-provider/list');
     } else if (serviceProviderId.value) {

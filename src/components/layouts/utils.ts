@@ -209,6 +209,7 @@ export const menuItems: MenuItemType[] = [
     prefix: "/settings",
     subMenu: [
       { label: "alerts", link: "/settings/alerts" },
+      { label: "contract-code-configs", link: "/settings/code-configs" },
       //{ label: "period", link: "/users/users/list" },
      // { label: "functions", link: "/auth/signup" },
     ],

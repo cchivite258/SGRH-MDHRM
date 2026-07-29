@@ -142,6 +142,9 @@ const onCreateEditClick = (data: ServiceProviderInsertType | null) => {
       id: undefined,
       serviceProvider: "",
       company: company,
+      isBusinessDays: false,
+      gracePeriod: null,
+      maxDaysAfterService: null,
       enabled: true 
     };
 
@@ -301,6 +304,9 @@ onBeforeUnmount(() => {
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
             <td>{{ item.serviceProvider.name }}</td>
+            <td>{{ item.maxDaysAfterService ?? "N/A" }}</td>
+            <td>{{ item.gracePeriod ?? "N/A" }}</td>
+            <td>{{ item.isBusinessDays ? $t('t-yes') : $t('t-no') }}</td>
             <td class="text-end">
               <div class="d-flex justify-end" style="gap: 8px">
                 <v-btn

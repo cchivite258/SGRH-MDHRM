@@ -1,5 +1,7 @@
 export type InstitutionListingType = {
     id: string  ;
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     address: string;
     phone: string;
@@ -49,6 +51,8 @@ export type InstitutionListingType = {
 
 export type InstitutionResponseType = { 
     id: string  ;
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     address: string;
     phone: string;
@@ -97,6 +101,8 @@ export type InstitutionResponseType = {
 };
 
 export type InstitutionInsertType = {
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     description: string | null;
     companyDetailsId: string | number | undefined;
@@ -321,6 +327,9 @@ export type ServiceProviderListingType = {
         deletedBy: string;
     }
     company: string;
+    isBusinessDays?: boolean | null;
+    gracePeriod?: number | null;
+    maxDaysAfterService?: number | null;
     createdAt: Date | null;
     updatedAt: Date | null;
     deletedAt: Date | null;
@@ -334,6 +343,9 @@ export type ServiceProviderInsertType = {
     id?: string | null; 
     serviceProvider: string; 
     company: string; 
+    isBusinessDays?: boolean | null;
+    gracePeriod?: number | null;
+    maxDaysAfterService?: number | null;
     enabled: boolean;
 };
 

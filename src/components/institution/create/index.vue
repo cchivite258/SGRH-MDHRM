@@ -52,6 +52,8 @@ const onHeaderSave = async () => {
 };
 
 const institutionData = reactive<InstitutionInsertType>({
+  code: null,
+  erpCode: null,
   name: "",
   description: null,
   companyDetailsId: undefined,
@@ -95,6 +97,8 @@ const loadInstitutionData = async (id: string) => {
     const data = response.data;
 
     institutionData.name = data.name || data.companyDetails?.name || "";
+    institutionData.code = data.code || null;
+    institutionData.erpCode = data.erpCode || null;
     institutionData.description = data.description || data.companyDetails?.description || null;
     institutionData.companyDetailsId = data.companyDetailsId || data.companyDetails?.id;
     institutionData.responsibleId = data.responsibleId || data.responsible?.id || undefined;
@@ -141,6 +145,13 @@ const saveInstitution = async () => {
       institutionId.value = response?.data?.id !== undefined && response?.data?.id !== null
         ? String(response.data.id)
         : undefined;
+
+      if (institutionId.value) {
+        const createdContract = await institutionService.getInstitutionById(institutionId.value);
+        institutionData.code = createdContract.data.code || null;
+        institutionData.erpCode = createdContract.data.erpCode || institutionData.erpCode || null;
+      }
+
       basicDataValidated.value = true;
       toast.success(t("t-institution-created-success"));
     }
