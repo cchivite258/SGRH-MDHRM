@@ -3,7 +3,6 @@ import { PropType, computed, ref, watch } from "vue";
 import { BudgetInsertType, CoveragePeriodListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { useCoveragePeriodStore } from '@/store/institution/coveragePeriodStore';
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
