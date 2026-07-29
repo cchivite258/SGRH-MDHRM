@@ -75,8 +75,11 @@ const pendingUploadsValidationMessage = computed(() => {
   return "";
 });
 
-const getAttachmentId = (attachment: ServiceProviderAttachmentType) =>
-  String((attachment as any).serviceProviderAttachmentId || attachment.id || "");
+const getServiceProviderAttachmentId = (attachment: ServiceProviderAttachmentType) => {
+  return attachment.id !== undefined && attachment.id !== null
+    ? String(attachment.id)
+    : "";
+};
 
 const getDocumentTypeLabel = (value: string | null | undefined) => {
   const option = serviceProviderDocumentTypeOptions.find((item) => item.value === value);
@@ -190,13 +193,18 @@ const onAttachDocuments = async () => {
 };
 
 const onDownloadAttachment = async (attachment: ServiceProviderAttachmentType) => {
-  const attachmentId = getAttachmentId(attachment);
+  const serviceProviderAttachmentId = getServiceProviderAttachmentId(attachment);
+  if (!serviceProviderAttachmentId) {
+    toast.error(t("t-message-download-error"));
+    return;
+  }
+
   const fileName = getAttachmentFileName(attachment);
   const extension = getAttachmentExtension(attachment);
 
-  downloadAttachmentLoadingId.value = attachmentId;
+  downloadAttachmentLoadingId.value = serviceProviderAttachmentId;
   try {
-    const response = await serviceProviderAttachmentService.downloadAttachment(attachmentId, fileName, extension);
+    const response = await serviceProviderAttachmentService.downloadAttachment(serviceProviderAttachmentId, fileName, extension);
     if (response.status === "error") {
       getApiErrorMessages(response.error, t("t-message-download-error")).forEach((message) => toast.error(message));
     }
@@ -215,17 +223,22 @@ const onDeleteAttachment = (attachment: ServiceProviderAttachmentType) => {
 const onConfirmDeleteAttachment = async () => {
   if (!attachmentToDelete.value) return;
 
-  const attachmentId = getAttachmentId(attachmentToDelete.value);
-  attachmentActionLoadingId.value = attachmentId;
+  const serviceProviderAttachmentId = getServiceProviderAttachmentId(attachmentToDelete.value);
+  if (!serviceProviderAttachmentId) {
+    toast.error(t("t-toast-message-deleted-erros"));
+    return;
+  }
+
+  attachmentActionLoadingId.value = serviceProviderAttachmentId;
 
   try {
-    const response = await serviceProviderAttachmentService.deleteAttachment(attachmentId);
+    const response = await serviceProviderAttachmentService.deleteAttachment(serviceProviderAttachmentId);
     if (response.status === "error") {
       getApiErrorMessages(response.error, t("t-toast-message-deleted-erros")).forEach((message) => toast.error(message));
       return;
     }
 
-    currentAttachments.value = currentAttachments.value.filter((item) => getAttachmentId(item) !== attachmentId);
+    currentAttachments.value = currentAttachments.value.filter((item) => getServiceProviderAttachmentId(item) !== serviceProviderAttachmentId);
     toast.success(t("t-toast-message-deleted"));
     await refreshServiceProviderAttachments();
   } catch (error) {
@@ -282,7 +295,7 @@ const onConfirmDeleteAttachment = async () => {
         Nenhum documento anexado.
       </v-alert>
 
-      <v-card v-for="attachment in currentAttachments" :key="getAttachmentId(attachment)" class="border mb-3" elevation="0">
+      <v-card v-for="attachment in currentAttachments" :key="getServiceProviderAttachmentId(attachment)" class="border mb-3" elevation="0">
         <v-card-text class="d-flex align-center justify-space-between">
           <div class="d-flex flex-column">
             <span class="font-weight-bold">
@@ -300,8 +313,8 @@ const onConfirmDeleteAttachment = async () => {
               color="black"
               variant="elevated"
               size="small"
-              :loading="downloadAttachmentLoadingId === getAttachmentId(attachment)"
-              :disabled="downloadAttachmentLoadingId === getAttachmentId(attachment) || attachmentActionLoadingId === getAttachmentId(attachment)"
+              :loading="downloadAttachmentLoadingId === getServiceProviderAttachmentId(attachment)"
+              :disabled="downloadAttachmentLoadingId === getServiceProviderAttachmentId(attachment) || attachmentActionLoadingId === getServiceProviderAttachmentId(attachment)"
               @click="onDownloadAttachment(attachment)"
             >
               <i class="ph-download-simple me-1" /> {{ $t('t-download-attachment') }}
@@ -310,8 +323,8 @@ const onConfirmDeleteAttachment = async () => {
               color="danger"
               variant="elevated"
               size="small"
-              :loading="attachmentActionLoadingId === getAttachmentId(attachment)"
-              :disabled="attachmentActionLoadingId === getAttachmentId(attachment)"
+              :loading="attachmentActionLoadingId === getServiceProviderAttachmentId(attachment)"
+              :disabled="attachmentActionLoadingId === getServiceProviderAttachmentId(attachment)"
               @click="onDeleteAttachment(attachment)"
             >
               <i class="ph-trash me-1" /> {{ $t('t-delete') }}

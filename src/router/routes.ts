@@ -457,6 +457,12 @@ const settingsRoutes = [
     component: () => import("@/views/settings/Alerts.vue"),
     meta: { title: "t-alerts", authRequired: true },
   },
+  {
+    path: `${settingsPrefix}/code-configs`,
+    name: "CodeConfigs",
+    component: () => import("@/views/settings/CodeConfigs.vue"),
+    meta: { title: "t-contract-code-configs", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,

@@ -38,6 +38,8 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const headerTitle = computed(() => props.cardTitle || t("t-view-service-provider"));
 
 let serviceProviderData = reactive<ServiceProviderInsertType>({
+  code: null,
+  erpCode: null,
   name: "",
   description: "",
   address: "",
@@ -55,6 +57,9 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   responsibleId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
+  isBusinessDays: false,
+  gracePeriod: null,
+  maxDaysAfterService: null,
   enabled: true,
   countryId: undefined,
   provinceId: undefined

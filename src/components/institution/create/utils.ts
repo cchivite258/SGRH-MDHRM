@@ -234,6 +234,9 @@ export const healthPlanHeader: DataTableHeaderType[] = [
 export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
   { title: "service-provider", sortable: true },
+  { title: "max-days-after-service", sortable: true },
+  { title: "grace-period", sortable: true },
+  { title: "is-business-days", sortable: true },
   { title: "action", align: 'end' },
 ];
 

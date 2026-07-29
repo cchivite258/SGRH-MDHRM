@@ -117,14 +117,13 @@ const onBack = () => {
         </v-row>
 
         <v-row class="mt-n9">
-          <v-col cols="12" lg="9">
+          <v-col cols="12" lg="8">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t("t-service-provider-name") }}
             </div>
             <div>{{ serviceProviderData.name || "-" }}</div>
           </v-col>
-
-          <v-col cols="12" lg="3">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t("t-provider-type") }}
             </div>

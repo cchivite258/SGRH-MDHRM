@@ -13,8 +13,15 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
+const toNullableNumber = (value: number | string | null | undefined): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType): ServiceProviderInsertType => ({
   name: serviceProviderData.name,
+  erpCode: serviceProviderData.erpCode || null,
   description: serviceProviderData.description,
   address: serviceProviderData.address,
   phone: serviceProviderData.phone,
@@ -31,6 +38,9 @@ const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType
   responsibleId: serviceProviderData.responsibleId,
   contractStartDate: serviceProviderData.contractStartDate,
   contractEndDate: serviceProviderData.contractEndDate,
+  isBusinessDays: !!serviceProviderData.isBusinessDays,
+  gracePeriod: toNullableNumber(serviceProviderData.gracePeriod),
+  maxDaysAfterService: toNullableNumber(serviceProviderData.maxDaysAfterService),
   enabled: serviceProviderData.enabled,
   provinceId: serviceProviderData.provinceId,
   countryId: serviceProviderData.countryId
@@ -62,7 +72,7 @@ export default class ServiceProviderService extends HttpService {
 
        //filtro geral
       if (globalSearch) {
-        params.append('query_props', 'name,address,phone,email,description,website,incomeTaxNumber,personOfContactFullname1,personOfContactPhone1,personOfContactEmail1,personOfContactFullname2,personOfContactPhone2,personOfContactEmail2');
+        params.append('query_props', 'code,erpCode,name,address,phone,email,description,website,incomeTaxNumber,personOfContactFullname1,personOfContactPhone1,personOfContactEmail1,personOfContactFullname2,personOfContactPhone2,personOfContactEmail2');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -102,7 +112,7 @@ export default class ServiceProviderService extends HttpService {
   // Obter prestadores de serviços para o dropdown
   async getServiceProvidersForDropdown(
     page: number = 0,
-    size: number = 10,
+    size: number = 10000000,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

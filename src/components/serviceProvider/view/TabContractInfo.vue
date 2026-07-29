@@ -66,6 +66,45 @@ onMounted(async () => {
   <Card :title="$t('t-contract')" elevation="0" title-class="pb-0">
     <v-card-text class="pt-0">
       <v-row class="mt-2">
+        <v-col cols="12" lg="6">
+          <div class="font-weight-bold mb-2">
+            {{ $t("t-contract-code") }}
+          </div>
+          <div>{{ serviceProviderData.code || "-" }}</div>
+        </v-col>
+
+        <v-col cols="12" lg="6">
+          <div class="font-weight-bold mb-2">
+            {{ $t("t-erp-code") }}
+          </div>
+          <div>{{ serviceProviderData.erpCode || "-" }}</div>
+        </v-col>
+      </v-row>
+
+      <v-row>
+        <v-col cols="12" lg="4">
+          <div class="font-weight-bold mb-2">
+            {{ $t("t-is-business-days") }}
+          </div>
+          <div>{{ serviceProviderData.isBusinessDays ? $t("t-yes") : $t("t-no") }}</div>
+        </v-col>
+
+        <v-col cols="12" lg="4">
+          <div class="font-weight-bold mb-2">
+            {{ $t("t-max-days-after-service") }}
+          </div>
+          <div>{{ serviceProviderData.maxDaysAfterService ?? "-" }}</div>
+        </v-col>
+
+        <v-col cols="12" lg="4">
+          <div class="font-weight-bold mb-2">
+            {{ $t("t-grace-period") }}
+          </div>
+          <div>{{ serviceProviderData.gracePeriod ?? "-" }}</div>
+        </v-col>
+      </v-row>
+
+      <v-row>
         <v-col cols="12" lg="4">
           <div class="font-weight-bold mb-2">
             {{ $t("t-contract-start-date") }}

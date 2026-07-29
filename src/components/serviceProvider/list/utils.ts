@@ -14,13 +14,11 @@ export const breadcrumb: BreadcrumbType[] = [
 ];
 
 export const serviceProviderHeader: DataTableHeaderType[] = [
+  { title: "code", key: "code", sortable: true },
   { title: "name", key: "name", sortable: true },
   { title: "type-provider", key: "serviceProviderType", sortable: true },
   { title: "address", key: "address", sortable: true },
   { title: "phone", key: "phone", sortable: true },
-  { title: "email", key: "email", sortable: true },
   { title: "availability", key: "enabled", sortable: true },
   { title: "action", sortable: false, align: "center" },
 ];
-
-

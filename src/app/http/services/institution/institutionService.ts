@@ -175,6 +175,7 @@ export default class InstitutionService extends HttpService {
     try {
       const payload = {
         name: institutionData.name,
+        erpCode: institutionData.erpCode || null,
         description: institutionData.description,
         organizationId: institutionData.companyDetailsId,
         responsibleId: institutionData.responsibleId,
@@ -257,6 +258,7 @@ export default class InstitutionService extends HttpService {
   async updateInstitution(id: string, institutionData: InstitutionInsertType): Promise<InstitutionResponseType> {
     const payload = {
       name: institutionData.name,
+      erpCode: institutionData.erpCode || null,
       description: institutionData.description,
       organizationId: institutionData.companyDetailsId,
       responsibleId: institutionData.responsibleId,

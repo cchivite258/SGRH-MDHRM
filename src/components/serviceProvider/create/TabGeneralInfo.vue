@@ -310,14 +310,14 @@ defineExpose({ submitForm, validateForm });
 
         <!-- Nome da Clínica -->
         <v-row class="mt-n9">
-          <v-col cols="12" lg="9">
+          <v-col cols="12" lg="8">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t('t-service-provider-name') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="serviceProviderData.name" :placeholder="$t('t-enter-service-provider-name')"
               :rules="applyServerErrorsToRules('name', requiredRules.name)" />
           </v-col>
-          <v-col cols="12" lg="3">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2 mt-5">
               {{ $t('t-provider-type') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
