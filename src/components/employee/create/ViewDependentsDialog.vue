@@ -62,9 +62,11 @@ const dialogValue = computed({
   },
 });
 
-const formatDate = (date: Date | undefined) => {
+const formatDate = (date: Date | string | undefined) => {
   if (!date) return '-';
-  return new Date(date).toLocaleDateString('pt-PT');
+  const parsedDate = new Date(date);
+  if (Number.isNaN(parsedDate.getTime())) return '-';
+  return parsedDate.toLocaleDateString('pt-PT');
 };
 </script>
 

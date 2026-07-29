@@ -517,7 +517,11 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     let response;
     if (isEdit) {
       // Modo edição
-      response = await employeeService.updateEmployee(employeeId.value, normalizedPayload);
+      const currentEmployeeId = employeeId.value;
+      if (!currentEmployeeId) {
+        throw new Error(t('t-error-saving-employee'));
+      }
+      response = await employeeService.updateEmployee(currentEmployeeId, normalizedPayload);
     } else {
       // Modo criação
       response = await employeeService.createEmployee(normalizedPayload);
