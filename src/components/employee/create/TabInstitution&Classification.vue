@@ -17,6 +17,7 @@ import { useLayoutStore } from "@/store/app";
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import EmployeeRehireTracksTable from "@/components/employee/shared/EmployeeRehireTracksTable.vue";
 
 // Stores
 import { useInstitutionStore } from '@/store/institution/institutionStore';
@@ -52,6 +53,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: EmployeeInsertType): void;
   (e: 'clear-server-error', field: string): void;
   (e: 'terminate-contract'): void;
+  (e: 'rehire-contract'): void;
 }>();
 
 const props = withDefaults(defineProps<{
@@ -60,12 +62,14 @@ const props = withDefaults(defineProps<{
   serverErrors?: Record<string, string[]>,
   isEditMode?: boolean,
   employeeId?: string | null,
+  rehireTracksRefreshKey?: number,
   showActions?: boolean
 }>(), {
   loading: false,
   serverErrors: () => ({}),
   isEditMode: false,
   employeeId: null,
+  rehireTracksRefreshKey: 0,
   showActions: true
 });
 
@@ -324,8 +328,29 @@ const saveData = async () => {
   emit('save', payload);
 };
 
+const hasTerminationDateReached = (value?: string) => {
+  if (!value) return false;
+
+  const terminationDate = new Date(`${String(value).split("T")[0]}T00:00:00`);
+  if (Number.isNaN(terminationDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return terminationDate <= today;
+};
+
 const canTerminateContract = computed(() => {
-  return props.isEditMode && !!props.employeeId && !employeeData.value.terminationDate;
+  return (
+    props.isEditMode &&
+    !!props.employeeId &&
+    employeeData.value.enabled !== false &&
+    !hasTerminationDateReached(employeeData.value.terminationDate)
+  );
+});
+
+const canRehireContract = computed(() => {
+  return props.isEditMode && !!props.employeeId;
 });
 
 defineExpose({
@@ -344,18 +369,33 @@ defineExpose({
       title-class="pb-0"
     >
       <template #title-action>
-        <v-btn
-          v-if="canTerminateContract"
-          type="button"
-          color="danger"
-          variant="tonal"
-          size="small"
-          :disabled="loading"
-          @click.stop.prevent="emit('terminate-contract')"
-        >
-          <i class="ph-user-minus me-2" />
-          {{ $t('t-terminate-contract') }}
-        </v-btn>
+        <div class="d-flex flex-wrap ga-2 justify-end">
+          <v-btn
+            v-if="canRehireContract"
+            type="button"
+            color="primary"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('rehire-contract')"
+          >
+            <i class="ph-user-plus me-2" />
+            {{ $t('t-rehire-contract') }}
+          </v-btn>
+
+          <v-btn
+            v-if="canTerminateContract"
+            type="button"
+            color="danger"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('terminate-contract')"
+          >
+            <i class="ph-user-minus me-2" />
+            {{ $t('t-terminate-contract') }}
+          </v-btn>
+        </div>
       </template>
 
       <!-- Mensagem de erro -->
@@ -460,6 +500,12 @@ defineExpose({
         </v-btn>
       </v-card-actions>
     </Card>
+
+    <v-row v-if="isEditMode && employeeId" class="mt-2">
+      <v-col cols="12">
+        <EmployeeRehireTracksTable :employee-id="employeeId" :refresh-key="rehireTracksRefreshKey" />
+      </v-col>
+    </v-row>
   </v-form>
 </template>
 

@@ -208,6 +208,35 @@ export type EmployeeTerminationType = {
   reasonId: string | number;
 };
 
+export type EmployeeRehireType = {
+  newBaseSalary: number | null;
+  contractDurationType: string;
+  rehireDate: string;
+  endDate: string;
+  positionId: string | number;
+  departmentId: string | number;
+  notes: string;
+};
+
+export type EmployeeRehireTrackType = {
+  id: string;
+  employeeId?: string;
+  departmentId?: string | number;
+  positionId?: string | number;
+  notes?: string | null;
+  rehireDate?: string;
+  terminateDate?: string;
+  endDate?: string;
+  baseSalary?: number | null;
+  contractDurationType?: string;
+  employee?: Partial<EmployeeListingType>;
+  department?: { id?: string | number; name?: string | null } | null;
+  position?: { id?: string | number; name?: string | null } | null;
+  enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 
 export type EmployeeUpdateType = {
   employeeNumber: string;
@@ -257,15 +286,15 @@ export type DependentInsertType = {
   middleName: string;
   lastName: string;
   gender: string;
-  birthDate: Date | undefined;
+  birthDate: Date | string | undefined;
   relationship: string;
   isUnivesityStudent: boolean;
   employee: string;
   idCardNumber: string;
   idCardIssuer: string;
-  idCardExpiryDate: Date | undefined;
+  idCardExpiryDate: Date | string | undefined;
   isLifeTimeCard?: boolean;
-  idCardIssuanceDate: Date | undefined;
+  idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   attachmentUploads?: DependentAttachmentUploadType[];
 }
@@ -276,7 +305,7 @@ export type DependentListingType = {
   middleName: string;
   lastName: string;
   gender: string;
-  birthDate: Date | undefined;
+  birthDate: Date | string | undefined;
   relationship: string;
   isUnivesityStudent: boolean;
   employee: {
@@ -287,9 +316,9 @@ export type DependentListingType = {
   };
   idCardNumber: string;
   idCardIssuer: string;
-  idCardExpiryDate: Date | undefined;
+  idCardExpiryDate: Date | string | undefined;
   isLifeTimeCard?: boolean | null;
-  idCardIssuanceDate: Date | undefined;
+  idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   dependentDocumentType?: DependentDocumentType | null;
 }

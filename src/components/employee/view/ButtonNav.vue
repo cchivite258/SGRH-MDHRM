@@ -21,6 +21,7 @@ const step = computed({
 
 const tabs = [
   { value: 1, label: 't-general-information' },
+  { value: 2, label: 't-institution-and-classification' },
   { value: 3, label: 't-salary-review' },
   { value: 4, label: 't-dependents' },
   { value: 5, label: 't-health-plan' }

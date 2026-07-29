@@ -161,4 +161,8 @@ export const contractDurationTypeOptions: MenuSelectItemType[] = [
     label: "Indeterminado",
     value: "OPEN_ENDED"
   },
+  {
+    label: "Não especificado",
+    value: "UNSPECIFIED_TERM"
+  },
 ];

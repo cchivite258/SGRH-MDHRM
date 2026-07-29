@@ -193,15 +193,33 @@ const getAlertMessage = (employee: EmployeeListingType) => {
   }
 }
 
+const hasTerminationDateReached = (value?: string) => {
+  if (!value) return false
+
+  const terminationDate = new Date(`${String(value).split("T")[0]}T00:00:00`)
+  if (Number.isNaN(terminationDate.getTime())) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return terminationDate <= today
+}
+
+const canTerminateEmployee = (employee: EmployeeListingType) => {
+  return employee.enabled !== false && !hasTerminationDateReached(employee.terminationDate)
+}
+
 const onEdit = (id: string) => {
   router.push(`/employee/edit/${id}`)
 }
 
-const getDynamicOptions = () => {
-  return Options.map(option => ({
-    ...option,
-    title: t(`t-${option.title}`)
-  }))
+const getDynamicOptions = (employee: EmployeeListingType) => {
+  return Options
+    .filter(option => option.value !== "terminate-contract" || canTerminateEmployee(employee))
+    .map(option => ({
+      ...option,
+      title: t(`t-${option.title}`)
+    }))
 }
 
 const onSelect = (option: string, data: EmployeeListingType) => {
@@ -216,6 +234,7 @@ const onSelect = (option: string, data: EmployeeListingType) => {
       openNotificationDialog(data.id)
       break
     case "terminate-contract":
+      if (!canTerminateEmployee(data)) return
       openTerminateDialog(data.id)
       break
     case "delete":
@@ -345,15 +364,15 @@ onBeforeRouteLeave(() => {
 
           <v-tooltip v-if="shouldHighlight(item)" location="top">
             <template #activator="{ props }">
-              <td v-bind="props" data-label="Telemóvel">
-                {{ item.phone || "N/A" }}
+              <td v-bind="props" data-label="Contrato">
+                {{ item.company?.name || "N/A" }}
               </td>
             </template>
             <span>{{ getAlertMessage(item) }}</span>
           </v-tooltip>
 
-          <td v-else data-label="Telemóvel">
-            {{ item.phone || "N/A" }}
+          <td v-else data-label="Contrato">
+            {{ item.company?.name || "N/A" }}
           </td>
 
           <v-tooltip v-if="shouldHighlight(item)" location="top">
@@ -374,14 +393,14 @@ onBeforeRouteLeave(() => {
           </td>
 
           <td data-label="Acção" class="employee-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions()" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
 
       <template v-if="employeeStore.employees.length === 0" #body>
         <tr>
-          <td :colspan="employeeHeader.length" class="employee-listing-table__empty-state text-center py-10">
+          <td :colspan="employeeHeader.length + 1" class="employee-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="employee-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>
