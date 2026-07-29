@@ -76,6 +76,16 @@ export default class UserService extends HttpService {
     }
   }
 
+  async findUserById(id: string): Promise<UserListingType> {
+    try {
+      const response = await this.get<any>(`/administration/users/${id}`);
+      return (response.data ?? response.content ?? response) as UserListingType;
+    } catch (error) {
+      console.error("âŒ Erro ao buscar utilizador:", error);
+      throw error;
+    }
+  }
+
   async deleteUser(id: number): Promise<void> {
     try {
       await this.delete(`/administration/users/${id}`);

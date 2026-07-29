@@ -215,11 +215,13 @@ export const menuItems: MenuItemType[] = [
     ],
   },
   {
-    label: "users",
+    label: "access-management",
     icon: "ph-user-circle",
     id: "sidebarUsers",
+    prefix: "/users",
     subMenu: [
       { label: "users", link: "/users/users/list" },
+      { label: "roles", link: "/users/roles/list" },
      // { label: "functions", link: "/auth/signup" },
     ],
   },

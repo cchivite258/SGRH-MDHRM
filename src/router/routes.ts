@@ -443,6 +443,30 @@ const usersRoutes = [
     component: () => import("@/views/users/users/ListView.vue"),
     meta: { title: "Users List", authRequired: true },
   },
+  {
+    path: `${usersPrefix}/users/edit-roles/:id`,
+    name: "EditUserRoles",
+    component: () => import("@/views/users/users/EditRoles.vue"),
+    meta: { title: "t-manage-user-roles", authRequired: true },
+  },
+  {
+    path: `${usersPrefix}/modules/list`,
+    name: "ModulesListView",
+    component: () => import("@/views/users/modules/ListView.vue"),
+    meta: { title: "Modules List", authRequired: true },
+  },
+  {
+    path: `${usersPrefix}/roles/list`,
+    name: "RolesListView",
+    component: () => import("@/views/users/roles/ListView.vue"),
+    meta: { title: "Roles List", authRequired: true },
+  },
+  {
+    path: `${usersPrefix}/roles/edit/:id`,
+    name: "EditRolePermissions",
+    component: () => import("@/views/users/roles/Edit.vue"),
+    meta: { title: "t-edit-role-permissions", authRequired: true },
+  },
 ].map((data) => {
   return {
     ...data,

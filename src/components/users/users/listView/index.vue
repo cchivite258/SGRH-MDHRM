@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
@@ -22,6 +23,7 @@ import { getApiErrorMessages } from "@/app/common/apiErrors";
 const { t } = useI18n();
 const toast = useToast();
 const userStore = useUserStore();
+const router = useRouter();
 
 const lockerAction = ref<"enable" | "disable">("enable");
 const dialog = ref(false);
@@ -229,6 +231,12 @@ const onChangePassword = (data: UserListingType | null) => {
   passwordDialog.value = true;
 };
 
+const onManageRoles = (data: UserListingType | null) => {
+  if (!data) return;
+
+  router.push(`/users/users/edit-roles/${data.id}`);
+};
+
 const onEnable = (id: number) => {
   const user = userStore.users.find(u => u.id === id);
   if (!user) return;
@@ -301,6 +309,9 @@ const onSelect = (option: string, data: UserListingType) => {
       break;
     case "edit":
       onCreateEditClick(data);
+      break;
+    case "manage-roles":
+      onManageRoles(data);
       break;
     case "delete":
       onDelete(data.id);
