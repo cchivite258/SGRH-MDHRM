@@ -221,13 +221,12 @@ watch(
  * Salva os dados do employee
  * @param isFinalStep - Indica se é o passo final (salvar e sair)
  */
-const wasEditing = !!serviceProviderId.value; // ← Guarda se já estava em modo edição
-
 const saveServiceProvider = async (isFinalStep: boolean = false) => {
   try {
     loading.value = true;
     errorMsg.value = "";
     apiFieldErrors.value = {};
+    const wasEditing = !!serviceProviderId.value;
 
     console.log("Dados recebidos do Step1:", serviceProviderData);
     const normalizedPayload = { ...serviceProviderData } as ServiceProviderInsertType;
@@ -258,10 +257,12 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       response = await serviceProviderService.createServiceProvider(normalizedPayload);
       console.log('Response from createServiceProvider:', response);
 
-      if (response?.data?.id) {
-        serviceProviderId.value = response.data.id;
-        serviceProviderStore.setCurrentServiceProviderId(response.data.id);
+      if (response?.data?.id !== undefined && response?.data?.id !== null) {
+        const createdServiceProviderId = String(response.data.id);
+        serviceProviderId.value = createdServiceProviderId;
+        serviceProviderStore.setCurrentServiceProviderId(createdServiceProviderId);
         basicDataValidated.value = true;
+        contractDataValidated.value = true;
       } else {
         throw new Error(response?.error?.message || t('t-error-creating-service-provider'));
       }
@@ -283,9 +284,11 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
         : t('t-service-provider-add-success')
     );
     // Redirecionamento ou próxima etapa
-    if (isFinalStep) {
+    if (isFinalStep && wasEditing) {
       await serviceProviderStore.fetchServiceProviders();
       router.push('/service-provider/list');
+    } else if (serviceProviderId.value) {
+      step.value = 2;
     } else {
       step.value++;
     }

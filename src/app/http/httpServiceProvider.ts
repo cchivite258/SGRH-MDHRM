@@ -8,8 +8,10 @@ import DepartmentService from "@/app/http/services/institution/departmentService
 import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
 import ServiceProviderContractExtensionService from "@/app/http/services/institution/serviceProviderContractExtensionService";
+import ContractAttachmentService from "@/app/http/services/institution/contractAttachmentService";
 import CoveragePeriodExtensionService from "@/app/http/services/institution/coveragePeriodExtensionService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
+import ServiceProviderAttachmentService from "@/app/http/services/serviceProvider/serviceProviderAttachmentService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
 import CoveragePeriodsService from "@/app/http/services/institution/coveragePeriodsService";
@@ -66,7 +68,9 @@ const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
 const healthPlanService = new HealthPlanService();
 const serviceProviderService = new ServiceProviderService();
+const serviceProviderAttachmentService = new ServiceProviderAttachmentService();
 const serviceProviderContractExtensionService = new ServiceProviderContractExtensionService();
+const contractAttachmentService = new ContractAttachmentService();
 const coveragePeriodExtensionService = new CoveragePeriodExtensionService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
@@ -133,7 +137,9 @@ export {
     departmentService, 
     positionService, 
     serviceProviderService,
+    serviceProviderAttachmentService,
     serviceProviderContractExtensionService,
+    contractAttachmentService,
     coveragePeriodExtensionService,
     contactPersonService,
     serviceProviderInstitutionService,

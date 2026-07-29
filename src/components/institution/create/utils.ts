@@ -83,6 +83,18 @@ export const healthPlanLimitOptions: MenuSelectItemType[] = [
   }
 ];
 
+export const contractDocumentTypeOptions: MenuSelectItemType[] = [
+  { value: "", label: "Selecione o Tipo de Documento" },
+  { label: "Contrato", value: "CONTRACT" },
+  { label: "Adenda ao Contrato", value: "CONTRACT_ADDENDUM" },
+  { label: "Termino do Contrato", value: "CONTRACT_TERMINATION" },
+  { label: "Renovacao do Contrato", value: "CONTRACT_RENEWAL" },
+  { label: "Alteracao do Contrato", value: "CONTRACT_AMENDMENT" },
+  { label: "Proposta Comercial", value: "COMMERCIAL_PROPOSAL" },
+  { label: "Proposta Tecnica", value: "TECHNICAL_PROPOSAL" },
+  { label: "Proposta Financeira", value: "FINANCIAL_PROPOSAL" }
+];
+
 export const limitTypeDefinitionOptions: MenuSelectItemType[] = [
   {
     label: "Valor Fixo",

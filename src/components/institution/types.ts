@@ -123,6 +123,57 @@ export type InstitutionInsertType = {
     enabled: boolean;
 }
 
+export type ContractDocumentType =
+  | "CONTRACT"
+  | "CONTRACT_ADDENDUM"
+  | "CONTRACT_TERMINATION"
+  | "CONTRACT_RENEWAL"
+  | "CONTRACT_AMENDMENT"
+  | "COMMERCIAL_PROPOSAL"
+  | "TECHNICAL_PROPOSAL"
+  | "FINANCIAL_PROPOSAL";
+
+export type ContractAttachmentType = {
+  id: string;
+  contractId?: string | number;
+  contract?: any;
+  contractDocumentType: ContractDocumentType;
+  originalFilename?: string;
+  name?: string;
+  extension?: string;
+  fileSize?: number;
+  size?: number;
+  attachment?: {
+    id?: string;
+    originalFilename?: string;
+    contentType?: string;
+    fileSize?: number;
+    extension?: string;
+    removable?: boolean;
+    enabled?: boolean;
+  } | null;
+  fileMetadata?: {
+    originalFilename?: string;
+    name?: string;
+    extension?: string;
+    fileSize?: number;
+    size?: number;
+  } | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
+
+export type ContractAttachmentUploadType = {
+  contractDocumentType: ContractDocumentType | "";
+  file: File | null;
+};
+
 export type DepartmentInsertType = {
     id?: string | null;
     name: string;
