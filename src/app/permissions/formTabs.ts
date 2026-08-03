@@ -41,10 +41,10 @@ export const SERVICE_PROVIDER_FORM_TABS = [
   { value: 3, label: "t-contacts-service-provider", permissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS },
 ] as const satisfies readonly PermissionedFormTab[];
 
-export const getAllowedFormTabs = <T extends PermissionedFormTab>(
-  tabs: readonly T[],
+export const getAllowedFormTabs = (
+  tabs: readonly PermissionedFormTab[],
   canAny: CanAnyFn
-) => tabs.filter((tab) => canAny(tab.permissions));
+): PermissionedFormTab[] => tabs.filter((tab) => canAny(tab.permissions));
 
 export const getFirstAllowedFormStep = (
   tabs: readonly PermissionedFormTab[],

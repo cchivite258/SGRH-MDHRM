@@ -44,7 +44,7 @@ const props = defineProps({
     default: 't-back-to-health-plan'
   },
   nextStep: {
-    type: Number,
+    type: Number as PropType<number | null>,
     default: null
   },
   loading: {
