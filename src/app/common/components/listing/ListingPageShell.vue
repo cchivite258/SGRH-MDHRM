@@ -1,9 +1,14 @@
 <script lang="ts" setup>
 import { computed } from "vue"
 import { useLayoutStore } from "@/store/app"
+import { useRoute } from "vue-router"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const layoutStore = useLayoutStore()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
+const route = useRoute()
+const { canAny } = usePermissions()
 
 const props = withDefaults(defineProps<{
   title: string
@@ -11,6 +16,7 @@ const props = withDefaults(defineProps<{
   actionLabel?: string
   actionTo?: string
   actionIcon?: string
+  actionPermission?: PermissionRequirement
   showAction?: boolean
   page?: number
   itemsPerPage?: number
@@ -22,6 +28,7 @@ const props = withDefaults(defineProps<{
   actionLabel: "",
   actionTo: "",
   actionIcon: "ph-plus-circle",
+  actionPermission: undefined,
   showAction: true,
   page: 1,
   itemsPerPage: 10,
@@ -38,6 +45,26 @@ const emit = defineEmits<{
 const updatePage = (value: number) => {
   emit("update:page", value)
 }
+
+const normalizeRequirement = (requirement?: unknown): string[] => {
+  if (!requirement) return []
+  if (typeof requirement === "string") return [requirement]
+  if (Array.isArray(requirement)) return requirement.flatMap(item => normalizeRequirement(item))
+  return []
+}
+
+const inferredCreatePermission = computed(() => {
+  const readPermission = route.matched
+    .flatMap(record => normalizeRequirement(record.meta.anyPermissions ?? record.meta.permissions ?? record.meta.allPermissions ?? record.meta.permission))
+    .find(permission => permission.startsWith("read."))
+
+  return readPermission?.replace(/^read\./, "create.")
+})
+
+const canShowAction = computed(() => {
+  if (!props.showAction || !props.actionLabel) return false
+  return canAny(props.actionPermission ?? inferredCreatePermission.value)
+})
 
 const handleAction = () => {
   if (!props.actionTo) {
@@ -58,7 +85,7 @@ const handleAction = () => {
       </div>
 
       <v-btn
-        v-if="showAction && actionLabel"
+        v-if="canShowAction"
         class="listing-page-shell__action"
         color="secondary"
         :to="actionTo || undefined"

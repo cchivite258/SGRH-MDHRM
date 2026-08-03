@@ -4,6 +4,8 @@ import { useAuthStore } from "@/store/authStore";
 import { authService } from "@/app/http/httpServiceProvider";
 import { useRouter } from "vue-router"; 
 import { computed } from "vue";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 export default {
   data() {
@@ -14,8 +16,15 @@ export default {
   setup() {
     const authStore = useAuthStore(); 
     const router = useRouter(); 
+    const { can, canAny } = usePermissions();
 
     const userName = computed(() => authStore.user?.firstName || "Utilizador");
+    // O item do perfil só aparece quando a autenticação já carregou uma claim de perfil.
+    const canAccessProfile = computed(() => canAny(PERMISSIONS.USER_PROFILE.ACCESS));
+    // Quem pode editar vai direto para definições; quem só lê entra na página de consulta.
+    const profileLink = computed(() =>
+      can(PERMISSIONS.USER_PROFILE.UPDATE) ? "/pages/profile-settings" : "/pages/profile"
+    );
     const userRole = computed(() => authStore.user?.function_name || "Sem função");
 
     function logout() {
@@ -24,7 +33,7 @@ export default {
       router.push("/login"); 
     }
 
-    return { brandsList, logout, userName, userRole };
+    return { brandsList, logout, userName, userRole, canAccessProfile, profileLink };
   },
 };
 </script>
@@ -49,7 +58,7 @@ export default {
     </template>
     <v-list density="compact" :lines="false" class="profile-list" nav>
       <h6 class="dropdown-header">{{ userName }}</h6>
-      <v-list-item class="dropdown-item" to="/pages/profile-settings">
+      <v-list-item v-if="canAccessProfile" class="dropdown-item" :to="profileLink">
         <i class="mdi mdi-account-circle text-muted" />
         {{$t('t-profile')}}
       </v-list-item>

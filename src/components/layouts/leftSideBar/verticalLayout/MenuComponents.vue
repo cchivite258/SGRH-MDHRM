@@ -6,11 +6,15 @@ import { menuItems } from "@/components/layouts/utils";
 import { useLayoutStore } from "@/store/app";
 import { SIDEBAR_SIZE } from "@/app/const";
 import type { MenuItemType, SubMenuItemType } from "@/components/layouts/types";
+import { useAuthStore } from "@/store/authStore";
+import { usePermissions } from "@/composables/usePermissions";
 
 const state = useLayoutStore();
+const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
+const { can, canAny, canAll } = usePermissions();
 
 const emit = defineEmits(["update:modelValue"]);
 const props = defineProps({
@@ -45,14 +49,63 @@ const onClick = (targetPath: string) => {
   router.push(targetPath);
 };
 
+// Um menu pode declarar permission, permissions, anyPermissions ou allPermissions.
+// Se o utilizador não cumprir a regra, o item nem chega a ser desenhado.
+const hasAccessToMenuItem = (item: MenuItemType | SubMenuItemType) => {
+  const hasAccessRule = !!(item.permission || item.permissions || item.anyPermissions || item.allPermissions);
+  if (hasAccessRule && authStore.isAuthenticated && !authStore.isAccessLoaded) return false;
+  if (item.permission && !can(item.permission)) return false;
+  if (item.permissions && !canAll(item.permissions)) return false;
+  if (item.allPermissions && !canAll(item.allPermissions)) return false;
+  if (item.anyPermissions && !canAny(item.anyPermissions)) return false;
+  return true;
+};
+
+// Filtra submenus de forma recursiva para também remover pais que ficam vazios.
+const filterSubMenuByAccess = (items: SubMenuItemType[] = []): SubMenuItemType[] => {
+  return items
+    .map((item) => {
+      const subMenu = filterSubMenuByAccess(item.subMenu || []);
+      return { ...item, subMenu };
+    })
+    .filter((item) => {
+      if (!hasAccessToMenuItem(item)) return false;
+      if (item.subMenu?.length) return true;
+      return !!item.link || !item.subMenu;
+    });
+};
+
+// Também remove cabeçalhos quando todos os itens abaixo ficaram escondidos.
+const accessibleMenuItems = computed(() => {
+  const filtered = menuItems
+    .map((item) => ({
+      ...item,
+      subMenu: filterSubMenuByAccess(item.subMenu || [])
+    }))
+    .filter((item) => {
+      if (item.isHeader) return true;
+      if (!hasAccessToMenuItem(item)) return false;
+      return !!item.link || !!item.subMenu?.length;
+    });
+
+  return filtered.filter((item, index) => {
+    if (!item.isHeader) return true;
+    return filtered.slice(index + 1).some((nextItem) => {
+      if (nextItem.isHeader) return false;
+      return true;
+    });
+  });
+});
+
 const filteredMenuItems = computed(() => {
   const query = searchQuery.value.toLowerCase().trim();
-  if (!query) return menuItems;
+  const visibleMenuItems = accessibleMenuItems.value;
+  if (!query) return visibleMenuItems;
 
   const result: MenuItemType[] = [];
 
-  for (let index = 0; index < menuItems.length; index += 1) {
-    const item = menuItems[index];
+  for (let index = 0; index < visibleMenuItems.length; index += 1) {
+    const item = visibleMenuItems[index];
     const labelMatch =
       item.label.toLowerCase().includes(query) ||
       t(`t-${item.label}`).toLowerCase().includes(query);
@@ -60,8 +113,8 @@ const filteredMenuItems = computed(() => {
     if (item.isHeader && labelMatch) {
       result.push(item);
 
-      for (let nextIndex = index + 1; nextIndex < menuItems.length; nextIndex += 1) {
-        const nextItem = menuItems[nextIndex];
+      for (let nextIndex = index + 1; nextIndex < visibleMenuItems.length; nextIndex += 1) {
+        const nextItem = visibleMenuItems[nextIndex];
         if (nextItem.isHeader) break;
         result.push(nextItem);
       }

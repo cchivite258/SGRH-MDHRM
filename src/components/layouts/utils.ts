@@ -4,6 +4,7 @@ import {
   CartItemType,
   NotificationType,
 } from "@/components/layouts/types";
+import { PERMISSIONS } from "@/app/permissions/constants";
 import {
   gitHub,
   bitBucket,
@@ -21,7 +22,8 @@ export const menuItems: MenuItemType[] = [
     icon: "ph-gauge",
     id: "index",
     prefix: "/",
-    link: "/"
+    link: "/",
+    anyPermissions: PERMISSIONS.DASHBOARD.ACCESS
   }, 
   {
     label: "personnel-managment",
@@ -114,21 +116,24 @@ export const menuItems: MenuItemType[] = [
     icon: "ph ph-identification-card",
     id: "sidebarEntities",
     prefix: "/entities",
-    link: "/entities/list"
+    link: "/entities/list",
+    anyPermissions: PERMISSIONS.ENTITIES.ACCESS
   },
   {
     label: "institutions",
     icon: "ph ph-buildings",
     id: "sidebarInstitution", 
     prefix: "/institution",
-    link: "/institution/list"
+    link: "/institution/list",
+    anyPermissions: PERMISSIONS.CONTRACTS.ACCESS
   },
   {
     label: "employees",
     icon: "ph ph-users-three",
     id: "sidebarEmployees",
     prefix: "/employee",
-    link: "/employee/list"
+    link: "/employee/list",
+    anyPermissions: PERMISSIONS.EMPLOYEE.ACCESS
   },
   /*{
     label: "support-tickets",
@@ -150,21 +155,24 @@ export const menuItems: MenuItemType[] = [
     icon: "ph ph-first-aid",
     id: "sidebarServiceProvider",
     prefix: "/service-provider", 
-    link: "/service-provider/list"
+    link: "/service-provider/list",
+    anyPermissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS
   },
   {
     label: "billing",
     icon: "ph ph-files",
     id: "sidebarBilling",
     prefix: "/invoices",
-    link: "/invoices/list"
+    link: "/invoices/list",
+    anyPermissions: PERMISSIONS.INVOICES.ACCESS
   },
   {
     label: "reports",
     icon: "ph ph-presentation-chart",
     id: "sidebarReports",
     prefix: "/reports",
-    link: "/reports/list"
+    link: "/reports/list",
+    anyPermissions: PERMISSIONS.REPORTS.ACCESS
   },
   /*{
     label: "real-estate",
@@ -207,19 +215,23 @@ export const menuItems: MenuItemType[] = [
     icon: "ph-gear",
     id: "sidebarSettings",
     prefix: "/settings",
+    anyPermissions: PERMISSIONS.SETTINGS.ACCESS,
     subMenu: [
-      { label: "alerts", link: "/settings/alerts" },
-      { label: "contract-code-configs", link: "/settings/code-configs" },
+      { label: "alerts", link: "/settings/alerts", anyPermissions: PERMISSIONS.SETTINGS.ALERTS.ACCESS },
+      { label: "contract-code-configs", link: "/settings/code-configs", anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.ACCESS },
       //{ label: "period", link: "/users/users/list" },
      // { label: "functions", link: "/auth/signup" },
     ],
   },
   {
-    label: "users",
+    label: "access-management",
     icon: "ph-user-circle",
     id: "sidebarUsers",
+    prefix: "/users",
+    anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.ACCESS,
     subMenu: [
-      { label: "users", link: "/users/users/list" },
+      { label: "users", link: "/users/users/list", anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.USERS.LIST },
+      { label: "roles", link: "/users/roles/list", anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.LIST },
      // { label: "functions", link: "/auth/signup" },
     ],
   },
@@ -227,18 +239,19 @@ export const menuItems: MenuItemType[] = [
     label: "base-tables",
     icon: "ph ph-database",
     id: "sidebarAuth",
+    anyPermissions: PERMISSIONS.BASE_TABLES.ACCESS,
     subMenu: [
-      { label: "countries", link: "/baseTable/country/list" },
-      { label: "currencies", link: "/baseTable/currency/list" },
-      { label: "hospital_procedure_types", link: "/baseTable/hospitalproceduretype/list" },
-      { label: "hospital_procedure_categories", link: "/baseTable/hospitalprocedurecategory/list" },
-      { label: "hospital_procedure_groups", link: "/baseTable/hospitalproceduregroup/list" },
-      { label: "institution-types", link: "/baseTable/institutiontype/list" },
-      { label: "leave-reason", link: "/baseTable/leavereason/list" },
-      { label: "languages", link: "/baseTable/languages/list" },
-      { label: "tax-rates", link: "/baseTable/tax-rates/list" },
-      { label: "provider-types", link: "/baseTable/provider-types/list" },
-      { label: "reasons", link: "/baseTable/reasons/list" },
+      { label: "countries", link: "/baseTable/country/list", anyPermissions: PERMISSIONS.BASE_TABLES.COUNTRIES.LIST },
+      { label: "currencies", link: "/baseTable/currency/list", anyPermissions: PERMISSIONS.BASE_TABLES.CURRENCIES.LIST },
+      { label: "hospital_procedure_types", link: "/baseTable/hospitalproceduretype/list", anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_TYPES.LIST },
+      { label: "hospital_procedure_categories", link: "/baseTable/hospitalprocedurecategory/list", anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_CATEGORIES.LIST },
+      { label: "hospital_procedure_groups", link: "/baseTable/hospitalproceduregroup/list", anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_GROUPS.LIST },
+      { label: "institution-types", link: "/baseTable/institutiontype/list", anyPermissions: PERMISSIONS.BASE_TABLES.INSTITUTION_TYPES.LIST },
+      { label: "leave-reason", link: "/baseTable/leavereason/list", anyPermissions: PERMISSIONS.BASE_TABLES.LEAVE_REASONS.LIST },
+      { label: "languages", link: "/baseTable/languages/list", anyPermissions: PERMISSIONS.BASE_TABLES.LANGUAGES.LIST },
+      { label: "tax-rates", link: "/baseTable/tax-rates/list", anyPermissions: PERMISSIONS.BASE_TABLES.TAX_RATES.LIST },
+      { label: "provider-types", link: "/baseTable/provider-types/list", anyPermissions: PERMISSIONS.BASE_TABLES.PROVIDER_TYPES.LIST },
+      { label: "reasons", link: "/baseTable/reasons/list", anyPermissions: PERMISSIONS.BASE_TABLES.REASONS.LIST },
     ],
   },
   /*{

@@ -18,13 +18,37 @@ import Overview from "@/components/employee/list/Overview.vue"
 import { employeeHeader, Options } from "@/components/employee/list/utils"
 import type { EmployeeListingType } from "@/components/employee/types"
 import { useEmployeeStore } from "@/store/employee/employeeStore"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const employeeStore = useEmployeeStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
+
+// Permissões usadas nesta página de gestão de colaboradores.
+const canListEmployees = computed(() => canAny(PERMISSIONS.EMPLOYEE.LIST))
+const canViewEmployee = computed(() => canAny(PERMISSIONS.EMPLOYEE.VIEW))
+const canCreateEmployee = computed(() => can(PERMISSIONS.EMPLOYEE.CREATE))
+const canSelectEmployees = computed(() =>
+  canAny([
+    PERMISSIONS.EMPLOYEE.DELETE,
+    PERMISSIONS.EMPLOYEE.SEND_EXTRACT_NOTIFICATION,
+    PERMISSIONS.EMPLOYEE.TERMINATE_CONTRACT,
+  ])
+)
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.EMPLOYEE.VIEW,
+  edit: PERMISSIONS.EMPLOYEE.UPDATE,
+  "send-notification": PERMISSIONS.EMPLOYEE.SEND_EXTRACT_NOTIFICATION,
+  "terminate-contract": PERMISSIONS.EMPLOYEE.TERMINATE_CONTRACT,
+  delete: PERMISSIONS.EMPLOYEE.DELETE,
+}
 
 const searchQuery = ref("")
 const searchProps = "firstName,lastName,email,employeeNumber,phone"
@@ -72,6 +96,7 @@ const fetchEmployees = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
 }
 
 const onView = (id: string) => {
+  if (!canViewEmployee.value) return
   router.push(`/employee/view/${id}`)
 }
 
@@ -210,11 +235,14 @@ const canTerminateEmployee = (employee: EmployeeListingType) => {
 }
 
 const onEdit = (id: string) => {
+  if (!can(PERMISSIONS.EMPLOYEE.UPDATE)) return
   router.push(`/employee/edit/${id}`)
 }
 
 const getDynamicOptions = (employee: EmployeeListingType) => {
   return Options
+    // Remove do menu de acções aquilo que o utilizador não pode executar.
+    .filter(option => canAny(actionPermissionByValue[option.value]))
     .filter(option => option.value !== "terminate-contract" || canTerminateEmployee(employee))
     .map(option => ({
       ...option,
@@ -260,12 +288,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão dos colaboradores registados."
     :action-label="$t('t-add-employee')"
     action-to="/employee/create"
+    :show-action="canCreateEmployee"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListEmployees" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissão para listar colaboradores.
+    </v-alert>
+
     <template #afterHeader>
       <Overview />
     </template>
@@ -294,7 +327,7 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canSelectEmployees"
       @load-items="fetchEmployees"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
@@ -303,7 +336,7 @@ onBeforeRouteLeave(() => {
           :key="item.id"
           :class="[shouldHighlight(item) ? 'bg-danger-subtle' : '', 'employee-listing-table__row']"
         >
-          <v-tooltip v-if="shouldHighlight(item)" location="top">
+          <v-tooltip v-if="canSelectEmployees && shouldHighlight(item)" location="top">
             <template #activator="{ props }">
               <td v-bind="props" data-label="">
                 <v-checkbox
@@ -317,7 +350,7 @@ onBeforeRouteLeave(() => {
             <span>{{ getAlertMessage(item) }}</span>
           </v-tooltip>
 
-          <td v-else data-label="">
+          <td v-else-if="canSelectEmployees" data-label="">
             <v-checkbox
               :model-value="selectedEmployees.some(selected => selected.id === item.id)"
               hide-details
@@ -326,7 +359,7 @@ onBeforeRouteLeave(() => {
             />
           </td>
 
-          <v-tooltip v-if="shouldHighlight(item)" location="top">
+          <v-tooltip v-if="canViewEmployee && shouldHighlight(item)" location="top">
             <template #activator="{ props }">
               <td
                 v-bind="props"
@@ -343,7 +376,8 @@ onBeforeRouteLeave(() => {
           <td
             v-else
             data-label="Número"
-            class="employee-listing-table__primary-cell cursor-pointer"
+            class="employee-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewEmployee }"
             @click="onView(item.id)"
           >
             #{{ item.employeeNumber || "N/A" }}
@@ -393,14 +427,19 @@ onBeforeRouteLeave(() => {
           </td>
 
           <td data-label="Acção" class="employee-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon
+              v-if="getDynamicOptions(item).length"
+              align="center"
+              :menuItems="getDynamicOptions(item)"
+              @onSelect="onSelect($event, item)"
+            />
           </td>
         </tr>
       </template>
 
       <template v-if="employeeStore.employees.length === 0" #body>
         <tr>
-          <td :colspan="employeeHeader.length + 1" class="employee-listing-table__empty-state text-center py-10">
+          <td :colspan="employeeHeader.length + (canSelectEmployees ? 1 : 0)" class="employee-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="employee-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

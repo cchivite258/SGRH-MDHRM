@@ -9,9 +9,12 @@ import ServiceProviderAttachments from "@/components/serviceProvider/create/Serv
 import type { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const userStore = useUserStore();
+const { can, canAny } = usePermissions();
 
 const emit = defineEmits<{
   (e: "onStepChange", step: number): void;
@@ -39,6 +42,20 @@ const endDatePickerRef = ref<{ validate: () => boolean | Promise<boolean> } | nu
 const errorMsg = ref("");
 const contractExtensionsDialog = ref(false);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const canConsultContractExtensions = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.READ,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.UPDATE,
+]));
+const canManageContractExtensions = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.UPDATE,
+]));
+const canConsultAttachments = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.READ,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.DELETE,
+]));
 
 const serviceProviderData = computed({
   get() {
@@ -168,7 +185,7 @@ defineExpose({ submitForm, validateForm });
     <Card :title="$t('t-contract')" elevation="0" title-class="pb-0">
       <template #title-action>
         <v-btn
-          v-if="serviceProviderId"
+          v-if="serviceProviderId && canConsultContractExtensions"
           color="info"
           variant="tonal"
           :disabled="loading"
@@ -311,11 +328,12 @@ defineExpose({ submitForm, validateForm });
       :service-provider-id="serviceProviderId"
       :service-provider-name="serviceProviderData.name || ''"
       :current-contract-end-date="serviceProviderData.contractEndDate || null"
+      :read-only="!canManageContractExtensions"
     />
   </v-form>
 
   <ServiceProviderAttachments
-    v-if="serviceProviderId"
+    v-if="serviceProviderId && canConsultAttachments"
     class="mt-4"
     :service-provider-id="serviceProviderId"
   />

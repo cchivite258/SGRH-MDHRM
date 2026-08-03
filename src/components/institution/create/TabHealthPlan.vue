@@ -47,6 +47,8 @@ import { healthPlanHeader, healthPlanLimitOptions, limitTypeDefinitionOptions, s
 import { healthPlanOptions as Options } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
 import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -54,6 +56,7 @@ const router = useRouter();
 const toast = useToast();
 const healthPlanStore = useHealthPlanStore();
 const hospitalProcedureStore = useHospitalProcedureStore();
+const { can } = usePermissions();
 
 // props
 const props = defineProps({
@@ -64,6 +67,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -96,6 +107,11 @@ const healthPlanProcedureSearch = ref("");
 const loadingList = computed(() => healthPlanStore.loading);
 const totalItems = computed(() => healthPlanStore.pagination.totalElements);
 const activeHealthPlan = computed(() => healthPlanStore.activeHealthPlan);
+const canCreateHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.CREATE));
+const canUpdateHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.UPDATE));
+const canDeleteHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.DELETE));
+const canCloneHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.CLONE));
+const canSelectHealthPlans = computed(() => !props.isViewMode && canDeleteHealthPlan.value);
 const activePlanProcedures = computed(() => orderHealthPlanProcedures(hospitalProcedureStore.hospital_procedure_of_plan_scoped || [], t("t-procedures")));
 
 const activePlanCoveragePeriod = computed(() =>
@@ -509,6 +525,13 @@ const getDynamicOptions = (invoice: HealthPlanListingType) => {
   // Opções base
   let availableOptions = [...Options];
 
+  availableOptions = availableOptions.filter((option) => {
+    if (option.value === "edit") return canUpdateHealthPlan.value;
+    if (option.value === "delete") return canDeleteHealthPlan.value;
+    if (option.value === "clone") return canCloneHealthPlan.value;
+    return true;
+  });
+
   // Se o status for RUNNING, remove as opções de editar e deletar
   if (invoice.coveragePeriod?.status === 'RUNNING') {
     availableOptions = availableOptions.filter(option =>
@@ -678,7 +701,7 @@ onBeforeUnmount(() => {
           <i class="ph-first-aid-kit me-1" /> {{ $t('t-consult-health-plan') }}
         </v-btn>
 
-        <v-btn v-if="!props.isViewMode" color="secondary" class="mx-1" @click="onCreateEditClick(null)">
+        <v-btn v-if="!props.isViewMode && canCreateHealthPlan" color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-health-plan') }}
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">
@@ -704,10 +727,10 @@ onBeforeUnmount(() => {
         :headers="healthPlanHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="healthPlanStore.health_plans" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchHealthPlans"
-        item-value="id" :show-select="!props.isViewMode">
+        item-value="id" :show-select="canSelectHealthPlans">
         <template #body="{ items }">
           <tr v-for="item in items as HealthPlanListingType[]" :key="item.id" height="50">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectHealthPlans">
               <v-checkbox :model-value="selectedHealthPlans.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -925,11 +948,11 @@ onBeforeUnmount(() => {
     </v-card>
   </v-dialog>
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-period') }}
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 4)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

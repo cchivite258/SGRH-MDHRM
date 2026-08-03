@@ -63,14 +63,20 @@ const props = withDefaults(defineProps<{
   isEditMode?: boolean,
   employeeId?: string | null,
   rehireTracksRefreshKey?: number,
-  showActions?: boolean
+  showActions?: boolean,
+  readonly?: boolean,
+  allowTerminateContract?: boolean,
+  allowRehireContract?: boolean
 }>(), {
   loading: false,
   serverErrors: () => ({}),
   isEditMode: false,
   employeeId: null,
   rehireTracksRefreshKey: 0,
-  showActions: true
+  showActions: true,
+  readonly: false,
+  allowTerminateContract: false,
+  allowRehireContract: false
 });
 
 // Dados computados do employee
@@ -315,6 +321,9 @@ const validateForm = async (options: { showToast?: boolean } = {}) => {
 };
 
 const saveData = async () => {
+  // Em modo consulta os campos ficam visíveis, mas a gravação fica bloqueada.
+  if (props.readonly) return;
+
   const valid = await validateForm();
   if (!valid) return;
 
@@ -341,16 +350,19 @@ const hasTerminationDateReached = (value?: string) => {
 };
 
 const canTerminateContract = computed(() => {
+  // O botão de terminar contrato só aparece se a regra de negócio e a permissão passarem.
   return (
     props.isEditMode &&
     !!props.employeeId &&
+    props.allowTerminateContract &&
     employeeData.value.enabled !== false &&
     !hasTerminationDateReached(employeeData.value.terminationDate)
   );
 });
 
 const canRehireContract = computed(() => {
-  return props.isEditMode && !!props.employeeId;
+  // Recontratar também é uma acção protegida por permissão própria.
+  return props.isEditMode && !!props.employeeId && props.allowRehireContract;
 });
 
 defineExpose({
@@ -413,14 +425,14 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.company" :items="institutions" :loading="institutionStore.loading"
               :placeholder="t('t-select-institution')" clearable :rules="applyServerErrorsToRules('company', requiredRules.institution)"
-              :error-messages="getServerErrors('company')" />
+              :error-messages="getServerErrors('company')" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-department') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.department" :items="departments" :loading="departmentStore.loading"
-              :placeholder="t('t-select-department')" :disabled="!employeeData.company"
+              :placeholder="t('t-select-department')" :disabled="readonly || !employeeData.company"
               :rules="applyServerErrorsToRules('department', requiredRules.department)" @scroll-end="loadMoreDepartments"
               clearable :error-messages="getServerErrors('department')" />
           </v-col>
@@ -434,7 +446,7 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.position" :items="positions" :loading="positionStore.loading"
               :rules="applyServerErrorsToRules('position', requiredRules.position)" :placeholder="t('t-select-position')"
-              :disabled="!employeeData.department" @scroll-end="loadMorePositions" clearable
+              :disabled="readonly || !employeeData.department" @scroll-end="loadMorePositions" clearable
               :error-messages="getServerErrors('position')" />
           </v-col>
           <v-col cols="12" lg="6">
@@ -444,7 +456,7 @@ defineExpose({
             <TextField v-model="employeeData.baseSalary" type="number"
               :placeholder="t('t-enter-the-employee-base-salary')"
               :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2"
-              :disabled="!!isEditMode" />
+              :disabled="readonly || !!isEditMode" />
           </v-col>
         </v-row>
 
@@ -455,7 +467,7 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="hireDatePicker" v-model="employeeData.hireDate"
               :placeholder="$t('t-enter-hire-date')" :rules="applyServerErrorsToRules('hireDate', requiredRules.hireDate)" :teleport="true"
-              format="dd/MM/yyyy" />
+              format="dd/MM/yyyy" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -463,7 +475,7 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.contractDurationType" :items="contractDurationTypeOptions"
               :rules="applyServerErrorsToRules('contractDurationType', requiredRules.contractDurationType)"
-              :error-messages="getServerErrors('contractDurationType')" />
+              :error-messages="getServerErrors('contractDurationType')" :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -475,7 +487,8 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="terminationDatePicker" v-model="employeeData.terminationDate"
               :placeholder="$t('t-enter-termination-date')" :teleport="true" format="dd/MM/yyyy"
-              :rules="applyServerErrorsToRules('terminationDate', requiredRules.terminationDate)" />
+              :rules="applyServerErrorsToRules('terminationDate', requiredRules.terminationDate)"
+              :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -483,7 +496,7 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="rehireDatePicker" v-model="employeeData.rehireDate" :teleport="true"
               :placeholder="$t('t-enter-rehire-date')" format="dd/MM/yyyy"
-              :rules="applyServerErrorsToRules('rehireDate', [])" />
+              :rules="applyServerErrorsToRules('rehireDate', [])" :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -495,7 +508,7 @@ defineExpose({
           <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
 
-        <v-btn color="secondary" variant="elevated" @click="saveData" :loading="loading">
+        <v-btn v-if="!readonly" color="secondary" variant="elevated" @click="saveData" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>

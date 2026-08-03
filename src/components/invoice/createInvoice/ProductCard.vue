@@ -76,6 +76,18 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  canCreateItems: {
+    type: Boolean,
+    default: true
+  },
+  canUpdateItems: {
+    type: Boolean,
+    default: true
+  },
+  canDeleteItems: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -248,6 +260,13 @@ const getFlagConfig = (flag?: string): FlagConfig | null =>
     ? flagConfig[flag as keyof typeof flagConfig] || flagConfig.default
     : null;
 
+// Uma linha nova depende de create.invoice.items; uma linha existente depende de update/delete.
+const canEditItem = (item: InvoiceItem) =>
+  !props.disabled && (item.originalId ? props.canUpdateItems : props.canCreateItems);
+
+const canRemoveItem = (item: InvoiceItem) =>
+  !props.disabled && (item.originalId ? props.canDeleteItems : props.canCreateItems);
+
 // =============================================
 // CORE METHODS
 // =============================================
@@ -302,7 +321,7 @@ const handleError = (messageKey: string, error: unknown) => {
 // ITEM MANAGEMENT
 // =============================================
 const addItem = () => {
-  if (props.disabled) return;
+  if (props.disabled || !props.canCreateItems) return;
 
   invoiceItems.value.push({
     id: Date.now().toString(),
@@ -320,6 +339,8 @@ const removeItem = (id: string) => {
   if (props.disabled) return;
 
   const index = invoiceItems.value.findIndex(item => item.id === id);
+  if (index !== -1 && !canRemoveItem(invoiceItems.value[index])) return;
+
   if (index !== -1) {
     invoiceItems.value.splice(index, 1);
   }
@@ -358,6 +379,8 @@ const validateItems = (items: InvoiceItemInsertType[]): boolean => {
 };
 
 const emitItemsReady = async (): Promise<boolean> => {
+  if (props.disabled) return false;
+
   if (form.value) {
     const { valid } = await form.value.validate();
     if (!valid) {
@@ -473,25 +496,25 @@ onMounted(() => {
             <ProcedureCategorySelect v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
               :rules="requiredRules.companyAllowedHospitalProcedure" :placeholder="$t('t-select-procedure')"
               :procedure-title="$t('t-hospital-procedure')" :category-title="$t('t-hospital-procedure-category')"
-              :disabled="disabled" class="w-100" />
+              :disabled="!canEditItem(item)" class="w-100" />
           </td>
 
           <!-- Preço Unitário -->
           <td style="width: 10%" class="pt-4 px-1">
             <TextField v-model.number="item.unitPrice" :rules="requiredRules.unitPrice"
-              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" :disabled="disabled" class="compact-input" />
+              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" :disabled="!canEditItem(item)" class="compact-input" />
           </td>
 
           <!-- Quantidade -->
           <td style="width: 5%" class="pt-4 px-1">
             <TextField v-model.number="item.quantity" :placeholder="$t('t-quantity')" type="number" min="0"
-              :rules="requiredRules.quantity" :disabled="disabled" class="compact-input" />
+              :rules="requiredRules.quantity" :disabled="!canEditItem(item)" class="compact-input" />
           </td>
 
           <!-- Taxa -->
           <td style="width: 12%" class="pt-4 px-1">
             <MenuSelect v-model="item.taxRate" :items="taxRates" :rules="requiredRules.taxRate"
-              :placeholder="$t('t-select-tax-rate')" item-value="value" :disabled="disabled" class="w-100" />
+              :placeholder="$t('t-select-tax-rate')" item-value="value" :disabled="!canEditItem(item)" class="w-100" />
           </td>
 
           <!-- Total -->
@@ -502,12 +525,12 @@ onMounted(() => {
           <!-- Descrição -->
           <td style="width: 25%" class="pt-4">
             <TextArea v-model="item.description" :placeholder="$t('t-description')" class="description-field" rows="1"
-              :disabled="disabled" auto-grow />
+              :disabled="!canEditItem(item)" auto-grow />
           </td>
 
           <!-- Ações -->
           <td style="width: 5%" class="pt-4 px-1 text-center">
-            <v-btn v-if="!disabled" icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
+            <v-btn v-if="canRemoveItem(item)" icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
               <i class="ph-trash"></i>
             </v-btn>
           </td>
@@ -516,7 +539,7 @@ onMounted(() => {
     </Table>
 
     <!-- Botão para Adicionar Item -->
-    <v-btn v-if="!disabled" color="secondary" @click="addItem" class="mt-2">
+    <v-btn v-if="!disabled && canCreateItems" color="secondary" @click="addItem" class="mt-2">
       <i class="ph-plus me-2"></i> {{ $t("t-add-invoice-item") }}
     </v-btn>
 

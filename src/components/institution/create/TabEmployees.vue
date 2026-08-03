@@ -38,12 +38,15 @@ import type {
 // Utils
 import { employeeHeader } from "@/components/employee/list/utils";
 import { coverageperiodOptions as Options } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { can, canAny } = usePermissions();
 
 // props
 const props = defineProps({
@@ -54,6 +57,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -87,6 +98,11 @@ const periodId = ref<string | null>(null);
 // Computed properties
 const loading = computed(() => employeeStore.loading);
 const totalItems = computed(() => employeeStore.companyEmployeesPagination.totalElements);
+const canCreateEmployee = computed(() => can(PERMISSIONS.EMPLOYEE.CREATE));
+const canUpdateEmployee = computed(() => can(PERMISSIONS.EMPLOYEE.UPDATE));
+const canDeleteEmployee = computed(() => can(PERMISSIONS.EMPLOYEE.DELETE));
+const canViewEmployee = computed(() => canAny(PERMISSIONS.EMPLOYEE.VIEW));
+const canSelectEmployees = computed(() => !props.isViewMode && canDeleteEmployee.value);
 const employeeReturnTo = computed(() => {
   if (!institutionId.value && route.path.startsWith("/institution/")) {
     return route.fullPath;
@@ -223,7 +239,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-employee-list')" title-class="py-5">
-    <template v-if="!props.isViewMode" #title-action>
+    <template v-if="!props.isViewMode && canCreateEmployee" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-employee') }}
@@ -250,10 +266,10 @@ onBeforeUnmount(() => {
       <DataTableServer v-model="selectedEmployees"
         :headers="employeeHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="employeeStore.company_employees" :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loading"
-        :search-query="searchQuery" @load-items="fetchCompanyEmployees" item-value="id" :show-select="!props.isViewMode">
+        :search-query="searchQuery" @load-items="fetchCompanyEmployees" item-value="id" :show-select="canSelectEmployees">
         <template #body="{ items }: { items: readonly unknown[] }">
           <tr v-for="item in items as EmployeeListingType[]" :key="item.id">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectEmployees">
               <v-checkbox :model-value="selectedEmployees.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -277,6 +293,9 @@ onBeforeUnmount(() => {
               </v-btn>
               <TableAction
                 v-else
+                :can-view="canViewEmployee"
+                :can-edit="canUpdateEmployee"
+                :can-delete="canDeleteEmployee"
                 @on-view="() => goToEmployeeView(item.id)"
                 @onEdit="() => goToEmployeeEdit(item.id)"
                 @onDelete="() => openDeleteDialog(item.id)"
@@ -305,11 +324,11 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
  <RemoveItemConfirmationDialog v-model="deleteDialog" @onConfirm="deleteEmployee" :loading="deleteLoading" />
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 6)">
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
       <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$router.push('/institution/list')">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

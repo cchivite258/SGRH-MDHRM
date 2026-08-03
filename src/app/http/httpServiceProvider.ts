@@ -1,6 +1,11 @@
 
 import AuthService from "@/app/http/services/authService";
 import UserService from "@/app/http/services/userService";
+import ModuleService from "@/app/http/services/moduleService";
+import RoleService from "@/app/http/services/roleService";
+import PermissionService from "@/app/http/services/permissionService";
+import RolePermissionService from "@/app/http/services/rolePermissionService";
+import UserRoleService from "@/app/http/services/userRoleService";
 import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
 import CompanyDetailsService from "@/app/http/services/institution/companyDetailsService";
@@ -61,6 +66,11 @@ import FakeBackendService from "@/app/http/services/fakeBackendService";
 
 const authService = new AuthService();
 const userService = new UserService();
+const moduleService = new ModuleService();
+const roleService = new RoleService();
+const permissionService = new PermissionService();
+const rolePermissionService = new RolePermissionService();
+const userRoleService = new UserRoleService();
 const employeeService = new EmployeeService();
 const institutionService = new InstitutionService();
 const companyDetailsService = new CompanyDetailsService();
@@ -122,6 +132,11 @@ const fakeBackendService = new FakeBackendService();
 export {
     authService,
     userService, 
+    moduleService,
+    roleService,
+    permissionService,
+    rolePermissionService,
+    userRoleService,
     employeeService, 
     fakeBackendService, 
     countryService, 

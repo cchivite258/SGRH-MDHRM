@@ -24,12 +24,15 @@ import { limitTypeDefinitionOptions } from "@/components/institution/create/util
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
 import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 import Status from "@/app/common/components/Status.vue";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Composables
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const invoiceStore = useInvoiceStore();
+const { can, canAny } = usePermissions();
 
 // Props
 const props = defineProps({
@@ -196,6 +199,8 @@ const activeHealthPlan = computed(() =>
 const activePlanProcedures = computed(() => orderHealthPlanProcedures(employeePlanProcedureLimits.value || [], t("t-procedures")));
 
 const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE));
+const canConsultHealthPlan = computed(() => canAny(PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW));
 const invoiceActionReasonName = computed(() => {
   const data = invoiceData.value as any;
   const reason = data.reason;
@@ -556,6 +561,11 @@ const getPlanUsedBalanceTotal = (procedures: ExpensePerProcedureType[]) => {
 };
 
 const onConsultHealthPlan = async () => {
+  if (!canConsultHealthPlan.value) {
+    toast.error("Sem permissao para consultar o plano de saude.");
+    return;
+  }
+
   if (!invoiceData.value.employee) {
     toast.error(t("t-employee-required"));
     return;
@@ -608,6 +618,11 @@ const onConsultHealthPlan = async () => {
 };
 
 const onExportHealthPlanPdf = async () => {
+  if (!canConsultHealthPlan.value) {
+    toast.error("Sem permissao para consultar o plano de saude.");
+    return;
+  }
+
   if (!activePlanProcedures.value.length || !employeeActiveHealthPlan.value) {
     toast.error(t("t-no-active-health-plan"));
     return;
@@ -674,6 +689,8 @@ const onBack = () => {
 };
 
 const onNewInvoice = () => {
+  if (!canCreateInvoice.value) return;
+
   invoiceStore.clearDraft();
   router.push('/invoices/create');
 };
@@ -784,6 +801,7 @@ onMounted(async () => {
 
       <div class="d-flex align-center justify-end flex-wrap ga-2">
         <v-btn
+          v-if="canCreateInvoice"
           color="primary"
           variant="tonal"
           @click="onNewInvoice"
@@ -940,6 +958,7 @@ onMounted(async () => {
         </v-btn>
 
         <v-btn
+          v-if="canConsultHealthPlan"
           color="primary"
           variant="tonal"
           :disabled="!invoiceData.employee"
@@ -974,6 +993,7 @@ onMounted(async () => {
 
         <div class="d-flex align-center ga-2">
           <v-btn
+            v-if="canConsultHealthPlan"
             color="primary"
             variant="tonal"
             :disabled="activePlanProcedures.length === 0"

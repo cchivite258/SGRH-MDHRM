@@ -41,6 +41,8 @@ import { formatCurrency } from "@/app/common/currencyFormat";
 import { healthPlanLimitOptions, limitTypeDefinitionOptions } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
 import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -49,6 +51,7 @@ const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const invoiceStore = useInvoiceStore();
+const { can, canAny } = usePermissions();
 
 // =============================================
 // COMPONENT PROPS & EMITS
@@ -237,10 +240,28 @@ const isInvoiceLocked = computed(() =>
   ["POSTED", "CANCELLED", "REVERSED"].includes(invoiceStatus.value)
 );
 
+// Cada botao do formulario fica ligado a permissao exacta da accao que executa.
+const canViewInvoice = computed(() => can(PERMISSIONS.INVOICES.VIEW));
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE));
+const canUpdateInvoice = computed(() => can(PERMISSIONS.INVOICES.UPDATE));
+const canSaveInvoice = computed(() =>
+  props.isEditMode ? canUpdateInvoice.value : canCreateInvoice.value
+);
+const canAttachInvoiceFile = computed(() => can(PERMISSIONS.INVOICE_FILES.ATTACH));
+const canDeleteInvoiceFile = computed(() => can(PERMISSIONS.INVOICE_FILES.DELETE));
+const canCreateInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.CREATE));
+const canUpdateInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.UPDATE));
+const canDeleteInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.DELETE));
+const canManageInvoiceItems = computed(() =>
+  canCreateInvoiceItem.value || canUpdateInvoiceItem.value || canDeleteInvoiceItem.value
+);
+const canConsultHealthPlan = computed(() => canAny(PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW));
+const isInvoiceFormReadonly = computed(() => isInvoiceLocked.value || !canSaveInvoice.value);
+
 const canPostInvoice = computed(() => {
   if (!props.isEditMode || !invoiceData.value.id) return false;
 
-  return !isInvoiceLocked.value;
+  return !isInvoiceLocked.value && can(PERMISSIONS.INVOICES.POST);
 });
 
 const getBalanceValue = (
@@ -611,6 +632,11 @@ const getPlanUsedBalanceTotal = (procedures: ExpensePerProcedureType[]) => {
 };
 
 const onConsultHealthPlan = async () => {
+  if (!canConsultHealthPlan.value) {
+    toast.error("Sem permissao para consultar o plano de saude.");
+    return;
+  }
+
   if (!invoiceData.value.employee) {
     toast.error(t("t-employee-required"));
     return;
@@ -669,6 +695,11 @@ const onConsultHealthPlan = async () => {
 };
 
 const onExportHealthPlanPdf = async () => {
+  if (!canConsultHealthPlan.value) {
+    toast.error("Sem permissao para consultar o plano de saude.");
+    return;
+  }
+
   if (!activePlanProcedures.value.length || !employeeActiveHealthPlan.value) {
     toast.error(t("t-no-active-health-plan"));
     return;
@@ -698,6 +729,7 @@ const onExportHealthPlanPdf = async () => {
 
 
 const onDownloadClick = (id: string | undefined, name: string, extension: string) => {
+  if (!canViewInvoice.value) return;
   if (!id) return;
   onSubmitDownloadInvoice(id, name, extension);
 };
@@ -724,6 +756,11 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
 };
 
 const onUploadClick = (data: InvoiceAttachmentType | undefined) => {
+  if (!canAttachInvoiceFile.value) {
+    toast.error("Sem permissao para anexar ficheiros da factura.");
+    return;
+  }
+
   if (isInvoiceLocked.value) {
     toast.error(t("t-invoice-locked-no-edit"));
     return;
@@ -745,6 +782,12 @@ const onSubmitInvoiceAttachment = async (
     onFinally?: () => void
   }
 ) => {
+  if (!canAttachInvoiceFile.value) {
+    toast.error("Sem permissao para anexar ficheiros da factura.");
+    callbacks?.onFinally?.();
+    return;
+  }
+
   if (isInvoiceLocked.value) {
     toast.error(t("t-invoice-locked-no-edit"));
     callbacks?.onFinally?.();
@@ -784,6 +827,11 @@ watch(deleteDialog, (newVal: boolean) => {
 });
 
 const onDeleteAttachmentClick = (id: string) => {
+  if (!canDeleteInvoiceFile.value) {
+    toast.error("Sem permissao para remover ficheiros da factura.");
+    return;
+  }
+
   if (isInvoiceLocked.value) {
     toast.error(t("t-invoice-locked-no-edit"));
     return;
@@ -795,6 +843,12 @@ const onDeleteAttachmentClick = (id: string) => {
 
 
 const onConfirmDelete = async () => {
+  if (!canDeleteInvoiceFile.value) {
+    toast.error("Sem permissao para remover ficheiros da factura.");
+    deleteDialog.value = false;
+    return;
+  }
+
   if (isInvoiceLocked.value) {
     toast.error(t("t-invoice-locked-no-edit"));
     deleteDialog.value = false;
@@ -826,6 +880,11 @@ const onConfirmDelete = async () => {
  * Submete o formulário da fatura
  */
 const submitInvoice = async () => {
+  if (!canSaveInvoice.value) {
+    toast.error("Sem permissao para gravar a factura.");
+    return;
+  }
+
   if (isInvoiceLocked.value) {
     toast.error(t("t-invoice-locked-no-edit"));
     return;
@@ -850,7 +909,7 @@ const submitInvoice = async () => {
       invoiceReferenceNumber: "trimToNull"
     });
 
-    if (productCardRef.value) {
+    if (productCardRef.value && canManageInvoiceItems.value) {
       const itemsValid = await productCardRef.value.emitItemsReady();
       if (!itemsValid) return;
     } else {
@@ -881,6 +940,8 @@ const onBack = () => {
 };
 
 const onNewInvoice = () => {
+  if (!canCreateInvoice.value) return;
+
   invoiceStore.clearDraft();
   router.push('/invoices/create');
 };
@@ -896,6 +957,7 @@ const openPostNotesDialog = () => {
 };
 
 const postInvoice = async (notes: string) => {
+  if (!canPostInvoice.value) return;
   if (!invoiceData.value.id) return;
 
   postLoading.value = true;
@@ -992,6 +1054,7 @@ onMounted(async () => {
 
       <div class="d-flex align-center justify-end flex-wrap ga-2">
         <v-btn
+          v-if="canCreateInvoice"
           color="primary"
           variant="tonal"
           @click="onNewInvoice"
@@ -1031,7 +1094,7 @@ onMounted(async () => {
               </v-card-text>
             </v-card>
 
-            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id">
+            <div class="mt-3" v-if="canViewInvoice && invoiceData.invoiceAttachment && invoiceData.id">
               <v-btn color="black" variant="elevated"
                 @click="onDownloadClick(invoiceData.id, invoiceData.invoiceAttachment.originalFilename, invoiceData.invoiceAttachment.extension)"
                 block>
@@ -1041,7 +1104,7 @@ onMounted(async () => {
               </v-btn>
             </div>
 
-            <div class="mt-3" v-if="invoiceData.invoiceAttachment && invoiceData.id && !isInvoiceLocked">
+            <div class="mt-3" v-if="canDeleteInvoiceFile && invoiceData.invoiceAttachment && invoiceData.id && !isInvoiceLocked">
               <v-btn color="black" variant="elevated" @click="onDeleteAttachmentClick(invoiceData.id)" block>
                 <span class="font-weight-bold align-center d-flex">
                   <i class="ph ph-trash me-2" /> {{ $t('t-delete-original-invoice') }}
@@ -1049,7 +1112,7 @@ onMounted(async () => {
               </v-btn>
             </div>
 
-            <div class="mt-3" v-if="invoiceData.id && !isInvoiceLocked">
+            <div class="mt-3" v-if="canAttachInvoiceFile && invoiceData.id && !isInvoiceLocked">
               <v-btn color="black" variant="elevated" @click="onUploadClick(undefined)" block>
                 <span class="font-weight-bold align-center d-flex">
                   <i class="ph ph-upload-simple me-2" /> {{ $t('t-upload-original-invoice') }}
@@ -1064,16 +1127,16 @@ onMounted(async () => {
           <v-col cols="12" lg="4" justify="end">
             <div class="font-weight-bold">{{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.company" :items="institutions" :loading="institutionStore.loading"
-              :rules="requiredRules.institution" :placeholder="$t('t-institution')" :disabled="isInvoiceLocked" />
+              :rules="requiredRules.institution" :placeholder="$t('t-institution')" :disabled="isInvoiceFormReadonly" />
 
             <div class="font-weight-bold mt-n1">{{ $t('t-service-provider') }} <i
                 class="ph-asterisk ph-xs text-danger" /></div>
             <MenuSelect v-model="invoiceData.serviceProvider" :items="service_providers"
               :loading="serviceProviderStore.loading" :rules="requiredRules.service_provider"
-              :placeholder="$t('t-service-provider')" :disabled="isInvoiceLocked || !service_providers.length" />
+              :placeholder="$t('t-service-provider')" :disabled="isInvoiceFormReadonly || !service_providers.length" />
 
             <div class="font-weight-bold">{{ $t('t-employee-or-dependent') }}</div>
-            <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary" :disabled="isInvoiceLocked">
+            <v-checkbox v-model="invoiceData.isEmployeeInvoice" density="compact" color="primary" :disabled="isInvoiceFormReadonly">
               <template #label>
                 <span>{{ $t('t-is-employee-invoice') }}</span>
               </template>
@@ -1089,7 +1152,7 @@ onMounted(async () => {
               {{ $t('t-invoice-number') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="invoiceData.invoiceNumber" :placeholder="$t('t-enter-invoice-number')"
-              :rules="requiredRules.invoiceNumber" :disabled="isInvoiceLocked" />
+              :rules="requiredRules.invoiceNumber" :disabled="isInvoiceFormReadonly" />
           </v-col>
 
           <v-col cols="12" lg="">
@@ -1098,7 +1161,7 @@ onMounted(async () => {
             </div>
             <MenuSelect v-model="invoiceData.employee" :items="employees" :loading="employeeStore.loading"
               :rules="requiredRules.employee" :placeholder="$t('t-select-employee')"
-              :disabled="isInvoiceLocked || !invoiceData.company || !employees.length" />
+              :disabled="isInvoiceFormReadonly || !invoiceData.company || !employees.length" />
           </v-col>
 
           <v-col cols="12" lg="4" v-if="!invoiceData.isEmployeeInvoice">
@@ -1107,7 +1170,7 @@ onMounted(async () => {
             </div>
             <MenuSelect v-model="invoiceData.dependent" :items="dependents" :loading="dependentStore.loading"
               :rules="requiredRules.dependent" :placeholder="$t('t-select-dependent')"
-              :disabled="isInvoiceLocked || !invoiceData.employee || !dependents.length" />
+              :disabled="isInvoiceFormReadonly || !invoiceData.employee || !dependents.length" />
           </v-col>
         </v-row>
 
@@ -1119,7 +1182,7 @@ onMounted(async () => {
             </div>
             <ValidatedDatePicker ref="serviceProvisionDatePickerRef" v-model="invoiceData.serviceProvisionDate"
               :teleport="true" :enable-time-picker="false" :rules="requiredRules.serviceProvisionDate"
-              :placeholder="$t('t-select-service-provision-date')" :disabled="isInvoiceLocked" />
+              :placeholder="$t('t-select-service-provision-date')" :disabled="isInvoiceFormReadonly" />
           </v-col>
 
           <v-col cols="12" lg="3">
@@ -1127,7 +1190,7 @@ onMounted(async () => {
               {{ $t('t-issue-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="issueDatePickerRef" v-model="invoiceData.issueDate" :teleport="true" :enable-time-picker="false"
-              :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" :disabled="isInvoiceLocked" />
+              :rules="requiredRules.issueDate" :placeholder="$t('t-select-issue-date')" :disabled="isInvoiceFormReadonly" />
           </v-col>
 
           <v-col cols="12" lg="3">
@@ -1135,7 +1198,7 @@ onMounted(async () => {
               {{ $t('t-currency') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="invoiceData.currency" :items="currencies" :rules="requiredRules.currency"
-              :placeholder="$t('t-select-currency')" :disabled="isInvoiceLocked" />
+              :placeholder="$t('t-select-currency')" :disabled="isInvoiceFormReadonly" />
           </v-col>
 
           <v-col cols="12" lg="3">
@@ -1143,7 +1206,7 @@ onMounted(async () => {
               {{ $t('t-due-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="dueDatePickerRef" v-model="invoiceData.dueDate" :teleport="true" :enable-time-picker="false"
-              :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" :disabled="isInvoiceLocked" />
+              :rules="requiredRules.dueDate" :placeholder="$t('t-select-due-date')" :disabled="isInvoiceFormReadonly" />
           </v-col>
         </v-row>
 
@@ -1151,7 +1214,7 @@ onMounted(async () => {
         <v-row class="mt-n6 mb-2">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold">{{ $t('t-invoice-reference') }}</div>
-            <TextField v-model="invoiceData.invoiceReferenceNumber" :placeholder="$t('t-enter-invoice-reference')" :disabled="isInvoiceLocked" />
+            <TextField v-model="invoiceData.invoiceReferenceNumber" :placeholder="$t('t-enter-invoice-reference')" :disabled="isInvoiceFormReadonly" />
           </v-col>
 
           <v-col cols="12" lg="6">
@@ -1159,7 +1222,7 @@ onMounted(async () => {
               {{ $t('t-authorized-by') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="invoiceData.authorizedBy" :placeholder="$t('t-enter-authorized-by')"
-              :rules="requiredRules.authorizedBy" :disabled="isInvoiceLocked" />
+              :rules="requiredRules.authorizedBy" :disabled="isInvoiceFormReadonly" />
           </v-col>
         </v-row>
 
@@ -1167,7 +1230,11 @@ onMounted(async () => {
         <div class="mb-12">
           <ProductCard ref="productCardRef" v-model="invoiceItemData" :institution-id="invoiceData.company || ''"
             :employee-id="invoiceData.employee || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
-            :disabled="isInvoiceLocked" @items-ready="handleItemsReady" />
+            :disabled="isInvoiceFormReadonly"
+            :can-create-items="canCreateInvoiceItem"
+            :can-update-items="canUpdateInvoiceItem"
+            :can-delete-items="canDeleteInvoiceItem"
+            @items-ready="handleItemsReady" />
         </div>
       </v-card-text>
 
@@ -1179,6 +1246,7 @@ onMounted(async () => {
 
         <div class="d-flex align-center flex-wrap justify-end ga-2">
           <v-btn
+            v-if="canConsultHealthPlan"
             color="primary"
             variant="tonal"
             :disabled="!invoiceData.employee"
@@ -1188,7 +1256,7 @@ onMounted(async () => {
             <i class="ph-first-aid-kit me-1" /> {{ $t('t-consult-health-plan') }}
           </v-btn>
 
-          <v-btn color="secondary" variant="elevated" @click="submitInvoice" :loading="loading" :disabled="isInvoiceLocked">
+          <v-btn v-if="canSaveInvoice" color="secondary" variant="elevated" @click="submitInvoice" :loading="loading" :disabled="isInvoiceLocked">
             <i class="ph-printer me-1" /> {{ $t('t-save') }}
           </v-btn>
         </div>
@@ -1237,6 +1305,7 @@ onMounted(async () => {
 
         <div class="d-flex align-center ga-2">
           <v-btn
+            v-if="canConsultHealthPlan"
             color="primary"
             variant="tonal"
             :disabled="activePlanProcedures.length === 0"

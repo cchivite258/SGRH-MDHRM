@@ -90,7 +90,6 @@ async function onSubmit() {
   emit("onSubmit", {
     newPassword: normalizeStringValue(newPassword.value, "trimToEmpty") || "",
     confirmPassword: normalizeStringValue(confirmPassword.value, "trimToEmpty") || "",
-    passwordsMatching: newPassword.value.trim() === confirmPassword.value.trim(),
   }, {
     onSuccess: () => {
       dialogValue.value = false;
