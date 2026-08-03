@@ -18,6 +18,14 @@ const props = defineProps({
   employeeId: {
     type: String as PropType<string | null>,
     default: null
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -114,18 +122,10 @@ onBeforeUnmount(() => {
         :search-props="searchProps"
         @load-items="fetchHealthPlanEmployee"
         item-value="id"
-        show-select
+        :show-select="false"
       >
         <template #body="{ items }">
           <tr v-for="item in items as HealthPlanListingType[]" :key="item.id" height="50">
-            <td>
-              <v-checkbox
-                :model-value="selectedhealthPlanData.some(selected => selected.id === item.id)"
-                @update:model-value="toggleSelection(item)"
-                hide-details
-                density="compact"
-              />
-            </td>
             <td>{{ formatCurrency(item.allocatedBalance) }}</td>
             <td>{{ formatCurrency(item.usedBalance) }}</td>
             <td>{{ formatCurrency(item.remainingBalance) }}</td>
@@ -153,9 +153,12 @@ onBeforeUnmount(() => {
     </v-col>
   </v-row>
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 4)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-dependents') }}
+  <v-card-actions v-if="previousStep || nextStep" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
+    </v-btn>
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" class="me-2" @click="$emit('onStepChange', nextStep)">
+      {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>
 </template>

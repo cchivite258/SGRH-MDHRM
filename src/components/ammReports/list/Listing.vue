@@ -11,6 +11,8 @@ import Table from "@/app/common/components/Table.vue";
 import { ReportType } from "@/components/ammReports/types";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import ListingPageShell from "@/app/common/components/listing/ListingPageShell.vue";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 import PreviewDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/PreviewDialog.vue";
 import GenerateDialog100001 from "@/components/ammReports/list/HospitalProceduresReport/GenerateDialog.vue";
@@ -42,6 +44,7 @@ import GenerateDialog100013 from "@/components/ammReports/list/EmployeeFrequency
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
+const { can, canAny } = usePermissions();
 
 const previewDialog100001 = ref(false);
 const generateDialog100001 = ref(false);
@@ -86,10 +89,31 @@ const mappedReports = reports.map((data) => {
   };
 });
 
-const filteredReports = ref<ReportType[]>(mappedReports);
-const finalData = ref<ReportType[]>(filteredReports.value);
-
 const page = ref(1);
+const searchQuery = ref("");
+const canGenerateReports = computed(() => can(PERMISSIONS.REPORTS.GENERATE));
+const visibleReportHeader = computed(() => (
+  canGenerateReports.value ? reportHeader : reportHeader.filter((item) => !item.isCheck)
+));
+
+const getReportPermission = (report: ReportType) => {
+  return PERMISSIONS.REPORTS.BY_ID[report.id as keyof typeof PERMISSIONS.REPORTS.BY_ID] || PERMISSIONS.REPORTS.VIEW;
+};
+
+// Cada relatorio aparece se o utilizador tiver a permissao geral de relatorios
+// ou a permissao especifica mapeada para esse relatorio.
+const canReadReport = (report: ReportType) => {
+  return canAny([PERMISSIONS.REPORTS.VIEW, getReportPermission(report)]);
+};
+
+const filteredReports = computed(() => {
+  const val = searchQuery.value.toLowerCase();
+
+  return mappedReports.filter((report) =>
+    canReadReport(report) && t(`t-${report.title}`).toLowerCase().includes(val)
+  );
+});
+
 const noOfItems = computed(() => filteredReports.value.length);
 const loading = ref(false);
 
@@ -127,6 +151,8 @@ watch(filteredReports, syncConfig, { deep: true });
 
 
 const onSelectAll = () => {
+  if (!canGenerateReports.value) return;
+
   isAllChecked.value = !isAllChecked.value;
 
   // Atualiza todos os itens filtrados
@@ -202,6 +228,9 @@ const reportHandlers: Record<string, {
 
 
 const onSelect = (action: string, data: ReportType) => {
+  if (action === "preview" && !canReadReport(data)) return;
+  if (action === "generate" && !canGenerateReports.value) return;
+
   const handler = reportHandlers[data.id];
 
   if (!handler) {
@@ -219,22 +248,20 @@ if (action === "generate" && handler.generate) {
 
 };
 
-const reportActions = computed(() => {
-  return reportAction.map((item) => ({
-    ...item,
-    title: t(`t-${item.title}`),
-  }));
-});
+const getReportActions = (report: ReportType) => {
+  return reportAction
+    .filter((item) => {
+      if (item.value === "preview") return canReadReport(report);
+      if (item.value === "generate") return canGenerateReports.value;
+      return false;
+    })
+    .map((item) => ({
+      ...item,
+      title: t(`t-${item.title}`),
+    }));
+};
 
-
-const searchQuery = ref("");
-
-watch(searchQuery, (value) => {
-  const val = value.toLowerCase();
-
-  filteredReports.value = finalData.value.filter((report) =>
-    t(`t-${report.title}`).toLowerCase().includes(val)
-  );
+watch(searchQuery, () => {
   page.value = 1;
 });
 
@@ -266,11 +293,11 @@ watch(searchQuery, (value) => {
 
     <div>
       <Table v-model="page" :config="config"
-        :headerItems="reportHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" is-pagination
+        :headerItems="visibleReportHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" is-pagination
         :loading="loading" @onSelectAll="onSelectAll">
         <template #body>
           <tr v-for="item in paginatedReports" :key="item.id" class="report-row">
-            <td>
+            <td v-if="canGenerateReports">
               <v-checkbox v-model="item.isChecked" color="primary" hide-details />
             </td>
             <td class="text-primary cursor-pointer">
@@ -294,7 +321,11 @@ watch(searchQuery, (value) => {
               </div>
             </td>
             <td class="report-actions-cell">
-              <TableActionMenu :menuItems="reportActions" @onSelect="onSelect($event, item)" />
+              <TableActionMenu
+                v-if="getReportActions(item).length"
+                :menuItems="getReportActions(item)"
+                @onSelect="onSelect($event, item)"
+              />
             </td>
           </tr>
         </template>

@@ -15,12 +15,16 @@ import { serviceProviderHeader } from "@/components/serviceProvider/list/utils"
 import type { ServiceProviderListingType } from "@/components/serviceProvider/types"
 import type { OptionType } from "@/app/common/types/option.type"
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const serviceProviderStore = useServiceProviderStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
@@ -42,6 +46,19 @@ const loading = computed(() => serviceProviderStore.loading)
 const totalItems = computed(() => serviceProviderStore.pagination.totalElements)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
 
+// Quem tem apenas leitura consulta a listagem e a ficha.
+// As restantes opcoes aparecem apenas com a permissao exacta.
+const canListServiceProviders = computed(() => canAny(PERMISSIONS.SERVICE_PROVIDERS.LIST))
+const canViewServiceProvider = computed(() => can(PERMISSIONS.SERVICE_PROVIDERS.VIEW))
+const canCreateServiceProvider = computed(() => can(PERMISSIONS.SERVICE_PROVIDERS.CREATE))
+const canDeleteServiceProvider = computed(() => can(PERMISSIONS.SERVICE_PROVIDERS.DELETE))
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.SERVICE_PROVIDERS.VIEW,
+  edit: PERMISSIONS.SERVICE_PROVIDERS.UPDATE,
+  delete: PERMISSIONS.SERVICE_PROVIDERS.DELETE,
+}
+
 watch(selectedServiceProvider, newSelection => {
   console.log("serviceProvider selecionados:", newSelection)
 }, { deep: true })
@@ -62,6 +79,7 @@ const fetchServiceProviders = async ({ page, itemsPerPage, sortBy }: FetchParams
 }
 
 const onView = (id: string) => {
+  if (!canViewServiceProvider.value) return
   router.push(`/service-provider/view/${id}`)
 }
 
@@ -71,7 +89,7 @@ const openDeleteDialog = (id: string) => {
 }
 
 const deleteServiceProvider = async () => {
-  if (!deleteId.value) return
+  if (!deleteId.value || !canDeleteServiceProvider.value) return
 
   deleteLoading.value = true
   try {
@@ -101,10 +119,14 @@ const truncate = (text: string, maxLength = 30) => {
 }
 
 const serviceProviderOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" }
 ]
+
+const getDynamicOptions = () => {
+  return serviceProviderOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+}
 
 const onSelect = (option: string, item: ServiceProviderListingType) => {
   switch (option) {
@@ -112,9 +134,11 @@ const onSelect = (option: string, item: ServiceProviderListingType) => {
       onView(item.id)
       break
     case "edit":
+      if (!can(PERMISSIONS.SERVICE_PROVIDERS.UPDATE)) return
       router.push(`/service-provider/edit/${item.id}`)
       break
     case "delete":
+      if (!canDeleteServiceProvider.value) return
       openDeleteDialog(item.id)
       break
   }
@@ -137,12 +161,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão dos provedores de serviço registados."
     :action-label="$t('t-add-service-provider')"
     action-to="/service-provider/create"
+    :show-action="canCreateServiceProvider"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListServiceProviders" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissao para listar provedores de servico.
+    </v-alert>
+
     <template #filters>
       <AdvancedFilter />
     </template>
@@ -167,12 +196,12 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canDeleteServiceProvider"
       @load-items="fetchServiceProviders"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
         <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id" class="service-provider-listing-table__row">
-          <td data-label="">
+          <td v-if="canDeleteServiceProvider" data-label="">
             <v-checkbox
               :model-value="selectedServiceProvider.some(selected => selected.id === item.id)"
               hide-details
@@ -185,7 +214,8 @@ onBeforeRouteLeave(() => {
           </td>
           <td
             data-label="Nome"
-            class="service-provider-listing-table__primary-cell cursor-pointer"
+            class="service-provider-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewServiceProvider }"
             @click="onView(item.id)"
           >
             {{ truncate(item.name) }}
@@ -204,7 +234,12 @@ onBeforeRouteLeave(() => {
           </td>
           <td data-label="Acção" class="service-provider-listing-table__actions-cell">
             <div class="d-flex justify-center" style="gap: 8px">
-              <ListMenuWithIcon align="center" :menuItems="serviceProviderOptions" @onSelect="onSelect($event, item)" />
+              <ListMenuWithIcon
+                v-if="getDynamicOptions().length"
+                align="center"
+                :menuItems="getDynamicOptions()"
+                @onSelect="onSelect($event, item)"
+              />
             </div>
           </td>
         </tr>
@@ -212,7 +247,7 @@ onBeforeRouteLeave(() => {
 
       <template v-if="serviceProviderStore.service_providers.length === 0" #body>
         <tr>
-          <td :colspan="serviceProviderHeader.length" class="service-provider-listing-table__empty-state text-center py-10">
+          <td :colspan="serviceProviderHeader.length + (canDeleteServiceProvider ? 1 : 0)" class="service-provider-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="service-provider-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

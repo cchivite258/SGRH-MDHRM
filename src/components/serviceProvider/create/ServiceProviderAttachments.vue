@@ -15,6 +15,8 @@ import type {
   ServiceProviderDocumentType
 } from "@/components/serviceProvider/types";
 import { serviceProviderDocumentTypeOptions } from "@/components/serviceProvider/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 type AttachmentUploadRow = {
   id: string;
@@ -31,6 +33,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const toast = useToast();
+const { can, canAny } = usePermissions();
 
 const loading = ref(false);
 const uploadLoading = ref(false);
@@ -41,6 +44,13 @@ const attachmentActionLoadingId = ref<string | null>(null);
 const downloadAttachmentLoadingId = ref<string | null>(null);
 const deleteAttachmentDialog = ref(false);
 const attachmentToDelete = ref<ServiceProviderAttachmentType | null>(null);
+const canConsultAttachments = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.READ,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.DELETE,
+]));
+const canAttachDocuments = computed(() => can(PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.CREATE));
+const canDeleteDocuments = computed(() => can(PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.DELETE));
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
   id: uuidv4(),
@@ -260,7 +270,7 @@ const onConfirmDeleteAttachment = async () => {
         <div class="font-weight-bold text-caption">
           {{ $t('t-document-file') }}
         </div>
-        <div class="d-flex ga-2">
+        <div v-if="canAttachDocuments" class="d-flex ga-2">
           <v-btn
             v-if="attachmentUploads.length > 0"
             color="secondary"
@@ -310,6 +320,7 @@ const onConfirmDeleteAttachment = async () => {
           </div>
           <div class="d-flex ga-2">
             <v-btn
+              v-if="canConsultAttachments"
               color="black"
               variant="elevated"
               size="small"
@@ -320,6 +331,7 @@ const onConfirmDeleteAttachment = async () => {
               <i class="ph-download-simple me-1" /> {{ $t('t-download-attachment') }}
             </v-btn>
             <v-btn
+              v-if="canDeleteDocuments"
               color="danger"
               variant="elevated"
               size="small"
@@ -333,7 +345,7 @@ const onConfirmDeleteAttachment = async () => {
         </v-card-text>
       </v-card>
 
-      <v-card v-for="row in attachmentUploads" :key="row.id" class="border mt-3" elevation="0">
+      <v-card v-for="row in attachmentUploads" :key="row.id" v-if="canAttachDocuments" class="border mt-3" elevation="0">
         <v-card-text class="position-relative">
           <v-btn
             icon="ph-x"

@@ -32,6 +32,9 @@ import { useProvinceStore } from '@/store/baseTables/countryStore';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
 import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { EMPLOYEE_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Services & Types
 import { employeeService } from "@/app/http/httpServiceProvider";
@@ -57,6 +60,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { can, canAny, useFieldAccess } = usePermissions();
 
 const isEmployeeEditRoute = () => route.name === "EditEmployee";
 const isEmployeeCreateRoute = () => route.name === "CreateEmployee";
@@ -117,8 +121,49 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
 const canUseHeaderSave = computed(() => step.value === 1 || step.value === 2);
+
+// Em criação exigimos permissão de criar; em edição exigimos permissão de actualizar.
+const canSaveEmployee = computed(() => (
+  isEmployeeCreateRoute()
+    ? can(PERMISSIONS.EMPLOYEE.CREATE)
+    : can(PERMISSIONS.EMPLOYEE.UPDATE)
+));
+const isFormReadonly = computed(() => !canSaveEmployee.value);
 const headerSaveLabel = computed(() => step.value === 1 ? t('t-proceed') : t('t-save-and-proceed'));
-const employeeFormSteps = [1, 2, 3, 4, 5];
+const accessibleEmployeeFormTabs = computed(() => getAllowedFormTabs(EMPLOYEE_FORM_TABS, canAny));
+const employeeFormSteps = computed(() => accessibleEmployeeFormTabs.value.map((tab) => tab.value));
+const firstAllowedEmployeeStep = computed(() => employeeFormSteps.value[0] || 1);
+const currentEmployeeStepIndex = computed(() => employeeFormSteps.value.indexOf(step.value));
+const previousEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value - 1] || null);
+const nextEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value + 1] || null);
+const isEmployeeStepAllowed = (value: number) => employeeFormSteps.value.includes(value);
+const ensureEmployeeStepAllowed = () => {
+  if (!isEmployeeStepAllowed(step.value)) {
+    step.value = firstAllowedEmployeeStep.value;
+  }
+};
+
+// Cada grupo de campos pode ter uma permissão de consulta e outra de edição.
+// Assim o ecrã consegue esconder, mostrar só para leitura ou permitir alteração.
+const identificationAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_IDENTIFICATION_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_IDENTIFICATION_UPDATE
+);
+const contactAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_CONTACT_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_CONTACT_UPDATE
+);
+const institutionAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_INSTITUTION_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_INSTITUTION_UPDATE
+);
+const hideIdentificationFields = computed(() => identificationAccess.hidden.value);
+const identificationReadonly = computed(() => identificationAccess.readonly.value || isFormReadonly.value);
+const contactReadonly = computed(() => contactAccess.readonly.value || isFormReadonly.value);
+const institutionReadonly = computed(() => institutionAccess.readonly.value || isFormReadonly.value);
+const canViewSalaryReview = computed(() =>
+  canAny([PERMISSIONS.EMPLOYEE.SALARY_REVIEW_VIEW, PERMISSIONS.EMPLOYEE.SALARY_REVIEW_UPDATE])
+);
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -306,6 +351,8 @@ watch(
  */
 
 const onStepChange = (value: number) => {
+  if (!isEmployeeStepAllowed(value)) return;
+
   // Permite sempre voltar para tabs anteriores
   if (value < step.value) {
     step.value = value;
@@ -427,16 +474,21 @@ const goBackToList = () => {
 };
 
 const goToNextAvailableStep = () => {
-  const currentStepIndex = employeeFormSteps.indexOf(step.value);
+  const currentStepIndex = employeeFormSteps.value.indexOf(step.value);
   if (currentStepIndex === -1) return;
 
-  const nextStep = employeeFormSteps[currentStepIndex + 1];
+  const nextStep = employeeFormSteps.value[currentStepIndex + 1];
   if (nextStep) {
     step.value = nextStep;
   }
 };
 
 const onHeaderSave = async () => {
+  if (!canSaveEmployee.value) {
+    toast.warning("Sem permissão para gravar dados do colaborador.");
+    return;
+  }
+
   if (step.value === 1) {
     await proceedFromGeneralInfo();
     return;
@@ -464,6 +516,8 @@ watch(
   { deep: true }
 );
 
+watch(accessibleEmployeeFormTabs, ensureEmployeeStepAllowed, { immediate: true });
+
 
 // E o watcher deve ficar assim:
 watch(() => route.query.tab, (newTab) => {
@@ -481,6 +535,11 @@ watch(() => route.query.tab, (newTab) => {
  * @param isFinalStep - Indica se é o passo final (salvar e sair)
  */
 const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = false) => {
+  if (!canSaveEmployee.value) {
+    toast.warning("Sem permissão para gravar dados do colaborador.");
+    return;
+  }
+
   try {
     loading.value = true;
     errorMsg.value = "";
@@ -581,8 +640,8 @@ onBeforeUnmount(() => {
     save-icon="ph-arrow-right"
     save-icon-position="end"
     :loading="loading"
-    :show-save="canUseHeaderSave"
-    :save-disabled="!canUseHeaderSave"
+    :show-save="canUseHeaderSave && canSaveEmployee"
+    :save-disabled="!canUseHeaderSave || !canSaveEmployee"
     @back="goBackToList"
     @save="onHeaderSave"
   />
@@ -600,31 +659,48 @@ onBeforeUnmount(() => {
   </transition>
 
   <!-- Abas do formulário -->
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 1 && isEmployeeStepAllowed(1)" class="employee-form-section">
     <Step1 ref="step1Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
-      :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
+      :show-actions="false" :readonly="isFormReadonly" :hide-identification-fields="hideIdentificationFields"
+      :identification-readonly="identificationReadonly" :contact-readonly="contactReadonly"
+      @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
   </FormCard>
 
-  <FormCard v-if="step === 2" class="employee-form-section">
+  <FormCard v-if="step === 2 && isEmployeeStepAllowed(2)" class="employee-form-section">
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
       :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()"
       :employee-id="employeeId" :rehire-tracks-refresh-key="rehireTracksRefreshKey"
+      :readonly="institutionReadonly" :allow-terminate-contract="can(PERMISSIONS.EMPLOYEE.TERMINATE_CONTRACT)"
+      :allow-rehire-contract="can(PERMISSIONS.EMPLOYEE.REHIRE_CONTRACT)"
       @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
   </FormCard>
 
-  <FormCard v-if="step === 3" class="employee-form-section">
+  <FormCard v-if="step === 3 && isEmployeeStepAllowed(3) && canViewSalaryReview" class="employee-form-section">
     <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-      :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" @salaryUpdated="onSalaryUpdated" />
+      :previous-step="previousEmployeeStep" previous-label-key="t-back" :next-step="nextEmployeeStep"
+      :allow-edit="can(PERMISSIONS.EMPLOYEE.SALARY_REVIEW_UPDATE)" @salaryUpdated="onSalaryUpdated" />
   </FormCard>
 
-  <FormCard v-if="step === 4" class="employee-form-section">
-    <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 4 && isEmployeeStepAllowed(4)" class="employee-form-section">
+    <Step4
+      @onStepChange="onStepChange"
+      :loading="loading"
+      :employee-id="employeeId"
+      :previous-step="previousEmployeeStep"
+      :next-step="nextEmployeeStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 5" class="employee-form-section">
-    <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 5 && isEmployeeStepAllowed(5)" class="employee-form-section">
+    <Step5
+      @onStepChange="onStepChange"
+      :loading="loading"
+      :employee-id="employeeId"
+      :previous-step="previousEmployeeStep"
+      :next-step="nextEmployeeStep"
+    />
   </FormCard>
 
   <div v-if="step === 1 || step === 2" class="employee-form-footer-actions">
@@ -641,6 +717,7 @@ onBeforeUnmount(() => {
 
     <v-btn
       class="employee-form-footer-actions__save"
+      v-if="canSaveEmployee"
       color="secondary"
       variant="elevated"
       :loading="loading"

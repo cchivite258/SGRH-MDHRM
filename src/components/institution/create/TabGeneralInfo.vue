@@ -12,11 +12,14 @@ import { InstitutionInsertType } from "@/components/institution/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const userStore = useUserStore();
+const { canAny } = usePermissions();
 
 const emit = defineEmits(["onStepChange", "save", "update:modelValue", "clear-server-error"]);
 
@@ -45,6 +48,11 @@ const props = defineProps({
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const companyDetails = ref<EntityListingType[]>([]);
+const canConsultContractAttachments = computed(() => canAny([
+  PERMISSIONS.CONTRACT_ATTACHMENTS.READ,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.CREATE,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.DELETE,
+]));
 
 const institutionData = computed({
   get() {
@@ -275,7 +283,7 @@ onMounted(async () => {
   </v-form>
 
   <ContractAttachments
-    v-if="institutionId"
+    v-if="institutionId && canConsultContractAttachments"
     class="mt-4"
     :contract-id="institutionId"
   />

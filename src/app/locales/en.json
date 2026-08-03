@@ -1184,5 +1184,14 @@
   "t-enter-max-days-after-service": "Enter the maximum days after service",
   "t-value-must-be-zero-or-greater": "The value must be zero or greater",
   "t-termination-data": "Termination data",
-  "t-submit-termination": "Submit termination"
+  "t-submit-termination": "Submit termination",
+  "t-home": "Home",
+  "t-alternative-home-subtitle": "Use the available modules below.",
+  "t-alternative-home-empty": "Your session is active, but there are no modules available for this profile yet.",
+  "t-alternative-home-employees-description": "Consult employee records, dependants and associated plans.",
+  "t-alternative-home-contracts-description": "Consult contracts, health plans and coverage periods.",
+  "t-alternative-home-invoices-description": "Consult and monitor invoices according to the account permissions.",
+  "t-alternative-home-service-providers-description": "Consult the service provider network and its respective data.",
+  "t-alternative-home-entities-description": "Consult entities registered in the system.",
+  "t-alternative-home-reports-description": "Open reports available for your profile."
 }

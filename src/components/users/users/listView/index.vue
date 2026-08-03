@@ -19,11 +19,15 @@ import { changePasswordType, changePasswordListingType } from "@/components/user
 import EnableAccountConfirmationDialog from "@/components/users/users/EnableAccountConfirmationDialog.vue";
 import AdvancedFilter from "@/components/users/users/listView/AdvancedFilter.vue";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
+import type { PermissionRequirement } from "@/app/permissions/constants";
 
 const { t } = useI18n();
 const toast = useToast();
 const userStore = useUserStore();
 const router = useRouter();
+const { can, canAny } = usePermissions();
 
 const lockerAction = ref<"enable" | "disable">("enable");
 const dialog = ref(false);
@@ -50,6 +54,20 @@ const selectedUsers = ref<any[]>([]);
 const loadingList = computed(() => userStore.loading);
 const totalItems = computed(() => userStore.pagination.totalElements);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+const canListUsers = computed(() => canAny(PERMISSIONS.ACCESS_MANAGEMENT.USERS.LIST));
+const canViewUser = computed(() => can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.VIEW));
+const canCreateUser = computed(() => can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.CREATE));
+const canDeleteUser = computed(() => can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.DELETE));
+const canSelectUsers = computed(() => canDeleteUser.value);
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.ACCESS_MANAGEMENT.USERS.VIEW,
+  edit: PERMISSIONS.ACCESS_MANAGEMENT.USERS.UPDATE,
+  "manage-roles": PERMISSIONS.ACCESS_MANAGEMENT.USERS.MANAGE_ROLES,
+  delete: PERMISSIONS.ACCESS_MANAGEMENT.USERS.DELETE,
+  change: PERMISSIONS.ACCESS_MANAGEMENT.USERS.CHANGE_PASSWORDS,
+  enable: PERMISSIONS.ACCESS_MANAGEMENT.USERS.ENABLE,
+};
 
 const resetListingFilters = () => {
   userStore.clearFilters();
@@ -114,6 +132,9 @@ watch(dialog, (newVal: boolean) => {
 });
 
 const onCreateEditClick = (data: UserListingType | null) => {
+  if (!data && !canCreateUser.value) return;
+  if (data && !can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.UPDATE)) return;
+
   if (!data) {
     userData.value = {
       id: -1,
@@ -141,6 +162,8 @@ const onSubmit = async (data: UserListingType, callbacks?: {
   onSuccess?: () => void,
   onFinally?: () => void
 }) => {
+  if ((!data.id && !canCreateUser.value) || (data.id && !can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.UPDATE))) return;
+
   try {
     if (!data.id) {
       await userService.createUser(data);
@@ -163,6 +186,8 @@ const onSubmitChangePassword = async (data: changePasswordType, callbacks?: {
   onSuccess?: () => void,
   onFinally?: () => void
 }) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.CHANGE_PASSWORDS)) return;
+
   try {
     if (!changePasswordUserId.value) {
       toast.error(t('t-message-user-not-selected'));
@@ -187,6 +212,8 @@ watch(viewDialog, (newVal: boolean) => {
 });
 
 const onViewClick = (data: UserListingType | null) => {
+  if (!canViewUser.value) return;
+
   if (!data) {
     userData.value = {
       id: -1,
@@ -218,13 +245,13 @@ watch(passwordDialog, val => {
 });
 
 const onChangePassword = (data: UserListingType | null) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.CHANGE_PASSWORDS)) return;
   if (!data) return;
 
   changePasswordUser.value = {
     id: data.id,
     newPassword: "",
     confirmPassword: "",
-    passwordsMatching: true,
   };
 
   changePasswordUserId.value = data.id;
@@ -232,12 +259,15 @@ const onChangePassword = (data: UserListingType | null) => {
 };
 
 const onManageRoles = (data: UserListingType | null) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.MANAGE_ROLES)) return;
   if (!data) return;
 
   router.push(`/users/users/edit-roles/${data.id}`);
 };
 
 const onEnable = (id: number) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.ENABLE)) return;
+
   const user = userStore.users.find(u => u.id === id);
   if (!user) return;
 
@@ -247,6 +277,8 @@ const onEnable = (id: number) => {
 };
 
 const onConfirmEnableAccount = async () => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.USERS.ENABLE)) return;
+
   lockerLoading.value = true;
 
   try {
@@ -281,11 +313,15 @@ watch(deleteDialog, (newVal: boolean) => {
 });
 
 const onDelete = (id: number) => {
+  if (!canDeleteUser.value) return;
+
   deleteId.value = id;
   deleteDialog.value = true;
 };
 
 const onConfirmDelete = async () => {
+  if (!canDeleteUser.value) return;
+
   deleteLoading.value = true;
 
   try {
@@ -326,7 +362,7 @@ const onSelect = (option: string, data: UserListingType) => {
 };
 
 const getDynamicOptions = (user: UserListingType) => {
-  return Options.map(option => {
+  return Options.filter(option => canAny(actionPermissionByValue[option.value])).map(option => {
     if (option.value === "enable") {
       return {
         ...option,
@@ -351,6 +387,7 @@ onMounted(() => {
     :title="$t('t-users-list')"
     subtitle="Consulte, pesquise e faça a gestão dos utilizadores registados."
     :action-label="$t('t-add-user')"
+    :show-action="canCreateUser"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -373,10 +410,10 @@ onMounted(() => {
     <DataTableServer v-model="selectedUsers" v-model:page="currentPage"
       :headers="userHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))" :items="userStore.users"
       :items-per-page="itemsPerPage" :total-items="totalItems" :loading="loadingList" :search-query="searchQuery"
-      :search-props="searchProps" @load-items="fetchUsers" item-value="id" :show-pagination="false" show-select>
+      :search-props="searchProps" @load-items="fetchUsers" item-value="id" :show-pagination="false" :show-select="canSelectUsers">
       <template #body="{ items }">
         <tr v-for="item in items as UserListingType[]" :key="item.id" class="user-listing-table__row">
-          <td data-label="">
+          <td v-if="canSelectUsers" data-label="">
             <v-checkbox :model-value="selectedUsers.some(selected => selected.id === item.id)"
               @update:model-value="toggleSelection(item)" hide-details density="compact" />
           </td>
@@ -391,14 +428,14 @@ onMounted(() => {
             <Status :status="item.accountLocked ? 'block' : 'unblock'" />
           </td>
           <td data-label="Acção" class="user-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon v-if="getDynamicOptions(item).length" align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
           </td>
         </tr>
       </template>
 
       <template v-if="userStore.users.length === 0" #body>
         <tr>
-          <td :colspan="userHeader.length + 1" class="user-listing-table__empty-state text-center py-10">
+          <td :colspan="userHeader.length + (canSelectUsers ? 1 : 0)" class="user-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="user-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

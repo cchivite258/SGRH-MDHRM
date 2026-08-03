@@ -17,11 +17,15 @@ import ViewRoleModal from "@/components/users/roles/ViewRoleModal.vue";
 import type { OptionType } from "@/app/common/types/option.type";
 import type { RoleFetchParams, RoleFormType, RoleListingType } from "@/components/users/roles/types";
 import { roleHeader } from "@/components/users/roles/listView/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
+import type { PermissionRequirement } from "@/app/permissions/constants";
 
 const { t } = useI18n();
 const toast = useToast();
 const roleStore = useRoleStore();
 const router = useRouter();
+const { can, canAny } = usePermissions();
 
 const dialog = ref(false);
 const viewDialog = ref(false);
@@ -49,6 +53,19 @@ const actionOptions: OptionType[] = [
 const loadingList = computed(() => roleStore.loading);
 const totalItems = computed(() => roleStore.pagination.totalElements);
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+const canCreateRole = computed(() => can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.CREATE));
+const canDeleteRole = computed(() => can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.DELETE));
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.VIEW,
+  "manage-permissions": PERMISSIONS.ACCESS_MANAGEMENT.ROLES.MANAGE_PERMISSIONS,
+  edit: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.UPDATE,
+  delete: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.DELETE,
+};
+
+const dynamicActionOptions = computed(() =>
+  actionOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+);
 
 const defaultRole = (): RoleFormType => ({
   name: "",
@@ -127,11 +144,15 @@ watch(deleteDialog, newVal => {
 });
 
 const onCreateClick = () => {
+  if (!canCreateRole.value) return;
+
   roleData.value = defaultRole();
   dialog.value = true;
 };
 
 const onEditClick = (data: RoleListingType) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.UPDATE)) return;
+
   roleData.value = {
     id: data.id,
     name: data.name,
@@ -141,6 +162,8 @@ const onEditClick = (data: RoleListingType) => {
 };
 
 const onManagePermissionsClick = (data: RoleListingType) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.MANAGE_PERMISSIONS)) return;
+
   router.push(`/users/roles/edit/${data.id}`);
 };
 
@@ -151,6 +174,8 @@ const onActionSelect = (option: string, data: RoleListingType) => {
 };
 
 const onViewClick = async (data: RoleListingType) => {
+  if (!can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.VIEW)) return;
+
   viewRoleData.value = data;
   viewDialog.value = true;
 
@@ -165,6 +190,8 @@ const onViewClick = async (data: RoleListingType) => {
 };
 
 const onSubmit = async (data: RoleFormType, callbacks?: { onSuccess?: () => void; onFinally?: () => void }) => {
+  if ((!data.id && !canCreateRole.value) || (data.id && !can(PERMISSIONS.ACCESS_MANAGEMENT.ROLES.UPDATE))) return;
+
   try {
     if (!data.id) {
       await roleService.createRole(data);
@@ -185,11 +212,15 @@ const onSubmit = async (data: RoleFormType, callbacks?: { onSuccess?: () => void
 };
 
 const onDelete = (id: string) => {
+  if (!canDeleteRole.value) return;
+
   deleteId.value = id;
   deleteDialog.value = true;
 };
 
 const onConfirmDelete = async () => {
+  if (!canDeleteRole.value) return;
+
   deleteLoading.value = true;
 
   try {
@@ -213,6 +244,7 @@ const onConfirmDelete = async () => {
     :title="$t('t-roles-list')"
     :subtitle="$t('t-roles-list-subtitle')"
     :action-label="$t('t-add-role')"
+    :show-action="canCreateRole"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -248,7 +280,7 @@ const onConfirmDelete = async () => {
     >
       <template #body="{ items }">
         <tr v-for="item in items as RoleListingType[]" :key="item.id" class="role-listing-table__row">
-          <td data-label="">
+          <td v-if="canDeleteRole" data-label="">
             <v-checkbox
               :model-value="selectedRoles.some(selected => selected.id === item.id)"
               @update:model-value="toggleSelection(item)"
@@ -267,7 +299,7 @@ const onConfirmDelete = async () => {
           </td>
           <td data-label="Accao" class="role-listing-table__actions-cell">
             <TableActionMenu
-              :menu-items="actionOptions"
+              :menu-items="dynamicActionOptions"
               @onSelect="onActionSelect($event, item)"
               @onView="onViewClick(item)"
               @onEdit="onEditClick(item)"
@@ -279,7 +311,7 @@ const onConfirmDelete = async () => {
 
       <template v-if="roleStore.roles.length === 0" #body>
         <tr>
-          <td :colspan="roleHeader.length + 1" class="role-listing-table__empty-state text-center py-10">
+          <td :colspan="roleHeader.length + (canDeleteRole ? 1 : 0)" class="role-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="role-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

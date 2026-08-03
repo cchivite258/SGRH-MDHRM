@@ -31,6 +31,8 @@ import { useProvinceStore } from '@/store/baseTables/countryStore';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
 import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
+import { EMPLOYEE_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Services & Types
 import { employeeService } from "@/app/http/httpServiceProvider";
@@ -56,7 +58,20 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { canAny } = usePermissions();
 const headerTitle = computed(() => props.cardTitle || t('t-view-employee'));
+const accessibleEmployeeFormTabs = computed(() => getAllowedFormTabs(EMPLOYEE_FORM_TABS, canAny));
+const employeeFormSteps = computed(() => accessibleEmployeeFormTabs.value.map((tab) => tab.value));
+const firstAllowedEmployeeStep = computed(() => employeeFormSteps.value[0] || 1);
+const currentEmployeeStepIndex = computed(() => employeeFormSteps.value.indexOf(step.value));
+const previousEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value - 1] || null);
+const nextEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value + 1] || null);
+const isEmployeeStepAllowed = (value: number) => employeeFormSteps.value.includes(value);
+const ensureEmployeeStepAllowed = () => {
+  if (!isEmployeeStepAllowed(step.value)) {
+    step.value = firstAllowedEmployeeStep.value;
+  }
+};
 
 const resolveRelationId = (value: unknown): string | number | undefined => {
   if (value == null) return undefined;
@@ -264,6 +279,8 @@ onMounted(async () => {
  * @param value - Número da aba (1 ou 2)
  */
 const onStepChange = (value: number) => {
+  if (!isEmployeeStepAllowed(value)) return;
+
   // Permite sempre voltar para tabs anteriores
   if (value < step.value) {
     step.value = value;
@@ -384,6 +401,8 @@ watch(() => route.query.tab, (newTab) => {
   }
 }, { immediate: true });
 
+watch(accessibleEmployeeFormTabs, ensureEmployeeStepAllowed, { immediate: true });
+
 /**
  * Salva os dados do employee
  * @param isFinalStep - Indica se é o passo final (salvar e sair)
@@ -448,7 +467,7 @@ onBeforeUnmount(() => {
 
   <ButtonNav v-model="step" class="employee-form-tabs" />
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 1 && isEmployeeStepAllowed(1)" class="employee-form-section">
       <!-- Indicador de loading -->
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
@@ -464,7 +483,7 @@ onBeforeUnmount(() => {
 
   </FormCard>
 
-  <FormCard v-if="step === 2" class="employee-form-section">
+  <FormCard v-if="step === 2 && isEmployeeStepAllowed(2)" class="employee-form-section">
       <Step2 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
         :loading="loading" :show-actions="false" :employee-id="employeeId"
         :rehire-tracks-refresh-key="rehireTracksRefreshKey"
@@ -472,20 +491,32 @@ onBeforeUnmount(() => {
 
   </FormCard>
 
-  <FormCard v-if="step === 3" class="employee-form-section">
+  <FormCard v-if="step === 3 && isEmployeeStepAllowed(3)" class="employee-form-section">
       <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
         :allow-edit="false"
-        :previous-step="2" previous-label-key="t-back-to-institution-and-classification" :next-step="4" />
+        :previous-step="previousEmployeeStep" previous-label-key="t-back" :next-step="nextEmployeeStep" />
 
   </FormCard>
 
-  <FormCard v-if="step === 4" class="employee-form-section">
-      <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 4 && isEmployeeStepAllowed(4)" class="employee-form-section">
+      <Step4
+        @onStepChange="onStepChange"
+        :loading="loading"
+        :employee-id="employeeId"
+        :previous-step="previousEmployeeStep"
+        :next-step="nextEmployeeStep"
+      />
 
   </FormCard>
 
-  <FormCard v-if="step === 5" class="employee-form-section">
-      <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 5 && isEmployeeStepAllowed(5)" class="employee-form-section">
+      <Step5
+        @onStepChange="onStepChange"
+        :loading="loading"
+        :employee-id="employeeId"
+        :previous-step="previousEmployeeStep"
+        :next-step="nextEmployeeStep"
+      />
 
   </FormCard>
 

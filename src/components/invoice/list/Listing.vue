@@ -19,12 +19,16 @@ import { invoiceHeader, Options } from "@/components/invoice/list/utils"
 import type { ReasonType } from "@/components/baseTables/reason/types"
 import type { InvoiceListingType } from "@/components/invoice/types"
 import { useInvoiceStore } from "@/store/invoice/invoiceStore"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const invoiceStore = useInvoiceStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
@@ -65,6 +69,29 @@ const loading = computed(() => invoiceStore.loading)
 const totalItems = computed(() => invoiceStore.pagination.totalElements)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
 
+// Quem tem apenas leitura consulta a lista e o detalhe da factura.
+// Cada accao operacional continua amarrada a sua permissao exacta.
+const canListInvoices = computed(() => canAny(PERMISSIONS.INVOICES.LIST))
+const canViewInvoice = computed(() => can(PERMISSIONS.INVOICES.VIEW))
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE))
+const canSelectInvoices = computed(() =>
+  canAny([
+    PERMISSIONS.INVOICES.POST,
+    PERMISSIONS.INVOICES.POST_FLAGGED,
+    PERMISSIONS.INVOICES.CANCEL,
+    PERMISSIONS.INVOICES.REVERSE,
+  ])
+)
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.INVOICES.VIEW,
+  edit: PERMISSIONS.INVOICES.UPDATE,
+  post: PERMISSIONS.INVOICES.POST,
+  "force-post": PERMISSIONS.INVOICES.POST_FLAGGED,
+  cancel: PERMISSIONS.INVOICES.CANCEL,
+  reverse: PERMISSIONS.INVOICES.REVERSE,
+}
+
 watch(selectedInvoices, newSelection => {
   console.log("Facturas selecionadas:", newSelection)
 }, { deep: true })
@@ -85,10 +112,12 @@ const fetchInvoices = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
 }
 
 const onView = (id: string) => {
+  if (!canViewInvoice.value) return
   router.push(`/invoices/view/${id}`)
 }
 
 const openPostFlaggedDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.POST_FLAGGED)) return
   postFlaggedId.value = id
   postFlaggedDialog.value = true
 }
@@ -99,7 +128,7 @@ const openPostFlaggedNotesDialog = () => {
 }
 
 const postFlaggedInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
-  if (!postFlaggedId.value) return
+  if (!postFlaggedId.value || !can(PERMISSIONS.INVOICES.POST_FLAGGED)) return
 
   postFlaggedLoading.value = true
   try {
@@ -121,6 +150,7 @@ const postFlaggedInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayloa
 }
 
 const openPostDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.POST)) return
   postId.value = id
   postDialog.value = true
 }
@@ -131,7 +161,7 @@ const openPostNotesDialog = () => {
 }
 
 const postInvoice = async (notes: string) => {
-  if (!postId.value) return
+  if (!postId.value || !can(PERMISSIONS.INVOICES.POST)) return
 
   postLoading.value = true
   try {
@@ -153,6 +183,7 @@ const postInvoice = async (notes: string) => {
 }
 
 const openCancelDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.CANCEL)) return
   cancelId.value = id
   cancelDialog.value = true
 }
@@ -163,7 +194,7 @@ const openCancelNotesDialog = () => {
 }
 
 const cancelInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
-  if (!cancelId.value) return
+  if (!cancelId.value || !can(PERMISSIONS.INVOICES.CANCEL)) return
 
   cancelLoading.value = true
   try {
@@ -185,6 +216,7 @@ const cancelInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) =>
 }
 
 const openReverseDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.REVERSE)) return
   reverseId.value = id
   reverseDialog.value = true
 }
@@ -195,7 +227,7 @@ const openReverseNotesDialog = () => {
 }
 
 const reverseInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
-  if (!reverseId.value) return
+  if (!reverseId.value || !can(PERMISSIONS.INVOICES.REVERSE)) return
 
   reverseLoading.value = true
   try {
@@ -226,6 +258,7 @@ const toggleSelection = (item: InvoiceListingType) => {
 }
 
 const onCreateEditClick = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.UPDATE)) return
   router.push(`/invoices/edit/${id}`)
 }
 
@@ -242,6 +275,8 @@ const onCancel = (id: string) => {
 }
 
 const onReverse = (invoice: InvoiceListingType) => {
+  if (!can(PERMISSIONS.INVOICES.REVERSE)) return
+
   if (invoice.invoiceStatus !== "POSTED") {
     toast.error(t("t-invoice-reverse-only-posted"))
     return
@@ -259,10 +294,12 @@ const getDynamicOptions = (invoice: InvoiceListingType) => {
     availableOptions = Options.filter(option => option.title === "view" || option.title === "reverse")
   }
 
-  return availableOptions.map(option => ({
-    ...option,
-    title: t(`t-${option.title}`)
-  }))
+  return availableOptions
+    .filter(option => canAny(actionPermissionByValue[option.value]))
+    .map(option => ({
+      ...option,
+      title: t(`t-${option.title}`)
+    }))
 }
 
 const onSelect = (option: string, data: InvoiceListingType) => {
@@ -334,12 +371,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão das facturas registadas."
     :action-label="$t('t-add-invoice')"
     action-to="/invoices/create"
+    :show-action="canCreateInvoice"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListInvoices" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissao para listar facturas.
+    </v-alert>
+
     <template #filters>
       <AdvancedFilter />
     </template>
@@ -364,7 +406,7 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canSelectInvoices"
       @load-items="fetchInvoices"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
@@ -373,7 +415,7 @@ onBeforeRouteLeave(() => {
           :key="item.id"
           :class="[shouldHighlight(item) ? 'bg-danger-subtle' : '', 'invoice-listing-table__row']"
         >
-          <td data-label="">
+          <td v-if="canSelectInvoices" data-label="">
             <v-checkbox
               :model-value="selectedInvoices.some(selected => selected.id === item.id)"
               hide-details
@@ -384,7 +426,12 @@ onBeforeRouteLeave(() => {
           <td data-label="Contrato">
             {{ getContractName(item) }}
           </td>
-          <td data-label="Factura" class="invoice-listing-table__primary-cell cursor-pointer" @click="onView(item.id)">
+          <td
+            data-label="Factura"
+            class="invoice-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewInvoice }"
+            @click="onView(item.id)"
+          >
             <div class="d-flex align-center ga-2">
               <span>{{ item.invoiceNumber || "N/A" }}</span>
               <v-tooltip v-if="getInvoiceAlerts(item).length" location="top">
@@ -408,14 +455,19 @@ onBeforeRouteLeave(() => {
             <Status :status="item.invoiceStatus" />
           </td>
           <td data-label="Acção" class="invoice-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon
+              v-if="getDynamicOptions(item).length"
+              align="center"
+              :menuItems="getDynamicOptions(item)"
+              @onSelect="onSelect($event, item)"
+            />
           </td>
         </tr>
       </template>
 
       <template v-if="invoiceStore.invoices.length === 0" #body>
         <tr>
-          <td :colspan="invoiceHeader.length" class="invoice-listing-table__empty-state text-center py-10">
+          <td :colspan="invoiceHeader.length + (canSelectInvoices ? 1 : 0)" class="invoice-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="invoice-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

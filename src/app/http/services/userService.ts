@@ -119,7 +119,6 @@ export default class UserService extends HttpService {
       const payload = {
         newPassword: userData.newPassword,
         confirmPassword: userData.confirmPassword,
-        passwordsMatching: userData.passwordsMatching,
       };
 
       const response = await this.put<UserListingType>(`/administration/users/change-password/${id}`, payload);

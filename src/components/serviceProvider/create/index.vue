@@ -20,6 +20,8 @@ import { serviceProviderService } from "@/app/http/httpServiceProvider";
 
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
+import { SERVICE_PROVIDER_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Props
 const props = defineProps({
@@ -35,6 +37,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const serviceProviderStore = useServiceProviderStore();
+const { canAny } = usePermissions();
 
 // Refs
 const step = ref(1);
@@ -53,6 +56,19 @@ const basicDataValidated = ref(false);
 const contractDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (serviceProviderId.value ? t('t-edit-service-provider') : t('t-add-service-provider')));
 const headerSaveLabel = computed(() => t('t-save'));
+const accessibleServiceProviderFormTabs = computed(() => getAllowedFormTabs(SERVICE_PROVIDER_FORM_TABS, canAny));
+const serviceProviderFormSteps = computed(() => accessibleServiceProviderFormTabs.value.map((tab) => tab.value));
+const firstAllowedServiceProviderStep = computed(() => serviceProviderFormSteps.value[0] || 1);
+const currentStepIndex = computed(() => serviceProviderFormSteps.value.indexOf(step.value));
+const isLastStep = computed(() => currentStepIndex.value === serviceProviderFormSteps.value.length - 1);
+const previousServiceProviderStep = computed(() => serviceProviderFormSteps.value[currentStepIndex.value - 1]);
+const nextServiceProviderStep = computed(() => serviceProviderFormSteps.value[currentStepIndex.value + 1]);
+const isServiceProviderStepAllowed = (value: number) => serviceProviderFormSteps.value.includes(value);
+const ensureServiceProviderStepAllowed = () => {
+  if (!isServiceProviderStepAllowed(step.value)) {
+    step.value = firstAllowedServiceProviderStep.value;
+  }
+};
 
 const goBackToList = () => {
   router.push('/service-provider/list');
@@ -193,6 +209,7 @@ const validateCurrentStep = async () => {
 };
 
 const onStepChange = async (value: number) => {
+  if (!isServiceProviderStepAllowed(value)) return;
   if (value === step.value) return;
 
   if (value < step.value) {
@@ -235,6 +252,8 @@ watch(
   },
   { deep: true }
 );
+
+watch(accessibleServiceProviderFormTabs, ensureServiceProviderStepAllowed, { immediate: true });
 
 
 
@@ -372,7 +391,7 @@ onBeforeUnmount(() => {
       @update:model-value="onStepChange"
     />
   </div>
-  <FormCard v-show="step === 1" class="service-provider-form-section">
+  <FormCard v-show="step === 1 && isServiceProviderStepAllowed(1)" class="service-provider-form-section">
 
       <!-- Mensagens de erro -->
       <transition name="fade">
@@ -385,14 +404,14 @@ onBeforeUnmount(() => {
 
   </FormCard>
 
-  <FormCard v-show="step === 2" class="service-provider-form-section">
+  <FormCard v-show="step === 2 && isServiceProviderStepAllowed(2)" class="service-provider-form-section">
       <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         :service-provider-id="serviceProviderId"
         @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
         :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onContractDataValidated" />
   </FormCard>
 
-  <FormCard v-show="step === 3" class="service-provider-form-section">
+  <FormCard v-show="step === 3 && isServiceProviderStepAllowed(3)" class="service-provider-form-section">
       <Step3 ref="step3Ref" @onStepChange="onStepChange" v-model="serviceProviderData"
         @save="saveServiceProvider(true)" :loading="loading" :server-errors="apiFieldErrors"
         :show-actions="false" @clear-server-error="clearApiFieldError" />
@@ -400,13 +419,13 @@ onBeforeUnmount(() => {
 
   <div class="service-provider-form-footer-actions">
     <v-btn class="service-provider-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading"
-      @click="step === 1 ? goBackToList() : onStepChange(step - 1)">
+      @click="previousServiceProviderStep ? onStepChange(previousServiceProviderStep) : goBackToList()">
       <i class="ph-arrow-left me-2" />
-      {{ step === 1 ? $t('t-back-to-list') : $t('t-back') }}
+      {{ previousServiceProviderStep ? $t('t-back') : $t('t-back-to-list') }}
     </v-btn>
 
-    <v-btn v-if="step < 3" class="service-provider-form-footer-actions__save" color="secondary" variant="elevated"
-      :loading="loading" @click="onStepChange(step + 1)">
+    <v-btn v-if="!isLastStep" class="service-provider-form-footer-actions__save" color="secondary" variant="elevated"
+      :loading="loading" @click="nextServiceProviderStep && onStepChange(nextServiceProviderStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

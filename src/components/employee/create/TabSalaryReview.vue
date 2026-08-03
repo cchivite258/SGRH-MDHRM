@@ -9,18 +9,22 @@ defineProps({
     default: null
   },
   previousStep: {
-    type: Number,
-    default: 1
+    type: Number as PropType<number | null>,
+    default: null
   },
   previousLabelKey: {
     type: String,
     default: "t-general-information"
   },
   nextStep: {
-    type: Number,
-    default: 4
+    type: Number as PropType<number | null>,
+    default: null
   },
   loading: {
+    type: Boolean,
+    default: false
+  },
+  allowEdit: {
     type: Boolean,
     default: false
   }
@@ -43,7 +47,7 @@ const onSalaryUpdated = (value: number) => {
 <template>
   <SalaryReview
     :employee-id="employeeId"
-    :allow-edit="true"
+    :allow-edit="allowEdit"
     :previous-step="previousStep"
     :previous-label-key="previousLabelKey"
     :next-step="nextStep"

@@ -15,6 +15,8 @@ import type {
   ContractDocumentType
 } from "@/components/institution/types";
 import { contractDocumentTypeOptions } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 type AttachmentUploadRow = {
   id: string;
@@ -31,6 +33,7 @@ const props = defineProps({
 
 const { t } = useI18n();
 const toast = useToast();
+const { can, canAny } = usePermissions();
 
 const loading = ref(false);
 const uploadLoading = ref(false);
@@ -41,6 +44,13 @@ const attachmentActionLoadingId = ref<string | null>(null);
 const downloadAttachmentLoadingId = ref<string | null>(null);
 const deleteAttachmentDialog = ref(false);
 const attachmentToDelete = ref<ContractAttachmentType | null>(null);
+const canConsultContractAttachments = computed(() => canAny([
+  PERMISSIONS.CONTRACT_ATTACHMENTS.READ,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.CREATE,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.DELETE,
+]));
+const canAttachContractDocuments = computed(() => can(PERMISSIONS.CONTRACT_ATTACHMENTS.CREATE));
+const canDeleteContractDocuments = computed(() => can(PERMISSIONS.CONTRACT_ATTACHMENTS.DELETE));
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
   id: uuidv4(),
@@ -105,7 +115,7 @@ const getAttachmentExtension = (attachment: ContractAttachmentType) =>
   attachment.attachment?.extension || attachment.extension || attachment.fileMetadata?.extension || "";
 
 const refreshContractAttachments = async () => {
-  if (!props.contractId) return;
+  if (!props.contractId || !canConsultContractAttachments.value) return;
 
   loading.value = true;
   try {
@@ -124,19 +134,20 @@ const refreshContractAttachments = async () => {
 };
 
 watch(
-  () => props.contractId,
-  async (contractId) => {
+  [() => props.contractId, canConsultContractAttachments],
+  async ([contractId, canConsult]) => {
     attachmentUploads.value = [];
     currentAttachments.value = [];
     errorMsg.value = "";
 
-    if (!contractId) return;
+    if (!contractId || !canConsult) return;
     await refreshContractAttachments();
   },
   { immediate: true }
 );
 
 const addAttachmentUploadRow = () => {
+  if (!canAttachContractDocuments.value) return;
   attachmentUploads.value = [...attachmentUploads.value, createAttachmentUploadRow()];
 };
 
@@ -145,6 +156,8 @@ const removeAttachmentUploadRow = (rowId: string) => {
 };
 
 const onAttachDocuments = async () => {
+  if (!canAttachContractDocuments.value) return;
+
   const pendingUploads = normalizedPendingUploads.value;
   if (pendingUploads.length === 0) {
     toast.error(t("t-add-at-least-one-document"));
@@ -190,6 +203,8 @@ const onAttachDocuments = async () => {
 };
 
 const onDownloadAttachment = async (attachment: ContractAttachmentType) => {
+  if (!canConsultContractAttachments.value) return;
+
   const attachmentId = getAttachmentId(attachment);
   const fileName = getAttachmentFileName(attachment);
   const extension = getAttachmentExtension(attachment);
@@ -208,6 +223,8 @@ const onDownloadAttachment = async (attachment: ContractAttachmentType) => {
 };
 
 const onDeleteAttachment = (attachment: ContractAttachmentType) => {
+  if (!canDeleteContractDocuments.value) return;
+
   attachmentToDelete.value = attachment;
   deleteAttachmentDialog.value = true;
 };
@@ -239,7 +256,7 @@ const onConfirmDeleteAttachment = async () => {
 </script>
 
 <template>
-  <Card title="Documentos do Contrato" elevation="0" title-class="pb-0">
+  <Card v-if="canConsultContractAttachments" title="Documentos do Contrato" elevation="0" title-class="pb-0">
     <v-card-text class="pt-0">
       <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mb-3" density="compact" />
 
@@ -247,7 +264,7 @@ const onConfirmDeleteAttachment = async () => {
         <div class="font-weight-bold text-caption">
           {{ $t('t-document-file') }}
         </div>
-        <div class="d-flex ga-2">
+        <div v-if="canAttachContractDocuments" class="d-flex ga-2">
           <v-btn
             v-if="attachmentUploads.length > 0"
             color="secondary"
@@ -297,6 +314,7 @@ const onConfirmDeleteAttachment = async () => {
           </div>
           <div class="d-flex ga-2">
             <v-btn
+              v-if="canConsultContractAttachments"
               color="black"
               variant="elevated"
               size="small"
@@ -307,6 +325,7 @@ const onConfirmDeleteAttachment = async () => {
               <i class="ph-download-simple me-1" /> {{ $t('t-download-attachment') }}
             </v-btn>
             <v-btn
+              v-if="canDeleteContractDocuments"
               color="danger"
               variant="elevated"
               size="small"
@@ -320,7 +339,7 @@ const onConfirmDeleteAttachment = async () => {
         </v-card-text>
       </v-card>
 
-      <v-card v-for="row in attachmentUploads" :key="row.id" class="border mt-3" elevation="0">
+      <v-card v-for="row in attachmentUploads" v-if="canAttachContractDocuments" :key="row.id" class="border mt-3" elevation="0">
         <v-card-text class="position-relative">
           <v-btn
             icon="ph-x"

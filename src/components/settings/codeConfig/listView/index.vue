@@ -23,9 +23,13 @@ import type {
   CodeConfigOption,
 } from "@/components/settings/codeConfig/types";
 import type { OptionType } from "@/app/common/types/option.type";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
+import type { PermissionRequirement } from "@/app/permissions/constants";
 
 const { t } = useI18n();
 const toast = useToast();
+const { can, canAny } = usePermissions();
 
 const dialog = ref(false);
 const viewDialog = ref(false);
@@ -45,12 +49,24 @@ const loadingList = ref(false);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+const canCreateCodeConfig = computed(() => can(PERMISSIONS.SETTINGS.CODE_CONFIG.CREATE));
+const canDeleteCodeConfig = computed(() => can(PERMISSIONS.SETTINGS.CODE_CONFIG.DELETE));
 
 const actionOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" },
 ];
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.SETTINGS.CODE_CONFIG.VIEW,
+  edit: PERMISSIONS.SETTINGS.CODE_CONFIG.UPDATE,
+  delete: PERMISSIONS.SETTINGS.CODE_CONFIG.DELETE,
+};
+
+const dynamicActionOptions = computed(() =>
+  actionOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+);
 
 const handleApiError = (error: any) => {
   if (alertTimeout) {
@@ -128,6 +144,9 @@ watch(deleteDialog, (newVal: boolean) => {
 });
 
 const onCreateEditClick = (data: CodeConfigListing | null) => {
+  if (!data && !canCreateCodeConfig.value) return;
+  if (data && !can(PERMISSIONS.SETTINGS.CODE_CONFIG.UPDATE)) return;
+
   codeConfigData.value = data ?? {
     id: "-1",
     type: "SERVICE_PROVIDER",
@@ -144,6 +163,8 @@ const onCreateEditClick = (data: CodeConfigListing | null) => {
 };
 
 const onViewClick = (data: CodeConfigListing) => {
+  if (!can(PERMISSIONS.SETTINGS.CODE_CONFIG.VIEW)) return;
+
   codeConfigData.value = data;
   viewDialog.value = true;
 };
@@ -152,6 +173,8 @@ const onSubmit = async (data: CodeConfigForm, callbacks?: {
   onSuccess?: () => void,
   onFinally?: () => void
 }) => {
+  if ((!data.id && !canCreateCodeConfig.value) || (data.id && !can(PERMISSIONS.SETTINGS.CODE_CONFIG.UPDATE))) return;
+
   try {
     const response = !data.id
       ? await codeConfigService.createCodeConfig(data)
@@ -173,11 +196,15 @@ const onSubmit = async (data: CodeConfigForm, callbacks?: {
 };
 
 const onDelete = (item: CodeConfigListing) => {
+  if (!canDeleteCodeConfig.value) return;
+
   deleteId.value = item.id;
   deleteDialog.value = true;
 };
 
 const onConfirmDelete = async () => {
+  if (!canDeleteCodeConfig.value) return;
+
   deleteLoading.value = true;
 
   try {
@@ -218,6 +245,7 @@ const booleanLabel = (value: boolean) => value ? t("t-yes") : t("t-no");
     :title="$t('t-contract-code-configs')"
     subtitle="Consulte, pesquise e faca a gestao das configuracoes dos codigos contratuais."
     :action-label="$t('t-add-contract-code-config')"
+    :show-action="canCreateCodeConfig"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -248,13 +276,13 @@ const booleanLabel = (value: boolean) => value ? t("t-yes") : t("t-no");
       :search-query="searchQuery"
       :search-props="searchProps"
       item-value="id"
-      show-select
+      :show-select="canDeleteCodeConfig"
       :show-pagination="false"
       @load-items="fetchCodeConfigs"
     >
       <template #body="{ items }">
         <tr v-for="item in items as CodeConfigListing[]" :key="item.id" class="code-config-listing-table__row">
-          <td data-label="" class="code-config-listing-page__select-cell">
+          <td v-if="canDeleteCodeConfig" data-label="" class="code-config-listing-page__select-cell">
             <v-checkbox
               :model-value="selectedCodeConfigs.some(selected => selected.id === item.id)"
               hide-details
@@ -277,14 +305,14 @@ const booleanLabel = (value: boolean) => value ? t("t-yes") : t("t-no");
           <td data-label="Ano">{{ booleanLabel(item.includesYear) }}</td>
           <td data-label="Mes">{{ booleanLabel(item.includesMonth) }}</td>
           <td data-label="Accao" class="code-config-listing-table__actions-cell">
-            <TableActionMenu :menu-items="actionOptions" @onSelect="onActionSelect($event, item)" />
+            <TableActionMenu :menu-items="dynamicActionOptions" @onSelect="onActionSelect($event, item)" />
           </td>
         </tr>
       </template>
 
       <template v-if="!codeConfigs.length" #body>
         <tr>
-          <td :colspan="listViewHeader.length + 1" class="code-config-listing-table__empty-state text-center py-10">
+          <td :colspan="listViewHeader.length + (canDeleteCodeConfig ? 1 : 0)" class="code-config-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="code-config-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

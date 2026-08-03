@@ -16,6 +16,8 @@ import { institutionService } from "@/app/http/httpServiceProvider";
 import type { InstitutionInsertType } from "@/components/institution/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
+import { CONTRACT_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 const props = defineProps({
   cardTitle: {
@@ -29,10 +31,10 @@ const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+const { canAny } = usePermissions();
 
 const loading = ref(false);
 const step = ref(1);
-const totalSteps = 7;
 const institutionId = ref<string | null>(
   typeof route.params.id === "string"
     ? route.params.id
@@ -65,13 +67,24 @@ const institutionData = reactive<InstitutionInsertType & { institutionTypeName?:
 });
 
 const headerTitle = computed(() => props.cardTitle || t("t-view-institution"));
+const accessibleContractFormTabs = computed(() => getAllowedFormTabs(CONTRACT_FORM_TABS, canAny));
+const contractFormSteps = computed(() => accessibleContractFormTabs.value.map((tab) => tab.value));
+const firstAllowedContractStep = computed(() => contractFormSteps.value[0] || 1);
+const isContractStepAllowed = (value: number) => contractFormSteps.value.includes(value);
+const ensureContractStepAllowed = () => {
+  if (!isContractStepAllowed(step.value)) {
+    step.value = firstAllowedContractStep.value;
+  }
+};
 
 const onStepChange = (value: number) => {
+  if (!isContractStepAllowed(value)) return;
   step.value = value;
 };
 
-const isFirstStep = computed(() => step.value === 1);
-const isLastStep = computed(() => step.value === totalSteps);
+const currentStepIndex = computed(() => contractFormSteps.value.indexOf(step.value));
+const isFirstStep = computed(() => currentStepIndex.value <= 0);
+const isLastStep = computed(() => currentStepIndex.value === contractFormSteps.value.length - 1);
 
 const goBackToList = () => {
   router.push("/institution/list");
@@ -83,7 +96,10 @@ const goToPreviousStep = () => {
     return;
   }
 
-  step.value -= 1;
+  const previousStep = contractFormSteps.value[currentStepIndex.value - 1];
+  if (previousStep) {
+    step.value = previousStep;
+  }
 };
 
 const goToNextStep = () => {
@@ -92,7 +108,10 @@ const goToNextStep = () => {
     return;
   }
 
-  step.value += 1;
+  const nextStep = contractFormSteps.value[currentStepIndex.value + 1];
+  if (nextStep) {
+    step.value = nextStep;
+  }
 };
 
 const toSingleString = (value: unknown): string | undefined => {
@@ -111,12 +130,14 @@ watch(
     if (!tabValue) return;
 
     const tabNumber = Number(tabValue);
-    if (!isNaN(tabNumber) && tabNumber >= 1 && tabNumber <= totalSteps) {
-      step.value = tabNumber;
+    if (!isNaN(tabNumber)) {
+      onStepChange(tabNumber);
     }
   },
   { immediate: true }
 );
+
+watch(accessibleContractFormTabs, ensureContractStepAllowed, { immediate: true });
 
 const formatUser = (user: { firstName?: string | null; lastName?: string | null; email?: string | null }) => {
   const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
@@ -179,7 +200,7 @@ onMounted(async () => {
 
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
-      <Card v-if="step === 1" :title="$t('t-general-information')" elevation="0" title-class="pb-0">
+      <Card v-if="step === 1 && isContractStepAllowed(1)" :title="$t('t-general-information')" elevation="0" title-class="pb-0">
         <v-card-text class="pt-0">
           <v-row>
             <v-col cols="12" class="text-right">
@@ -251,12 +272,12 @@ onMounted(async () => {
         </v-card-text>
       </Card>
 
-      <Step2 v-if="step === 2" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step3 v-if="step === 3" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step4 v-if="step === 4" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step5 v-if="step === 5" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step6 v-if="step === 6" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step7 v-if="step === 7" :institution-id="institutionId || undefined" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step2 v-if="step === 2 && isContractStepAllowed(2)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step3 v-if="step === 3 && isContractStepAllowed(3)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step4 v-if="step === 4 && isContractStepAllowed(4)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step5 v-if="step === 5 && isContractStepAllowed(5)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step6 v-if="step === 6 && isContractStepAllowed(6)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step7 v-if="step === 7 && isContractStepAllowed(7)" :institution-id="institutionId || undefined" :is-view-mode="true" @onStepChange="onStepChange" />
 
       <div class="institution-view-footer-actions">
         <v-btn

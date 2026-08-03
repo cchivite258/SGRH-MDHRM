@@ -36,8 +36,8 @@ const props = defineProps({
     default: false
   },
   previousStep: {
-    type: Number,
-    default: 4
+    type: Number as PropType<number | null>,
+    default: null
   },
   previousLabelKey: {
     type: String,
@@ -304,8 +304,8 @@ onBeforeUnmount(() => {
     </v-col>
   </v-row>
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
+  <v-card-actions v-if="previousStep || nextStep" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
       <i class="ph-arrow-left me-2" /> {{ $t(previousLabelKey) }}
     </v-btn>
     <v-btn v-if="nextStep" color="secondary" variant="elevated" class="me-2" @click="emit('onStepChange', nextStep)">

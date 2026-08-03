@@ -2,6 +2,8 @@
 import { computed } from "vue";
 import type { PropType } from "vue";
 import FormTabs from "@/app/common/components/FormTabs.vue";
+import { SERVICE_PROVIDER_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 const emit = defineEmits(["update:modelValue"]);
 const props = defineProps({
@@ -23,6 +25,8 @@ const props = defineProps({
   }
 });
 
+const { canAny } = usePermissions();
+
 const step = computed({
   get() {
     return props.modelValue;
@@ -39,11 +43,12 @@ const isTabDisabled = (tabNumber: number) => {
   return false;
 };
 
-const tabs = computed(() => [
-  { value: 1, label: "t-general-information", disabled: isTabDisabled(1) },
-  { value: 2, label: "t-contract", disabled: isTabDisabled(2) },
-  { value: 3, label: "t-contacts-service-provider", disabled: isTabDisabled(3) }
-]);
+const tabs = computed(() =>
+  getAllowedFormTabs(SERVICE_PROVIDER_FORM_TABS, canAny).map((tab) => ({
+    ...tab,
+    disabled: isTabDisabled(tab.value),
+  }))
+);
 </script>
 
 <template>
