@@ -862,4 +862,4 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = string;
-export type PermissionRequirement = Permission | readonly PermissionRequirement[];
+export type PermissionRequirement = Permission | undefined | readonly PermissionRequirement[];
