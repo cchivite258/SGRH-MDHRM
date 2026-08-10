@@ -369,18 +369,6 @@ const getProcedureGroupName = (procedure: ExpensePerProcedureType | any) => {
   return typeof group === "object" ? group.name || "-" : String(group);
 };
 
-const getProcedureGroupIdentity = (procedure: ExpensePerProcedureType | any) => {
-  const item = procedure as any;
-  const source = getProcedureSource(procedure);
-  return String(firstDefined(
-    item.hospitalProcedureGroupId,
-    source.hospitalProcedureGroupId,
-    item.hospitalProcedureGroup?.id,
-    source.hospitalProcedureGroup?.id,
-    getProcedureGroupName(procedure)
-  ));
-};
-
 const procedureUsesGroupLimit = (procedure: ExpensePerProcedureType | any) => {
   const source = getProcedureSource(procedure);
   return Boolean(procedure.belongsToGroup ?? source.belongsToGroup);
@@ -427,31 +415,6 @@ const getGroupedProcedureUsedBalance = (procedures: ExpensePerProcedureType[]) =
   return procedures.reduce((total, procedure) => total + getProcedureSpecificUsedBalance(procedure), 0);
 };
 
-const getPlanUsedBalanceTotal = (procedures: ExpensePerProcedureType[]) => {
-  const groupedProcedures = new Map<string, ExpensePerProcedureType[]>();
-  let total = 0;
-
-  procedures.forEach((procedure) => {
-    if (procedureUsesGroupLimit(procedure)) {
-      const groupKey = getProcedureGroupIdentity(procedure);
-      groupedProcedures.set(groupKey, [...(groupedProcedures.get(groupKey) || []), procedure]);
-      return;
-    }
-
-    total += getProcedureSpecificUsedBalance(procedure);
-  });
-
-  groupedProcedures.forEach((groupProcedures) => {
-    total += getGroupedProcedureUsedBalance(groupProcedures);
-  });
-
-  return total;
-};
-
-const dependentProcedureUsedBalanceTotal = computed(() =>
-  getPlanUsedBalanceTotal(allMainMemberProcedureLimits.value)
-);
-
 const displayAllocatedBalance = computed(() =>
   !props.isEmployee && dependentPlanSummary.value
     ? dependentPlanSummary.value.allocatedBalance
@@ -459,10 +422,9 @@ const displayAllocatedBalance = computed(() =>
 );
 
 const displayUsedBalance = computed(() => {
-  if (allMainMemberProcedureLimits.value.length) return getPlanUsedBalanceTotal(allMainMemberProcedureLimits.value);
   if (props.isEmployee) return healthPlanFormData.value.usedBalance;
   if (dependentPlanSummary.value) return dependentPlanSummary.value.usedBalance;
-  return dependentProcedureUsedBalanceTotal.value;
+  return healthPlanFormData.value.usedBalance;
 });
 
 const displayRemainingBalance = computed(() =>
@@ -592,7 +554,7 @@ onMounted(fetchHealthPlan);
               </v-col>
               <v-col cols="12" lg="4" class="py-1">
                 <div class="font-weight-bold mb-1">
-                  {{ props.isEmployee ? $t('t-used-balance') : $t('t-dependent-used-balance') }}
+                  {{ props.isEmployee ? $t('t-global-used-balance') : $t('t-dependent-used-balance') }}
                 </div>
                 <div>{{ formatCurrency(displayUsedBalance) }}</div>
               </v-col>
