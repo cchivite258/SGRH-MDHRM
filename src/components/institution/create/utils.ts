@@ -219,6 +219,7 @@ export const coveragePeriodHeader: DataTableHeaderType[] = [
 
 
 export const healthPlanHeader: DataTableHeaderType[] = [
+  { title: "coverage-period", key: "coveragePeriod.name", sortable: true },
   { title: "max-number-of-dependents", key: "maxNumberOfDependents", sortable: true },
   { title: "children-max-age", key: "childrenMaxAge", sortable: true },
   { title: "children-in-university-max-age", key: "childrenInUniversityMaxAge", sortable: true },

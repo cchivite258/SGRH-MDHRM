@@ -91,7 +91,7 @@ const healthPlanDataView = ref<HealthPlanListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
-const searchProps = "maxNumberOfDependents,childrenMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
+const searchProps = "coveragePeriod.name,maxNumberOfDependents,childrenMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
 const itemsPerPage = ref(10);
 const selectedHealthPlans = ref<HealthPlanListingType[]>([]);
 const customerDetail = ref<any>(null); // Adicionado para resolver o erro
@@ -120,6 +120,11 @@ const activePlanCoveragePeriod = computed(() =>
   || activeHealthPlan.value?.name
   || "-"
 );
+
+const getCoveragePeriodName = (healthPlan: HealthPlanListingType) =>
+  healthPlan.coveragePeriod?.name
+  || (healthPlan as any).coveragePeriodName
+  || "-";
 
 const filteredPlanProcedures = computed(() => {
   const search = healthPlanProcedureSearch.value.trim().toLowerCase();
@@ -734,6 +739,7 @@ onBeforeUnmount(() => {
               <v-checkbox :model-value="selectedHealthPlans.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
+            <td>{{ getCoveragePeriodName(item) }}</td>
             <td>{{ item.maxNumberOfDependents }}</td>
             <td>{{ item.childrenMaxAge }}</td>
             <td>{{ item.childrenInUniversityMaxAge }}</td>
