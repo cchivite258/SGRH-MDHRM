@@ -978,6 +978,7 @@
   "t-contract-end-date-must-be-after-start-date": "The contract end date cannot be earlier than the start date.",
   "t-exceeds-limit": "Procedure limit exceeded!",
   "t-frequency-flagged": "Usage frequency exceeded!",
+  "t-waiting-period": "Grace period!",
   "t-flag": "Flag",
   "t-insufficient-funds": "Insufficient funds!",
   "t-items-flagged": "Items Flagged",

@@ -196,6 +196,22 @@ const activeHealthPlan = computed(() =>
   || employeeActiveHealthPlan.value
 );
 
+// Na consulta, o ProductCard precisa do plano da factura, não necessariamente do plano activo actual.
+const invoiceHealthPlanId = computed(() => {
+  const invoice = invoiceData.value as any;
+  const coveragePeriod = invoice.coveragePeriod || {};
+  return String(firstDefined(
+    coveragePeriod.companyHealthPlanId,
+    coveragePeriod.contractHealthPlanId,
+    coveragePeriod.companyHealthPlan?.id,
+    coveragePeriod.contractHealthPlan?.id,
+    invoice.companyHealthPlanId,
+    invoice.contractHealthPlanId,
+    invoice.companyHealthPlan?.id,
+    invoice.contractHealthPlan?.id
+  ) || "");
+});
+
 const activePlanProcedures = computed(() => orderHealthPlanProcedures(employeePlanProcedureLimits.value || [], t("t-procedures")));
 
 const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
@@ -945,7 +961,7 @@ onMounted(async () => {
 
         <div class="mb-12">
           <ProductCard ref="productCardRef" v-model="invoiceItemData"
-            :healthplan-id="invoiceData.coveragePeriod?.companyHealthPlanId || ''"
+            :healthplan-id="invoiceHealthPlanId"
             :institution-id="invoiceData.company || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
             @items-ready="handleItemsReady" />
         </div>

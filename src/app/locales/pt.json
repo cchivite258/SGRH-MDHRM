@@ -1055,6 +1055,7 @@
   "t-draft": "Draft",
   "t-exceeds-limit": "Limite do procedimento excedido!",
   "t-frequency-flagged": "Frequência de utilização excedida!",
+  "t-waiting-period": "Período de carência!",
   "t-unknown-flag": "Sinalização desconhecida",
   "t-procedure-required": "Procedimento hospitalar é obrigatório!",
   "t-unit-price-required": "Preço unitário é obrigatório!",

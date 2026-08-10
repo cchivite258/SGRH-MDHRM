@@ -22,6 +22,7 @@ import { invoiceService } from "@/app/http/httpServiceProvider";
 
 // Types e Utils
 import { InvoiceItemInsertType, InvoiceAdviceResponseType } from "@/components/invoice/types";
+import { invoiceItemFlagCatalogue } from "@/components/invoice/invoiceItemFlagCatalogue";
 import { productHeader } from "@/components/invoice/createInvoice/utils";
 
 // =============================================
@@ -233,21 +234,18 @@ const requiredRules = {
 // FLAG CONFIGURATION
 // =============================================
 const flagConfig: Record<string, FlagConfig> = {
-  EXCEEDS_LIMIT: {
-    color: 'warning',
-    icon: 'ph-warning',
-    text: t('t-exceeds-limit')
-  },
-  FREQUENCY_FLAGGED: {
-    color: 'info',
-    icon: 'ph-clock-counter-clockwise',
-    text: t('t-frequency-flagged')
-  },
-  INSUFFICIENT_FUNDS: {
-    color: 'error',
-    icon: 'ph-money',
-    text: t('t-insufficient-funds')
-  },
+  ...Object.fromEntries(
+    invoiceItemFlagCatalogue
+      .filter(item => item.isFlagged)
+      .map(item => [
+        item.value,
+        {
+          color: item.color,
+          icon: item.icon,
+          text: t(item.i18nKey)
+        }
+      ])
+  ),
   default: {
     color: 'info',
     icon: 'ph-warning-circle',
@@ -652,6 +650,15 @@ onMounted(() => {
 
 .flag-border-INSUFFICIENT_FUNDS > td {
   background-color: rgba(244, 67, 54, 0.08);
+}
+
+.flag-border-WAITING_PERIOD {
+  border-left: 4px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.08);
+}
+
+.flag-border-WAITING_PERIOD > td {
+  background-color: rgba(108, 117, 125, 0.08);
 }
 
 
