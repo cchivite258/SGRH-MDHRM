@@ -1192,6 +1192,7 @@
   "t-used-balance": "Valor Gasto",
   "t-remaining-balance": "Saldo Remanescente",
   "t-global-allocated-balance": "Saldo Global Alocado",
+  "t-global-used-balance": "Valor global utilizado",
   "t-dependent-used-balance": "Valor Gasto pelo Dependente",
   "t-global-remaining-balance": "Saldo Global Remanescente",
   "t-usages-list": "Lista de Utilizações",

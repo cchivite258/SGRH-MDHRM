@@ -1000,6 +1000,7 @@
   "t-used-balance": "Amount Spent",
   "t-remaining-balance": "Remaining Balance",
   "t-global-allocated-balance": "Global Allocated Balance",
+  "t-global-used-balance": "Global Amount Used",
   "t-dependent-used-balance": "Amount Spent by Dependent",
   "t-global-remaining-balance": "Global Remaining Balance",
   "t-usages-list": "Usages list",
