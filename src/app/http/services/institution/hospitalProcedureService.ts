@@ -91,7 +91,7 @@ export default class HospitalProcedureService extends HttpService {
       const queryString = queryParams.join('&');
       const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
-      console.log('URL da requisiÃ§Ã£o:', url);
+      console.log('URL:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -131,7 +131,7 @@ export default class HospitalProcedureService extends HttpService {
       const queryString = queryParams.join('&');
       const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
-      console.log('URL da requisiÃ§Ã£o:', url);
+      console.log('URL :', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -140,7 +140,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -226,7 +226,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("Ã¢ÂÅ’ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }

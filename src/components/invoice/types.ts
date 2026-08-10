@@ -188,7 +188,8 @@ export type InvoiceItemFlag =
     | "EXCEEDS_LIMIT"
     | "FREQUENCY_FLAGGED"
     | "INSUFFICIENT_FUNDS"
-    | "UNFLAGGED";
+    | "UNFLAGGED"
+    | "WAITING_PERIOD";
 
 export type InvoiceItemInsertType = {
     id?: string;
