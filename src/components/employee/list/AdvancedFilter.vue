@@ -89,7 +89,7 @@
 
                             <v-btn color="secondary" variant="tonal" @click="applyAdvancedFilters"
                                 :disabled="advancedFilters.length === 0 || hasIncompleteFilters" :loading="loading"
-                                size="small" :title="hasIncompleteFilters ? 'Preencha todos os campos dos filtros' : ''">
+                                size="small" :title="hasIncompleteFilters ? t('t-incomplete-filters-title') : ''">
                                 <i class="ph-funnel me-1"></i>
                                 {{ $t('t-apply-filters') }}
                             </v-btn>
@@ -97,7 +97,7 @@
                             <v-btn color="error" variant="tonal" @click="clearAllFilters" class="ml-2" size="small"
                                 :loading="loading">
                                 <i class="ph-x me-1"></i>
-                                Limpar
+                                {{ $t('t-clear') }}
                             </v-btn>
                         </div>
                     </v-expansion-panel-text>
@@ -525,7 +525,7 @@ const clearAllFilters = async () => {
 
 const applyAdvancedFilters = async () => {
     if (hasIncompleteFilters.value) {
-        toast.error('Preencha todos os campos dos filtros antes de aplicar.');
+        toast.error(t('t-incomplete-filters-message'));
         return;
     }
 
