@@ -9,7 +9,7 @@ import type { PermissionRequirement } from "@/app/permissions/constants";
 const emit = defineEmits(["onView", "onEdit", "onDelete", "onSelect"]);
 
 const defaultOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" }
 ];

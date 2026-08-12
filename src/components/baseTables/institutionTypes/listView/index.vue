@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
 });
 
 watch(selectedInstitutionTypes, newSelection => {
-  console.log("Tipos de contrato selecionados:", newSelection);
+  console.log("Tipos de entidade selecionados:", newSelection);
 }, { deep: true });
 
 const fetchInstitutionTypes = async ({ page, itemsPerPage, sortBy, search }: InstitutionTypeOption) => {
@@ -169,7 +169,7 @@ const onConfirmDelete = async () => {
 
 <template>
   <ListingPageShell class="base-table-listing-page" :title="$t('t-institution-type-list')"
-    subtitle="Consulte, pesquise e faça a gestão dos tipos de contrato registados."
+    subtitle="Consulte, pesquise e faça a gestão dos tipos de entidade registados."
     :action-label="$t('t-add-institution-type')" :page="currentPage" :items-per-page="itemsPerPage"
     :total-items="totalItems" :total-pages="totalPages" @update:page="currentPage = $event"
     @action="onCreateEditClick(null)">
