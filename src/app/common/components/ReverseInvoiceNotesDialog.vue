@@ -46,6 +46,14 @@ const props = defineProps({
   reasonType: {
     type: String as PropType<ReasonType | "">,
     default: ""
+  },
+  notesRequired: {
+    type: Boolean,
+    default: true
+  },
+  confirmOnClose: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -53,13 +61,44 @@ const notes = ref("");
 const reasonId = ref("");
 const reasons = ref<ReasonListing[]>([]);
 const reasonsLoading = ref(false);
+const confirmEmitted = ref(false);
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+
+const emitConfirm = () => {
+  if (confirmEmitted.value) return;
+
+  confirmEmitted.value = true;
+  const trimmedNotes = notes.value.trim();
+
+  if (props.reasonType) {
+    emit("onConfirm", { notes: trimmedNotes, reasonId: reasonId.value });
+    return;
+  }
+
+  emit("onConfirm", trimmedNotes);
+};
+
+const closeDialog = () => {
+  if (props.loading) return;
+
+  if (props.confirmOnClose) {
+    emitConfirm();
+    return;
+  }
+
+  emit("update:modelValue", false);
+};
 
 const dialogValue = computed({
   get() {
     return props.modelValue;
   },
   set(value: boolean) {
+    if (!value) {
+      closeDialog();
+      return;
+    }
+
     emit("update:modelValue", value);
   },
 });
@@ -68,12 +107,13 @@ watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     notes.value = "";
     reasonId.value = "";
+    confirmEmitted.value = false;
     fetchReasons();
   }
 });
 
 const requiredRules = {
-  notes: [(value: string) => !!value?.trim() || t(props.requiredKey)],
+  notes: [(value: string) => !props.notesRequired || !!value?.trim() || t(props.requiredKey)],
   reason: [(value: string) => !props.reasonType || !!value || t("t-please-select-reason")]
 };
 
@@ -106,17 +146,12 @@ const submit = async () => {
 
   const { valid } = await form.value.validate();
   const trimmedNotes = notes.value.trim();
-  if (!valid || !trimmedNotes || (props.reasonType && !reasonId.value)) {
+  if (!valid || (props.notesRequired && !trimmedNotes) || (props.reasonType && !reasonId.value)) {
     toast.error(t("t-validation-error"));
     return;
   }
 
-  if (props.reasonType) {
-    emit("onConfirm", { notes: trimmedNotes, reasonId: reasonId.value });
-    return;
-  }
-
-  emit("onConfirm", trimmedNotes);
+  emitConfirm();
 };
 </script>
 <template>
@@ -124,7 +159,7 @@ const submit = async () => {
     <v-form ref="form" @submit.prevent="submit">
       <Card :title="$t(titleKey)" title-class="py-0" style="overflow: hidden">
         <template #title-action>
-          <v-btn type="button" icon="ph-x" variant="plain" @click="dialogValue = false" />
+          <v-btn type="button" icon="ph-x" variant="plain" :disabled="loading" @click="closeDialog" />
         </template>
 
         <v-divider />
@@ -145,7 +180,7 @@ const submit = async () => {
             </v-col>
             <v-col cols="12" lg="12" class="invoice-notes-dialog__field">
               <div class="font-weight-bold text-caption mb-1">
-                {{ t(labelKey) }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ t(labelKey) }} <i v-if="notesRequired" class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextArea
                 v-model="notes"
@@ -161,7 +196,7 @@ const submit = async () => {
 
         <v-card-actions class="d-flex justify-end">
           <div>
-            <v-btn type="button" color="danger" class="me-1" @click="dialogValue = false">
+            <v-btn type="button" color="danger" class="me-1" :disabled="loading" @click="closeDialog">
               <i class="ph-x me-1" /> {{ $t("t-close") }}
             </v-btn>
             <v-btn type="submit" :color="submitColor" variant="elevated" :loading="loading" :disabled="loading">
