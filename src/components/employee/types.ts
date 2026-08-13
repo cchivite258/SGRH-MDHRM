@@ -425,6 +425,7 @@ export type ExpensePerProcedureType = {
  frequencyInterval?: number | null;
  lastUsageDate?: string | null;
  allowedFrequencyUse?: number | null;
+ waitingPeriodDays?: number | null;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;
@@ -488,6 +489,7 @@ export type DependentHospitalProcedurePlanLimitType = {
   frequencyInterval?: number | null;
   lastUsageDate?: string | null;
   allowedFrequencyUse?: number | null;
+  waitingPeriodDays?: number | null;
   employeeHealthPlan?: HealthPlanListingType;
   contractHealthPlanHospitalProcedures?: any;
   companyHealthPlanHospitalProcedures?: any;
@@ -508,6 +510,7 @@ export type DependentHospitalProcedurePlanLimitType = {
 export type DependentHospitalProcedurePlanUsedBalanceType = {
   dependent?: DependentListingType;
   employeeHealthPlan?: HealthPlanListingType;
+  waitingPeriodDays?: number | null;
   allocatedBalance: number;
   usedBalance: number;
   remainingBalance: number;

@@ -19,7 +19,6 @@ import type { OptionType } from "@/app/common/types/option.type"
 import { PERMISSIONS } from "@/app/permissions/constants"
 import { usePermissions } from "@/composables/usePermissions"
 import type { PermissionRequirement } from "@/app/permissions/constants"
-import { toUpperCaseText } from "@/app/common/textFormat"
 
 const { t } = useI18n()
 const toast = useToast()
@@ -229,7 +228,7 @@ onBeforeRouteLeave(() => {
             <div class="entity-listing-table__identity">
               <div class="entity-listing-table__identity-content">
                 <div class="entity-listing-table__identity-name">
-                  {{ toUpperCaseText(item.name, "N/A") }}
+                  {{ item.name ?? "N/A" }}
                 </div>
               </div>
             </div>

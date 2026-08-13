@@ -354,6 +354,7 @@ export type HospitalProcedureListingType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    waitingPeriodDays?: number | null;
     hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
     groupFixedAmount?: number | null;
     groupPercentage?: number | null;
@@ -379,6 +380,7 @@ export type HospitalProcedureInsertType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    waitingPeriodDays?: number | null;
     hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
     groupFixedAmount?: number | null;
     groupPercentage?: number | null;
@@ -455,6 +457,7 @@ export type HealthPlanListingType = {
     maxNumberOfDependents: number | undefined;
     childrenInUniversityMaxAge: number | undefined;
     childrenMaxAge: number | undefined;
+    waitingPeriodDays?: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
     salaryComponent: string | undefined;
@@ -476,6 +479,7 @@ export type HealthPlanInsertType = {
     maxNumberOfDependents: number | undefined;
     childrenMaxAge: number | undefined;
     childrenInUniversityMaxAge: number | undefined;
+    waitingPeriodDays?: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
     salaryComponent: string | undefined;

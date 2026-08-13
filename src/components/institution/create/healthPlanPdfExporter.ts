@@ -146,6 +146,11 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   return `${allowedFrequencyUse}/${frequencyInterval}`;
 };
 
+const getWaitingPeriodDays = (procedure: HospitalProcedureListingType) => {
+  const source = getProcedureSource(procedure);
+  return firstDefined(source.waitingPeriodDays, (procedure as any).waitingPeriodDays) ?? "-";
+};
+
 const hasBalanceColumns = (procedures: HospitalProcedureListingType[]) =>
   procedures.some((procedure) => {
     const item = procedure as any;
@@ -229,6 +234,11 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
   return procedure ? getFrequencyLabel(procedure) : "-";
 };
 
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getWaitingPeriodDays(procedure) : "-";
+};
+
 const getPlanUsedBalanceTotal = (procedures: HospitalProcedureListingType[]) => {
   const groupedProcedures = new Map<string, HospitalProcedureListingType[]>();
   let total = 0;
@@ -265,7 +275,7 @@ const safeFileName = (value: string) =>
     .toLowerCase();
 
 const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBalances: boolean) => {
-  const groupColSpan = includeBalances ? 9 : 6;
+  const groupColSpan = includeBalances ? 10 : 7;
   return groupHealthPlanProcedures(procedures, tr("t-procedures", "Procedimentos")).flatMap(({ group, procedures: groupProcedures, categories }) => {
     const rows: any[] = [
       [{ content: group, colSpan: groupColSpan, styles: { fillColor: SOFT_BLUE, textColor: BRAND_BLUE, fontStyle: "bold" } }]
@@ -285,7 +295,8 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
           formatMoney(getGroupAllocatedBalance(groupProcedures)),
           formatMoney(getGroupUsedBalance(groupProcedures)),
           formatMoney(getGroupRemainingBalance(groupProcedures)),
-          getGroupFrequencyLabel(groupProcedures)
+          getGroupFrequencyLabel(groupProcedures),
+          getGroupWaitingPeriodDays(groupProcedures)
         ]
         : [
           {
@@ -296,7 +307,8 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
           getGroupLimitLabel(groupProcedures),
           formatMoney(getGroupFixedAmount(groupProcedures)),
           formatPercent(getGroupPercentage(groupProcedures)),
-          getGroupFrequencyLabel(groupProcedures)
+          getGroupFrequencyLabel(groupProcedures),
+          getGroupWaitingPeriodDays(groupProcedures)
         ]);
     }
 
@@ -322,9 +334,11 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
                 "-",
                 hasProcedureTotalUsedBalance(procedure) ? formatMoney(getProcedureTotalUsedBalance(procedure)) : "-",
                 "-",
+                "-",
                 "-"
               ]
               : [
+                "-",
                 "-"
               ])
           ]);
@@ -341,7 +355,8 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
             formatMoney(getProcedureAllocatedBalance(procedure)),
             formatMoney(getProcedureTotalUsedBalance(procedure)),
             formatMoney(getProcedureRemainingBalance(procedure)),
-            getFrequencyLabel(procedure)
+            getFrequencyLabel(procedure),
+            getWaitingPeriodDays(procedure)
           ]
           : [
             getProcedureCode(procedure),
@@ -349,7 +364,8 @@ const buildGroupedRows = (procedures: HospitalProcedureListingType[], includeBal
             getProcedureLimitLabel(procedure),
             formatMoney(getProcedureFixedAmount(procedure)),
             formatPercent(getProcedurePercentage(procedure)),
-            getFrequencyLabel(procedure)
+            getFrequencyLabel(procedure),
+            getWaitingPeriodDays(procedure)
           ]);
       });
     });
@@ -390,7 +406,8 @@ export const exportHealthPlanToPdf = async ({
       "Alocado",
       "Gasto",
       "Remanescente",
-      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia")
+      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia"),
+      tr("t-waiting-period-days", "Periodo de carencia (dias)")
     ]]
     : [[
       tr("t-code", "Codigo"),
@@ -398,27 +415,30 @@ export const exportHealthPlanToPdf = async ({
       tr("t-limit-type", "Tipo de limite"),
       tr("t-fixed-amount", "Valor fixo"),
       tr("t-percentage", "Percentagem"),
-      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia")
+      tr("t-allowed-frequency-use-frequency", "Utilizacoes permitidas/Frequencia"),
+      tr("t-waiting-period-days", "Periodo de carencia (dias)")
     ]];
   const columnStyles: NonNullable<UserOptions["columnStyles"]> = includeBalances
     ? {
-      0: { cellWidth: 17 },
-      1: { cellWidth: 54 },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 21 },
-      4: { cellWidth: 28 },
-      5: { cellWidth: 27 },
-      6: { cellWidth: 30 },
-      7: { cellWidth: 27 },
-      8: { cellWidth: 34 }
+      0: { cellWidth: 16 },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 31 },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 24 },
+      5: { cellWidth: 25 },
+      6: { cellWidth: 27 },
+      7: { cellWidth: 25 },
+      8: { cellWidth: 32 },
+      9: { cellWidth: 28 }
     }
     : {
-      0: { cellWidth: 24 },
-      1: { cellWidth: 98 },
-      2: { cellWidth: 42 },
-      3: { cellWidth: 36 },
-      4: { cellWidth: 27 },
-      5: { cellWidth: 46 }
+      0: { cellWidth: 20 },
+      1: { cellWidth: 78 },
+      2: { cellWidth: 38 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 42 },
+      6: { cellWidth: 38 }
     };
 
   pdf.setFont("helvetica", "bold");
@@ -471,11 +491,12 @@ export const exportHealthPlanToPdf = async ({
       [tr("t-health-plan-limit", "Limite do plano"), getHealthPlanLimitLabel(healthPlan?.healthPlanLimit)],
       [tr("t-fixed-amount", "Valor fixo"), formatMoney(healthPlan?.fixedAmount)],
       [tr("t-percentage", "Percentagem"), formatPercent(healthPlan?.companyContributionPercentage)],
+      [tr("t-waiting-period-days", "Periodo de carencia (dias)"), String(healthPlan?.waitingPeriodDays ?? "-")],
       [tr("t-procedures", "Procedimentos"), String(orderedProcedures.length)]
     ];
 
   const cardGap = 4;
-  const cardWidth = (contentWidth - (cardGap * 3)) / 4;
+  const cardWidth = (contentWidth - (cardGap * (cards.length - 1))) / cards.length;
   cards.forEach(([label, value], index) => {
     const x = margin + (index * (cardWidth + cardGap));
     pdf.setDrawColor(222, 226, 232);
@@ -512,7 +533,7 @@ export const exportHealthPlanToPdf = async ({
     },
     columnStyles,
     didParseCell: (data: any) => {
-      if (data.section === "body" && Array.isArray(data.row.raw) && data.row.raw[0]?.colSpan === (includeBalances ? 9 : 6)) {
+      if (data.section === "body" && Array.isArray(data.row.raw) && data.row.raw[0]?.colSpan === (includeBalances ? 10 : 7)) {
         data.cell.styles.cellPadding = 2.4;
         data.cell.styles.fontSize = 7.4;
       }

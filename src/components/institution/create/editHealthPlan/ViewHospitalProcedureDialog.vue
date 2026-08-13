@@ -19,6 +19,7 @@ const props = defineProps({
     fixedAmount: 0,
     percentage: 0,
     limitTypeDefinition: "",
+    waitingPeriodDays: 0,
     hospitalProcedureGroup: null,
     groupFixedAmount: null,
     groupPercentage: null,
@@ -142,6 +143,11 @@ const dialogValue = computed({
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type') }}</div>
             <div>{{ getUsageLimitTypeLabel(props.data?.limitType) }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-waiting-period-days') }}</div>
+            <div>{{ getDisplayOptionalNumber(props.data?.waitingPeriodDays) }}</div>
           </v-col>
 
           <v-col cols="12" lg="6">
