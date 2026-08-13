@@ -491,7 +491,6 @@ export const exportHealthPlanToPdf = async ({
       [tr("t-health-plan-limit", "Limite do plano"), getHealthPlanLimitLabel(healthPlan?.healthPlanLimit)],
       [tr("t-fixed-amount", "Valor fixo"), formatMoney(healthPlan?.fixedAmount)],
       [tr("t-percentage", "Percentagem"), formatPercent(healthPlan?.companyContributionPercentage)],
-      [tr("t-waiting-period-days", "Periodo de carencia (dias)"), String(healthPlan?.waitingPeriodDays ?? "-")],
       [tr("t-procedures", "Procedimentos"), String(orderedProcedures.length)]
     ];
 

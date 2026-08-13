@@ -155,6 +155,9 @@ const getDisplayUsageFrequency = (item: HospitalProcedureListingType) => {
   return `${allowedFrequencyUse || "-"}/${frequencyInterval || "-"}`;
 };
 
+const getDisplayWaitingPeriodDays = (item: HospitalProcedureListingType) =>
+  firstDefined(item.waitingPeriodDays) ?? "-";
+
 const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
   procedures.some(procedure => procedure.belongsToGroup);
 
@@ -180,6 +183,11 @@ const getGroupUsageFrequency = (procedures: HospitalProcedureListingType[]) => {
   const procedure = getGroupLimitProcedure(procedures);
   return procedure ? getDisplayUsageFrequency(procedure) : "-";
 };
+
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayWaitingPeriodDays(procedure) : "-";
+};
 </script>
 
 <template>
@@ -204,6 +212,7 @@ const getGroupUsageFrequency = (procedures: HospitalProcedureListingType[]) => {
       <td>{{ getGroupFixedAmount(group.procedures) }}</td>
       <td>{{ getGroupPercentage(group.procedures) }}</td>
       <td>{{ getGroupUsageFrequency(group.procedures) }}</td>
+      <td>{{ getGroupWaitingPeriodDays(group.procedures) }}</td>
       <td></td>
     </tr>
 
@@ -247,12 +256,14 @@ const getGroupUsageFrequency = (procedures: HospitalProcedureListingType[]) => {
           <td class="text-muted">-</td>
           <td class="text-muted">-</td>
           <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
         </template>
         <template v-else>
           <td>{{ getDisplayLimitType(item) }}</td>
           <td>{{ getDisplayFixedAmount(item) }}</td>
           <td>{{ getDisplayPercentage(item) }}</td>
           <td>{{ getDisplayUsageFrequency(item) }}</td>
+          <td>{{ getDisplayWaitingPeriodDays(item) }}</td>
         </template>
         <td>
           <slot name="action" :item="item" />
