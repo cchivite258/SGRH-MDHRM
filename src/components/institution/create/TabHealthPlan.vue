@@ -91,7 +91,7 @@ const healthPlanDataView = ref<HealthPlanListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
-const searchProps = "coveragePeriod.name,maxNumberOfDependents,childrenMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
+const searchProps = "coveragePeriod.name,maxNumberOfDependents,childrenMaxAge,childrenInUniversityMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
 const itemsPerPage = ref(10);
 const selectedHealthPlans = ref<HealthPlanListingType[]>([]);
 const customerDetail = ref<any>(null); // Adicionado para resolver o erro
@@ -239,6 +239,7 @@ const onCreateEditClick = (data: HealthPlanInsertType | HealthPlanListingType | 
       maxNumberOfDependents: 0,
       childrenMaxAge: 0,
       childrenInUniversityMaxAge: 0,
+      waitingPeriodDays: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
       salaryComponent: "",
@@ -843,6 +844,12 @@ onBeforeUnmount(() => {
             <div class="plan-metric plan-metric--success">
               <span>{{ $t('t-percentage') }}</span>
               <strong>{{ formatPlanPercent(activeHealthPlan?.companyContributionPercentage) }}</strong>
+            </div>
+          </v-col>
+          <v-col cols="12" md="3">
+            <div class="plan-metric">
+              <span>{{ $t('t-waiting-period-days') }}</span>
+              <strong>{{ activeHealthPlan?.waitingPeriodDays ?? '-' }}</strong>
             </div>
           </v-col>
           <v-col cols="12" md="3">

@@ -20,6 +20,7 @@ type HospitalProcedureUpdatePayload = {
   limitTypeDefinition?: string;
   fixedAmount?: number;
   percentage?: number;
+  waitingPeriodDays?: number;
   groupFixedAmount?: number;
   groupPercentage?: number;
   hospitalProcedureGroupLimit?: string;
@@ -279,6 +280,7 @@ export default class HospitalProcedureService extends HttpService {
         ...hospitalProcedureData,
         fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
         percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        waitingPeriodDays: toOptionalNumber(hospitalProcedureData.waitingPeriodDays) ?? 0,
         groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
         groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
         limitType: hospitalProcedureData.limitType || "NONE",
@@ -373,6 +375,7 @@ export default class HospitalProcedureService extends HttpService {
         limitTypeDefinition: hospitalProcedureData.limitTypeDefinition || undefined,
         fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
         percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        waitingPeriodDays: toOptionalNumber(hospitalProcedureData.waitingPeriodDays) ?? 0,
         groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
         groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
         hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit || undefined,

@@ -116,6 +116,7 @@ const healthPlanFormData = ref<HealthPlanInsertType>({
   maxNumberOfDependents: 0,
   childrenInUniversityMaxAge: 0,
   childrenMaxAge: 0,
+  waitingPeriodDays: 0,
   healthPlanLimit: "",
   fixedAmount: 0,
   salaryComponent: "",
@@ -140,6 +141,10 @@ const requiredRules = {
   childrenInUniversityMaxAge: [
     (v: number) => hasNumericValue(v) || t('t-please-enter-max-age-university'),
     (v: number) => Number(v) >= 0 || t('t-min-zero-age')
+  ],
+  waitingPeriodDays: [
+    (v: number) => hasNumericValue(v) || t('t-please-enter-waiting-period-days'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-days')
   ],
   childrenMaxAge: [
     (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
@@ -207,6 +212,7 @@ onMounted(async () => {
           maxNumberOfDependents: healthPlan.maxNumberOfDependents,
           childrenInUniversityMaxAge: healthPlan.childrenInUniversityMaxAge,
           childrenMaxAge: healthPlan.childrenMaxAge,
+          waitingPeriodDays: healthPlan.waitingPeriodDays ?? 0,
           healthPlanLimit: healthPlan.healthPlanLimit,
           fixedAmount: healthPlan.fixedAmount,
           salaryComponent: healthPlan.salaryComponent,
@@ -339,6 +345,7 @@ const onCreateEditClick = (data: HospitalProcedureInsertType | HospitalProcedure
     fixedAmount: data?.fixedAmount ?? 0,
     percentage: data?.percentage ?? 0,
     limitTypeDefinition: data?.limitTypeDefinition || "",
+    waitingPeriodDays: data?.waitingPeriodDays ?? 0,
     hospitalProcedureGroup: data?.hospitalProcedureGroup ?? (data as any)?.hospitalProcedureGroupId ?? null,
     groupFixedAmount: data?.groupFixedAmount ?? null,
     groupPercentage: data?.groupPercentage ?? null,
@@ -584,16 +591,26 @@ const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
         </v-row>
         <v-row class="mt-n6">
           <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
-          <v-col :cols="12" :lg="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="healthPlanFormData.healthPlanLimit" :items="healthPlanLimitOptions"
               :rules="requiredRules.healthPlanLimit" />
           </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-waiting-period-days') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField v-model.number="healthPlanFormData.waitingPeriodDays"
+              :placeholder="t('t-enter-waiting-period-days')" type="number"
+              :rules="requiredRules.waitingPeriodDays" class="mb-2" />
+          </v-col>
+        </v-row>
 
+        <v-row class="mt-n6" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
           <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
-          <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>

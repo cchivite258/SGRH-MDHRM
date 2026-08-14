@@ -36,6 +36,7 @@ const props = defineProps({
       maxNumberOfDependents: 0,
       childrenMaxAge: 0,
       childrenInUniversityMaxAge: 0,
+      waitingPeriodDays: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
       salaryComponent: undefined,
@@ -55,6 +56,7 @@ const id = ref("");
 const maxNumberOfDependents = ref(0);
 const childrenMaxAge = ref(0);
 const childrenInUniversityMaxAge = ref(0);
+const waitingPeriodDays = ref(0);
 const healthPlanLimit = ref("");
 const fixedAmount = ref(0);
 const salaryComponent = ref<string | undefined>(undefined);
@@ -74,6 +76,7 @@ watch(() => props.data, (newData) => {
   maxNumberOfDependents.value = newData.maxNumberOfDependents || 0;
   childrenMaxAge.value = newData.childrenMaxAge || 0;
   childrenInUniversityMaxAge.value = newData.childrenInUniversityMaxAge || 0;
+  waitingPeriodDays.value = newData.waitingPeriodDays ?? 0;
   fixedAmount.value = newData.fixedAmount || 0;
   companyContributionPercentage.value = newData.companyContributionPercentage || 0;
   healthPlanLimit.value = newData.healthPlanLimit || "";
@@ -125,6 +128,10 @@ const requiredRules = {
   childrenInUniversityMaxAge: [
     (v: number) => hasNumericValue(v) || t('t-please-enter-max-age'),
     (v: number) => Number(v) >= 0 || t('t-min-zero-age')
+  ],
+  waitingPeriodDays: [
+    (v: number) => hasNumericValue(v) || t('t-please-enter-waiting-period-days'),
+    (v: number) => Number(v) >= 0 || t('t-min-zero-days')
   ],
   coveragePeriod: [
     (v: string) => !!v || t('t-please-select-coverage-period')
@@ -207,6 +214,7 @@ const onSubmit = async () => {
     maxNumberOfDependents: maxNumberOfDependents.value,
     childrenMaxAge: childrenMaxAge.value,
     childrenInUniversityMaxAge: childrenInUniversityMaxAge.value,
+    waitingPeriodDays: waitingPeriodDays.value,
     fixedAmount: fixedAmount.value,
     companyContributionPercentage: companyContributionPercentage.value,
     healthPlanLimit: healthPlanLimit.value,
@@ -333,17 +341,25 @@ onMounted(async () => {
             </v-col>
           </v-row>
           <v-row class="mt-n6">
-            <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
-            <v-col :cols="12" :lg="healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
+            <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect v-model="healthPlanLimit" :items="healthPlanLimitOptions"
                 :rules="requiredRules.healthPlanLimit" :error-messages="getServerErrors('healthPlanLimit')" />
             </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold mb-2">
+                {{ $t('t-waiting-period-days') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model.number="waitingPeriodDays" :placeholder="t('t-enter-waiting-period-days')"
+                type="number" :rules="applyServerErrorsToRules('waitingPeriodDays', requiredRules.waitingPeriodDays)" class="mb-2" />
+            </v-col>
+          </v-row>
 
+          <v-row class="mt-n6" v-if="healthPlanLimit === 'FIXED_AMOUNT'">
             <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
-            <v-col cols="12" lg="6" v-if="healthPlanLimit === 'FIXED_AMOUNT'">
+            <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
                 {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>

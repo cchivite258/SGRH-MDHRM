@@ -264,6 +264,12 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
           </v-col>
           <v-col cols="12" md="3">
             <div class="plan-metric">
+              <span>{{ $t('t-waiting-period-days') }}</span>
+              <strong>{{ healthPlan?.waitingPeriodDays ?? '-' }}</strong>
+            </div>
+          </v-col>
+          <v-col cols="12" md="3">
+            <div class="plan-metric">
               <span>{{ $t('t-procedures') }}</span>
               <strong>{{ activePlanProcedures.length }}</strong>
             </div>
