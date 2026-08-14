@@ -212,11 +212,6 @@ const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) =
   const procedure = getGroupLimitProcedure(procedures);
   return procedure ? getWaitingPeriodDays(procedure) : "-";
 };
-
-const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getFrequencyLabel(procedure) : "-";
-};
 </script>
 
 <template>
