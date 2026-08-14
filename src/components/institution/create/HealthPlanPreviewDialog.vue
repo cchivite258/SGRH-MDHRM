@@ -198,9 +198,19 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   return `${allowedFrequencyUse}/${frequencyInterval}`;
 };
 
+const getWaitingPeriodDays = (procedure: HospitalProcedureListingType) => {
+  const source = getProcedureSource(procedure);
+  return firstDefined(source.waitingPeriodDays, (procedure as any).waitingPeriodDays) ?? "-";
+};
+
 const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
   const procedure = getGroupLimitProcedure(procedures);
   return procedure ? getFrequencyLabel(procedure) : "-";
+};
+
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getWaitingPeriodDays(procedure) : "-";
 };
 </script>
 
@@ -264,12 +274,6 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
           </v-col>
           <v-col cols="12" md="3">
             <div class="plan-metric">
-              <span>{{ $t('t-waiting-period-days') }}</span>
-              <strong>{{ healthPlan?.waitingPeriodDays ?? '-' }}</strong>
-            </div>
-          </v-col>
-          <v-col cols="12" md="3">
-            <div class="plan-metric">
               <span>{{ $t('t-procedures') }}</span>
               <strong>{{ activePlanProcedures.length }}</strong>
             </div>
@@ -315,7 +319,8 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                 <th style="width: 18%">{{ $t('t-limit-type') }}</th>
                 <th style="width: 15%">{{ $t('t-fixed-amount') }}</th>
                 <th style="width: 12%">{{ $t('t-percentage') }}</th>
-                <th style="width: 18%">{{ $t('t-allowed-frequency-use-frequency') }}</th>
+                <th style="width: 16%">{{ $t('t-allowed-frequency-use-frequency') }}</th>
+                <th style="width: 13%">{{ $t('t-waiting-period-days') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -324,7 +329,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                 :key="group.group"
               >
                 <tr class="group-row">
-                  <td colspan="6">
+                  <td colspan="7">
                     <div class="d-flex align-center justify-space-between">
                       <span>
                         <i class="ph-stack me-2" />
@@ -343,6 +348,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                   <td>{{ formatPlanMoney(getGroupFixedAmount(group.procedures)) }}</td>
                   <td>{{ formatPlanPercent(getGroupPercentage(group.procedures)) }}</td>
                   <td>{{ getGroupFrequencyLabel(group.procedures) }}</td>
+                  <td>{{ getGroupWaitingPeriodDays(group.procedures) }}</td>
                 </tr>
 
                 <template
@@ -350,7 +356,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                   :key="`${group.group}-${category.category}`"
                 >
                   <tr class="category-row">
-                    <td colspan="6">
+                    <td colspan="7">
                       <div class="d-flex align-center justify-space-between">
                         <span>
                           <i class="ph-folder-open me-2" />
@@ -376,6 +382,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getFrequencyLabel(procedure) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getWaitingPeriodDays(procedure) }}</td>
                   </tr>
                 </template>
               </template>
