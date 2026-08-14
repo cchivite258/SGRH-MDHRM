@@ -16,7 +16,7 @@ interface ServiceResponse<T> {
   error?: ApiErrorResponse;
 }
 
-const EMPLOYEE_FREQUENCY_TREND_REPORT_ENDPOINT = "/reports/trend-limits/employee-frequency";
+const EMPLOYEE_FREQUENCY_TREND_REPORT_ENDPOINT = "/reports/employee-frequency";
 
 export default class EmployeeFrequencyTrendReportService extends HttpService {
   async createReport(

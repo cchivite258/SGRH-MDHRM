@@ -20,54 +20,39 @@ const exportMenu = ref(false);
 
 const numberFormatter = computed(() => new Intl.NumberFormat(locale.value === "en" ? "en-US" : "pt-PT"));
 
-const employeeName = (item: NonNullable<EmployeeFrequencyTrendReportType["details"]>[number]) => {
+const employeeName = (item: NonNullable<EmployeeFrequencyTrendReportType["employees"]>[number]) => {
   const employee = item.employee;
   return `${employee?.firstName || ""} ${employee?.middleName || ""} ${employee?.lastName || ""}`.replace(/\s+/g, " ").trim() || "-";
 };
 
 const normalizedRows = computed(() => {
-  return (props.report?.details || []).flatMap((item) => {
-    const procedures = item.hospitalProcedures || [];
-    if (!procedures.length) {
-      return [{
-        employeeName: employeeName(item),
-        employeeNumber: item.employee?.employeeNumber || "-",
-        procedureName: "-",
-        totalUsages: 0
-      }];
-    }
-
-    return procedures.map((procedure) => ({
-      employeeName: employeeName(item),
-      employeeNumber: item.employee?.employeeNumber || "-",
-      procedureName: procedure.hospitalProcedureTypeName || t("t-hpt-unknown-procedure"),
-      totalUsages: Number(procedure.totalUsages || 0)
-    }));
-  });
+  return (props.report?.employees || []).map((item) => ({
+    employeeName: employeeName(item),
+    employeeNumber: item.employee?.employeeNumber || "-",
+    frequency: Number(item.frequency || 0)
+  })).sort((a, b) => b.frequency - a.frequency);
 });
 
 const employeeTotals = computed(() => {
-  return (props.report?.details || []).map((item) => ({
-    employeeName: employeeName(item),
-    employeeNumber: item.employee?.employeeNumber || "-",
-    totalUsages: (item.hospitalProcedures || []).reduce((sum, procedure) => sum + Number(procedure.totalUsages || 0), 0)
-  })).sort((a, b) => b.totalUsages - a.totalUsages);
+  return normalizedRows.value.map((item) => ({
+    employeeName: item.employeeName,
+    employeeNumber: item.employeeNumber,
+    frequency: item.frequency
+  })).sort((a, b) => b.frequency - a.frequency);
 });
 
 const totals = computed(() => {
   const rows = normalizedRows.value;
-  const totalUsages = rows.reduce((sum, row) => sum + row.totalUsages, 0);
-  const maxUsages = rows.reduce((max, row) => Math.max(max, row.totalUsages), 0);
+  const frequencySum = rows.reduce((sum, row) => sum + row.frequency, 0);
+  const maxFrequency = rows.reduce((max, row) => Math.max(max, row.frequency), 0);
   const topEmployee = employeeTotals.value[0];
 
   return {
-    employeeCount: props.report?.details?.length || 0,
-    procedureCount: rows.length,
-    totalUsages,
-    maxUsages,
-    averageFrequency: props.report?.details?.length ? totalUsages / (props.report.details.length || 1) : 0,
+    employeeCount: props.report?.employees?.length || 0,
+    maxFrequency,
+    averageFrequency: props.report?.employees?.length ? frequencySum / (props.report.employees.length || 1) : 0,
     topEmployeeName: topEmployee?.employeeName || "-",
-    topEmployeeUsages: topEmployee?.totalUsages || 0
+    topEmployeeFrequency: topEmployee?.frequency || 0
   };
 });
 
@@ -95,8 +80,8 @@ const periodRange = computed(() => {
 });
 
 const usagePercent = (value: number) => {
-  if (!totals.value.maxUsages) return 0;
-  return Math.max(4, Math.round((value / totals.value.maxUsages) * 100));
+  if (!totals.value.maxFrequency) return 0;
+  return Math.max(4, Math.round((value / totals.value.maxFrequency) * 100));
 };
 
 const onBack = () => router.push({ path: "/reports/list" });
@@ -192,12 +177,12 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
         <v-card variant="outlined" class="pa-4 h-100" elevation="0">
           <div class="d-flex align-center mb-2">
             <v-icon size="18" class="mr-2" color="primary">mdi-chart-bar</v-icon>
-            <div class="text-caption text-grey">{{ $t("t-eft-total-frequency") }}</div>
+            <div class="text-caption text-grey">{{ $t("t-eft-top-employee") }}</div>
           </div>
-          <div class="text-h6 font-weight-bold text-red-darken-2">{{ numberFormatter.format(totals.totalUsages) }}</div>
+          <div class="text-h6 font-weight-bold text-red-darken-2 text-truncate">{{ totals.topEmployeeName }}</div>
           <v-divider class="my-2" />
-          <div class="text-caption text-grey">{{ $t("t-eft-top-employee") }}</div>
-          <div class="text-body-2 font-weight-medium text-truncate">{{ totals.topEmployeeName }} ({{ numberFormatter.format(totals.topEmployeeUsages) }})</div>
+          <div class="text-caption text-grey">{{ $t("t-eft-frequency") }}</div>
+          <div class="text-body-2 font-weight-medium">{{ numberFormatter.format(totals.topEmployeeFrequency) }}</div>
         </v-card>
       </v-col>
     </v-row>
@@ -206,44 +191,35 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
       <v-card-title class="d-flex align-center pa-4">
         <v-icon class="mr-3" color="grey-darken-2">mdi-table</v-icon>
         <span class="text-body-1 font-weight-medium">{{ $t("t-eft-detailed-table") }}</span>
-        <v-chip size="small" variant="outlined" class="ml-3">{{ normalizedRows.length }} {{ $t("t-procedures") }}</v-chip>
+        <v-chip size="small" variant="outlined" class="ml-3">{{ normalizedRows.length }} {{ $t("t-employees") }}</v-chip>
       </v-card-title>
       <v-divider />
 
       <div class="table-responsive">
-        <v-table density="comfortable" hover>
+        <v-table density="comfortable" hover class="frequency-table">
           <thead>
             <tr class="table-head-row">
-              <th class="text-left pa-3">{{ $t("t-employee") }}</th>
-              <th class="text-left pa-3">{{ $t("t-employee-number") }}</th>
-              <th class="text-left pa-3">{{ $t("t-procedure") }}</th>
+              <th class="text-left pa-3 employee-column">{{ $t("t-employee") }}</th>
+              <th class="text-left pa-3 employee-number-column">{{ $t("t-employee-number") }}</th>
               <th class="text-left pa-3 trend-column">{{ $t("t-eft-frequency") }}</th>
-              <th class="text-right pa-3">{{ $t("t-hpt-total-usages") }}</th>
+              <th class="text-right pa-3 frequency-column">{{ $t("t-value") }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, i) in normalizedRows" :key="`${row.employeeNumber}-${row.procedureName}-${i}`" class="table-row">
-              <td class="pa-3">
+            <tr v-for="(row, i) in normalizedRows" :key="`${row.employeeNumber}-${i}`" class="table-row">
+              <td class="pa-3 employee-column">
                 <div class="font-weight-medium">{{ row.employeeName }}</div>
               </td>
-              <td class="pa-3">{{ row.employeeNumber }}</td>
-              <td class="pa-3">{{ row.procedureName }}</td>
+              <td class="pa-3 employee-number-column">{{ row.employeeNumber }}</td>
               <td class="pa-3 trend-column">
                 <div class="usage-track">
-                  <div class="usage-bar" :style="{ width: `${usagePercent(row.totalUsages)}%` }"></div>
+                  <div class="usage-bar" :style="{ width: `${usagePercent(row.frequency)}%` }"></div>
                 </div>
               </td>
-              <td class="text-right pa-3 font-weight-bold">{{ numberFormatter.format(row.totalUsages) }}</td>
+              <td class="text-right pa-3 font-weight-bold frequency-column">{{ numberFormatter.format(row.frequency) }}</td>
             </tr>
             <tr v-if="!normalizedRows.length">
-              <td colspan="5" class="text-center pa-6 text-grey">{{ $t("t-no-report-data") }}</td>
-            </tr>
-            <tr class="totals-row">
-              <td class="pa-3 font-weight-bold">{{ $t("t-totals") }}</td>
-              <td class="pa-3"></td>
-              <td class="pa-3"></td>
-              <td class="pa-3"></td>
-              <td class="text-right pa-3 font-weight-bold">{{ numberFormatter.format(totals.totalUsages) }}</td>
+              <td colspan="4" class="text-center pa-6 text-grey">{{ $t("t-no-report-data") }}</td>
             </tr>
           </tbody>
         </v-table>
@@ -282,12 +258,16 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
 
 <style scoped>
 .header-container { background: linear-gradient(to right, #f8f9fa, #ffffff); padding: 24px; border-radius: 12px; border: 1px solid #e0e0e0; }
-.table-responsive { overflow-x: auto; }
+.table-responsive { overflow-x: auto; width: 100%; }
+.frequency-table { width: 100%; }
+.frequency-table :deep(table) { width: 100%; table-layout: fixed; }
 .table-head-row :deep(th) { background-color: #dcebff; color: #1f3a93; font-weight: 700 !important; }
 .table-row:hover { background-color: #f8f9fa; }
-.totals-row { background-color: #eef4ff; }
 .h-100 { height: 100%; }
+.employee-column { width: 42%; }
+.employee-number-column { width: 18%; }
 .trend-column { min-width: 180px; width: 28%; }
+.frequency-column { width: 12%; }
 .usage-track { width: 100%; height: 10px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
 .usage-bar { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #1f3a93, #3f7ee8); }
 .export-menu-list :deep(.v-list-item) { min-height: 34px; padding-inline: 10px; }
@@ -304,6 +284,15 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
 
   .trend-column {
     min-width: 160px;
+  }
+
+  .employee-column {
+    min-width: 220px;
+  }
+
+  .employee-number-column,
+  .frequency-column {
+    min-width: 140px;
   }
 }
 </style>
