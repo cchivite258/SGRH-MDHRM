@@ -1280,6 +1280,8 @@ onMounted(async () => {
     required-key="t-post-invoice-notes-required"
     submit-key="t-submit-post"
     submit-color="info"
+    :notes-required="false"
+    :confirm-on-close="true"
     @onConfirm="postInvoice"
   />
 

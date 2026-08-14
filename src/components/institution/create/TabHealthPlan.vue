@@ -361,6 +361,9 @@ const getTranslatedEnum = (prefix: string, value: string | null | undefined) => 
 const getHealthPlanStatusLabel = (value: string | null | undefined) =>
   getTranslatedEnum("t", value) || "-";
 
+const isClosedHealthPlan = (healthPlan: HealthPlanListingType) =>
+  healthPlan.status?.toString().toUpperCase() === "CLOSED";
+
 const getLimitTypeDefinitionLabel = (value: string | null | undefined) =>
   value ? limitTypeDefinitionOptions.find(option => option.value === value)?.label || humanizeEnum(value) : "";
 
@@ -537,8 +540,10 @@ const getDynamicOptions = (invoice: HealthPlanListingType) => {
     return true;
   });
 
-  // Se o status for RUNNING, remove as opções de editar e deletar
-  if (invoice.coveragePeriod?.status === 'RUNNING') {
+  const coveragePeriodStatus = invoice.coveragePeriod?.status?.toString().toUpperCase();
+
+  // Planos fechados não podem ser editados nem eliminados.
+  if (isClosedHealthPlan(invoice) || coveragePeriodStatus === "RUNNING") {
     availableOptions = availableOptions.filter(option =>
       option.value !== 'edit' && option.value !== 'delete'
     );
@@ -551,6 +556,10 @@ const getDynamicOptions = (invoice: HealthPlanListingType) => {
 };
 
 const onSelect = (option: string, data: HealthPlanListingType) => {
+  if ((option === "edit" || option === "delete") && isClosedHealthPlan(data)) {
+    return;
+  }
+
   switch (option) {
     case "view":
       onViewClick(data);
