@@ -663,7 +663,8 @@ const onConsultHealthPlan = async () => {
         size: 1000000000,
         sortColumn: "createdAt",
         direction: "asc",
-        memberFilters
+        query_value: "",
+        query_props: "hospitalProcedureType.code,hospitalProcedureType.name,allocatedBalance,usedBalance,totalUsedBalance,remainingBalance,groupAllocatedBalance,groupUsedBalance,groupRemainingBalance,belongsToGroup,frequencyInterval,lastUsageDate,allowedFrequencyUse,contractHealthPlanHospitalProcedures.fixedAmount,contractHealthPlanHospitalProcedures.percentage,contractHealthPlanHospitalProcedures.limitTypeDefinition,contractHealthPlanHospitalProcedures.belongsToGroup,contractHealthPlanHospitalProcedures.groupFixedAmount,contractHealthPlanHospitalProcedures.groupPercentage,contractHealthPlanHospitalProcedures.hospitalProcedureGroupLimit,companyHealthPlanHospitalProcedures.fixedAmount,companyHealthPlanHospitalProcedures.percentage,companyHealthPlanHospitalProcedures.limitTypeDefinition,companyHealthPlanHospitalProcedures.belongsToGroup,companyHealthPlanHospitalProcedures.groupFixedAmount,companyHealthPlanHospitalProcedures.groupPercentage,companyHealthPlanHospitalProcedures.hospitalProcedureGroupLimit"
       }
     );
 
@@ -695,11 +696,6 @@ const onConsultHealthPlan = async () => {
 };
 
 const onExportHealthPlanPdf = async () => {
-  if (!canConsultHealthPlan.value) {
-    toast.error("Sem permissao para consultar o plano de saude.");
-    return;
-  }
-
   if (!activePlanProcedures.value.length || !employeeActiveHealthPlan.value) {
     toast.error(t("t-no-active-health-plan"));
     return;
@@ -712,7 +708,7 @@ const onExportHealthPlanPdf = async () => {
         ...activeHealthPlan.value,
         ...employeeActiveHealthPlan.value
       },
-      procedures: orderHealthPlanProcedures(activePlanProcedures.value, t("t-procedures")) as any,
+      procedures: activePlanProcedures.value as any,
       contextLabel: employees.value.find(item => item.value === invoiceData.value.employee)?.label
         || invoiceData.value.employeeLabel
         || undefined,

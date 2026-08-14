@@ -144,16 +144,16 @@ const getProcedureFixedAmount = (procedure: HospitalProcedureListingType) => {
   const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount)
-    : firstDefined(source.fixedAmount, item.fixedAmount);
+    ? firstDefined(source.groupFixedAmount, item.groupFixedAmount, source.fixedAmount, item.fixedAmount)
+    : firstDefined(source.fixedAmount, item.fixedAmount, source.groupFixedAmount, item.groupFixedAmount);
 };
 
 const getProcedurePercentage = (procedure: HospitalProcedureListingType) => {
   const item = procedure as any;
   const source = getProcedureSource(procedure);
   return procedureUsesGroupLimit(procedure)
-    ? firstDefined(source.groupPercentage, item.groupPercentage)
-    : firstDefined(source.percentage, item.percentage);
+    ? firstDefined(source.groupPercentage, item.groupPercentage, source.percentage, item.percentage)
+    : firstDefined(source.percentage, item.percentage, source.groupPercentage, item.groupPercentage);
 };
 
 const getProcedureLimitLabel = (procedure: HospitalProcedureListingType) => {
@@ -211,6 +211,11 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
 const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
   const procedure = getGroupLimitProcedure(procedures);
   return procedure ? getWaitingPeriodDays(procedure) : "-";
+};
+
+const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
 };
 </script>
 
@@ -344,11 +349,10 @@ const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) =
 
                 <tr v-if="groupUsesGroupLimit(group.procedures)" class="group-limit-row">
                   <td colspan="2">Limite do grupo</td>
-                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
                   <td>{{ formatPlanMoney(getGroupFixedAmount(group.procedures)) }}</td>
                   <td>{{ formatPlanPercent(getGroupPercentage(group.procedures)) }}</td>
+                  <td>{{ getGroupLimitLabel(group.procedures) }}</td>
                   <td>{{ getGroupFrequencyLabel(group.procedures) }}</td>
-                  <td>{{ getGroupWaitingPeriodDays(group.procedures) }}</td>
                 </tr>
 
                 <template
@@ -378,11 +382,10 @@ const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) =
                     <td>
                       <div class="font-weight-medium">{{ getProcedureName(procedure) }}</div>
                     </td>
-                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getProcedureLimitLabel(procedure) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanMoney(getProcedureFixedAmount(procedure)) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : formatPlanPercent(getProcedurePercentage(procedure)) }}</td>
+                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getProcedureLimitLabel(procedure) }}</td>
                     <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getFrequencyLabel(procedure) }}</td>
-                    <td>{{ procedureUsesGroupLimit(procedure) ? '-' : getWaitingPeriodDays(procedure) }}</td>
                   </tr>
                 </template>
               </template>
