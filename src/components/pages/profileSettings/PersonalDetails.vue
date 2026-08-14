@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { skillsOptions } from "@/components/pages/profileSettings/utils";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useAuthStore } from "@/store/authStore";
 import { storeToRefs } from "pinia";
 import { onMounted } from "vue";
@@ -9,12 +9,17 @@ import { watch } from "vue";
 import { userService } from "@/app/http/httpServiceProvider";
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 
 
 const { t } = useI18n();
 const toast = useToast();
 const authStore = useAuthStore();
+const { can } = usePermissions();
+// Esta permissão separa consulta de edição dos dados do próprio utilizador.
+const canUpdateProfile = computed(() => can(PERMISSIONS.USER_PROFILE.UPDATE));
 // Para garantir reatividade, usamos storeToRefs
 const { user } = storeToRefs(authStore);
 const errorMsg = ref("");
@@ -95,6 +100,10 @@ const handleApiError = (error: any) => {
 
 
 const onSubmit = async () => {
+  if (!canUpdateProfile.value) {
+    return;
+  }
+
   const showError = (msg: string) => {
     if (alertTimeout) {
       clearTimeout(alertTimeout);
@@ -168,31 +177,31 @@ const onSubmit = async () => {
       <v-row>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-first-name') }}</div>
-          <TextField v-model="formData.fname" placeholder="Enter your first name" hide-details />
+          <TextField v-model="formData.fname" placeholder="Enter your first name" hide-details :disabled="!canUpdateProfile" />
         </v-col>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-last-name') }}</div>
-          <TextField v-model="formData.lname" placeholder="Enter your Last name" hide-details />
+          <TextField v-model="formData.lname" placeholder="Enter your Last name" hide-details :disabled="!canUpdateProfile" />
         </v-col>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-phone-number') }}</div>
-          <TextField v-model="formData.phone" placeholder="Enter your Phone number" hide-details />
+          <TextField v-model="formData.phone" placeholder="Enter your Phone number" hide-details :disabled="!canUpdateProfile" />
         </v-col>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-email') }}</div>
-          <TextField v-model="formData.email" placeholder="Enter your Email address" hide-details />
+          <TextField v-model="formData.email" placeholder="Enter your Email address" hide-details :disabled="!canUpdateProfile" />
         </v-col>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-date-of-birth') }}</div>
-          <VueDatePicker v-model="formData.joiningDate" :teleport="true" :enable-time-picker="false" />
+          <VueDatePicker v-model="formData.joiningDate" :teleport="true" :enable-time-picker="false" :disabled="!canUpdateProfile" />
         </v-col>
         <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-1">{{ $t('t-joining-date') }}</div>
-          <VueDatePicker v-model="formData.joiningDate" :teleport="true" :enable-time-picker="false" />
+          <VueDatePicker v-model="formData.joiningDate" :teleport="true" :enable-time-picker="false" :disabled="!canUpdateProfile" />
         </v-col>
       </v-row>
     </v-card-text>
-    <v-card-actions class="d-flex justify-end">
+    <v-card-actions v-if="canUpdateProfile" class="d-flex justify-end">
       <div>
         <v-btn color="primary" variant="elevated" @click="onSubmit"> {{ $t('t-update') }} </v-btn>
 

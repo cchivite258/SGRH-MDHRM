@@ -24,7 +24,7 @@ import ViewDependentsDialog from "@/components/employee/create/ViewDependentsDia
 import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
-import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
+import { dependentEmployeeService, healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
@@ -35,12 +35,15 @@ import type {
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
 import { contactOptions as Options } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const dependentStore = useDependentEmployeeStore();
+const { canAny } = usePermissions();
 
 
 // Utils
@@ -53,6 +56,14 @@ import {
 const props = defineProps({
   employeeId: {
     type: String as PropType<string | null>,
+    default: null
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
     default: null
   }
 });
@@ -78,9 +89,10 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
+const canConsultDependentHealthPlan = computed(() => canAny(PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW));
 const dependentActionOptions = computed(() => [
   { title: t("t-view"), value: "view", icon: "ph-eye" },
-  { title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" }
+  ...(canConsultDependentHealthPlan.value ? [{ title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" }] : [])
 ]);
 
 interface FetchParams {
@@ -153,17 +165,46 @@ const onViewClick = (data: DependentInsertType | DependentListingType) => {
   viewDialog.value = true;
 };
 
-const onConsultPlan = (data: DependentListingType) => {
+const getActiveHealthPlanId = async () => {
+  if (!employeeId.value) return null;
+
+  const { content } = await healthPlanEmployeeService.getHealthPlansByEmployee(
+    employeeId.value,
+    0,
+    1000,
+    "createdAt",
+    "asc",
+    "",
+    "employee.id"
+  );
+
+  return content.find(plan => plan.status === "ACTIVE")?.id || null;
+};
+
+const onConsultPlan = async (data: DependentListingType) => {
   if (!employeeId.value) return;
 
-  router.push({
-    name: "ViewDependentHealthPlan",
-    params: {
-      employeeId: employeeId.value,
-      dependentId: data.id
-    },
-    query: { mode: "view" }
-  });
+  try {
+    const activeHealthPlanId = await getActiveHealthPlanId();
+
+    if (!activeHealthPlanId) {
+      toast.error(t("t-no-active-health-plan"));
+      return;
+    }
+
+    router.push({
+      name: "ViewEmployeeHealthPlan",
+      params: { id: activeHealthPlanId },
+      query: {
+        employeeId: employeeId.value,
+        isEmployee: "false",
+        dependentId: data.id
+      }
+    });
+  } catch (error) {
+    toast.error(t("t-message-load-error"));
+    console.error("Erro ao consultar plano do dependente:", error);
+  }
 };
 
 const onActionSelect = (action: string, item: DependentListingType) => {
@@ -213,13 +254,9 @@ onBeforeUnmount(() => {
         :headers="dependentHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="dependentStore.dependents" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchContactPersons"
-        item-value="id" show-select>
+        item-value="id" :show-select="false">
         <template #body="{ items }">
           <tr v-for="item in items as DependentListingType[]" :key="item.id" height="50">
-            <td>
-              <v-checkbox :model-value="selectedDependentData.some(selected => selected.id === item.id)"
-                @update:model-value="toggleSelection(item)" hide-details density="compact" />
-            </td>
             <td>{{ item.firstName }} {{ item.lastName }}</td>
             <td>{{ getGenderLabel(item.gender) }}</td>
             <td>{{ getRelationshipLabel(item.relationship) }}</td>
@@ -252,12 +289,12 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
   <ViewDependentsDialog v-model="viewDialog" :data="dependentData" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-salary-review') }}
+  <v-card-actions v-if="previousStep || nextStep" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
 
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
+    <v-btn v-if="nextStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>

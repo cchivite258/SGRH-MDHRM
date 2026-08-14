@@ -18,16 +18,20 @@ import { formateDate } from "@/app/common/dateFormate"
 import type { InstitutionListingType } from "../types"
 import AdvancedFilter from "@/components/institution/list/AdvancedFilter.vue"
 import type { OptionType } from "@/app/common/types/option.type"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const institutionStore = useInstitutionStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name"
+const searchProps = "code,erpCode,name,description,organization.name,organization.address,organization.phone,organization.email,organization.website,organization.incomeTaxNumber,organization.institutionType.name"
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedInstitutions = ref<any[]>([])
@@ -45,6 +49,19 @@ const deleteLoading = ref(false)
 const loading = computed(() => institutionStore.loading)
 const totalItems = computed(() => institutionStore.pagination.totalElements)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
+
+// Quem tem apenas leitura ve a listagem e somente a accao "Consultar".
+// Criar, editar e eliminar continuam a exigir a permissao exacta.
+const canListInstitutions = computed(() => canAny(PERMISSIONS.CONTRACTS.LIST))
+const canViewInstitution = computed(() => can(PERMISSIONS.CONTRACTS.VIEW))
+const canCreateInstitution = computed(() => can(PERMISSIONS.CONTRACTS.CREATE))
+const canDeleteInstitution = computed(() => can(PERMISSIONS.CONTRACTS.DELETE))
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.CONTRACTS.VIEW,
+  edit: PERMISSIONS.CONTRACTS.UPDATE,
+  delete: PERMISSIONS.CONTRACTS.DELETE,
+}
 
 watch(selectedInstitutions, (newSelection) => {
   console.log("Contratos selecionados:", newSelection)
@@ -66,6 +83,7 @@ const fetchInstitutions = async ({ page, itemsPerPage, sortBy }: FetchParams) =>
 }
 
 const onView = (id: string) => {
+  if (!canViewInstitution.value) return
   router.push(`/institution/view/${id}`)
 }
 
@@ -75,7 +93,7 @@ const openDeleteDialog = (id: string) => {
 }
 
 const deleteInstitution = async () => {
-  if (!deleteId.value) return
+  if (!deleteId.value || !canDeleteInstitution.value) return
 
   deleteLoading.value = true
   try {
@@ -113,10 +131,14 @@ const getInstitutionTypeColor = (type?: string | null) => {
 }
 
 const institutionOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" }
 ]
+
+const getDynamicOptions = () => {
+  return institutionOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+}
 
 const onSelect = (option: string, item: InstitutionListingType) => {
   switch (option) {
@@ -124,9 +146,11 @@ const onSelect = (option: string, item: InstitutionListingType) => {
       onView(item.id)
       break
     case "edit":
+      if (!can(PERMISSIONS.CONTRACTS.UPDATE)) return
       router.push(`/institution/edit/${item.id}`)
       break
     case "delete":
+      if (!canDeleteInstitution.value) return
       openDeleteDialog(item.id)
       break
   }
@@ -149,12 +173,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão dos contratos registados."
     :action-label="$t('t-add-institution')"
     action-to="/institution/create"
+    :show-action="canCreateInstitution"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListInstitutions" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissao para listar contratos.
+    </v-alert>
+
     <template #afterHeader>
       <Overview />
     </template>
@@ -183,12 +212,12 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canDeleteInstitution"
       @load-items="fetchInstitutions"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
         <tr v-for="item in items as InstitutionListingType[]" :key="item.id" class="institution-listing-table__row">
-          <td data-label="">
+          <td v-if="canDeleteInstitution" data-label="">
             <v-checkbox
               :model-value="selectedInstitutions.some(selected => selected.id === item.id)"
               hide-details
@@ -196,15 +225,17 @@ onBeforeRouteLeave(() => {
               @update:model-value="toggleSelection(item)"
             />
           </td>
+          <td data-label="Código">{{ item.code || "N/A" }}</td>
           <td
             data-label="Nome do Contrato"
-            class="institution-listing-table__primary-cell cursor-pointer"
+            class="institution-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewInstitution }"
             @click="onView(item.id)"
           >
             <div class="institution-listing-table__identity">
               <div class="institution-listing-table__identity-content">
                 <div class="institution-listing-table__identity-name">
-                  {{ item.name || "N/A" }}
+                  {{ item.name ?? "N/A" }}
                 </div>
               </div>
             </div>
@@ -214,17 +245,6 @@ onBeforeRouteLeave(() => {
               :status="getInstitutionTypeColor(item.institutionType?.name)"
               :label="item.institutionType?.name || 'N/A'"
             />
-          </td>
-          <td data-label="Email">
-            <a
-              v-if="item.email"
-              class="institution-listing-table__contact-link"
-              :href="`mailto:${item.email}`"
-              @click.stop
-            >
-              {{ item.email }}
-            </a>
-            <span v-else>N/A</span>
           </td>
           <td data-label="Telemóvel">
             <a
@@ -244,14 +264,19 @@ onBeforeRouteLeave(() => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="institution-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menu-items="institutionOptions" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon
+              v-if="getDynamicOptions().length"
+              align="center"
+              :menu-items="getDynamicOptions()"
+              @onSelect="onSelect($event, item)"
+            />
           </td>
         </tr>
       </template>
 
       <template v-if="institutionStore.institutions.length === 0" #body>
         <tr>
-          <td :colspan="institutionHeader.length" class="institution-listing-table__empty-state text-center py-10">
+          <td :colspan="institutionHeader.length + (canDeleteInstitution ? 1 : 0)" class="institution-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="institution-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

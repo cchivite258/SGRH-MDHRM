@@ -4,13 +4,17 @@ import { useI18n } from "vue-i18n";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
-import ServiceProviderContractExtensionsDialog from "@/components/institution/create/ServiceProviderContractExtensionsDialog.vue";
+import ServiceProviderContractExtensionsDialog from "@/components/serviceProvider/create/ServiceProviderContractExtensionsDialog.vue";
+import ServiceProviderAttachments from "@/components/serviceProvider/create/ServiceProviderAttachments.vue";
 import type { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const userStore = useUserStore();
+const { can, canAny } = usePermissions();
 
 const emit = defineEmits<{
   (e: "onStepChange", step: number): void;
@@ -38,6 +42,20 @@ const endDatePickerRef = ref<{ validate: () => boolean | Promise<boolean> } | nu
 const errorMsg = ref("");
 const contractExtensionsDialog = ref(false);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
+const canConsultContractExtensions = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.READ,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.UPDATE,
+]));
+const canManageContractExtensions = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_CONTRACT_EXTENSIONS.UPDATE,
+]));
+const canConsultAttachments = computed(() => canAny([
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.READ,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.CREATE,
+  PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.DELETE,
+]));
 
 const serviceProviderData = computed({
   get() {
@@ -78,6 +96,13 @@ const requiredRules = {
       endDate.setHours(0, 0, 0, 0);
       return endDate >= startDate || t("t-contract-end-date-must-be-after-start-date");
     }
+  ],
+  optionalPositiveNumber: [
+    (v: string | number | null | undefined) => v === null || v === undefined || v === "" || Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
+  ],
+  requiredPositiveNumber: [
+    (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" || t("t-required-field"),
+    (v: string | number | null | undefined) => Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
   ]
 };
 
@@ -112,6 +137,10 @@ watch(
 watch(() => serviceProviderData.value.contractStartDate, () => emit("clear-server-error", "contractStartDate"));
 watch(() => serviceProviderData.value.contractEndDate, () => emit("clear-server-error", "contractEndDate"));
 watch(() => serviceProviderData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
+watch(() => serviceProviderData.value.erpCode, () => emit("clear-server-error", "erpCode"));
+watch(() => serviceProviderData.value.isBusinessDays, () => emit("clear-server-error", "isBusinessDays"));
+watch(() => serviceProviderData.value.gracePeriod, () => emit("clear-server-error", "gracePeriod"));
+watch(() => serviceProviderData.value.maxDaysAfterService, () => emit("clear-server-error", "maxDaysAfterService"));
 
 const showError = () => {
   if (alertTimeout) {
@@ -156,7 +185,7 @@ defineExpose({ submitForm, validateForm });
     <Card :title="$t('t-contract')" elevation="0" title-class="pb-0">
       <template #title-action>
         <v-btn
-          v-if="serviceProviderId"
+          v-if="serviceProviderId && canConsultContractExtensions"
           color="info"
           variant="tonal"
           :disabled="loading"
@@ -183,8 +212,64 @@ defineExpose({ submitForm, validateForm });
 
       <v-card-text class="pt-0">
         <v-row class="mt-2">
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-contract-code') }}
+            </div>
+            <TextField :model-value="serviceProviderData.code || ''" :disabled="true" />
+          </v-col>
+
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-erp-code') }}
+            </div>
+            <TextField
+              v-model="serviceProviderData.erpCode"
+              :error-messages="getServerErrors('erpCode')"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-n2">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
+              {{ $t('t-is-business-days') }}
+            </div>
+            <v-checkbox v-model="serviceProviderData.isBusinessDays" density="compact" color="primary" class="d-inline-flex">
+              <template #label>
+                <span>{{ $t('t-count-business-days') }}</span>
+              </template>
+            </v-checkbox>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-max-days-after-service') }} <i class="ph-asterisk ph-xs text-danger" />
+            </div>
+            <TextField
+              v-model="serviceProviderData.maxDaysAfterService"
+              type="number"
+              :placeholder="$t('t-enter-max-days-after-service')"
+              :rules="applyServerErrorsToRules('maxDaysAfterService', requiredRules.requiredPositiveNumber)"
+            />
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-grace-period') }}
+            </div>
+            <TextField
+              v-model="serviceProviderData.gracePeriod"
+              type="number"
+              :placeholder="$t('t-enter-grace-period')"
+              :rules="applyServerErrorsToRules('gracePeriod', requiredRules.optionalPositiveNumber)"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-2">
+          <v-col cols="12" lg="4" class="mt-n4">
+            <div class="font-weight-bold mb-2 " >
               {{ $t('t-contract-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker
@@ -197,7 +282,7 @@ defineExpose({ submitForm, validateForm });
             />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="4" class="mt-n4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -211,7 +296,7 @@ defineExpose({ submitForm, validateForm });
             />
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="4" class="mt-n4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-responsible') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -243,8 +328,15 @@ defineExpose({ submitForm, validateForm });
       :service-provider-id="serviceProviderId"
       :service-provider-name="serviceProviderData.name || ''"
       :current-contract-end-date="serviceProviderData.contractEndDate || null"
+      :read-only="!canManageContractExtensions"
     />
   </v-form>
+
+  <ServiceProviderAttachments
+    v-if="serviceProviderId && canConsultAttachments"
+    class="mt-4"
+    :service-provider-id="serviceProviderId"
+  />
 </template>
 
 <style scoped>

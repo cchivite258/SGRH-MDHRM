@@ -83,6 +83,18 @@ export const healthPlanLimitOptions: MenuSelectItemType[] = [
   }
 ];
 
+export const contractDocumentTypeOptions: MenuSelectItemType[] = [
+  { value: "", label: "Selecione o Tipo de Documento" },
+  { label: "Contrato", value: "CONTRACT" },
+  { label: "Adenda ao Contrato", value: "CONTRACT_ADDENDUM" },
+  { label: "Termino do Contrato", value: "CONTRACT_TERMINATION" },
+  { label: "Renovacao do Contrato", value: "CONTRACT_RENEWAL" },
+  { label: "Alteracao do Contrato", value: "CONTRACT_AMENDMENT" },
+  { label: "Proposta Comercial", value: "COMMERCIAL_PROPOSAL" },
+  { label: "Proposta Tecnica", value: "TECHNICAL_PROPOSAL" },
+  { label: "Proposta Financeira", value: "FINANCIAL_PROPOSAL" }
+];
+
 export const limitTypeDefinitionOptions: MenuSelectItemType[] = [
   {
     label: "Valor Fixo",
@@ -207,6 +219,7 @@ export const coveragePeriodHeader: DataTableHeaderType[] = [
 
 
 export const healthPlanHeader: DataTableHeaderType[] = [
+  { title: "coverage-period", key: "coveragePeriod.name", sortable: true },
   { title: "max-number-of-dependents", key: "maxNumberOfDependents", sortable: true },
   { title: "children-max-age", key: "childrenMaxAge", sortable: true },
   { title: "children-in-university-max-age", key: "childrenInUniversityMaxAge", sortable: true },
@@ -222,19 +235,16 @@ export const healthPlanHeader: DataTableHeaderType[] = [
 export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
   { title: "service-provider", sortable: true },
+  { title: "max-days-after-service", sortable: true },
+  { title: "grace-period", sortable: true },
+  { title: "is-business-days", sortable: true },
   { title: "action", align: 'end' },
-];
-
-export const serviceProviderContractExtensionHeader: DataTableHeaderType[] = [
-  { title: "contract-start-date", key: "contractStartDate", sortable: true },
-  { title: "contract-end-date", key: "contractEndDate", sortable: true },
-  { title: "status", key: "status", sortable: true },
-  { title: "action", sortable: false, align: "end" }
 ];
 
 export const coveragePeriodExtensionHeader: DataTableHeaderType[] = [
   { title: "start-date", key: "startDate", sortable: true },
   { title: "end-date", key: "endDate", sortable: true },
+  { title: "notes", key: "notes", sortable: false },
   { title: "status", key: "status", sortable: true },
   { title: "action", sortable: false, align: "end" }
 ];
@@ -364,7 +374,8 @@ export const hospitalProcedureHeader: TableHeaderType[] = [
   { title: "limit-type-definition", key: "limitTypeDefinition", sortable: true },
   { title: "fixed-amount", key: "fixedAmount", sortable: true },
   { title: "percentage", key: "percentage", sortable: true },
-  { title: "allowed-frequency-use", key: "allowedFrequencyUse", sortable: true },
+  { title: "allowed-frequency-use-frequency", key: "allowedFrequencyUse", sortable: true },
+  { title: "waiting-period-days", key: "waitingPeriodDays", sortable: true },
   { title: "action", sortable: false, align: "center" }
 ];
 

@@ -4,16 +4,18 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
-import { serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
-import { serviceProviderContractExtensionHeader } from "@/components/institution/create/utils";
+import { reasonService, serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
+import type { ReasonListing } from "@/components/baseTables/reason/types";
+import { serviceProviderContractExtensionHeader } from "@/components/serviceProvider/create/utils";
 import type {
   ServiceProviderContractExtensionPayloadType,
   ServiceProviderContractExtensionType
-} from "@/components/institution/types";
+} from "@/components/serviceProvider/types";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -71,11 +73,13 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const contractEndDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const loading = ref(false);
 const formLoading = ref(false);
+const reasonsLoading = ref(false);
 const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<ServiceProviderContractExtensionType[]>([]);
 const extensions = ref<ServiceProviderContractExtensionType[]>([]);
 const selectedExtension = ref<ServiceProviderContractExtensionType | null>(null);
+const contractExtensionReasons = ref<ReasonListing[]>([]);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -86,13 +90,23 @@ const pagination = ref({
 const extensionForm = ref<ServiceProviderContractExtensionPayloadType>({
   id: undefined,
   serviceProviderId: "",
-  contractEndDate: new Date().toISOString().split("T")[0]
+  contractEndDate: new Date().toISOString().split("T")[0],
+  reasonId: "",
+  notes: ""
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const isCreate = computed(() => !extensionForm.value.id);
 const totalItems = computed(() => pagination.value.totalElements);
+const contractExtensionReasonOptions = computed(() =>
+  contractExtensionReasons.value
+    .filter(reason => reason.enabled)
+    .map(reason => ({
+      label: reason.name,
+      value: reason.id
+    }))
+);
 
 const clearErrorLater = () => {
   if (alertTimeout) {
@@ -123,6 +137,12 @@ const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => st
 const requiredRules = {
   contractEndDate: [
     (v: Date | string | null) => !!v || t("t-please-enter-contract-end-date")
+  ],
+  reasonId: [
+    (v: string | number | null | undefined) => !!v || t("t-please-select-reason")
+  ],
+  notes: [
+    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
   ]
 };
 
@@ -177,11 +197,26 @@ const reloadContractExtensions = async () => {
   });
 };
 
+const fetchContractExtensionReasons = async () => {
+  reasonsLoading.value = true;
+  try {
+    const { content } = await reasonService.getReasonsByType("SERVICE_PROVIDER_CONTRACT_EXTENSION");
+    contractExtensionReasons.value = content;
+  } catch (error) {
+    contractExtensionReasons.value = [];
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  } finally {
+    reasonsLoading.value = false;
+  }
+};
+
 const resetForm = () => {
   extensionForm.value = {
     id: undefined,
     serviceProviderId: props.serviceProviderId || "",
-    contractEndDate: new Date().toISOString().split("T")[0]
+    contractEndDate: new Date().toISOString().split("T")[0],
+    reasonId: "",
+    notes: ""
   };
   serverErrors.value = {};
   errorMsg.value = "";
@@ -195,6 +230,29 @@ const openCreateDialog = () => {
 const openViewDialog = (item: ServiceProviderContractExtensionType) => {
   selectedExtension.value = { ...item };
   viewDialog.value = true;
+};
+
+const openEditDialog = async (item: ServiceProviderContractExtensionType) => {
+  try {
+    formLoading.value = true;
+    serverErrors.value = {};
+    const response = await serviceProviderContractExtensionService.getById(item.id);
+    const extension = response.data;
+
+    extensionForm.value = {
+      id: extension.id,
+      serviceProviderId: extension.serviceProviderId || props.serviceProviderId || "",
+      contractEndDate: extension.contractEndDate,
+      reasonId: extension.reasonId || extension.reason?.id || "",
+      notes: extension.notes || ""
+    };
+    formDialog.value = true;
+  } catch (error) {
+    console.error("Erro ao carregar adenda:", error);
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  } finally {
+    formLoading.value = false;
+  }
 };
 
 const closeFormDialog = () => {
@@ -218,7 +276,9 @@ const onSubmit = async () => {
     formLoading.value = true;
     const payload: ServiceProviderContractExtensionPayloadType = {
       serviceProviderId: props.serviceProviderId,
-      contractEndDate: extensionForm.value.contractEndDate
+      contractEndDate: extensionForm.value.contractEndDate,
+      reasonId: extensionForm.value.reasonId,
+      notes: extensionForm.value.notes.trim()
     };
 
     const response = extensionForm.value.id
@@ -255,7 +315,9 @@ watch(dialogValue, async (isOpen) => {
 });
 
 watch(formDialog, (isOpen) => {
-  if (!isOpen) {
+  if (isOpen) {
+    fetchContractExtensionReasons();
+  } else {
     resetForm();
   }
 });
@@ -310,19 +372,32 @@ watch(viewDialog, (isOpen) => {
               <tr v-for="item in items as ServiceProviderContractExtensionType[]" :key="item.id" height="50">
                 <td>{{ formateDate(item.contractStartDate || undefined) || '-' }}</td>
                 <td>{{ formateDate(item.contractEndDate || undefined) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
                 </td>
-                <td class="text-end">
-                  <v-btn
-                    icon="ph-eye ph-sm"
-                    color="secondary"
-                    density="compact"
-                    variant="tonal"
-                    rounded
-                    :title="$t('t-view')"
-                    @click="openViewDialog(item)"
-                  />
+                <td class="text-end contract-extension-actions-cell">
+                  <div class="contract-extension-actions">
+                    <v-btn
+                      v-if="!readOnly"
+                      icon="ph-pencil-simple ph-sm"
+                      color="primary"
+                      density="compact"
+                      variant="tonal"
+                      rounded
+                      :title="$t('t-edit')"
+                      @click="openEditDialog(item)"
+                    />
+                    <v-btn
+                      icon="ph-eye ph-sm"
+                      color="secondary"
+                      density="compact"
+                      variant="tonal"
+                      rounded
+                      :title="$t('t-view')"
+                      @click="openViewDialog(item)"
+                    />
+                  </div>
                 </td>
               </tr>
             </template>
@@ -352,19 +427,42 @@ watch(viewDialog, (isOpen) => {
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
 
-        <v-card-text>
+        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
           <v-row>
             <v-col cols="12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker
+              <MenuDatePicker
                 ref="contractEndDatePickerRef"
                 v-model="extensionForm.contractEndDate"
                 :placeholder="$t('t-enter-contract-end-date')"
                 :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
-                :teleport="true"
-                format="dd/MM/yyyy"
+                :error-messages="getServerErrors('contractEndDate')"
+              />
+            </v-col>
+            <v-col cols="12" class="mt-n2">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-reason') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuSelect
+                v-model="extensionForm.reasonId"
+                :items="contractExtensionReasonOptions"
+                :placeholder="$t('t-select-reason')"
+                :rules="applyServerErrorsToRules('reasonId', requiredRules.reasonId)"
+                :disabled="formLoading || reasonsLoading"
+              />
+            </v-col>
+            <v-col cols="12" class="mt-n7">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextArea
+                v-model="extensionForm.notes"
+                :placeholder="$t('t-enter-notes')"
+                :rules="applyServerErrorsToRules('notes', requiredRules.notes)"
+                rows="3"
+                hide-details="auto"
               />
             </v-col>
           </v-row>
@@ -406,6 +504,14 @@ watch(viewDialog, (isOpen) => {
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
             <Status :status="selectedExtension?.status || 'INACTIVE'" />
           </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-reason') }}</div>
+            <div>{{ selectedExtension?.reason?.name || selectedExtension?.reasonId || '-' }}</div>
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
+            <div>{{ selectedExtension?.notes || '-' }}</div>
+          </v-col>
         </v-row>
       </v-card-text>
 
@@ -418,3 +524,19 @@ watch(viewDialog, (isOpen) => {
     </Card>
   </v-dialog>
 </template>
+
+<style scoped>
+.contract-extension-actions-cell {
+  width: 110px;
+  min-width: 110px;
+  white-space: nowrap;
+}
+
+.contract-extension-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+</style>

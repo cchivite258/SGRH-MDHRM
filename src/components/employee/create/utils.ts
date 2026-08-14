@@ -99,7 +99,7 @@ export const nationalityOptions: MenuSelectItemType[] = [
 ];
 
 export const relationshipOptions: MenuSelectItemType[] = [
-  { value: "", label: "Selecione o Relacionamento" },
+  { value: "", label: "Selecione o Grau de Parentesco" },
   {
     label: "Esposo(a)",
     value: "SPOUSE"
@@ -160,5 +160,9 @@ export const contractDurationTypeOptions: MenuSelectItemType[] = [
   {
     label: "Indeterminado",
     value: "OPEN_ENDED"
+  },
+  {
+    label: "Não especificado",
+    value: "UNSPECIFIED_TERM"
   },
 ];

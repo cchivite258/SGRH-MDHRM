@@ -22,12 +22,17 @@ import type { ExpensePerProcedureType } from "@/components/employee/types";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { limitTypeDefinitionOptions } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
+import Status from "@/app/common/components/Status.vue";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Composables
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const invoiceStore = useInvoiceStore();
+const { can, canAny } = usePermissions();
 
 // Props
 const props = defineProps({
@@ -191,7 +196,37 @@ const activeHealthPlan = computed(() =>
   || employeeActiveHealthPlan.value
 );
 
-const activePlanProcedures = computed(() => employeePlanProcedureLimits.value || []);
+// Na consulta, o ProductCard precisa do plano da factura, não necessariamente do plano activo actual.
+const invoiceHealthPlanId = computed(() => {
+  const invoice = invoiceData.value as any;
+  const coveragePeriod = invoice.coveragePeriod || {};
+  return String(firstDefined(
+    coveragePeriod.companyHealthPlanId,
+    coveragePeriod.contractHealthPlanId,
+    coveragePeriod.companyHealthPlan?.id,
+    coveragePeriod.contractHealthPlan?.id,
+    invoice.companyHealthPlanId,
+    invoice.contractHealthPlanId,
+    invoice.companyHealthPlan?.id,
+    invoice.contractHealthPlan?.id
+  ) || "");
+});
+
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(employeePlanProcedureLimits.value || [], t("t-procedures")));
+
+const invoiceStatus = computed(() => String(invoiceData.value.invoiceStatus || "DRAFT").toUpperCase());
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE));
+const canConsultHealthPlan = computed(() => canAny(PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW));
+const invoiceActionReasonName = computed(() => {
+  const data = invoiceData.value as any;
+  const reason = data.reason;
+
+  if (reason && typeof reason === "object") {
+    return reason.name || reason.description || reason.id || "";
+  }
+
+  return data.reasonName || reason || data.reasonId || "";
+});
 
 type DisplayValue = number | string | null | undefined;
 
@@ -358,32 +393,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, ExpensePerProcedureType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, ExpensePerProcedureType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 const activePlanCoveragePeriod = computed(() =>
@@ -567,8 +577,18 @@ const getPlanUsedBalanceTotal = (procedures: ExpensePerProcedureType[]) => {
 };
 
 const onConsultHealthPlan = async () => {
+  if (!canConsultHealthPlan.value) {
+    toast.error("Sem permissao para consultar o plano de saude.");
+    return;
+  }
+
   if (!invoiceData.value.employee) {
     toast.error(t("t-employee-required"));
+    return;
+  }
+
+  if (!invoiceData.value.isEmployeeInvoice && !invoiceData.value.dependent) {
+    toast.error(t("t-dependent-required"));
     return;
   }
 
@@ -576,6 +596,11 @@ const onConsultHealthPlan = async () => {
   healthPlanProcedureSearch.value = "";
 
   try {
+    const memberFilters = {
+      isEmployee: invoiceData.value.isEmployeeInvoice,
+      dependentId: invoiceData.value.isEmployeeInvoice ? undefined : invoiceData.value.dependent
+    };
+
     await hospitalProcedureBalanceStore.fetchProcedures(
       invoiceData.value.employee,
       {
@@ -599,7 +624,7 @@ const onConsultHealthPlan = async () => {
     }
 
     employeeActiveHealthPlan.value = content[0]?.employeeHealthPlan || activeEmployeeHealthPlan;
-    employeePlanProcedureLimits.value = content;
+    employeePlanProcedureLimits.value = orderHealthPlanProcedures(content, t("t-procedures"));
     healthPlanDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano activo:", error);
@@ -673,6 +698,13 @@ const handleItemsReady = (items: InvoiceItemInsertType[]) => {
 const onBack = () => {
   institutionStore.clearDraft();
   router.push('/invoices/list');
+};
+
+const onNewInvoice = () => {
+  if (!canCreateInvoice.value) return;
+
+  invoiceStore.clearDraft();
+  router.push('/invoices/create');
 };
 
 // Watchers
@@ -774,7 +806,27 @@ onMounted(async () => {
 
 <template>
   <v-form ref="form">
+    <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-4">
+      <v-btn color="secondary" variant="outlined" @click="onBack">
+        <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-list') }}
+      </v-btn>
+
+      <div class="d-flex align-center justify-end flex-wrap ga-2">
+        <v-btn
+          v-if="canCreateInvoice"
+          color="primary"
+          variant="tonal"
+          @click="onNewInvoice"
+        >
+          <i class="ph-plus-circle me-1" /> {{ $t('t-add-invoice') }}
+        </v-btn>
+      </div>
+    </div>
+
     <v-card elevation="0" class="position-relative h-100 d-block">
+      <v-card-title class="d-flex justify-start px-6 pt-4 pb-0">
+        <Status :status="invoiceStatus" />
+      </v-card-title>
 
       <v-card-text>
         <v-row class="mt-4 pt-16 pt-md-0">
@@ -821,7 +873,7 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
-        <v-row class="mt-n6">
+        <v-row class="mt-n12">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold">{{ $t('t-invoice-number') }} <i class="ph-asterisk ph-xs text-danger" /></div>
             <TextField v-model="invoiceData.invoiceNumber" :placeholder="$t('t-enter-invoice-number')"
@@ -881,8 +933,18 @@ onMounted(async () => {
           </v-col>
         </v-row>
 
-        <v-row v-if="invoiceData.notes" class="mt-n6 mb-2">
-          <v-col cols="12">
+        <v-row v-if="invoiceActionReasonName || invoiceData.notes" class="mt-n9 mb-2">
+          <v-col v-if="invoiceActionReasonName" cols="12">
+            <div class="font-weight-bold">{{ $t('t-reason') }}</div>
+            <TextField
+              :model-value="invoiceActionReasonName"
+              :placeholder="$t('t-reason')"
+              hide-details
+              disabled
+            />
+          </v-col>
+
+          <v-col v-if="invoiceData.notes" cols="12" class="mt-n3">
             <div class="font-weight-bold">{{ $t('t-reverse-invoice-notes-label') }}</div>
             <TextArea
               v-model="invoiceData.notes"
@@ -895,7 +957,7 @@ onMounted(async () => {
 
         <div class="mb-12">
           <ProductCard ref="productCardRef" v-model="invoiceItemData"
-            :healthplan-id="invoiceData.coveragePeriod?.companyHealthPlanId || ''"
+            :healthplan-id="invoiceHealthPlanId"
             :institution-id="invoiceData.company || ''" :initial-items="initialItems" :is-edit-mode="isEditMode"
             @items-ready="handleItemsReady" />
         </div>
@@ -908,6 +970,7 @@ onMounted(async () => {
         </v-btn>
 
         <v-btn
+          v-if="canConsultHealthPlan"
           color="primary"
           variant="tonal"
           :disabled="!invoiceData.employee"
@@ -942,6 +1005,7 @@ onMounted(async () => {
 
         <div class="d-flex align-center ga-2">
           <v-btn
+            v-if="canConsultHealthPlan"
             color="primary"
             variant="tonal"
             :disabled="activePlanProcedures.length === 0"

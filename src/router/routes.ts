@@ -1,4 +1,5 @@
 import { DefaultLayout, AuthLayout } from "@/layouts/index";
+import { PERMISSIONS } from "@/app/permissions/constants";
 
 import Dashboard from "@/views/pages/StarterKit.vue";
 import Chats from "@/views/chats/index.vue";
@@ -42,61 +43,61 @@ const institutionRoutes = [
     path: `${institutionPrefix}/list`,
     name: "InstitutionList",
     component: () => import("@/views/institution/List.vue"),
-    meta: { title: "Institution List", authRequired: true },
+    meta: { title: "Institution List", authRequired: true, anyPermissions: PERMISSIONS.CONTRACTS.LIST },
   },
   {
     path: `${institutionPrefix}/overview`,
     name: "InstitutionOverview",
     component: () => import("@/views/institution/Overview.vue"),
-    meta: { title: "Invoice Overview", authRequired: true },
+    meta: { title: "Invoice Overview", authRequired: true, anyPermissions: PERMISSIONS.CONTRACTS.VIEW },
   },
   {
     path: `${institutionPrefix}/create`,
     name: "CreateInstitution",
     component: () => import("@/views/institution/Create.vue"),
-    meta: { title: "Create Institution", authRequired: true },
+    meta: { title: "Create Institution", authRequired: true, permission: PERMISSIONS.CONTRACTS.CREATE },
   },
   {
     path: `${institutionPrefix}/edit/:id`,
     name: "EditInstitution",
     component: () => import("@/views/institution/Edit.vue"),
-    meta: { title: "Edit Institution", authRequired: true },
+    meta: { title: "Edit Institution", authRequired: true, permission: PERMISSIONS.CONTRACTS.UPDATE },
   },
   {
     path: `${institutionPrefix}/view/:id`,
     name: "ViewInstitution",
     component: () => import("@/views/institution/View.vue"),
-    meta: { title: "View Institution", authRequired: true },
+    meta: { title: "View Institution", authRequired: true, anyPermissions: PERMISSIONS.CONTRACTS.VIEW },
   },
   {
     path: `${institutionPrefix}/department/:id`,
     name: "EditDepartment",
     component: () => import("@/views/institution/editDepartment/List.vue"),
-    meta: { title: "EditDepartment", authRequired: true },
+    meta: { title: "EditDepartment", authRequired: true, permission: PERMISSIONS.CONTRACTS.DEPARTMENTS_MANAGE },
   },
   {
     path: `${institutionPrefix}/healthPlan/:id`,
     name: "EditHealthPlan",
     component: () => import("@/views/institution/editHealthPlan/List.vue"),
-    meta: { title: "EditHealthPlan", authRequired: true },
+    meta: { title: "EditHealthPlan", authRequired: true, permission: PERMISSIONS.CONTRACTS.HEALTH_PLANS_MANAGE },
   },
    {
     path: `${institutionPrefix}/healthPlan/view/:id`,
     name: "ViewHealthPlan",
     component: () => import("@/views/institution/viewHealthPlan/List.vue"),
-    meta: { title: "ViewHealthPlan", authRequired: true },
+    meta: { title: "ViewHealthPlan", authRequired: true, anyPermissions: PERMISSIONS.CONTRACTS.HEALTH_PLANS_VIEW },
   },
   {
     path: `${institutionPrefix}/coveragePeriod/:id`,
     name: "EditCoveragePeriod",
     component: () => import("@/views/institution/editCoveragePeriod/List.vue"),
-    meta: { title: "EditCoveragePeriod", authRequired: true },
+    meta: { title: "EditCoveragePeriod", authRequired: true, permission: PERMISSIONS.CONTRACTS.COVERAGE_PERIODS_MANAGE },
   },
   {
     path: `${institutionPrefix}/coveragePeriod/view/:id`,
     name: "ViewCoveragePeriod",
     component: () => import("@/views/institution/viewCoveragePeriod/List.vue"),
-    meta: { title: "ViewCoveragePeriod", authRequired: true },
+    meta: { title: "ViewCoveragePeriod", authRequired: true, anyPermissions: PERMISSIONS.CONTRACTS.COVERAGE_PERIODS_VIEW },
   }
 
 ].map((data) => {
@@ -111,25 +112,25 @@ const entitiesRoutes = [
     path: `${entitiesPrefix}/list`,
     name: "EntitiesList",
     component: () => import("@/views/entities/List.vue"),
-    meta: { title: "Entity List", authRequired: true },
+    meta: { title: "Entity List", authRequired: true, anyPermissions: PERMISSIONS.ENTITIES.LIST },
   },
   {
     path: `${entitiesPrefix}/create`,
     name: "CreateEntity",
     component: () => import("@/views/entities/Create.vue"),
-    meta: { title: "Create Entity", authRequired: true },
+    meta: { title: "Create Entity", authRequired: true, permission: PERMISSIONS.ENTITIES.CREATE },
   },
   {
     path: `${entitiesPrefix}/edit/:id`,
     name: "EditEntity",
     component: () => import("@/views/entities/Edit.vue"),
-    meta: { title: "Edit Entity", authRequired: true },
+    meta: { title: "Edit Entity", authRequired: true, permission: PERMISSIONS.ENTITIES.UPDATE },
   },
   {
     path: `${entitiesPrefix}/view/:id`,
     name: "ViewEntity",
     component: () => import("@/views/entities/View.vue"),
-    meta: { title: "View Entity", authRequired: true },
+    meta: { title: "View Entity", authRequired: true, anyPermissions: PERMISSIONS.ENTITIES.VIEW },
   },
 ].map((data) => {
   return {
@@ -143,49 +144,49 @@ const employeeRoutes = [
     path: `${employeePrefix}/list`,
     name: "EmployeeList",
     component: () => import("@/views/employee/List.vue"),
-    meta: { title: "Employee List", authRequired: true },
+    meta: { title: "Employee List", authRequired: true, anyPermissions: PERMISSIONS.EMPLOYEE.LIST },
   },
   {
     path: `${employeePrefix}/overview`,
     name: "EmployeeOverview",
     component: () => import("@/views/employee/Overview.vue"),
-    meta: { title: "Employee Overview", authRequired: true },
+    meta: { title: "Employee Overview", authRequired: true, anyPermissions: PERMISSIONS.EMPLOYEE.VIEW },
   },
   {
     path: `${employeePrefix}/create`,
     name: "CreateEmployee",
     component: () => import("@/views/employee/Create.vue"),
-    meta: { title: "Create Employee", authRequired: true },
+    meta: { title: "Create Employee", authRequired: true, permission: PERMISSIONS.EMPLOYEE.CREATE },
   },
   {
     path: '/employee/edit/:id',
     name: 'EditEmployee',
     component: () => import('@/views/employee/Edit.vue'),
-    meta: { title: "Edit Employee", requiresAuth: true }
+    meta: { title: "Edit Employee", authRequired: true, permission: PERMISSIONS.EMPLOYEE.UPDATE }
   },
   {
     path: '/employee/view/:id',
     name: 'ViewEmployee',
     component: () => import('@/views/employee/View.vue'),
-    meta: { title: "View Employee", requiresAuth: true }
+    meta: { title: "View Employee", authRequired: true, anyPermissions: PERMISSIONS.EMPLOYEE.VIEW }
   },
   {
     path: `${employeePrefix}/healthPlan/edit/:id`,
     name: "EditEmployeeHealthPlan",
     component: () => import("@/views/employee/viewHealthPlan/List.vue"),
-    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true, permission: PERMISSIONS.EMPLOYEE.HEALTH_PLAN_MANAGE },
   },
   {
     path: `${employeePrefix}/healthPlan/view/:id`,
     name: "ViewEmployeeHealthPlan",
     component: () => import("@/views/employee/viewHealthPlan/View.vue"),
-    meta: { title: "ViewEmployeeHealthPlan", authRequired: true },
+    meta: { title: "ViewEmployeeHealthPlan", authRequired: true, anyPermissions: PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW },
   },
   {
     path: `${employeePrefix}/dependent-health-plan/:employeeId/:dependentId`,
     name: "ViewDependentHealthPlan",
     component: () => import("@/views/employee/DependentHealthPlan.vue"),
-    meta: { title: "Dependent Health Plan", authRequired: true },
+    meta: { title: "Dependent Health Plan", authRequired: true, anyPermissions: PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW },
   },
 ].map((data) => {
   return {
@@ -199,31 +200,31 @@ const serviceProviderRoutes = [
     path: `${serviceProviderPrefix}/list`,
     name: "ServiceProviderList",
     component: () => import("@/views/serviceProvider/List.vue"),
-    meta: { title: "Service Provider List", authRequired: true },
+    meta: { title: "Service Provider List", authRequired: true, anyPermissions: PERMISSIONS.SERVICE_PROVIDERS.LIST },
   },
   {
     path: `${serviceProviderPrefix}/overview`,
     name: "ServiceProviderOverview",
     component: () => import("@/views/serviceProvider/Overview.vue"),
-    meta: { title: "Service Provider Overview", authRequired: true },
+    meta: { title: "Service Provider Overview", authRequired: true, anyPermissions: PERMISSIONS.SERVICE_PROVIDERS.VIEW },
   },
   {
     path: `${serviceProviderPrefix}/create`,
     name: "CreateServiceProvider",
     component: () => import("@/views/serviceProvider/Create.vue"),
-    meta: { title: "Create Service Provider", authRequired: true },
+    meta: { title: "Create Service Provider", authRequired: true, permission: PERMISSIONS.SERVICE_PROVIDERS.CREATE },
   },
   {
     path: `${serviceProviderPrefix}/edit/:id`,
     name: 'EditServiceProvider',
     component: () => import('@/views/serviceProvider/Edit.vue'),
-    meta: { title: "Edit Service Provider", requiresAuth: true }
+    meta: { title: "Edit Service Provider", requiresAuth: true, permission: PERMISSIONS.SERVICE_PROVIDERS.UPDATE }
   },
   {
     path: `${serviceProviderPrefix}/view/:id`,
     name: 'ViewServiceProvider',
     component: () => import('@/views/serviceProvider/View.vue'),
-    meta: { title: "View Service Provider", requiresAuth: true }
+    meta: { title: "View Service Provider", requiresAuth: true, anyPermissions: PERMISSIONS.SERVICE_PROVIDERS.VIEW }
   }
 ].map((data) => {
   return {
@@ -237,85 +238,85 @@ const ammReportRoutes = [
     path: `${reportsPrefix}/list`,
     name: "ReportsList",
     component: () => import("@/views/ammReports/List.vue"),
-    meta: { title: "t-reports-list", authRequired: true },
+    meta: { title: "t-reports-list", authRequired: true, anyPermissions: PERMISSIONS.REPORTS.LIST },
   },
   {
   path: `${reportsPrefix}/preview`,
   name: "ReportPreview",
   component: () => import("@/views/ammReports/CompanyHospitalProceduresBalances/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100001"]] },
 },
  {
   path: `${reportsPrefix}100002/preview`,
   name: "ReportPreview100002",
   component: () => import("@/views/ammReports/CostPerEmployeeReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100002"]] },
 },
 {
   path: `${reportsPrefix}100003/preview`,
   name: "ReportPreview100003",
   component: () => import("@/views/ammReports/ServiceProviderReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100003"]] },
 },
 {
   path: `${reportsPrefix}100004/preview`,
   name: "ReportPreview100004",
   component: () => import("@/views/ammReports/TopServiceTypesByClinicReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100004"]] },
 },
 {
   path: `${reportsPrefix}100005/preview`,
   name: "ReportPreview100005",
   component: () => import("@/views/ammReports/ServiceProviderComparisonReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100005"]] },
 },
 {
   path: `${reportsPrefix}100006/preview`,
   name: "ReportPreview100006",
   component: () => import("@/views/ammReports/CompanyEmployeeLimitsReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100006"]] },
 },
 {
   path: `${reportsPrefix}100007/preview`,
   name: "ReportPreview100007",
   component: () => import("@/views/ammReports/TotalBilledMedicalAssistanceReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100007"]] },
 },
 {
   path: `${reportsPrefix}100008/preview`,
   name: "ReportPreview100008",
   component: () => import("@/views/ammReports/TotalBilledByProviderReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100008"]] },
 },
 {
   path: `${reportsPrefix}100009/preview`,
   name: "ReportPreview100009",
   component: () => import("@/views/ammReports/EmployeeExpenseStatementReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100009"]] },
 },
 {
   path: `${reportsPrefix}100010/preview`,
   name: "ReportPreview100010",
   component: () => import("@/views/ammReports/InvoiceReferenceReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100010"]] },
 },
 {
   path: `${reportsPrefix}100011/preview`,
   name: "ReportPreview100011",
   component: () => import("@/views/ammReports/HospitalProcedureTrendReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100011"]] },
 },
 {
   path: `${reportsPrefix}100012/preview`,
   name: "ReportPreview100012",
   component: () => import("@/views/ammReports/EmployeeHealthPlanLimitsTrendReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100012"]] },
 },
 {
   path: `${reportsPrefix}100013/preview`,
   name: "ReportPreview100013",
   component: () => import("@/views/ammReports/EmployeeFrequencyTrendReport/ReportPreview.vue"),
-  meta: { title: "t-preview-report", authRequired: true },
+  meta: { title: "t-preview-report", authRequired: true, anyPermissions: [PERMISSIONS.REPORTS.VIEW, PERMISSIONS.REPORTS.BY_ID["100013"]] },
 }
 
 
@@ -331,97 +332,103 @@ const baseTableRoutes = [
     path: `${baseTablePrefix}/documenttype/list`,
     name: "DocumentTypeListView",
     component: () => import("@/views/baseTables/documentType/ListView.vue"),
-    meta: { title: "Agent List", authRequired: true },
+    meta: { title: "Agent List", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.ACCESS },
   },
   {
     path: `${baseTablePrefix}/documenttype/grid`,
     name: "DocumentTypeGridView",
     component: () => import("@/views/baseTables/documentType/GridView.vue"),
-    meta: { title: "Agent Grid", authRequired: true },
+    meta: { title: "Agent Grid", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.ACCESS },
   },
   {
     path: `${baseTablePrefix}/country/list`,
     name: "CountryListView",
     component: () => import("@/views/baseTables/country/ListView.vue"),
-    meta: { title: "CountryListView", authRequired: true },
+    meta: { title: "CountryListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.COUNTRIES.LIST },
   },
   {
     path: `${baseTablePrefix}/edit-country`,
     name: "EditCountry",
     component: () => import("@/views/baseTables/editCountry/ListView.vue"),
-    meta: { title: "EditCountry", authRequired: true },
+    meta: { title: "EditCountry", authRequired: true, permission: PERMISSIONS.BASE_TABLES.COUNTRIES.UPDATE },
   },
   {
     path: `${baseTablePrefix}/currency/list`,
     name: "CurrencyListView",
     component: () => import("@/views/baseTables/currency/ListView.vue"),
-    meta: { title: "CurrencyListView", authRequired: true },
+    meta: { title: "CurrencyListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.CURRENCIES.LIST },
   },
   {
     path: `${baseTablePrefix}/hospitalproceduretype/list`,
     name: "HospitalProcedureTypeListView",
     component: () => import("@/views/baseTables/hospitalProcedureType/ListView.vue"),
-    meta: { title: "HospitalProcedureTypeListView", authRequired: true },
+    meta: { title: "HospitalProcedureTypeListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_TYPES.LIST },
   },
   {
     path: `${baseTablePrefix}/hospitalprocedurecategory/list`,
     name: "HospitalProcedureCategoryListView",
     component: () => import("@/views/baseTables/hospitalProcedureCategory/ListView.vue"),
-    meta: { title: "HospitalProcedureCategoryListView", authRequired: true },
+    meta: { title: "HospitalProcedureCategoryListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_CATEGORIES.LIST },
   },
   {
     path: `${baseTablePrefix}/hospitalprocedurecategory/group-procedure-types/:id`,
     name: "ManageHospitalProcedureCategoryTypes",
     component: () => import("@/views/baseTables/manageHospitalProcedureCategoryTypes/ListView.vue"),
-    meta: { title: "ManageHospitalProcedureCategoryTypes", authRequired: true },
+    meta: { title: "ManageHospitalProcedureCategoryTypes", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_CATEGORY_TYPES.LIST },
   },
   {
     path: `${baseTablePrefix}/hospitalproceduregroup/list`,
     name: "HospitalProcedureGroupListView",
     component: () => import("@/views/baseTables/hospitalProcedureGroup/ListView.vue"),
-    meta: { title: "HospitalProcedureGroupListView", authRequired: true },
+    meta: { title: "HospitalProcedureGroupListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_GROUPS.LIST },
   },
   {
     path: `${baseTablePrefix}/edit-hospital-procedure-group/:id`,
     name: "EditHospitalProcedureGroup",
     component: () => import("@/views/baseTables/editHospitalProcedureGroup/ListView.vue"),
-    meta: { title: "EditHospitalProcedureGroup", authRequired: true },
+    meta: { title: "EditHospitalProcedureGroup", authRequired: true, permission: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_GROUPS.UPDATE },
   },
   {
     path: `${baseTablePrefix}/view-hospital-procedure-group/:id`,
     name: "ViewHospitalProcedureGroup",
     component: () => import("@/views/baseTables/viewHospitalProcedureGroup/ListView.vue"),
-    meta: { title: "ViewHospitalProcedureGroup", authRequired: true },
+    meta: { title: "ViewHospitalProcedureGroup", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.HOSPITAL_PROCEDURE_GROUPS.LIST },
   },
   {
     path: `${baseTablePrefix}/institutiontype/list`,
     name: "InstitutionTypeListView",
     component: () => import("@/views/baseTables/institutionTypes/ListView.vue"),
-    meta: { title: "InstitutionTypeListView", authRequired: true },
+    meta: { title: "InstitutionTypeListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.INSTITUTION_TYPES.LIST },
   },
   {
     path: `${baseTablePrefix}/leavereason/list`,
     name: "LeaveReasonListView",
     component: () => import("@/views/baseTables/leaveReason/ListView.vue"),
-    meta: { title: "LeaveReasonListView", authRequired: true },
+    meta: { title: "LeaveReasonListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.LEAVE_REASONS.LIST },
   },
   {
     path: `${baseTablePrefix}/languages/list`,
     name: "LanguagesListView",
     component: () => import("@/views/baseTables/languages/ListView.vue"),
-    meta: { title: "LanguagesListView", authRequired: true },
+    meta: { title: "LanguagesListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.LANGUAGES.LIST },
   },
   {
     path: `${baseTablePrefix}/tax-rates/list`,
     name: "TaxRatesListView",
     component: () => import("@/views/baseTables/taxRate/ListView.vue"),
-    meta: { title: "TaxRatesListView", authRequired: true },
+    meta: { title: "TaxRatesListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.TAX_RATES.LIST },
   },
   {
     path: `${baseTablePrefix}/provider-types/list`,
     name: "ProviderTypeListView",
     component: () => import("@/views/baseTables/providerType/List.vue"),
-    meta: { title: "ProviderTypeListView", authRequired: true },
+    meta: { title: "ProviderTypeListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.PROVIDER_TYPES.LIST },
+  },
+  {
+    path: `${baseTablePrefix}/reasons/list`,
+    name: "ReasonsListView",
+    component: () => import("@/views/baseTables/reason/ListView.vue"),
+    meta: { title: "ReasonsListView", authRequired: true, anyPermissions: PERMISSIONS.BASE_TABLES.REASONS.LIST },
   },
 ].map((data) => {
   return {
@@ -435,7 +442,31 @@ const usersRoutes = [
     path: `${usersPrefix}/users/list`,
     name: "UsersListView",
     component: () => import("@/views/users/users/ListView.vue"),
-    meta: { title: "Users List", authRequired: true },
+    meta: { title: "Users List", authRequired: true, anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.USERS.LIST },
+  },
+  {
+    path: `${usersPrefix}/users/edit-roles/:id`,
+    name: "EditUserRoles",
+    component: () => import("@/views/users/users/EditRoles.vue"),
+    meta: { title: "t-manage-user-roles", authRequired: true, permission: PERMISSIONS.ACCESS_MANAGEMENT.USERS.MANAGE_ROLES },
+  },
+  {
+    path: `${usersPrefix}/modules/list`,
+    name: "ModulesListView",
+    component: () => import("@/views/users/modules/ListView.vue"),
+    meta: { title: "Modules List", authRequired: true, anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.MODULES.LIST },
+  },
+  {
+    path: `${usersPrefix}/roles/list`,
+    name: "RolesListView",
+    component: () => import("@/views/users/roles/ListView.vue"),
+    meta: { title: "Roles List", authRequired: true, anyPermissions: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.LIST },
+  },
+  {
+    path: `${usersPrefix}/roles/edit/:id`,
+    name: "EditRolePermissions",
+    component: () => import("@/views/users/roles/Edit.vue"),
+    meta: { title: "t-edit-role-permissions", authRequired: true, permission: PERMISSIONS.ACCESS_MANAGEMENT.ROLES.MANAGE_PERMISSIONS },
   },
 ].map((data) => {
   return {
@@ -449,7 +480,13 @@ const settingsRoutes = [
     path: `${settingsPrefix}/alerts`,
     name: "AlertConfigurations",
     component: () => import("@/views/settings/Alerts.vue"),
-    meta: { title: "t-alerts", authRequired: true },
+    meta: { title: "t-alerts", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.ALERTS.ACCESS },
+  },
+  {
+    path: `${settingsPrefix}/code-configs`,
+    name: "CodeConfigs",
+    component: () => import("@/views/settings/CodeConfigs.vue"),
+    meta: { title: "t-contract-code-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.LIST },
   },
 ].map((data) => {
   return {
@@ -495,31 +532,31 @@ const dashboardRoutes = [
     path: "/",
     name: "Dashboard",
     component: Dashboard,
-    meta: { title: "Dashboard", authRequired: true, layout: DefaultLayout },
+    meta: { title: "Dashboard", authRequired: true, layout: DefaultLayout, anyPermissions: PERMISSIONS.DASHBOARD.ACCESS, dashboardFallback: true },
   },
   {
     path: `${dashboardPrefix}/analytics`,
     name: "Analytics",
     component: () => import("@/views/dashboard/Analytics.vue"),
-    meta: { title: "Analytics", authRequired: true },
+    meta: { title: "Analytics", authRequired: true, anyPermissions: PERMISSIONS.DASHBOARD.ACCESS, dashboardFallback: true },
   },
   {
     path: `${dashboardPrefix}/crm`,
     name: "CRM",
     component: () => import("@/views/dashboard/CRM.vue"),
-    meta: { title: "CRM", authRequired: true },
+    meta: { title: "CRM", authRequired: true, anyPermissions: PERMISSIONS.DASHBOARD.ACCESS, dashboardFallback: true },
   },
   {
     path: `${dashboardPrefix}/learning`,
     name: "Learning",
     component: () => import("@/views/dashboard/Learning.vue"),
-    meta: { title: "Learning", authRequired: true },
+    meta: { title: "Learning", authRequired: true, anyPermissions: PERMISSIONS.DASHBOARD.ACCESS, dashboardFallback: true },
   },
   {
     path: `${dashboardPrefix}/real-estate`,
     name: "RealEstate",
     component: () => import("@/views/dashboard/RealEstate.vue"),
-    meta: { title: "Real Estate", authRequired: true },
+    meta: { title: "Real Estate", authRequired: true, anyPermissions: PERMISSIONS.DASHBOARD.ACCESS, dashboardFallback: true },
   },
 ].map((data) => {
   return {
@@ -679,31 +716,31 @@ const invoicesRoutes = [
     path: `${invoicePrefix}/list`,
     name: "InvoiceList",
     component: () => import("@/views/invoices/List.vue"),
-    meta: { title: "Invoice List", authRequired: true },
+    meta: { title: "Invoice List", authRequired: true, anyPermissions: PERMISSIONS.INVOICES.LIST },
   },
   {
     path: `${invoicePrefix}/overview`,
     name: "InvoiceOverview",
     component: () => import("@/views/invoices/Overview.vue"),
-    meta: { title: "Invoice Overview", authRequired: true },
+    meta: { title: "Invoice Overview", authRequired: true, anyPermissions: PERMISSIONS.INVOICES.VIEW },
   },
   {
     path: `${invoicePrefix}/create`,
     name: "CreateInvoice",
     component: () => import("@/views/invoices/Create.vue"),
-    meta: { title: "Create Invoice", authRequired: true },
+    meta: { title: "Create Invoice", authRequired: true, permission: PERMISSIONS.INVOICES.CREATE },
   },
   {
     path: `${invoicePrefix}/edit/:id`,
     name: "EditInvoice",
     component: () => import("@/views/invoices/Edit.vue"),
-    meta: { title: "Edit Invoice", authRequired: true },
+    meta: { title: "Edit Invoice", authRequired: true, permission: PERMISSIONS.INVOICES.UPDATE },
   },
   {
     path: `${invoicePrefix}/view/:id`,
     name: "ViewInvoice",
     component: () => import("@/views/invoices/View.vue"),
-    meta: { title: "View Invoice", authRequired: true },
+    meta: { title: "View Invoice", authRequired: true, anyPermissions: PERMISSIONS.INVOICES.VIEW },
   },
 ].map((data) => {
   return {
@@ -899,7 +936,7 @@ const pagesRoutes = [
     path: `${pagesPrefix}/profile`,
     name: "PagesProfile",
     component: () => import("@/views/pages/Profile.vue"),
-    meta: { title: "Profile", authRequired: false, layout: DefaultLayout },
+    meta: { title: "Profile", authRequired: true, layout: DefaultLayout, anyPermissions: PERMISSIONS.USER_PROFILE.ACCESS },
   },
   {
     path: `${pagesPrefix}/profile-settings`,
@@ -907,8 +944,9 @@ const pagesRoutes = [
     component: () => import("@/views/pages/ProfileSettings.vue"),
     meta: {
       title: "Profile Settings",
-      authRequired: false,
+      authRequired: true,
       layout: DefaultLayout,
+      anyPermissions: PERMISSIONS.USER_PROFILE.ACCESS,
     },
   },
   {
@@ -1420,6 +1458,12 @@ export const routes = [
   ...accountRoutes,
   ...dashboardRoutes,
   {
+    path: "/inicio",
+    name: "AlternativeHome",
+    component: () => import("@/views/pages/AlternativeHome.vue"),
+    meta: { title: "Inicio", authRequired: true, layout: DefaultLayout },
+  },
+  {
     path: "/chat",
     name: "Chat",
     component: Chats,
@@ -1455,6 +1499,12 @@ export const routes = [
   ...settingsRoutes,
   ...serviceProviderRoutes,
   ...ammReportRoutes,
+  {
+    path: "/403",
+    name: "Error403",
+    component: () => import("@/views/authentication/error/403.vue"),
+    meta: { title: "403", authRequired: true, layout: DefaultLayout },
+  },
   {
     path: "/widgets",
     name: "Widgets",

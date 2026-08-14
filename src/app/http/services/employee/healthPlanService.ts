@@ -33,6 +33,58 @@ const normalizeEmployeeHealthPlan = <T extends Record<string, any>>(item: T): T 
 const EMPLOYEE_HEALTH_PLAN_INCLUDES = 'usages,employee,contractHealthPlan,companyHealthPlan';
 
 export default class EmployeeHealthPlanService extends HttpService {
+  async getEmployeeHospitalProcedurePlanLimits(
+    page: number = 0,
+    size: number = 10,
+    sortColumn: string = 'createdAt',
+    direction: string = 'asc',
+    query_value?: string,
+    query_props?: string
+  ): Promise<{ content: ExpensePerProcedureType[], meta: any }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString(),
+        sortColumn,
+        direction
+      });
+
+      if (query_props) params.append('query_props', query_props);
+      if (query_value) params.append('query_value', query_value);
+
+      const includesToUse = 'employeeHealthPlan,contractHealthPlanHospitalProcedures,companyHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent';
+      params.append('includes', includesToUse);
+
+      const response = await this.get<ApiResponse<ExpensePerProcedureType[]>>(
+        `/amm/employee-hospital-procedure-plan-limits?${params.toString()}`
+      );
+
+      return {
+        content: getContent(response),
+        meta: getMeta(response)
+      };
+    } catch (error) {
+      console.error("Erro ao buscar limites de procedimentos hospitalares:", error);
+      throw error;
+    }
+  }
+
+  async getEmployeeHospitalProcedurePlanLimitById(id: string): Promise<{ data: ExpensePerProcedureType }> {
+    try {
+      const includesToUse = 'employeeHealthPlan,contractHealthPlanHospitalProcedures,companyHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent';
+      const response = await this.get<ApiResponse<ExpensePerProcedureType>>(
+        `/amm/employee-hospital-procedure-plan-limits/${id}?includes=${includesToUse}`
+      );
+
+      return {
+        data: (response.data ?? response.content ?? response) as ExpensePerProcedureType
+      };
+    } catch (error) {
+      console.error("Erro ao buscar limite de procedimento hospitalar:", error);
+      throw error;
+    }
+  }
+
   async getHealthPlansByEmployee(
     id: string | null,
     page: number = 0,
@@ -40,7 +92,8 @@ export default class EmployeeHealthPlanService extends HttpService {
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,
-    query_props?: string
+    query_props?: string,
+    useQueryOperator: boolean = true
   ): Promise<{ content: HealthPlanListingType[], meta: any }> {
     try {
       const queryParams = [
@@ -64,6 +117,10 @@ export default class EmployeeHealthPlanService extends HttpService {
 
       if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+      }
+
+      if (useQueryOperator && query_props && query_value) {
+        queryParams.push(`query_operator=AND`);
       }
 
       queryParams.push(`includes=${EMPLOYEE_HEALTH_PLAN_INCLUDES}`);
@@ -166,6 +223,10 @@ export default class EmployeeHealthPlanService extends HttpService {
 
       if (query_value) {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
+      }
+
+      if (query_props && query_value) {
+        queryParams.push(`query_operator=AND`);
       }
 
       const includesToUse = 'employeeHealthPlan,contractHealthPlanHospitalProcedures,companyHealthPlanHospitalProcedures,hospitalProcedureType,hospitalProcedureGroup,employeeHospitalProcedurePlanUsages,dependent';

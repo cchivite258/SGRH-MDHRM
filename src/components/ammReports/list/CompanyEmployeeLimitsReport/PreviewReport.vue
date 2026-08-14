@@ -99,34 +99,11 @@ const calcLimit = (employee: CompanyEmployeeLimitEmployeeType): number => {
   return fixed;
 };
 
-const limitColumnTitle = computed(() => {
-  const employee = (props.report?.employees || [])[0];
-  if (!employee) return t("t-cel-limit-amount");
-
-  const limitType = String(employee.healthPlanLimit || "");
-  const component = String(employee.salaryComponent || "");
-  const percentage = Number(employee.contractContributionPercentage || 0);
-
-  if (limitType === "FIXED_AMOUNT") return t("t-cel-limit-fixed-amount");
-
-  if (limitType === "SALARY_PERCENTAGE" || limitType === "ANUAL_SALARY" || limitType === "ANNUAL_SALARY") {
-    const formattedPercentage = new Intl.NumberFormat(locale.value === "en" ? "en-US" : "pt-PT", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }).format(percentage);
-    const componentLabel = component === "GROSS_SALARY"
-      ? t("t-cel-gross-salary-lower")
-      : t("t-cel-base-salary-lower");
-    return `${formattedPercentage}% ${componentLabel}`;
-  }
-
-  return t("t-cel-limit-amount");
-});
+const limitColumnTitle = computed(() => t("t-cel-global-limit"));
 
 const normalizedRows = computed(() => {
   const rows = (props.report?.employees || []).map((employee) => {
     const employeeName = `${employee.employeeFirstName || ""} ${employee.employeeLastName || ""}`.trim() || "-";
-    const contractType = String(employee.employeeContractDurationType || "").toUpperCase();
     const monthValues: Record<string, number> = {};
     (employee.monthlyDetails || []).forEach((m) => {
       monthValues[toMonthKey(Number(m.year || 0), Number(m.month || 0))] = Number(m.totalAmount || 0);
@@ -140,11 +117,6 @@ const normalizedRows = computed(() => {
       department: employee.departmentName || "-",
       position: employee.positionName || "-",
       hireDate: employee.employeeHireDate ? formateDate(employee.employeeHireDate) : "-",
-      terminateDate: contractType === "OPEN_ENDED"
-        ? "-"
-        : (employee.employeeTerminateDate ? formateDate(employee.employeeTerminateDate) : "-"),
-      baseSalary: Number(employee.employeeBaseSalary || 0),
-      grossSalary: Number(employee.employeeGrossSalary || 0),
       limitAmount,
       monthValues,
       totalBilled,
@@ -169,8 +141,6 @@ const totals = computed(() => {
     totalBilled: rows.reduce((sum, x) => sum + x.totalBilled, 0),
     totalAvailable: rows.reduce((sum, x) => sum + x.totalAvailable, 0),
     totalLimit: rows.reduce((sum, x) => sum + x.limitAmount, 0),
-    totalBaseSalary: rows.reduce((sum, x) => sum + x.baseSalary, 0),
-    totalGrossSalary: rows.reduce((sum, x) => sum + x.grossSalary, 0),
     monthValues
   };
 });
@@ -311,13 +281,10 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
         <v-table density="comfortable" hover>
           <thead>
             <tr class="table-head-row">
-              <th class="text-left pa-3">{{ $t("t-name") }}</th>
+              <th class="text-left pa-3 sticky-employee-cell sticky-employee-head">{{ $t("t-name") }}</th>
               <th class="text-left pa-3">{{ $t("t-department") }}</th>
               <th class="text-left pa-3">{{ $t("t-position") }}</th>
               <th class="text-left pa-3">{{ $t("t-hire-date") }}</th>
-              <th class="text-left pa-3">{{ $t("t-termination-date") }}</th>
-              <th class="text-right pa-3">{{ $t("t-base-salary") }}</th>
-              <th class="text-right pa-3">{{ $t("t-gross-salary") }}</th>
               <th class="text-right pa-3">{{ limitColumnTitle }}</th>
               <th v-for="m in monthRange" :key="`${m.year}-${m.month}`" class="text-right pa-3">{{ monthLabel(m.year, m.month) }}</th>
               <th class="text-right pa-3">{{ $t("t-cel-total-billed") }}</th>
@@ -326,13 +293,10 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
           </thead>
           <tbody>
             <tr v-for="(row, i) in normalizedRows" :key="i" class="table-row">
-              <td class="pa-3">{{ row.employeeName }}</td>
+              <td class="pa-3 sticky-employee-cell sticky-employee-row">{{ row.employeeName }}</td>
               <td class="pa-3">{{ row.department }}</td>
               <td class="pa-3">{{ row.position }}</td>
               <td class="pa-3">{{ row.hireDate }}</td>
-              <td class="pa-3">{{ row.terminateDate }}</td>
-              <td class="text-right pa-3">{{ amountFormate(row.baseSalary) }}</td>
-              <td class="text-right pa-3">{{ amountFormate(row.grossSalary) }}</td>
               <td class="text-right pa-3 font-weight-medium">{{ amountFormate(row.limitAmount) }}</td>
               <td v-for="m in monthRange" :key="`${m.year}-${m.month}-row-${i}`" class="text-right pa-3">
                 {{ amountFormate(row.monthValues[toMonthKey(m.year, m.month)] || 0) }}
@@ -341,13 +305,10 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
               <td class="text-right pa-3 font-weight-bold" :class="row.totalAvailable < 0 ? 'text-red-darken-2' : ''">{{ amountFormate(row.totalAvailable) }}</td>
             </tr>
             <tr class="totals-row">
-              <td class="pa-3 font-weight-bold">{{ $t("t-totals") }}</td>
+              <td class="pa-3 font-weight-bold sticky-employee-cell sticky-employee-total">{{ $t("t-totals") }}</td>
               <td class="pa-3 font-weight-bold">-</td>
               <td class="pa-3 font-weight-bold">-</td>
               <td class="pa-3 font-weight-bold">-</td>
-              <td class="pa-3 font-weight-bold">-</td>
-              <td class="text-right pa-3 font-weight-bold">{{ amountFormate(totals.totalBaseSalary) }}</td>
-              <td class="text-right pa-3 font-weight-bold">{{ amountFormate(totals.totalGrossSalary) }}</td>
               <td class="text-right pa-3 font-weight-bold">{{ amountFormate(totals.totalLimit) }}</td>
               <td v-for="m in monthRange" :key="`${m.year}-${m.month}-total`" class="text-right pa-3 font-weight-bold">
                 {{ amountFormate(totals.monthValues[toMonthKey(m.year, m.month)] || 0) }}
@@ -396,6 +357,32 @@ const handleExport = async (type: "pdf" | "excel" | "csv") => {
 .table-head-row :deep(th) { background-color: #dcebff; color: #1f3a93; font-weight: 700 !important; }
 .table-row:hover { background-color: #f8f9fa; }
 .totals-row { background-color: #eef4ff; }
+.table-responsive :deep(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sticky-employee-cell {
+  position: sticky !important;
+  left: 0;
+  z-index: 2;
+  min-width: 180px;
+  max-width: 220px;
+  background-color: #ffffff;
+  background-clip: padding-box;
+  box-shadow: 1px 0 0 #d8dee9, 8px 0 12px -12px rgba(15, 23, 42, 0.35);
+  white-space: normal;
+}
+.sticky-employee-head {
+  z-index: 4;
+  background-color: #dcebff;
+}
+.table-row:hover .sticky-employee-row {
+  background-color: #f8f9fa;
+}
+.sticky-employee-total {
+  z-index: 3;
+  background-color: #eef4ff;
+}
 .h-100 { height: 100%; }
 .export-menu-list :deep(.v-list-item) { min-height: 34px; padding-inline: 10px; }
 .export-menu-title { font-size: 14px; font-weight: 500; line-height: 1.2; font-family: inherit; }

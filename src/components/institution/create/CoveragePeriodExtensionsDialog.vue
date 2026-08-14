@@ -4,11 +4,13 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
-import { coveragePeriodExtensionService } from "@/app/http/httpServiceProvider";
+import { coveragePeriodExtensionService, reasonService } from "@/app/http/httpServiceProvider";
+import type { ReasonListing } from "@/components/baseTables/reason/types";
 import { coveragePeriodExtensionHeader } from "@/components/institution/create/utils";
 import type {
   CoveragePeriodExtensionPayloadType,
@@ -72,11 +74,13 @@ const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const endDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const loading = ref(false);
 const formLoading = ref(false);
+const reasonsLoading = ref(false);
 const errorMsg = ref("");
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<CoveragePeriodExtensionType[]>([]);
 const extensions = ref<CoveragePeriodExtensionType[]>([]);
 const selectedExtension = ref<CoveragePeriodExtensionType | null>(null);
+const periodExtensionReasons = ref<ReasonListing[]>([]);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -88,13 +92,23 @@ const extensionForm = ref<CoveragePeriodExtensionPayloadType>({
   id: undefined,
   coveragePeriodId: "",
   endDate: new Date().toISOString().split("T")[0],
-  budgetAmount: undefined
+  budgetAmount: undefined,
+  reasonId: "",
+  notes: ""
 });
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const isCreate = computed(() => !extensionForm.value.id);
 const totalItems = computed(() => pagination.value.totalElements);
+const periodExtensionReasonOptions = computed(() =>
+  periodExtensionReasons.value
+    .filter(reason => reason.enabled)
+    .map(reason => ({
+      label: reason.name,
+      value: reason.id
+    }))
+);
 
 const toDateOnly = (value: string | Date | null | undefined): Date | null => {
   if (!value) return null;
@@ -169,6 +183,12 @@ const requiredRules = {
       if (v === null || v === undefined || v === "") return true;
       return Number(v) >= 0 || t("t-min-zero-amount");
     }
+  ],
+  reasonId: [
+    (v: string | number | null | undefined) => !!v || t("t-please-select-reason")
+  ],
+  notes: [
+    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
   ]
 };
 
@@ -223,12 +243,27 @@ const reloadExtensions = async () => {
   });
 };
 
+const fetchPeriodExtensionReasons = async () => {
+  reasonsLoading.value = true;
+  try {
+    const { content } = await reasonService.getReasonsByType("COVERAGE_PERIOD_EXTENSION");
+    periodExtensionReasons.value = content;
+  } catch (error) {
+    periodExtensionReasons.value = [];
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  } finally {
+    reasonsLoading.value = false;
+  }
+};
+
 const resetForm = () => {
   extensionForm.value = {
     id: undefined,
     coveragePeriodId: props.coveragePeriodId || "",
     endDate: getDefaultEndDate(),
-    budgetAmount: undefined
+    budgetAmount: undefined,
+    reasonId: "",
+    notes: ""
   };
   serverErrors.value = {};
   errorMsg.value = "";
@@ -255,7 +290,9 @@ const openEditDialog = async (item: CoveragePeriodExtensionType) => {
       id: extension.id,
       coveragePeriodId: extension.coveragePeriodId || props.coveragePeriodId || "",
       endDate: extension.endDate,
-      budgetAmount: extension.budgetAmount ?? undefined
+      budgetAmount: extension.budgetAmount ?? undefined,
+      reasonId: extension.reasonId || extension.reason?.id || "",
+      notes: extension.notes || ""
     };
     formDialog.value = true;
   } catch (error) {
@@ -292,7 +329,9 @@ const onSubmit = async () => {
         extensionForm.value.budgetAmount === null ||
         extensionForm.value.budgetAmount === undefined
           ? undefined
-          : Number(extensionForm.value.budgetAmount)
+          : Number(extensionForm.value.budgetAmount),
+      reasonId: extensionForm.value.reasonId,
+      notes: extensionForm.value.notes.trim()
     };
 
     const response = extensionForm.value.id
@@ -330,7 +369,9 @@ watch(dialogValue, async (isOpen) => {
 });
 
 watch(formDialog, (isOpen) => {
-  if (!isOpen) {
+  if (isOpen) {
+    fetchPeriodExtensionReasons();
+  } else {
     resetForm();
   }
 });
@@ -385,10 +426,22 @@ watch(viewDialog, (isOpen) => {
               <tr v-for="item in items as CoveragePeriodExtensionType[]" :key="item.id" height="50">
                 <td>{{ formateDate(item.startDate || undefined) || '-' }}</td>
                 <td>{{ formateDate(item.endDate || undefined) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
                 </td>
                 <td class="text-end">
+                  <v-btn
+                    v-if="!readOnly"
+                    icon="ph-pencil-simple ph-sm"
+                    color="primary"
+                    density="compact"
+                    variant="tonal"
+                    rounded
+                    class="me-1"
+                    :title="$t('t-edit')"
+                    @click="openEditDialog(item)"
+                  />
                   <v-btn
                     icon="ph-eye ph-sm"
                     color="secondary"
@@ -427,22 +480,21 @@ watch(viewDialog, (isOpen) => {
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
 
-        <v-card-text>
+        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
           <v-row>
             <v-col cols="12">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <ValidatedDatePicker
+              <MenuDatePicker
                 ref="endDatePickerRef"
                 v-model="extensionForm.endDate"
                 :placeholder="$t('t-enter-end-date')"
                 :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)"
-                :teleport="true"
-                format="dd/MM/yyyy"
+                :error-messages="getServerErrors('endDate')"
               />
             </v-col>
-            <v-col cols="12">
+            <v-col cols="12" class="mt-n1">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-budget-amount') }}
               </div>
@@ -451,6 +503,30 @@ watch(viewDialog, (isOpen) => {
                 :placeholder="$t('t-enter-budget-amount')"
                 type="number"
                 :rules="applyServerErrorsToRules('budgetAmount', requiredRules.budgetAmount)"
+              />
+            </v-col>
+            <v-col cols="12" class="mt-n8">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-reason') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <MenuSelect
+                v-model="extensionForm.reasonId"
+                :items="periodExtensionReasonOptions"
+                :placeholder="$t('t-select-reason')"
+                :rules="applyServerErrorsToRules('reasonId', requiredRules.reasonId)"
+                :disabled="formLoading || reasonsLoading"
+              />
+            </v-col>
+            <v-col cols="12" class="mt-n6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextArea
+                v-model="extensionForm.notes"
+                :placeholder="$t('t-enter-notes')"
+                :rules="applyServerErrorsToRules('notes', requiredRules.notes)"
+                rows="3"
+                hide-details="auto"
               />
             </v-col>
           </v-row>
@@ -495,6 +571,14 @@ watch(viewDialog, (isOpen) => {
           <v-col cols="12" md="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-budget-amount') }}</div>
             <div>{{ selectedExtension?.budgetAmount ?? '-' }}</div>
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-reason') }}</div>
+            <div>{{ selectedExtension?.reason?.name || selectedExtension?.reasonId || '-' }}</div>
+          </v-col>
+          <v-col cols="12">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
+            <div>{{ selectedExtension?.notes || '-' }}</div>
           </v-col>
         </v-row>
       </v-card-text>

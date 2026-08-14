@@ -1,5 +1,7 @@
 export type InstitutionListingType = {
     id: string  ;
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     address: string;
     phone: string;
@@ -49,6 +51,8 @@ export type InstitutionListingType = {
 
 export type InstitutionResponseType = { 
     id: string  ;
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     address: string;
     phone: string;
@@ -97,6 +101,8 @@ export type InstitutionResponseType = {
 };
 
 export type InstitutionInsertType = {
+    code?: string | null;
+    erpCode?: string | null;
     name: string;
     description: string | null;
     companyDetailsId: string | number | undefined;
@@ -122,6 +128,57 @@ export type InstitutionInsertType = {
     companyContributionPercentage?: number | null;
     enabled: boolean;
 }
+
+export type ContractDocumentType =
+  | "CONTRACT"
+  | "CONTRACT_ADDENDUM"
+  | "CONTRACT_TERMINATION"
+  | "CONTRACT_RENEWAL"
+  | "CONTRACT_AMENDMENT"
+  | "COMMERCIAL_PROPOSAL"
+  | "TECHNICAL_PROPOSAL"
+  | "FINANCIAL_PROPOSAL";
+
+export type ContractAttachmentType = {
+  id: string;
+  contractId?: string | number;
+  contract?: any;
+  contractDocumentType: ContractDocumentType;
+  originalFilename?: string;
+  name?: string;
+  extension?: string;
+  fileSize?: number;
+  size?: number;
+  attachment?: {
+    id?: string;
+    originalFilename?: string;
+    contentType?: string;
+    fileSize?: number;
+    extension?: string;
+    removable?: boolean;
+    enabled?: boolean;
+  } | null;
+  fileMetadata?: {
+    originalFilename?: string;
+    name?: string;
+    extension?: string;
+    fileSize?: number;
+    size?: number;
+  } | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
+
+export type ContractAttachmentUploadType = {
+  contractDocumentType: ContractDocumentType | "";
+  file: File | null;
+};
 
 export type DepartmentInsertType = {
     id?: string | null;
@@ -270,6 +327,9 @@ export type ServiceProviderListingType = {
         deletedBy: string;
     }
     company: string;
+    isBusinessDays?: boolean | null;
+    gracePeriod?: number | null;
+    maxDaysAfterService?: number | null;
     createdAt: Date | null;
     updatedAt: Date | null;
     deletedAt: Date | null;
@@ -279,33 +339,13 @@ export type ServiceProviderListingType = {
     enabled: boolean;
 };
 
-export type ServiceProviderContractExtensionPayloadType = {
-    id?: string | number;
-    serviceProviderId: string | number;
-    contractEndDate: Date | string | null;
-};
-
-export type ServiceProviderContractExtensionType = {
-    id: string | number;
-    contractStartDate: Date | string | null;
-    contractEndDate: Date | string | null;
-    status: string;
-    serviceProviderId: string | number;
-    serviceProvider?: ServiceProviderListingType["serviceProvider"];
-    removable: boolean;
-    enabled: boolean;
-    createdAt: Date | string | null;
-    updatedAt: Date | string | null;
-    deletedAt: Date | string | null;
-    createdBy: string | null;
-    updatedBy: string | null;
-    deletedBy: string | null;
-};
-
 export type ServiceProviderInsertType = {
     id?: string | null; 
     serviceProvider: string; 
     company: string; 
+    isBusinessDays?: boolean | null;
+    gracePeriod?: number | null;
+    maxDaysAfterService?: number | null;
     enabled: boolean;
 };
 
@@ -314,6 +354,7 @@ export type HospitalProcedureListingType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    waitingPeriodDays?: number | null;
     hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
     groupFixedAmount?: number | null;
     groupPercentage?: number | null;
@@ -339,6 +380,7 @@ export type HospitalProcedureInsertType = {
     fixedAmount: number | null;
     percentage: number | null;
     limitTypeDefinition: string;
+    waitingPeriodDays?: number | null;
     hospitalProcedureGroup?: string | { id?: string | number; name?: string; description?: string } | null;
     groupFixedAmount?: number | null;
     groupPercentage?: number | null;
@@ -375,6 +417,8 @@ export type CoveragePeriodExtensionPayloadType = {
     coveragePeriodId: string | number;
     endDate: Date | string | null;
     budgetAmount?: number | null;
+    reasonId: string | number;
+    notes: string;
 };
 
 export type CoveragePeriodExtensionType = {
@@ -382,6 +426,9 @@ export type CoveragePeriodExtensionType = {
     startDate: Date | string | null;
     endDate: Date | string | null;
     budgetAmount?: number | null;
+    reasonId?: string | number;
+    reason?: { id?: string | number; name?: string | null } | null;
+    notes?: string | null;
     status: string;
     coveragePeriodId: string | number;
     coveragePeriod?: CoveragePeriodListingType;
@@ -410,6 +457,7 @@ export type HealthPlanListingType = {
     maxNumberOfDependents: number | undefined;
     childrenInUniversityMaxAge: number | undefined;
     childrenMaxAge: number | undefined;
+    waitingPeriodDays?: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
     salaryComponent: string | undefined;
@@ -431,6 +479,7 @@ export type HealthPlanInsertType = {
     maxNumberOfDependents: number | undefined;
     childrenMaxAge: number | undefined;
     childrenInUniversityMaxAge: number | undefined;
+    waitingPeriodDays?: number | undefined;
     healthPlanLimit: string | undefined;
     fixedAmount: number | undefined;
     salaryComponent: string | undefined;

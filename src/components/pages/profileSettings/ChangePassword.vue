@@ -1,16 +1,16 @@
 <script lang="ts" setup>
-import { ref, onBeforeUnmount } from "vue";
-import Table from "@/app/common/components/Table.vue";
-import {
-  productsHeader,
-  loginHistory,
-} from "@/components/pages/profileSettings/utils";
+import { computed, ref, onBeforeUnmount } from "vue";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import { userService } from "@/app/http/httpServiceProvider"; // ajuste conforme sua estrutura
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const toast = useToast();
+const { can } = usePermissions();
+// Alterar senha é uma ação de escrita nas definições do próprio utilizador.
+const canUpdateProfile = computed(() => can(PERMISSIONS.USER_PROFILE.UPDATE));
 
 const isSubmitted = ref(false);
 const loading = ref(false);
@@ -55,6 +55,10 @@ const handleApiError = (error: any) => {
 };
 
 const submitForm = async () => {
+  if (!canUpdateProfile.value) {
+    return;
+  }
+
   isSubmitted.value = true;
 
   // Verificação extra para garantir que senhas coincidem
@@ -131,7 +135,7 @@ const onChange = () => {
             {{ $t('t-old-password') }} <i class="ph-asterisk ph-xs text-danger" />
           </div>
           <TextField v-model="formData.oldPswd.value" :placeholder="$t('t-enter-password')" hide-details
-            :showError="isSubmitted" :isSubmitted="isSubmitted" isPassword />
+            :showError="isSubmitted" :isSubmitted="isSubmitted" :disabled="!canUpdateProfile" isPassword />
           <div v-if="formErrors.oldPassword" class="text-red text-extra-small pt-1">
             {{ formErrors.oldPassword }}
           </div>
@@ -141,7 +145,7 @@ const onChange = () => {
             {{ $t('t-new-password') }}<i class="ph-asterisk ph-xs text-danger" />
           </div>
           <TextField v-model="formData.newPswd.value" :placeholder="$t('t-enter-password')" hide-details
-            :showError="isSubmitted" :isSubmitted="isSubmitted" isPassword />
+            :showError="isSubmitted" :isSubmitted="isSubmitted" :disabled="!canUpdateProfile" isPassword />
           <div v-if="formErrors.newPassword" class="text-red text-extra-small pt-1">
             {{ formErrors.newPassword }}
           </div>
@@ -151,7 +155,7 @@ const onChange = () => {
             {{ $t('t-confirm-password') }} <i class="ph-asterisk ph-xs text-danger" />
           </div>
           <TextField v-model="formData.confirmPswd.value" :placeholder="$t('t-enter-password')" hide-details
-            :showError="isSubmitted" :isSubmitted="isSubmitted" isPassword />
+            :showError="isSubmitted" :isSubmitted="isSubmitted" :disabled="!canUpdateProfile" isPassword />
           <div v-if="formErrors.confirmPassword" class="text-red text-extra-small pt-1">
             {{ formErrors.confirmPassword }}
           </div>
@@ -161,39 +165,12 @@ const onChange = () => {
         <span class="text-primary text-decoration-underline font-weight-medium">
         </span>
 
-        <v-btn color="success" :loading="loading" :disabled="loading" @click="submitForm">
+        <v-btn color="success" :loading="loading" :disabled="loading || !canUpdateProfile" @click="submitForm">
           {{ $t('t-save') }}
         </v-btn>
       </div>
     </v-card-text>
 
-    <Card elevation="0" :title="$t('t-login-history')">
-      <template #title-action>
-        <!--<v-btn color="secondary"> All Logout </v-btn>-->
-      </template>
-      <v-divider />
-      <v-card-text>
-        <Table :headerItems="productsHeader.map(header => ({
-          ...header,
-          title: $t('t-' + header.title)
-        }))">
-          <template #body>
-            <tr v-for="(item, index) in loginHistory" :key="'eCommerce-order-item-' + index" height="50">
-              <td>
-                <i class="ph-device-mobile-camera me-1" /> {{ item.product }}
-              </td>
-              <td>{{ item.ip_address }}</td>
-              <td>{{ item.date }}</td>
-              <td>{{ item.location }}</td>
-              <td>
-                <v-btn color="primary" variant="text" class="px-0">
-                  {{ $t('t-logout') }} <i class="ph-sign-out ms-1" />
-                </v-btn>
-              </td>
-            </tr>
-          </template>
-        </Table>
-      </v-card-text>
-    </Card>
+    <!-- Histórico de login oculto até o back-end disponibilizar os dados reais. -->
   </Card>
 </template>

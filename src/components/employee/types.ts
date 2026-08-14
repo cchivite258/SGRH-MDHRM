@@ -189,6 +189,9 @@ export type EmployeeBaseSalaryTrackType = {
   startDate?: string | undefined;
   endDate?: string | undefined;
   baseSalary: number | null;
+  reasonId?: string | number | undefined;
+  reason?: { id?: string | number; name?: string | null } | null;
+  notes?: string | undefined;
   status?: string | undefined;
   employeeId?: string | undefined;
 };
@@ -196,10 +199,42 @@ export type EmployeeBaseSalaryTrackType = {
 export type EmployeeBaseSalaryUpdateType = {
   newBaseSalary: number | null;
   starDate?: string;
+  notes: string;
+  reasonId: string | number;
 };
 
 export type EmployeeTerminationType = {
   terminationDate: string;
+  reasonId: string | number;
+};
+
+export type EmployeeRehireType = {
+  newBaseSalary: number | null;
+  contractDurationType: string;
+  rehireDate: string;
+  endDate: string;
+  positionId: string | number;
+  departmentId: string | number;
+  notes: string;
+};
+
+export type EmployeeRehireTrackType = {
+  id: string;
+  employeeId?: string;
+  departmentId?: string | number;
+  positionId?: string | number;
+  notes?: string | null;
+  rehireDate?: string;
+  terminateDate?: string;
+  endDate?: string;
+  baseSalary?: number | null;
+  contractDurationType?: string;
+  employee?: Partial<EmployeeListingType>;
+  department?: { id?: string | number; name?: string | null } | null;
+  position?: { id?: string | number; name?: string | null } | null;
+  enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 
@@ -251,15 +286,15 @@ export type DependentInsertType = {
   middleName: string;
   lastName: string;
   gender: string;
-  birthDate: Date | undefined;
+  birthDate: Date | string | undefined;
   relationship: string;
   isUnivesityStudent: boolean;
   employee: string;
   idCardNumber: string;
   idCardIssuer: string;
-  idCardExpiryDate: Date | undefined;
+  idCardExpiryDate: Date | string | undefined;
   isLifeTimeCard?: boolean;
-  idCardIssuanceDate: Date | undefined;
+  idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   attachmentUploads?: DependentAttachmentUploadType[];
 }
@@ -270,7 +305,7 @@ export type DependentListingType = {
   middleName: string;
   lastName: string;
   gender: string;
-  birthDate: Date | undefined;
+  birthDate: Date | string | undefined;
   relationship: string;
   isUnivesityStudent: boolean;
   employee: {
@@ -281,9 +316,9 @@ export type DependentListingType = {
   };
   idCardNumber: string;
   idCardIssuer: string;
-  idCardExpiryDate: Date | undefined;
+  idCardExpiryDate: Date | string | undefined;
   isLifeTimeCard?: boolean | null;
-  idCardIssuanceDate: Date | undefined;
+  idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   dependentDocumentType?: DependentDocumentType | null;
 }
@@ -390,6 +425,7 @@ export type ExpensePerProcedureType = {
  frequencyInterval?: number | null;
  lastUsageDate?: string | null;
  allowedFrequencyUse?: number | null;
+ waitingPeriodDays?: number | null;
  employeeHealthPlanId: string;
  companyHealthPlanHospitalProceduresId: string;
  hospitalProcedureTypeId: string;
@@ -453,6 +489,7 @@ export type DependentHospitalProcedurePlanLimitType = {
   frequencyInterval?: number | null;
   lastUsageDate?: string | null;
   allowedFrequencyUse?: number | null;
+  waitingPeriodDays?: number | null;
   employeeHealthPlan?: HealthPlanListingType;
   contractHealthPlanHospitalProcedures?: any;
   companyHealthPlanHospitalProcedures?: any;
@@ -473,6 +510,7 @@ export type DependentHospitalProcedurePlanLimitType = {
 export type DependentHospitalProcedurePlanUsedBalanceType = {
   dependent?: DependentListingType;
   employeeHealthPlan?: HealthPlanListingType;
+  waitingPeriodDays?: number | null;
   allocatedBalance: number;
   usedBalance: number;
   remainingBalance: number;

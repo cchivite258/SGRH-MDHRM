@@ -3,9 +3,14 @@ import {
   security,
   notifications,
 } from "@/components/pages/profileSettings/utils";
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const deleteText = ref("deleteTextHere");
+const { can } = usePermissions();
+// As opções de segurança alteram a conta, por isso ficam atrás da permissão de update.
+const canUpdateProfile = computed(() => can(PERMISSIONS.USER_PROFILE.UPDATE));
 
 </script>
 <template>
@@ -17,7 +22,7 @@ const deleteText = ref("deleteTextHere");
           <div class="text-muted mt-1">{{ $t('t-'+item.description) }}</div>
         </v-col>
         <v-col cols="auto">
-          <v-btn color="primary" density="compact" class="px-2">
+          <v-btn color="primary" density="compact" class="px-2" :disabled="!canUpdateProfile">
             {{ $t('t-'+item.btnText) }}
           </v-btn>
         </v-col>
@@ -47,6 +52,7 @@ const deleteText = ref("deleteTextHere");
       </v-card-text>
     </Card>-->
     <Card
+      v-if="canUpdateProfile"
       :title="$t('t-delete-this-account')"
       title-class="text-decoration-underline"
       elevation="0"

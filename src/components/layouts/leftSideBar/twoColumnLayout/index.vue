@@ -46,7 +46,7 @@ const isSideBar = computed(() => {
 });
 
 const onSelect = (data: MenuItemType) => {
-  sideBarData.value = data.subMenu || [];
+  sideBarData.value = (data.subMenu || []) as SubMenuItemType[];
   if (data.subMenu) {
     state.changeSideBarSize(DEFAULT);
   } else {

@@ -3,7 +3,7 @@ import { PropType, computed, ref, watch, nextTick } from "vue";
 import { CoveragePeriodInsertType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiValidationErrors, getFirstApiErrorMessage } from "@/app/common/apiErrors";
 
@@ -191,16 +191,18 @@ const onSubmit = async () => {
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-start-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')"
-              :rules="applyServerErrorsToRules('startDate', requiredRules.startDate)" :teleport="true"
+            <MenuDatePicker v-model="startDate" :placeholder="$t('t-enter-start-date')"
+              :rules="applyServerErrorsToRules('startDate', requiredRules.startDate)"
+              :error-messages="getServerErrors('startDate')"
               ref="startDatePickerRef" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">
               {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
-            <ValidatedDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')"
-              :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)" :teleport="true"
+            <MenuDatePicker v-model="endDate"  :placeholder="$t('t-enter-end-date')"
+              :rules="applyServerErrorsToRules('endDate', requiredRules.endDate)"
+              :error-messages="getServerErrors('endDate')"
               ref="endDatePickerRef" />
           </v-col>
         </v-row>

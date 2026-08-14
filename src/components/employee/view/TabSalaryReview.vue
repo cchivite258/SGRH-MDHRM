@@ -5,10 +5,12 @@ import { useToast } from "vue-toastification";
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
-import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import ChangeSalaryDialog from "@/components/employee/view/ChangeSalaryDialog.vue";
+import ViewSalaryChangeDialog from "@/components/employee/view/ViewSalaryChangeDialog.vue";
 import { formatCurrency } from "@/app/common/currencyFormat";
 import { formateDate } from "@/app/common/dateFormate";
-import { employeeService } from "@/app/http/httpServiceProvider";
+import { employeeService, reasonService } from "@/app/http/httpServiceProvider";
+import type { ReasonListing } from "@/components/baseTables/reason/types";
 import { salaryReviewHeader } from "@/components/employee/list/utils";
 import type {
   EmployeeBaseSalaryTrackType,
@@ -34,15 +36,15 @@ const props = defineProps({
     default: false
   },
   previousStep: {
-    type: Number,
-    default: 4
+    type: Number as PropType<number | null>,
+    default: null
   },
   previousLabelKey: {
     type: String,
     default: 't-back-to-health-plan'
   },
   nextStep: {
-    type: Number,
+    type: Number as PropType<number | null>,
     default: null
   },
   loading: {
@@ -52,18 +54,15 @@ const props = defineProps({
 });
 
 const dialog = ref(false);
+const viewDialog = ref(false);
 const localLoading = ref(false);
 const errorMsg = ref("");
 const employeeData = ref<EmployeeResponseType | null>(null);
 const selectedTracks = ref<EmployeeBaseSalaryTrackType[]>([]);
 const salaryTracks = ref<EmployeeBaseSalaryTrackType[]>([]);
-const formRef = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const effectiveDatePicker = ref<{ validate: () => boolean } | null>(null);
-
-const salaryForm = ref<EmployeeBaseSalaryUpdateType>({
-  newBaseSalary: 0,
-  starDate: new Date().toISOString().split("T")[0]
-});
+const salaryChangeReasons = ref<ReasonListing[]>([]);
+const reasonsLoading = ref(false);
+const selectedTrack = ref<EmployeeBaseSalaryTrackType | null>(null);
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -74,15 +73,14 @@ const tableHeaders = computed(() =>
 const loadingState = computed(() => props.loading || localLoading.value);
 const currentBaseSalary = computed(() => Number(employeeData.value?.baseSalary || 0));
 const totalItems = computed(() => salaryTracks.value.length);
-
-const salaryRules = [
-  (v: number | null) => v !== null && v !== undefined || t("t-please-enter-new-base-salary"),
-  (v: number | null) => Number(v) > 0 || t("t-please-enter-a-valid-new-base-salary")
-];
-
-const effectiveDateRules = [
-  (v: Date | string | null) => !!v || t("t-please-enter-effective-date")
-];
+const salaryChangeReasonOptions = computed(() =>
+  salaryChangeReasons.value
+    .filter(reason => reason.enabled)
+    .map(reason => ({
+      label: reason.name,
+      value: reason.id
+    }))
+);
 
 const clearErrorLater = () => {
   if (alertTimeout) {
@@ -142,42 +140,35 @@ const fetchEmployeeData = async () => {
 };
 
 const openDialog = () => {
-  salaryForm.value = {
-    newBaseSalary: currentBaseSalary.value,
-    starDate: new Date().toISOString().split("T")[0]
-  };
+  fetchSalaryChangeReasons();
   dialog.value = true;
 };
 
-const closeDialog = () => {
-  dialog.value = false;
+const openViewDialog = (item: EmployeeBaseSalaryTrackType) => {
+  selectedTrack.value = { ...item };
+  viewDialog.value = true;
 };
 
-const submitSalaryUpdate = async () => {
-  if (!props.employeeId || !formRef.value) return;
+const getSalaryTrackReasonName = (item: EmployeeBaseSalaryTrackType | null) => {
+  if (!item) return "";
+  return item.reason?.name || "";
+};
 
-  const { valid } = await formRef.value.validate();
-  const isDateValid = effectiveDatePicker.value?.validate?.() ?? true;
-
-  if (!valid || !isDateValid) {
-    return;
-  }
+const submitSalaryUpdate = async (payload: EmployeeBaseSalaryUpdateType) => {
+  if (!props.employeeId) return;
 
   try {
     localLoading.value = true;
-    const response = await employeeService.updateBaseSalary(props.employeeId, {
-      newBaseSalary: Number(salaryForm.value.newBaseSalary),
-      starDate: salaryForm.value.starDate ? String(salaryForm.value.starDate).split("T")[0] : undefined
-    });
+    const response = await employeeService.updateBaseSalary(props.employeeId, payload);
 
     if (response.status === "error") {
       throw new Error(response.error?.message || t("t-error-saving-employee"));
     }
 
     toast.success(t("t-salary-updated-success"));
-    closeDialog();
+    dialog.value = false;
     await fetchEmployeeData();
-    emit("salaryUpdated", Number(employeeData.value?.baseSalary || salaryForm.value.newBaseSalary || 0));
+    emit("salaryUpdated", Number(employeeData.value?.baseSalary || payload.newBaseSalary || 0));
   } catch (error: any) {
     console.error("Erro ao actualizar salário:", error);
     const message = error?.message || t("t-error-saving-employee");
@@ -185,6 +176,19 @@ const submitSalaryUpdate = async () => {
     setError(message);
   } finally {
     localLoading.value = false;
+  }
+};
+
+const fetchSalaryChangeReasons = async () => {
+  reasonsLoading.value = true;
+  try {
+    const { content } = await reasonService.getReasonsByType("EMPLOYEE_CHANGE_BASE_SALARY");
+    salaryChangeReasons.value = content;
+  } catch (error: any) {
+    salaryChangeReasons.value = [];
+    toast.error(error?.message || t("t-message-load-error"));
+  } finally {
+    reasonsLoading.value = false;
   }
 };
 
@@ -263,15 +267,28 @@ onBeforeUnmount(() => {
                 <td>{{ formatCurrency(item.baseSalary || 0) }}</td>
                 <td>{{ formateDate(item.startDate || item.stardDate) }}</td>
                 <td>{{ formateDate(item.endDate) || '-' }}</td>
+                <td>{{ getSalaryTrackReasonName(item) || '-' }}</td>
+                <td>{{ item.notes || '-' }}</td>
                 <td>
                   <Status :status="item.status || 'INACTIVE'" />
+                </td>
+                <td class="text-end">
+                  <v-btn
+                    icon="ph-eye ph-sm"
+                    color="secondary"
+                    density="compact"
+                    variant="tonal"
+                    rounded
+                    :title="$t('t-view')"
+                    @click="openViewDialog(item)"
+                  />
                 </td>
               </tr>
             </template>
 
             <template v-if="salaryTracks.length === 0" #body>
               <tr>
-                <td :colspan="salaryReviewHeader.length" class="text-center py-10">
+                <td :colspan="tableHeaders.length + 1" class="text-center py-10">
                   <v-avatar size="80" color="primary" variant="tonal">
                     <i class="ph-magnifying-glass" style="font-size: 30px" />
                   </v-avatar>
@@ -287,8 +304,8 @@ onBeforeUnmount(() => {
     </v-col>
   </v-row>
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
+  <v-card-actions v-if="previousStep || nextStep" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="emit('onStepChange', previousStep)">
       <i class="ph-arrow-left me-2" /> {{ $t(previousLabelKey) }}
     </v-btn>
     <v-btn v-if="nextStep" color="secondary" variant="elevated" class="me-2" @click="emit('onStepChange', nextStep)">
@@ -296,70 +313,22 @@ onBeforeUnmount(() => {
     </v-btn>
   </v-card-actions>
 
-  <v-dialog v-if="allowEdit" v-model="dialog" width="700" persistent>
-    <v-form ref="formRef" @submit.prevent="submitSalaryUpdate">
-      <Card :title="$t('t-change-salary')" title-class="py-0" style="overflow: hidden">
-        <template #title-action>
-          <v-btn icon="ph-x" variant="plain" @click="closeDialog" />
-        </template>
-        <v-divider />
+  <ChangeSalaryDialog
+    v-if="allowEdit"
+    v-model="dialog"
+    :loading="loadingState"
+    :current-base-salary="currentBaseSalary"
+    :reason-options="salaryChangeReasonOptions"
+    :reasons-loading="reasonsLoading"
+    :error-message="errorMsg"
+    @submit="submitSalaryUpdate"
+  />
 
-        <v-alert
-          v-if="errorMsg"
-          :text="errorMsg"
-          variant="tonal"
-          color="danger"
-          class="mx-5 mt-3"
-          density="compact"
-        />
-
-        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
-          <v-row>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-new-base-salary') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField
-                v-model="salaryForm.newBaseSalary"
-                type="number"
-                :placeholder="$t('t-enter-new-base-salary')"
-                :rules="salaryRules"
-                hide-details="auto"
-              />
-            </v-col>
-
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-effective-date') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <ValidatedDatePicker
-                ref="effectiveDatePicker"
-                v-model="salaryForm.starDate"
-                :placeholder="$t('t-enter-effective-date')"
-                :rules="effectiveDateRules"
-                :teleport="true"
-                format="dd/MM/yyyy"
-              />
-            </v-col>
-          </v-row>
-        </v-card-text>
-
-        <v-divider />
-
-        <v-card-actions class="d-flex justify-end">
-          <div>
-            <v-btn color="danger" class="me-1" @click="closeDialog">
-              <i class="ph-x me-1" /> {{ $t('t-close') }}
-            </v-btn>
-            <v-btn color="primary" variant="elevated" @click="submitSalaryUpdate" :loading="loadingState"
-              :disabled="loadingState">
-              {{ loadingState ? $t('t-saving') : $t('t-save') }}
-            </v-btn>
-          </div>
-        </v-card-actions>
-      </Card>
-    </v-form>
-  </v-dialog>
+  <ViewSalaryChangeDialog
+    v-model="viewDialog"
+    :data="selectedTrack"
+    :reason-name="getSalaryTrackReasonName(selectedTrack)"
+  />
 </template>
 
 <style scoped>

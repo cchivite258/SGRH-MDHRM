@@ -212,7 +212,7 @@ export class HospitalProcedureTrendReportExporter {
 
     autoTable(pdf, {
       startY: cardsY + cardHeight + 6,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [[this.tr("t-procedure"), this.tr("t-hpt-total-usages")]],
       body: rows.map((row) => [row.procedureName, this.formatNumber(row.totalUsages)]),
       foot: [[this.tr("t-totals"), this.formatNumber(total)]],

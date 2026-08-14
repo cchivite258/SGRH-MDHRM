@@ -38,12 +38,15 @@ import type {
 // Utils
 import { contactPersonHeader } from "@/components/institution/create/utils";
 import { contactOptions as Options } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const contactPersonStore = useContactPersonStore();
+const { can, canAny } = usePermissions();
 
 // props
 const props = defineProps({
@@ -54,6 +57,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -79,6 +90,16 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => contactPersonStore.loading);
 const totalItems = computed(() => contactPersonStore.pagination.totalElements);
+const canCreateContact = computed(() => can(PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.CREATE));
+const canUpdateContact = computed(() => can(PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.UPDATE));
+const canDeleteContact = computed(() => can(PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.DELETE));
+const canViewContact = computed(() => canAny([
+  PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.READ,
+  PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.CREATE,
+  PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.UPDATE,
+  PERMISSIONS.CONTRACT_PERSONS_OF_CONTACT.DELETE,
+]));
+const canSelectContacts = computed(() => !props.isViewMode && canDeleteContact.value);
 
 interface FetchParams {
   page: number;
@@ -220,8 +241,8 @@ const onConfirmDelete = async () => {
     );
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -239,7 +260,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-contact-person-list')" title-class="py-5">
-    <template v-if="!props.isViewMode" #title-action>
+    <template v-if="!props.isViewMode && canCreateContact" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-contact-person') }}
@@ -267,10 +288,10 @@ onBeforeUnmount(() => {
         :headers="contactPersonHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="contactPersonStore.contact_persons" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchContactPersons"
-        item-value="id" :show-select="!props.isViewMode">
+        item-value="id" :show-select="canSelectContacts">
         <template #body="{ items }">
           <tr v-for="item in items as ContactPersonListingType[]" :key="item.id" height="50">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectContacts">
               <v-checkbox :model-value="selectedContactPersons.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -291,6 +312,9 @@ onBeforeUnmount(() => {
               </v-btn>
               <TableAction
                 v-else
+                :can-view="canViewContact"
+                :can-edit="canUpdateContact"
+                :can-delete="canDeleteContact"
                 @onEdit="onCreateEditClick(item)"
                 @onView="onViewClick(item)"
                 @onDelete="onDelete(item.id)"
@@ -320,11 +344,11 @@ onBeforeUnmount(() => {
   <ViewContactDialog v-model="viewDialog" :data="contactPersonData" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 4)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-organizational-struture') }}
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 6)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
     {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
     

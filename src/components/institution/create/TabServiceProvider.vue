@@ -22,7 +22,6 @@ import ListMenuWithIcon from "@/app/common/components/ListMenuWithIcon.vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import CreateEditServiceProviderDialog from "@/components/institution/create/CreateEditServiceProviderDialog.vue";
 import ViewServiceProviderDialog from "@/components/institution/create/ViewServiceProviderDialog.vue";
-import ServiceProviderContractExtensionsDialog from "@/components/institution/create/ServiceProviderContractExtensionsDialog.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import TableActionSimplified from "@/app/common/components/TableActionSimplified.vue";
 
@@ -40,12 +39,15 @@ import type {
 import { serviceProviderHeader } from "@/components/institution/create/utils";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const serviceProviderInstitutionStore = useServiceProviderInstitutionStore();
+const { can, canAny } = usePermissions();
 
 
 
@@ -58,6 +60,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -69,12 +79,10 @@ const institutionId = ref(props.institutionId);
 
 const dialog = ref(false);
 const viewDialog = ref(false);
-const extensionDialog = ref(false);
 const deleteDialog = ref(false);
 const deleteLoading = ref(false);
 const serviceProviderData = ref<ServiceProviderInsertType | null>(null);
 const serviceProviderViewData = ref<ServiceProviderListingType | null>(null);
-const selectedServiceProviderForExtensions = ref<ServiceProviderListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
@@ -87,6 +95,14 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => serviceProviderInstitutionStore.loading);
 const totalItems = computed(() => serviceProviderInstitutionStore.pagination.totalElements);
+const canCreateContractServiceProvider = computed(() => can(PERMISSIONS.CONTRACT_SERVICE_PROVIDERS.CREATE));
+const canDeleteContractServiceProvider = computed(() => can(PERMISSIONS.CONTRACT_SERVICE_PROVIDERS.DELETE));
+const canViewContractServiceProvider = computed(() => canAny([
+  PERMISSIONS.CONTRACT_SERVICE_PROVIDERS.READ,
+  PERMISSIONS.CONTRACT_SERVICE_PROVIDERS.CREATE,
+  PERMISSIONS.CONTRACT_SERVICE_PROVIDERS.DELETE,
+]));
+const canSelectServiceProviders = computed(() => !props.isViewMode && canDeleteContractServiceProvider.value);
 
 interface FetchParams {
   page: number;
@@ -145,6 +161,9 @@ const onCreateEditClick = (data: ServiceProviderInsertType | null) => {
       id: undefined,
       serviceProvider: "",
       company: company,
+      isBusinessDays: false,
+      gracePeriod: null,
+      maxDaysAfterService: null,
       enabled: true 
     };
 
@@ -222,11 +241,6 @@ const onViewClick = (data: ServiceProviderListingType) => {
   viewDialog.value = true;
 };
 
-const onContractExtensionsClick = (data: ServiceProviderListingType) => {
-  selectedServiceProviderForExtensions.value = { ...data };
-  extensionDialog.value = true;
-};
-
 /**
  * Prepara exclusão de contato
  */
@@ -254,8 +268,8 @@ const onConfirmDelete = async () => {
     );
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -273,7 +287,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-service-provider-list')" title-class="py-5">
-    <template v-if="!props.isViewMode" #title-action>
+    <template v-if="!props.isViewMode && canCreateContractServiceProvider" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-service-provider') }} 
@@ -301,25 +315,19 @@ onBeforeUnmount(() => {
         :headers="serviceProviderHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="serviceProviderInstitutionStore.service_providers" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-        @load-items="fetchInstitutionServiceProviders" item-value="id" :show-select="!props.isViewMode">
+        @load-items="fetchInstitutionServiceProviders" item-value="id" :show-select="canSelectServiceProviders">
         <template #body="{ items }">
           <tr v-for="item in items as ServiceProviderListingType[]" :key="item.id" height="50">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectServiceProviders">
               <v-checkbox :model-value="selectedServiceProviders.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
             <td>{{ item.serviceProvider.name }}</td>
+            <td>{{ item.maxDaysAfterService ?? "N/A" }}</td>
+            <td>{{ item.gracePeriod ?? "N/A" }}</td>
+            <td>{{ item.isBusinessDays ? $t('t-yes') : $t('t-no') }}</td>
             <td class="text-end">
               <div class="d-flex justify-end" style="gap: 8px">
-                <v-btn
-                  icon="ph-file-plus ph-sm"
-                  color="info"
-                  density="compact"
-                  variant="tonal"
-                  rounded
-                  :title="$t('t-manage-contract-addenda')"
-                  @click="onContractExtensionsClick(item)"
-                />
                 <v-btn
                   v-if="props.isViewMode"
                   icon
@@ -330,7 +338,13 @@ onBeforeUnmount(() => {
                 >
                   <i class="ph-eye" />
                 </v-btn>
-                <TableActionSimplified v-else @onView="onViewClick(item)" @onDelete="onDelete(item.id)" />
+                <TableActionSimplified
+                  v-else
+                  :can-view="canViewContractServiceProvider"
+                  :can-delete="canDeleteContractServiceProvider"
+                  @onView="onViewClick(item)"
+                  @onDelete="onDelete(item.id)"
+                />
               </div>
             </td>
           </tr>
@@ -355,20 +369,13 @@ onBeforeUnmount(() => {
   <!-- Dialogs -->
   <CreateEditServiceProviderDialog v-model="dialog" :data="serviceProviderData" @onSubmit="onSubmit" />
   <ViewServiceProviderDialog v-model="viewDialog" :data="serviceProviderViewData" />
-  <ServiceProviderContractExtensionsDialog
-    v-model="extensionDialog"
-    :service-provider-id="selectedServiceProviderForExtensions?.serviceProvider?.id || null"
-    :service-provider-name="selectedServiceProviderForExtensions?.serviceProvider?.name || ''"
-    :current-contract-end-date="selectedServiceProviderForExtensions?.serviceProvider?.contractEndDate || null"
-    :read-only="props.isViewMode"
-  />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 5)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-contact-person') }}
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 7)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>

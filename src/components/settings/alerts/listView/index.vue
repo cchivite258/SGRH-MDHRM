@@ -22,9 +22,13 @@ import type {
   AlertConfigurationOption,
 } from "@/components/settings/alerts/types";
 import type { OptionType } from "@/app/common/types/option.type";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
+import type { PermissionRequirement } from "@/app/permissions/constants";
 
 const { t } = useI18n();
 const toast = useToast();
+const { can, canAny } = usePermissions();
 
 const dialog = ref(false);
 const viewDialog = ref(false);
@@ -47,14 +51,28 @@ const loadingList = ref(false);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
+const canCreateAlert = computed(() => can(PERMISSIONS.SETTINGS.ALERTS.JOBS.CREATE));
+const canDeleteAlert = computed(() => can(PERMISSIONS.SETTINGS.ALERTS.JOBS.DELETE));
 
 const actionOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Definir parâmetros", value: "parameters", icon: "ph-sliders-horizontal" },
   { title: "Executar", value: "execute", icon: "ph-play" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" },
 ];
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.SETTINGS.ALERTS.JOBS.VIEW,
+  edit: PERMISSIONS.SETTINGS.ALERTS.JOBS.UPDATE,
+  parameters: PERMISSIONS.SETTINGS.ALERTS.PARAMETERS.UPDATE,
+  execute: PERMISSIONS.SCHEDULED_JOBS.EXECUTE,
+  delete: PERMISSIONS.SETTINGS.ALERTS.JOBS.DELETE,
+};
+
+const dynamicActionOptions = computed(() =>
+  actionOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+);
 
 const handleApiError = (error: any) => {
   if (alertTimeout) {
@@ -138,6 +156,9 @@ watch(parametersDialog, (newVal: boolean) => {
 });
 
 const onCreateEditClick = (data: AlertConfigurationListing | null) => {
+  if (!data && !canCreateAlert.value) return;
+  if (data && !can(PERMISSIONS.SETTINGS.ALERTS.JOBS.UPDATE)) return;
+
   alertData.value = data ?? {
     id: "-1",
     name: "",
@@ -153,11 +174,15 @@ const onCreateEditClick = (data: AlertConfigurationListing | null) => {
 };
 
 const onViewClick = (data: AlertConfigurationListing) => {
+  if (!can(PERMISSIONS.SETTINGS.ALERTS.JOBS.VIEW)) return;
+
   alertData.value = data;
   viewDialog.value = true;
 };
 
 const onManageParameters = (data: AlertConfigurationListing) => {
+  if (!can(PERMISSIONS.SETTINGS.ALERTS.PARAMETERS.UPDATE)) return;
+
   parameterAlert.value = data;
   parametersDialog.value = true;
 };
@@ -166,6 +191,8 @@ const onSubmit = async (data: AlertConfigurationForm, callbacks?: {
   onSuccess?: () => void,
   onFinally?: () => void
 }) => {
+  if ((!data.id && !canCreateAlert.value) || (data.id && !can(PERMISSIONS.SETTINGS.ALERTS.JOBS.UPDATE))) return;
+
   try {
     const response = !data.id
       ? await alertConfigurationService.createAlertConfiguration(data)
@@ -187,6 +214,8 @@ const onSubmit = async (data: AlertConfigurationForm, callbacks?: {
 };
 
 const onDelete = (item: AlertConfigurationListing) => {
+  if (!canDeleteAlert.value) return;
+
   if (!item.removable) {
     toast.error(t("t-alert-not-removable"));
     return;
@@ -197,6 +226,8 @@ const onDelete = (item: AlertConfigurationListing) => {
 };
 
 const onConfirmDelete = async () => {
+  if (!canDeleteAlert.value) return;
+
   deleteLoading.value = true;
 
   try {
@@ -213,6 +244,8 @@ const onConfirmDelete = async () => {
 };
 
 const onExecute = async (item: AlertConfigurationListing) => {
+  if (!can(PERMISSIONS.SCHEDULED_JOBS.EXECUTE)) return;
+
   executeLoadingId.value = item.id;
 
   try {
@@ -292,6 +325,7 @@ const getAlertTypeLabel = (type: string) => {
     :title="$t('t-alerts')"
     subtitle="Consulte, pesquise e faça a gestão das configurações de alertas."
     :action-label="$t('t-add-alert')"
+    :show-action="canCreateAlert"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -322,13 +356,13 @@ const getAlertTypeLabel = (type: string) => {
       :search-query="searchQuery"
       :search-props="searchProps"
       item-value="id"
-      show-select
+      :show-select="canDeleteAlert"
       :show-pagination="false"
       @load-items="fetchAlerts"
     >
       <template #body="{ items }">
         <tr v-for="item in items as AlertConfigurationListing[]" :key="item.id" class="alert-listing-table__row">
-          <td data-label="" class="alert-listing-page__select-cell">
+          <td v-if="canDeleteAlert" data-label="" class="alert-listing-page__select-cell">
             <v-checkbox
               :model-value="selectedAlerts.some(selected => selected.id === item.id)"
               hide-details
@@ -363,14 +397,14 @@ const getAlertTypeLabel = (type: string) => {
           </td>
           <td data-label="Acção" class="alert-listing-table__actions-cell">
             <v-progress-circular v-if="executeLoadingId === item.id" indeterminate size="20" width="2" color="primary" />
-            <TableActionMenu v-else :menu-items="actionOptions" @onSelect="onActionSelect($event, item)" />
+            <TableActionMenu v-else :menu-items="dynamicActionOptions" @onSelect="onActionSelect($event, item)" />
           </td>
         </tr>
       </template>
 
       <template v-if="!alerts.length" #body>
         <tr>
-          <td :colspan="listViewHeader.length + 1" class="alert-listing-table__empty-state text-center py-10">
+          <td :colspan="listViewHeader.length + (canDeleteAlert ? 1 : 0)" class="alert-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="alert-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>

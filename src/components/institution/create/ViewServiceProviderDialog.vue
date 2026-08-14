@@ -4,8 +4,11 @@ import { ServiceProviderInsertType, ServiceProviderListingType } from "@/compone
 import { ServiceProviderListingForListType } from "@/components/serviceProvider/types";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useI18n } from "vue-i18n";
+import { useToast } from "vue-toastification";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 const { t } = useI18n();
+const toast = useToast();
 const emit = defineEmits(["update:modelValue"]);
 
 const props = defineProps({
@@ -58,13 +61,14 @@ onMounted(async () => {
   try {
     await serviceProviderStore.fetchServiceProvidersForDropdown();
   } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
     console.error("Erro ao carregar provedores de serviço:", error);
   }
 });
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" width="500" >
+  <v-dialog v-model="dialogValue" width="760" >
     <Card :title="$t('t-view-contracted-service-provider')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <v-btn icon="ph-x" variant="plain" @click="dialogValue = false" />
@@ -84,6 +88,23 @@ onMounted(async () => {
           <v-col cols="12">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-company') }}</div>
             <div>{{ props.data.company }}</div>
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-3">
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-is-business-days') }}</div>
+            <div>{{ props.data?.isBusinessDays ? $t('t-yes') : $t('t-no') }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-max-days-after-service') }}</div>
+            <div>{{ props.data?.maxDaysAfterService ?? "-" }}</div>
+          </v-col>
+
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-grace-period') }}</div>
+            <div>{{ props.data?.gracePeriod ?? "-" }}</div>
           </v-col>
         </v-row>
       </v-card-text>

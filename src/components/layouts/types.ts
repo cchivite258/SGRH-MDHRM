@@ -1,3 +1,5 @@
+import type { PermissionRequirement } from "@/app/permissions/constants";
+
 export type SubMenuItemType = {
   label: string;
   link?: string;
@@ -5,6 +7,10 @@ export type SubMenuItemType = {
   prefix?: string;
   subMenu?: SubMenuItemType[];
   action?: string;
+  permission?: string;
+  permissions?: PermissionRequirement;
+  anyPermissions?: PermissionRequirement;
+  allPermissions?: PermissionRequirement;
 };
 
 export type MenuItemType = {
@@ -16,6 +22,10 @@ export type MenuItemType = {
   prefix?: string;
   subMenu?: SubMenuItemType[];
   action?: string
+  permission?: string;
+  permissions?: PermissionRequirement;
+  anyPermissions?: PermissionRequirement;
+  allPermissions?: PermissionRequirement;
 };
 
 export type BrandsListType = {

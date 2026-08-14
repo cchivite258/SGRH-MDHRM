@@ -186,7 +186,7 @@ const onDeleteParameter = (parameter: ScheduledParameterListing) => {
   if (!parameter.removable) {
     toast.error(t("t-alert-parameter-not-removable"));
     return;
-  }
+}
 
   deleteId.value = parameter.id;
 };

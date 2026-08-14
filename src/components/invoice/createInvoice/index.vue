@@ -18,6 +18,8 @@ import InvoiceForm from "@/components/invoice/createInvoice/InvoiceForm.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { normalizeObjectStringFieldsInPlace, normalizeStringValue } from "@/app/common/normalizers";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 // =============================================
 // COMPOSABLES & UTILITIES
@@ -27,6 +29,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const invoiceStore = useInvoiceStore();
+const { can } = usePermissions();
 
 // =============================================
 // COMPONENT EMITS
@@ -66,7 +69,8 @@ const invoiceData = reactive<InvoiceInsertType>({
   company: '',
   authorizedBy: '',
   invoiceReferenceNumber: '',
-  coveragePeriod: undefined
+  coveragePeriod: undefined,
+  invoiceStatus: undefined
 });
 
 const resetInvoiceData = () => {
@@ -84,7 +88,8 @@ const resetInvoiceData = () => {
     company: '',
     authorizedBy: '',
     invoiceReferenceNumber: '',
-    coveragePeriod: undefined
+    coveragePeriod: undefined,
+    invoiceStatus: undefined
   });
 
   invoiceItems.value = [];
@@ -217,6 +222,11 @@ const showInvoiceApiErrors = (error: unknown, fallbackKey = "t-message-save-erro
 // COMPUTED PROPERTIES
 // =============================================
 const isEditMode = computed(() => !!invoiceId.value);
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE));
+const canUpdateInvoice = computed(() => can(PERMISSIONS.INVOICES.UPDATE));
+const canCreateInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.CREATE));
+const canUpdateInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.UPDATE));
+const canDeleteInvoiceItem = computed(() => can(PERMISSIONS.INVOICE_ITEMS.DELETE));
 
 const currentInvoiceId = computed(() => {
   if (!isEditMode.value) return null;
@@ -335,6 +345,10 @@ const processInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertTy
     if (!items?.length) {
       // Em edição, remover todos os itens existentes quando a lista enviada vier vazia.
       if (existingItems.length > 0) {
+        if (!canDeleteInvoiceItem.value) {
+          throw new Error("Sem permissao para eliminar itens da factura.");
+        }
+
         await Promise.all(existingItems.map(item => invoiceItemService.deleteInvoiceItem(item.id)));
       }
       return [];
@@ -344,6 +358,18 @@ const processInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertTy
     const itemsToCreate = items.filter(item => !item.id || !existingIds.includes(item.id));
     const itemsToUpdate = items.filter(item => item.id && existingIds.includes(item.id));
     const itemsToDelete = existingItems.filter(item => !newIds.includes(item.id));
+
+    if (itemsToCreate.length > 0 && !canCreateInvoiceItem.value) {
+      throw new Error("Sem permissao para criar itens da factura.");
+    }
+
+    if (itemsToUpdate.length > 0 && !canUpdateInvoiceItem.value) {
+      throw new Error("Sem permissao para actualizar itens da factura.");
+    }
+
+    if (itemsToDelete.length > 0 && !canDeleteInvoiceItem.value) {
+      throw new Error("Sem permissao para eliminar itens da factura.");
+    }
 
     // Primeiro garante criação/atualização; só depois remove itens antigos.
     const upsertResults = await Promise.all([
@@ -388,6 +414,12 @@ const saveInvoice = async (
     onFinally?: () => void
   }
 ): Promise<void> => {
+  const canPersistInvoice = isEditMode.value ? canUpdateInvoice.value : canCreateInvoice.value;
+  if (!canPersistInvoice) {
+    toast.error("Sem permissao para gravar a factura.");
+    return;
+  }
+
   try {
     loading.value = true;
     errorMsg.value = "";
@@ -515,7 +547,7 @@ onMounted(() => {
       <v-col cols="12" xl="9">
         <InvoiceForm v-model="invoiceData" :is-edit-mode="isEditMode" :loading="loading" :initial-items="invoiceItems"
           @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)"
-          @invoiceAttachmentUploaded="loadInvoiceData" />
+          @invoiceAttachmentUploaded="loadInvoiceData" @invoice-posted="loadInvoiceData" />
       </v-col>
     </v-row>
   </v-container>

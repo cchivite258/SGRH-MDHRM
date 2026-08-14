@@ -47,12 +47,15 @@ import type {
 // Utils
 import { coveragePeriodHeader } from "@/components/institution/create/utils";
 import { coverageperiodOptions as Options } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const coveragePeriodStore = useCoveragePeriodStore();
+const { can, canAny } = usePermissions();
 
 // props
 const props = defineProps({
@@ -63,6 +66,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -101,6 +112,20 @@ const periodCloseLoading = ref(false);
 // Computed properties
 const loadingList = computed(() => coveragePeriodStore.loading);
 const totalItems = computed(() => coveragePeriodStore.pagination.totalElements);
+const canCreateCoveragePeriod = computed(() => can(PERMISSIONS.COVERAGE_PERIODS.CREATE));
+const canUpdateCoveragePeriod = computed(() => can(PERMISSIONS.COVERAGE_PERIODS.UPDATE));
+const canDeleteCoveragePeriod = computed(() => can(PERMISSIONS.COVERAGE_PERIODS.DELETE));
+const canStartCoveragePeriod = computed(() => can(PERMISSIONS.COVERAGE_PERIODS.START));
+const canCloseCoveragePeriod = computed(() => can(PERMISSIONS.COVERAGE_PERIODS.CLOSE));
+const canCreateCoveragePeriodExtension = computed(() => can(PERMISSIONS.COVERAGE_PERIOD_EXTENSIONS.CREATE));
+const canCreateBudget = computed(() => can(PERMISSIONS.COVERAGE_PERIOD_BUDGETS.CREATE));
+const canConsultBudget = computed(() => canAny([
+  PERMISSIONS.COVERAGE_PERIOD_BUDGETS.READ,
+  PERMISSIONS.COVERAGE_PERIOD_BUDGETS.CREATE,
+  PERMISSIONS.COVERAGE_PERIOD_BUDGETS.UPDATE,
+  PERMISSIONS.COVERAGE_PERIOD_BUDGETS.DELETE,
+]));
+const canSelectCoveragePeriods = computed(() => !props.isViewMode && canDeleteCoveragePeriod.value);
 
 interface FetchParams {
   page: number;
@@ -357,14 +382,14 @@ const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
     : status === "INACTIVE"
       ? { title: "view-budget", icon: "ph-eye", value: "view-budget" }
       : null;
-  const contractAddendumOption = status === "RUNNING"
+  const contractAddendumOption = status === "RUNNING" && canCreateCoveragePeriodExtension.value
     ? { title: "extend-period", icon: "ph-file-plus", value: "contract-addendum" }
     : null;
 
   if (props.isViewMode) {
     return [
       ...Options.filter((option) => option.title === "view"),
-      ...(budgetOption?.value === "view-budget" ? [budgetOption] : [])
+      ...(budgetOption?.value === "view-budget" && canConsultBudget.value ? [budgetOption] : [])
     ].map((option) => ({
       ...option,
       title: t(`t-${option.title}`)
@@ -379,6 +404,16 @@ const getDynamicOptions = (invoice: CoveragePeriodListingType) => {
   if (budgetOption) {
     availableOptions.splice(contractAddendumOption ? 3 : 2, 0, budgetOption);
   }
+
+  availableOptions = availableOptions.filter((option) => {
+    if (option.value === "edit") return canUpdateCoveragePeriod.value;
+    if (option.value === "delete") return canDeleteCoveragePeriod.value;
+    if (option.value === "start") return canStartCoveragePeriod.value;
+    if (option.value === "close") return canCloseCoveragePeriod.value;
+    if (option.value === "add-budget") return canCreateBudget.value;
+    if (option.value === "view-budget") return canConsultBudget.value;
+    return true;
+  });
 
   if (status === "CLOSED") {
     availableOptions = availableOptions.filter(option =>
@@ -609,8 +644,8 @@ const onConfirmDelete = async () => {
     await reloadCoveragePeriods();
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -628,7 +663,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-coverage-period-list')" title-class="py-5">
-    <template v-if="!props.isViewMode" #title-action>
+    <template v-if="!props.isViewMode && canCreateCoveragePeriod" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-coverage-period') }}
@@ -656,10 +691,10 @@ onBeforeUnmount(() => {
         :headers="coveragePeriodHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="coveragePeriodStore.coverage_periods" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps"
-        @load-items="fetchCoveragePeriods" item-value="id" :show-select="!props.isViewMode">
+        @load-items="fetchCoveragePeriods" item-value="id" :show-select="canSelectCoveragePeriods">
         <template #body="{ items }">
           <tr v-for="item in items as CoveragePeriodListingType[]" :key="item.id" height="50">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectCoveragePeriods">
               <v-checkbox :model-value="selectedCoveragePeriods.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -719,11 +754,11 @@ onBeforeUnmount(() => {
   <StartConfirmationDialog v-model="periodStartDialog" :loading="periodStartLoading" @onConfirm="onConfirmStart" />
   <CloseConfirmationDialog v-model="periodCloseDialog" :loading="periodCloseLoading" @onConfirm="onConfirmClose" />
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 1)">
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
       <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 3)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

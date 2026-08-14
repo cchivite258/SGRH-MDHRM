@@ -391,15 +391,9 @@ export type EmployeeFrequencyTrendFilterType = {
   coveragePeriodId?: string | number;
 };
 
-export type EmployeeFrequencyTrendProcedureType = {
-  hospitalProcedureTypeId?: string | number;
-  hospitalProcedureTypeName?: string;
-  totalUsages?: number;
-};
-
-export type EmployeeFrequencyTrendDetailType = {
+export type EmployeeFrequencyTrendEmployeeType = {
   employee?: EmployeeHealthPlanLimitsTrendEmployeeType;
-  hospitalProcedures?: EmployeeFrequencyTrendProcedureType[];
+  frequency?: number;
 };
 
 export type EmployeeFrequencyTrendReportType = {
@@ -414,5 +408,5 @@ export type EmployeeFrequencyTrendReportType = {
     contractHealthPlanId?: string;
   };
   contract?: ReportContractType;
-  details?: EmployeeFrequencyTrendDetailType[];
+  employees?: EmployeeFrequencyTrendEmployeeType[];
 };

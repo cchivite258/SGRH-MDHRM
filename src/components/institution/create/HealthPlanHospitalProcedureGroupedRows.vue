@@ -31,6 +31,9 @@ const getLimitTypeLabel = (value: string | undefined) => {
   return option ? option.label : value;
 };
 
+const firstDefined = (...values: Array<string | number | null | undefined>) =>
+  values.find(value => value !== null && value !== undefined && value !== "");
+
 const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
   if (!item.belongsToGroup) return "Sem grupo";
 
@@ -49,8 +52,50 @@ const getHospitalProcedureGroupName = (item: HospitalProcedureListingType) => {
 const getProcedureCategoryName = (item: HospitalProcedureListingType) =>
   item.hospitalProcedureType?.categoryName || t("t-procedures");
 
+const compareText = (left: string, right: string) =>
+  left.localeCompare(right, undefined, { sensitivity: "base", numeric: true });
+
+const getProcedureCode = (item: HospitalProcedureListingType) =>
+  item.hospitalProcedureType?.code || item.hospitalProcedureType?.name || "";
+
+const hasDisplayValue = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return false;
+  const numericValue = Number(String(value).replace(",", "."));
+  return Number.isNaN(numericValue) ? true : numericValue !== 0;
+};
+
+const hasProcedureValues = (item: HospitalProcedureListingType) =>
+  item.belongsToGroup
+    ? [item.groupFixedAmount, item.groupPercentage, item.allowedFrequencyUse, item.frequencyInterval].some(hasDisplayValue)
+    : [item.fixedAmount, item.percentage, item.allowedFrequencyUse, item.frequencyInterval].some(hasDisplayValue);
+
+const getCategoryKey = (item: HospitalProcedureListingType) =>
+  `${getHospitalProcedureGroupName(item)}::${getProcedureCategoryName(item)}`;
+
+const orderedItems = computed(() => {
+  const categoryValueMap = props.items.reduce((map, item) => {
+    const categoryKey = getCategoryKey(item);
+    map.set(categoryKey, (map.get(categoryKey) || false) || hasProcedureValues(item));
+    return map;
+  }, new Map<string, boolean>());
+
+  return [...props.items].sort((left, right) => {
+    const groupComparison = compareText(getHospitalProcedureGroupName(left), getHospitalProcedureGroupName(right));
+    if (groupComparison !== 0) return groupComparison;
+
+    const leftHasValues = categoryValueMap.get(getCategoryKey(left)) || false;
+    const rightHasValues = categoryValueMap.get(getCategoryKey(right)) || false;
+    if (leftHasValues !== rightHasValues) return leftHasValues ? -1 : 1;
+
+    const categoryComparison = compareText(getProcedureCategoryName(left), getProcedureCategoryName(right));
+    if (categoryComparison !== 0) return categoryComparison;
+
+    return compareText(getProcedureCode(left), getProcedureCode(right));
+  });
+});
+
 const groupedProcedures = computed<ProcedureGroup[]>(() => {
-  const groupMap: Record<string, HospitalProcedureListingType[]> = props.items.reduce((groups, procedure) => {
+  const groupMap: Record<string, HospitalProcedureListingType[]> = orderedItems.value.reduce((groups, procedure) => {
     const group = getHospitalProcedureGroupName(procedure);
     if (!groups[group]) groups[group] = [];
 
@@ -58,7 +103,7 @@ const groupedProcedures = computed<ProcedureGroup[]>(() => {
     return groups;
   }, {} as Record<string, HospitalProcedureListingType[]>);
 
-  return Object.entries(groupMap).map(([group, procedures]: [string, HospitalProcedureListingType[]]) => {
+  return Object.entries(groupMap).sort(([leftGroup], [rightGroup]) => compareText(leftGroup, rightGroup)).map(([group, procedures]: [string, HospitalProcedureListingType[]]) => {
     const categoryMap: Record<string, HospitalProcedureListingType[]> = procedures.reduce((categories, procedure) => {
       const category = getProcedureCategoryName(procedure);
       if (!categories[category]) categories[category] = [];
@@ -70,10 +115,17 @@ const groupedProcedures = computed<ProcedureGroup[]>(() => {
     return {
       group,
       procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]: [string, HospitalProcedureListingType[]]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
+      categories: Object.entries(categoryMap)
+        .sort(([leftCategory, leftProcedures], [rightCategory, rightProcedures]) => {
+          const leftHasValues = leftProcedures.some(hasProcedureValues);
+          const rightHasValues = rightProcedures.some(hasProcedureValues);
+          if (leftHasValues !== rightHasValues) return leftHasValues ? -1 : 1;
+          return compareText(leftCategory, rightCategory);
+        })
+        .map(([category, categoryProcedures]: [string, HospitalProcedureListingType[]]) => ({
+          category,
+          procedures: [...categoryProcedures].sort((left, right) => compareText(getProcedureCode(left), getProcedureCode(right)))
+        }))
     };
   });
 });
@@ -96,7 +148,46 @@ const getDisplayLimitType = (item: HospitalProcedureListingType) => {
   return getLimitTypeLabel(limitType || "") || "-";
 };
 
-const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || value == null ? "-" : value;
+const getDisplayUsageFrequency = (item: HospitalProcedureListingType) => {
+  const allowedFrequencyUse = firstDefined(item.allowedFrequencyUse);
+  const frequencyInterval = firstDefined(item.frequencyInterval);
+  if (!allowedFrequencyUse && !frequencyInterval) return "-";
+  return `${allowedFrequencyUse || "-"}/${frequencyInterval || "-"}`;
+};
+
+const getDisplayWaitingPeriodDays = (item: HospitalProcedureListingType) =>
+  firstDefined(item.waitingPeriodDays) ?? "-";
+
+const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
+  procedures.some(procedure => procedure.belongsToGroup);
+
+const getGroupLimitProcedure = (procedures: HospitalProcedureListingType[]) =>
+  procedures.find(procedure => procedure.belongsToGroup) || procedures[0];
+
+const getGroupLimitType = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayLimitType(procedure) : "-";
+};
+
+const getGroupFixedAmount = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayFixedAmount(procedure) : "-";
+};
+
+const getGroupPercentage = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayPercentage(procedure) : "-";
+};
+
+const getGroupUsageFrequency = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayUsageFrequency(procedure) : "-";
+};
+
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getDisplayWaitingPeriodDays(procedure) : "-";
+};
 </script>
 
 <template>
@@ -113,6 +204,16 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
           </v-chip>
         </div>
       </td>
+    </tr>
+
+    <tr v-if="groupUsesGroupLimit(group.procedures)" class="procedure-group-limit-row">
+      <td colspan="2">Limite do grupo</td>
+      <td>{{ getGroupLimitType(group.procedures) }}</td>
+      <td>{{ getGroupFixedAmount(group.procedures) }}</td>
+      <td>{{ getGroupPercentage(group.procedures) }}</td>
+      <td>{{ getGroupUsageFrequency(group.procedures) }}</td>
+      <td>{{ getGroupWaitingPeriodDays(group.procedures) }}</td>
+      <td></td>
     </tr>
 
     <template
@@ -150,10 +251,20 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
         <td class="procedure-type-cell">
           {{ item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ` : "" }}{{ item.hospitalProcedureType?.name || "-" }}
         </td>
-        <td>{{ getDisplayLimitType(item) }}</td>
-        <td>{{ getDisplayFixedAmount(item) }}</td>
-        <td>{{ getDisplayPercentage(item) }}</td>
-        <td>{{ getDisplayAllowedFrequencyUse(item.allowedFrequencyUse) }}</td>
+        <template v-if="item.belongsToGroup">
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+          <td class="text-muted">-</td>
+        </template>
+        <template v-else>
+          <td>{{ getDisplayLimitType(item) }}</td>
+          <td>{{ getDisplayFixedAmount(item) }}</td>
+          <td>{{ getDisplayPercentage(item) }}</td>
+          <td>{{ getDisplayUsageFrequency(item) }}</td>
+          <td>{{ getDisplayWaitingPeriodDays(item) }}</td>
+        </template>
         <td>
           <slot name="action" :item="item" />
         </td>
@@ -180,6 +291,20 @@ const getDisplayAllowedFrequencyUse = (value?: number | null) => value === 0 || 
   line-height: 1.4;
   padding: 11px 14px;
   vertical-align: middle;
+}
+
+.procedure-group-limit-row td {
+  background: rgba(var(--v-theme-primary), 0.035);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.84);
+  font-weight: 700;
+  padding: 9px 14px;
+  vertical-align: middle;
+}
+
+.procedure-group-limit-row td:first-child {
+  color: rgb(var(--v-theme-primary));
+  text-transform: uppercase;
 }
 
 .procedure-row td {

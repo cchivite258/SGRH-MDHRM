@@ -19,7 +19,9 @@ import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 
 // Types e Utils
 import { InvoiceItemInsertType } from "@/components/invoice/types";
+import { invoiceItemFlagCatalogue } from "@/components/invoice/invoiceItemFlagCatalogue";
 import { productHeaderView } from "@/components/invoice/createInvoice/utils";
+import type { HospitalProcedureListingType } from "@/components/institution/types";
 
 // =============================================
 // INTERFACES E TIPOS
@@ -92,6 +94,8 @@ const errorMsg = ref("");
 const invoiceItems = ref<InvoiceItem[]>([]);
 const activeHealthPlanId = ref("");
 const lastProceduresLoadKey = ref("");
+// Procedimentos de planos antigos ficam locais para não alterar a lista global usada noutros ecrãs.
+const historicalPlanProcedures = ref<HospitalProcedureListingType[]>([]);
 
 // =============================================
 // COMPUTED PROPERTIES
@@ -99,7 +103,13 @@ const lastProceduresLoadKey = ref("");
 
 
 const companyAllowedHospitalProcedures = computed(() => {
-  const options = hospitalProcedureStore.hospital_procedure_of_plan.map(item => ({
+  // Se veio healthplanId, estamos a consultar a factura por um plano histórico.
+  // Sem healthplanId, mantém-se o comportamento anterior baseado no store global.
+  const procedures = props.healthplanId
+    ? historicalPlanProcedures.value
+    : hospitalProcedureStore.hospital_procedure_of_plan;
+
+  const options = procedures.map(item => ({
     value: item.id,
     label: (item.hospitalProcedureType?.code ? `${item.hospitalProcedureType.code} - ${item.hospitalProcedureType.name}` : item.hospitalProcedureType?.name) || "-",
     categoryName: item.hospitalProcedureType?.categoryName || "-"
@@ -160,21 +170,18 @@ const requiredRules = {
 // FLAG CONFIGURATION
 // =============================================
 const flagConfig: Record<string, FlagConfig> = {
-  EXCEEDS_LIMIT: { 
-    color: 'warning', 
-    icon: 'ph-warning', 
-    text: t('t-exceeds-limit') 
-  },
-  FREQUENCY_FLAGGED: { 
-    color: 'info', 
-    icon: 'ph-clock-counter-clockwise', 
-    text: t('t-frequency-flagged') 
-  },
-  INSUFFICIENT_FUNDS: { 
-    color: 'error', 
-    icon: 'ph-money', 
-    text: t('t-insufficient-funds') 
-  },
+  ...Object.fromEntries(
+    invoiceItemFlagCatalogue
+      .filter(item => item.isFlagged)
+      .map(item => [
+        item.value,
+        {
+          color: item.color,
+          icon: item.icon,
+          text: t(item.i18nKey)
+        }
+      ])
+  ),
   default: { 
     color: 'info', 
     icon: 'ph-warning-circle', 
@@ -204,6 +211,7 @@ const calculateLineTotal = (item: InvoiceItem) => {
 };
 
 const resolveHealthPlanId = async (): Promise<string> => {
+  // Prioridade máxima: plano associado à factura. Só cai para plano activo quando a factura não o fornece.
   if (props.healthplanId) {
     return props.healthplanId;
   }
@@ -218,7 +226,7 @@ const resolveHealthPlanId = async (): Promise<string> => {
 
 const loadProcedures = async () => {
   try {
-    if (!props.institutionId) {
+    if (!props.institutionId && !props.healthplanId) {
       return;
     }
 
@@ -228,17 +236,32 @@ const loadProcedures = async () => {
       return;
     }
 
-    const loadKey = `${props.institutionId}:${resolvedHealthPlanId}`;
+    const isHistoricalInvoicePlan = Boolean(props.healthplanId);
+    const loadKey = `${props.institutionId}:${resolvedHealthPlanId}:${isHistoricalInvoicePlan ? "historical" : "active"}`;
     const keyChanged = lastProceduresLoadKey.value !== loadKey;
 
     activeHealthPlanId.value = resolvedHealthPlanId;
     if (keyChanged) {
-      hospitalProcedureStore.hospital_procedure_of_plan = [];
+      // Limpa apenas a origem em uso para não afectar criação/edição ao consultar facturas antigas.
+      if (isHistoricalInvoicePlan) {
+        historicalPlanProcedures.value = [];
+      } else {
+        hospitalProcedureStore.hospital_procedure_of_plan = [];
+      }
     }
+
+    const loadPlanProcedures = isHistoricalInvoicePlan
+      ? hospitalProcedureStore
+          // Endpoint full inclui procedimentos de planos não activos, necessário para consulta histórica.
+          .fetchHospitalProceduresOfPlanScopedFull(activeHealthPlanId.value, 0, 1000000000)
+          .then((content) => {
+            historicalPlanProcedures.value = content;
+          })
+      : hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000);
 
     await Promise.all([
       taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
+      loadPlanProcedures
     ]);
 
     lastProceduresLoadKey.value = loadKey;
@@ -497,7 +520,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-n3" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-rate') }}:</span>
           </v-col>
@@ -506,9 +529,9 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-divider class="my-4" />
+        <v-divider class="my-4 mt-n3" />
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-0" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-total-amount') }}:</span>
           </v-col>
@@ -592,5 +615,14 @@ onMounted(() => {
 
 .flag-border-INSUFFICIENT_FUNDS > td {
   background-color: rgba(244, 67, 54, 0.08);
+}
+
+.flag-border-WAITING_PERIOD {
+  border-left: 4px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.08);
+}
+
+.flag-border-WAITING_PERIOD > td {
+  background-color: rgba(108, 117, 125, 0.08);
 }
 </style>

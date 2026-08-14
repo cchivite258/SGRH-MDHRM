@@ -36,6 +36,7 @@ const props = defineProps({
       fixedAmount: 0,
       percentage: 0,
       limitTypeDefinition: "",
+      waitingPeriodDays: 0,
       hospitalProcedureGroup: "",
       groupFixedAmount: null,
       groupPercentage: null,
@@ -60,6 +61,7 @@ const id = ref("");
 const fixedAmount = ref(0);
 const percentage = ref(0);
 const limitTypeDefinition = ref("");
+const waitingPeriodDays = ref(0);
 const hospitalProcedureGroup = ref("");
 const groupFixedAmount = ref<number | null>(null);
 const groupPercentage = ref<number | null>(null);
@@ -99,6 +101,7 @@ watch(() => props.data, (newData) => {
     fixedAmount.value = newData.fixedAmount ?? 0;
     percentage.value = newData.percentage ?? 0;
     limitTypeDefinition.value = newData.limitTypeDefinition || "";
+    waitingPeriodDays.value = newData.waitingPeriodDays ?? 0;
     const groupId = getHospitalProcedureGroupValue(newData.hospitalProcedureGroup)
       || (newData as any).hospitalProcedureGroupId;
     hospitalProcedureGroup.value = groupId != null ? String(groupId) : "";
@@ -218,6 +221,12 @@ const requiredRules = {
       return true;
     }
   ],
+  waitingPeriodDays: [
+    (v: number | string | null) => {
+      if (v === undefined || v === null || v === "") return t('t-please-enter-waiting-period-days');
+      return Number(v) >= 0 || t('t-min-zero-days');
+    }
+  ],
   groupFixedAmount: [
     (v: number | null) => {
       if (belongsToGroup.value && hospitalProcedureGroupLimit.value === 'FIXED_AMOUNT') {
@@ -334,6 +343,7 @@ const onSubmit = async () => {
     fixedAmount: belongsToGroup.value ? null : fixedAmount.value,
     percentage: belongsToGroup.value ? null : percentage.value,
     limitTypeDefinition: belongsToGroup.value ? "" : limitTypeDefinition.value,
+    waitingPeriodDays: waitingPeriodDays.value,
     hospitalProcedureGroup: belongsToGroup.value ? (hospitalProcedureGroup.value || null) : null,
     groupFixedAmount: belongsToGroup.value ? groupFixedAmount.value : null,
     groupPercentage: belongsToGroup.value ? groupPercentage.value : null,
@@ -397,6 +407,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("Failed to load procedimentos hospitalares:", error);
     errorMsg.value = "Falha ao carregar procedimentos hospitalares";
+    errorMsg.value = getFirstApiErrorMessage(error, t("t-message-load-error")) || t("t-message-load-error");
     setTimeout(() => errorMsg.value = "", 5000);
   }
 });
@@ -508,10 +519,19 @@ onMounted(async () => {
             </v-col>
           </v-row>
           <v-row class="mt-n8">
-            <v-col cols="12" lg="12">
+            <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">{{ $t('t-limit-type') }}</div>
               <MenuSelect v-model="limitType" :items="hospitalProcedureLimitTypeOptions"
                 :error-messages="getServerErrors('limitType')" />
+            </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-waiting-period-days') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <TextField v-model.number="waitingPeriodDays" type="number" min="0"
+                :placeholder="$t('t-enter-waiting-period-days')"
+                :rules="applyServerErrorsToRules('waitingPeriodDays', requiredRules.waitingPeriodDays)"
+                :error-messages="getServerErrors('waitingPeriodDays')" />
             </v-col>
           </v-row>
           <v-row v-if="hasUsageLimit" class="mt-n6">

@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType } from "@/components/employee/types";
+import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType, EmployeeRehireType, EmployeeRehireTrackType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -17,6 +17,7 @@ interface ServiceResponse<T> {
 
 const EMPLOYEES_ENDPOINT = '/human-resource/employees';
 const EMPLOYEES_BY_CONTRACT_ENDPOINT = `${EMPLOYEES_ENDPOINT}/in-contract`;
+const EMPLOYEES_REHIRES_ENDPOINT = '/human-resource/employees-rehires';
 
 const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
 const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta;
@@ -405,6 +406,68 @@ export default class EmployeeService extends HttpService {
         status: 'error',
         error: this.createNetworkErrorResponse()
       };
+    }
+  }
+
+  async rehireEmployee(id: string, payload: EmployeeRehireType): Promise<ServiceResponse<EmployeeResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<EmployeeResponseType>>(
+        `${EMPLOYEES_ENDPOINT}/${id}/rehire`,
+        payload
+      );
+
+      return {
+        status: 'success',
+        data: normalizeEmployee((response.data ?? response.content ?? response) as any) as EmployeeResponseType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: 'error',
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: 'error',
+        error: this.createNetworkErrorResponse()
+      };
+    }
+  }
+
+  async getEmployeeRehiresByEmployee(
+    employeeId: string,
+    page: number = 0,
+    size: number = 100,
+    sortColumn: string = 'createdAt',
+    direction: string = 'desc'
+  ): Promise<{ content: EmployeeRehireTrackType[], meta: any }> {
+    try {
+      const params = new URLSearchParams({
+        employeeId,
+        page: page.toString(),
+        size: size.toString(),
+        sortColumn,
+        direction,
+        includes: 'department,position,employee'
+      });
+
+      const response = await this.get<ApiResponse<EmployeeRehireTrackType[]>>(
+        `${EMPLOYEES_REHIRES_ENDPOINT}/by-employee?${params.toString()}`
+      );
+
+      return {
+        content: getContent(response),
+        meta: getMeta(response) || {
+          totalElements: 0,
+          page,
+          size,
+          totalPages: 0
+        }
+      };
+    } catch (error) {
+      console.error("Erro ao buscar histórico de renovações do contrato:", error);
+      throw error;
     }
   }
 

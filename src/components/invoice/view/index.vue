@@ -54,6 +54,39 @@ const normalizeCompanyId = (
   return String(contractId);
 };
 
+const firstDefined = (...values: any[]) =>
+  values.find(value => value !== null && value !== undefined && value !== "");
+
+// Em facturas antigas o backend pode devolver contractHealthPlanId em vez de companyHealthPlanId.
+// Normalizamos para uma única chave para o formulário não depender do nome exacto vindo da API.
+const normalizeCoveragePeriod = (coveragePeriod: any) => {
+  if (!coveragePeriod || typeof coveragePeriod !== "object") {
+    return coveragePeriod;
+  }
+
+  return {
+    ...coveragePeriod,
+    companyHealthPlanId: firstDefined(
+      coveragePeriod.companyHealthPlanId,
+      coveragePeriod.contractHealthPlanId,
+      coveragePeriod.companyHealthPlan?.id,
+      coveragePeriod.contractHealthPlan?.id
+    )
+  };
+};
+
+// Fallback histórico: quando o período da factura não traz o plano, tentamos inferi-lo
+// a partir do procedimento gravado no item da factura.
+const getInvoiceItemHealthPlanId = (item: any) => {
+  const procedure = item?.companyAllowedHospitalProcedure || item?.contractAllowedHospitalProcedure;
+  return firstDefined(
+    procedure?.companyHealthPlanId,
+    procedure?.contractHealthPlanId,
+    procedure?.companyHealthPlan?.id,
+    procedure?.contractHealthPlan?.id
+  );
+};
+
 /**
  * Dados reativos da fatura
  */
@@ -96,7 +129,10 @@ const loadInvoiceData = async (id: string) => {
 
     // Atualiza os dados da fatura se existirem
     if (invoiceResponse?.data) {
-      Object.assign(invoiceData, invoiceResponse.data);
+      Object.assign(invoiceData, {
+        ...invoiceResponse.data,
+        coveragePeriod: normalizeCoveragePeriod(invoiceResponse.data.coveragePeriod)
+      });
       // Mapeia os relacionamentos
       invoiceData.company = normalizeCompanyId(
         invoiceResponse.data.contract?.id ?? invoiceResponse.data.contractId
@@ -127,6 +163,15 @@ const loadInvoiceData = async (id: string) => {
         companyAllowedHospitalProcedureCategoryName: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.categoryName || '',
         invoice: item.invoice?.id || ''
       }));
+
+      // Mantém a consulta fiel ao plano usado na factura, mesmo que esse plano já não esteja activo.
+      const invoiceItemHealthPlanId = itemsResponse.content.map(getInvoiceItemHealthPlanId).find(Boolean);
+      if (invoiceItemHealthPlanId) {
+        invoiceData.coveragePeriod = {
+          ...(invoiceData.coveragePeriod || {}),
+          companyHealthPlanId: invoiceData.coveragePeriod?.companyHealthPlanId || invoiceItemHealthPlanId
+        };
+      }
     }
 
   } catch (error) {

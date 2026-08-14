@@ -33,6 +33,7 @@ const toHealthPlanPayload = (healthPlanData: HealthPlanInsertType) => ({
     maxNumberOfDependents: healthPlanData.maxNumberOfDependents,
     childrenMaxAge: healthPlanData.childrenMaxAge,
     childrenInUniversityMaxAge: healthPlanData.childrenInUniversityMaxAge,
+    waitingPeriodDays: healthPlanData.waitingPeriodDays,
     healthPlanLimit: healthPlanData.healthPlanLimit,
     salaryComponent: healthPlanData.salaryComponent,
     contractContributionPercentage: healthPlanData.companyContributionPercentage,

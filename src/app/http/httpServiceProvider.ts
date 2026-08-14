@@ -1,6 +1,11 @@
 
 import AuthService from "@/app/http/services/authService";
 import UserService from "@/app/http/services/userService";
+import ModuleService from "@/app/http/services/moduleService";
+import RoleService from "@/app/http/services/roleService";
+import PermissionService from "@/app/http/services/permissionService";
+import RolePermissionService from "@/app/http/services/rolePermissionService";
+import UserRoleService from "@/app/http/services/userRoleService";
 import EmployeeService from "@/app/http/services/employee/employeeService";
 import InstitutionService from "@/app/http/services/institution/institutionService";
 import CompanyDetailsService from "@/app/http/services/institution/companyDetailsService";
@@ -8,8 +13,10 @@ import DepartmentService from "@/app/http/services/institution/departmentService
 import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
 import ServiceProviderContractExtensionService from "@/app/http/services/institution/serviceProviderContractExtensionService";
+import ContractAttachmentService from "@/app/http/services/institution/contractAttachmentService";
 import CoveragePeriodExtensionService from "@/app/http/services/institution/coveragePeriodExtensionService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
+import ServiceProviderAttachmentService from "@/app/http/services/serviceProvider/serviceProviderAttachmentService";
 import ContactPersonService from "@/app/http/services/institution/contactPersonService";
 import HospitalProcedureService from "@/app/http/services/institution/hospitalProcedureService";
 import CoveragePeriodsService from "@/app/http/services/institution/coveragePeriodsService";
@@ -32,9 +39,11 @@ import LeaveReasonService from "@/app/http/services/baseTables/leaveReason/leave
 import LanguageService from "@/app/http/services/baseTables/languages/languageService";
 import TaxRateTypeTypeService from "./services/baseTables/taxRate/taxRateService";
 import ProviderTypeService from "@/app/http/services/baseTables/providerType/providerTypeService";
+import ReasonService from "@/app/http/services/baseTables/reason/reasonService";
 import BudgetService from "@/app/http/services/institution/budgetService";
 import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
 import ScheduledParameterService from "@/app/http/services/settings/scheduledParameterService";
+import CodeConfigService from "@/app/http/services/settings/codeConfigService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -57,6 +66,11 @@ import FakeBackendService from "@/app/http/services/fakeBackendService";
 
 const authService = new AuthService();
 const userService = new UserService();
+const moduleService = new ModuleService();
+const roleService = new RoleService();
+const permissionService = new PermissionService();
+const rolePermissionService = new RolePermissionService();
+const userRoleService = new UserRoleService();
 const employeeService = new EmployeeService();
 const institutionService = new InstitutionService();
 const companyDetailsService = new CompanyDetailsService();
@@ -65,7 +79,9 @@ const positionService = new PositionService();
 const coveragePeriodsService = new CoveragePeriodsService();
 const healthPlanService = new HealthPlanService();
 const serviceProviderService = new ServiceProviderService();
+const serviceProviderAttachmentService = new ServiceProviderAttachmentService();
 const serviceProviderContractExtensionService = new ServiceProviderContractExtensionService();
+const contractAttachmentService = new ContractAttachmentService();
 const coveragePeriodExtensionService = new CoveragePeriodExtensionService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
@@ -105,8 +121,10 @@ const leaveReasonService = new LeaveReasonService();
 const languageService = new LanguageService();
 const taxRateTypeService = new TaxRateTypeTypeService();
 const providerTypeService = new ProviderTypeService();
+const reasonService = new ReasonService();
 const alertConfigurationService = new AlertConfigurationService();
 const scheduledParameterService = new ScheduledParameterService();
+const codeConfigService = new CodeConfigService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -114,6 +132,11 @@ const fakeBackendService = new FakeBackendService();
 export {
     authService,
     userService, 
+    moduleService,
+    roleService,
+    permissionService,
+    rolePermissionService,
+    userRoleService,
     employeeService, 
     fakeBackendService, 
     countryService, 
@@ -131,7 +154,9 @@ export {
     departmentService, 
     positionService, 
     serviceProviderService,
+    serviceProviderAttachmentService,
     serviceProviderContractExtensionService,
+    contractAttachmentService,
     coveragePeriodExtensionService,
     contactPersonService,
     serviceProviderInstitutionService,
@@ -139,6 +164,7 @@ export {
     invoiceService,
     dependentEmployeeService,
     taxRateTypeService,
+    reasonService,
     invoiceItemService,
     coveragePeriodsService,
     healthPlanService,
@@ -146,6 +172,7 @@ export {
     providerTypeService,
     alertConfigurationService,
     scheduledParameterService,
+    codeConfigService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,

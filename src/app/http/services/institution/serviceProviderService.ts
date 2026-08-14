@@ -22,9 +22,18 @@ const CONTRACT_SERVICE_PROVIDERS_BY_CONTRACT_ENDPOINT = `${CONTRACT_SERVICE_PROV
 const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
 const getMeta = (response: ApiResponse<any>): any => response.metadata ?? response.meta ?? [];
 
+const toNullableNumber = (value: number | string | null | undefined): number | null => {
+    if (value === null || value === undefined || value === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
 const toContractServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType) => ({
     serviceProvider: serviceProviderData.serviceProvider,
-    contract: serviceProviderData.company
+    contract: serviceProviderData.company,
+    isBusinessDays: !!serviceProviderData.isBusinessDays,
+    gracePeriod: toNullableNumber(serviceProviderData.gracePeriod),
+    maxDaysAfterService: toNullableNumber(serviceProviderData.maxDaysAfterService)
 });
 
 const normalizeContractServiceProvider = <T extends Record<string, any>>(item: T): T => ({

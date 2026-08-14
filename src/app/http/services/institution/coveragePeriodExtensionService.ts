@@ -34,6 +34,8 @@ const formatDateForApi = (value: Date | string | null): string | null => {
 const toPayload = (data: CoveragePeriodExtensionPayloadType) => ({
     coveragePeriodId: data.coveragePeriodId,
     endDate: formatDateForApi(data.endDate),
+    reasonId: data.reasonId,
+    notes: data.notes,
     ...(data.budgetAmount !== null && data.budgetAmount !== undefined
         ? { budgetAmount: data.budgetAmount }
         : {})

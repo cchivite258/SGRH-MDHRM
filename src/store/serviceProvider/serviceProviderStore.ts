@@ -82,8 +82,8 @@ export const useServiceProviderStore = defineStore('serviceProviders', {
       this.loading = true;
       this.error = null;
 
-      const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualPage = page ?? 0;
+      const actualSize = size ?? 10000000;
 
       console.log('🔍 Parâmetros da requisição de clínicas:', {
         page: actualPage,

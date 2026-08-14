@@ -38,12 +38,15 @@ import type {
 
 // Utils
 import { departmentHeader } from "@/components/institution/create/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const departmentStore = useDepartmentStore();
+const { can, canAny } = usePermissions();
 
 // props
 const props = defineProps({
@@ -54,6 +57,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -78,6 +89,16 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => departmentStore.loading);
 const totalItems = computed(() => departmentStore.pagination.totalElements);
+const canCreateDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.CREATE));
+const canUpdateDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.UPDATE));
+const canDeleteDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.DELETE));
+const canViewDepartment = computed(() => canAny([
+  PERMISSIONS.CONTRACT_DEPARTMENTS.READ,
+  PERMISSIONS.CONTRACT_DEPARTMENTS.CREATE,
+  PERMISSIONS.CONTRACT_DEPARTMENTS.UPDATE,
+  PERMISSIONS.CONTRACT_DEPARTMENTS.DELETE,
+]));
+const canSelectDepartments = computed(() => !props.isViewMode && canDeleteDepartment.value);
 
 interface FetchParams {
   page: number;
@@ -218,8 +239,8 @@ const onConfirmDelete = async () => {
     );
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -237,7 +258,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Card :title="$t('t-department-list')" title-class="py-5">
-    <template v-if="!props.isViewMode" #title-action>
+    <template v-if="!props.isViewMode && canCreateDepartment" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-department') }}
@@ -265,10 +286,10 @@ onBeforeUnmount(() => {
         :headers="departmentHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="departmentStore.departmentsList" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchDepartments" 
-        item-value="id" :show-select="!props.isViewMode">
+        item-value="id" :show-select="canSelectDepartments">
         <template #body="{ items }">
           <tr v-for="item in items as DepartmentListingType[]" :key="item.id" height="50"> 
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectDepartments">
               <v-checkbox :model-value="selectedDepartments.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -290,6 +311,9 @@ onBeforeUnmount(() => {
               </v-btn>
               <TableAction
                 v-else
+                :can-view="canViewDepartment"
+                :can-edit="canUpdateDepartment"
+                :can-delete="canDeleteDepartment"
                 @onEdit="() => router.push({ path: `/institution/department/${item.id}`, query: { institutionId, tab: '4' } })"
                 @onView="onViewClick(item)"
                 @onDelete="onDelete(item.id)"
@@ -319,12 +343,12 @@ onBeforeUnmount(() => {
   <ViewDepartmentDialog v-model="viewDialog" :data="departmentDataView" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
 
-  <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-    <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-health-plan') }}
+  <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+    <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
   </v-btn>
-  <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 5)">
+  <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
     {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
   </v-btn>
 </v-card-actions>

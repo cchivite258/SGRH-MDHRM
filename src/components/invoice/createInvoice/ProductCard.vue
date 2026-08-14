@@ -22,6 +22,7 @@ import { invoiceService } from "@/app/http/httpServiceProvider";
 
 // Types e Utils
 import { InvoiceItemInsertType, InvoiceAdviceResponseType } from "@/components/invoice/types";
+import { invoiceItemFlagCatalogue } from "@/components/invoice/invoiceItemFlagCatalogue";
 import { productHeader } from "@/components/invoice/createInvoice/utils";
 
 // =============================================
@@ -72,6 +73,22 @@ const props = defineProps({
   isEditMode: {
     type: Boolean,
     default: false
+  },
+  disabled: {
+    type: Boolean,
+    default: false
+  },
+  canCreateItems: {
+    type: Boolean,
+    default: true
+  },
+  canUpdateItems: {
+    type: Boolean,
+    default: true
+  },
+  canDeleteItems: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -217,21 +234,18 @@ const requiredRules = {
 // FLAG CONFIGURATION
 // =============================================
 const flagConfig: Record<string, FlagConfig> = {
-  EXCEEDS_LIMIT: {
-    color: 'warning',
-    icon: 'ph-warning',
-    text: t('t-exceeds-limit')
-  },
-  FREQUENCY_FLAGGED: {
-    color: 'info',
-    icon: 'ph-clock-counter-clockwise',
-    text: t('t-frequency-flagged')
-  },
-  INSUFFICIENT_FUNDS: {
-    color: 'error',
-    icon: 'ph-money',
-    text: t('t-insufficient-funds')
-  },
+  ...Object.fromEntries(
+    invoiceItemFlagCatalogue
+      .filter(item => item.isFlagged)
+      .map(item => [
+        item.value,
+        {
+          color: item.color,
+          icon: item.icon,
+          text: t(item.i18nKey)
+        }
+      ])
+  ),
   default: {
     color: 'info',
     icon: 'ph-warning-circle',
@@ -243,6 +257,13 @@ const getFlagConfig = (flag?: string): FlagConfig | null =>
   flag && flag !== 'UNFLAGGED'
     ? flagConfig[flag as keyof typeof flagConfig] || flagConfig.default
     : null;
+
+// Uma linha nova depende de create.invoice.items; uma linha existente depende de update/delete.
+const canEditItem = (item: InvoiceItem) =>
+  !props.disabled && (item.originalId ? props.canUpdateItems : props.canCreateItems);
+
+const canRemoveItem = (item: InvoiceItem) =>
+  !props.disabled && (item.originalId ? props.canDeleteItems : props.canCreateItems);
 
 // =============================================
 // CORE METHODS
@@ -298,6 +319,8 @@ const handleError = (messageKey: string, error: unknown) => {
 // ITEM MANAGEMENT
 // =============================================
 const addItem = () => {
+  if (props.disabled || !props.canCreateItems) return;
+
   invoiceItems.value.push({
     id: Date.now().toString(),
     companyAllowedHospitalProcedure: "",
@@ -311,7 +334,11 @@ const addItem = () => {
 };
 
 const removeItem = (id: string) => {
+  if (props.disabled) return;
+
   const index = invoiceItems.value.findIndex(item => item.id === id);
+  if (index !== -1 && !canRemoveItem(invoiceItems.value[index])) return;
+
   if (index !== -1) {
     invoiceItems.value.splice(index, 1);
   }
@@ -350,6 +377,8 @@ const validateItems = (items: InvoiceItemInsertType[]): boolean => {
 };
 
 const emitItemsReady = async (): Promise<boolean> => {
+  if (props.disabled) return false;
+
   if (form.value) {
     const { valid } = await form.value.validate();
     if (!valid) {
@@ -465,25 +494,25 @@ onMounted(() => {
             <ProcedureCategorySelect v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
               :rules="requiredRules.companyAllowedHospitalProcedure" :placeholder="$t('t-select-procedure')"
               :procedure-title="$t('t-hospital-procedure')" :category-title="$t('t-hospital-procedure-category')"
-              class="w-100" />
+              :disabled="!canEditItem(item)" class="w-100" />
           </td>
 
           <!-- Preço Unitário -->
           <td style="width: 10%" class="pt-4 px-1">
             <TextField v-model.number="item.unitPrice" :rules="requiredRules.unitPrice"
-              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" class="compact-input" />
+              :placeholder="$t('t-unit-price')" type="number" min="0" step="0.01" :disabled="!canEditItem(item)" class="compact-input" />
           </td>
 
           <!-- Quantidade -->
           <td style="width: 5%" class="pt-4 px-1">
             <TextField v-model.number="item.quantity" :placeholder="$t('t-quantity')" type="number" min="0"
-              :rules="requiredRules.quantity" class="compact-input" />
+              :rules="requiredRules.quantity" :disabled="!canEditItem(item)" class="compact-input" />
           </td>
 
           <!-- Taxa -->
           <td style="width: 12%" class="pt-4 px-1">
             <MenuSelect v-model="item.taxRate" :items="taxRates" :rules="requiredRules.taxRate"
-              :placeholder="$t('t-select-tax-rate')" item-value="value" class="w-100" />
+              :placeholder="$t('t-select-tax-rate')" item-value="value" :disabled="!canEditItem(item)" class="w-100" />
           </td>
 
           <!-- Total -->
@@ -494,12 +523,12 @@ onMounted(() => {
           <!-- Descrição -->
           <td style="width: 25%" class="pt-4">
             <TextArea v-model="item.description" :placeholder="$t('t-description')" class="description-field" rows="1"
-              auto-grow />
+              :disabled="!canEditItem(item)" auto-grow />
           </td>
 
           <!-- Ações -->
           <td style="width: 5%" class="pt-4 px-1 text-center">
-            <v-btn icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
+            <v-btn v-if="canRemoveItem(item)" icon variant="text" color="error" size="small" @click="removeItem(item.id)" class="ml-auto">
               <i class="ph-trash"></i>
             </v-btn>
           </td>
@@ -508,7 +537,7 @@ onMounted(() => {
     </Table>
 
     <!-- Botão para Adicionar Item -->
-    <v-btn color="secondary" @click="addItem" class="mt-2">
+    <v-btn v-if="!disabled && canCreateItems" color="secondary" @click="addItem" class="mt-2">
       <i class="ph-plus me-2"></i> {{ $t("t-add-invoice-item") }}
     </v-btn>
 
@@ -526,7 +555,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-row class="d-flex align-center mb-2" no-gutters>
+        <v-row class="d-flex align-center mt-n3" no-gutters>
           <v-col cols="6">
             <span class="font-weight-bold me-4">{{ $t('t-rate') }}:</span>
           </v-col>
@@ -535,7 +564,7 @@ onMounted(() => {
           </v-col>
         </v-row>
 
-        <v-divider class="my-4" />
+        <v-divider class="my-4 mt-n3" />
 
         <v-row class="d-flex align-center mb-2" no-gutters>
           <v-col cols="6">
@@ -621,6 +650,15 @@ onMounted(() => {
 
 .flag-border-INSUFFICIENT_FUNDS > td {
   background-color: rgba(244, 67, 54, 0.08);
+}
+
+.flag-border-WAITING_PERIOD {
+  border-left: 4px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.08);
+}
+
+.flag-border-WAITING_PERIOD > td {
+  background-color: rgba(108, 117, 125, 0.08);
 }
 
 

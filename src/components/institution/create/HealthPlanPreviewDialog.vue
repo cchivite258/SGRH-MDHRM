@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import { amountFormate } from "@/app/common/amountFormate";
 import type { HospitalProcedureListingType } from "@/components/institution/types";
 import { healthPlanLimitOptions, limitTypeDefinitionOptions } from "@/components/institution/create/utils";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -34,7 +35,7 @@ const activePlanCoveragePeriod = computed(() =>
   || "-"
 );
 
-const activePlanProcedures = computed(() => props.procedures || []);
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(props.procedures || [], t("t-procedures")));
 
 const filteredPlanProcedures = computed(() => {
   const search = healthPlanProcedureSearch.value.trim().toLowerCase();
@@ -59,32 +60,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, HospitalProcedureListingType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, HospitalProcedureListingType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 const statusValue = computed(() =>
@@ -219,10 +195,22 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   const frequencyInterval = firstDefined(source.frequencyInterval, procedure.frequencyInterval);
   if (!allowedFrequencyUse || !frequencyInterval) return "-";
 
-  const limitTypeLabel = getTranslatedEnum("t-limit-type", source.limitType || (procedure as any).limitType);
-  return limitTypeLabel
-    ? `${allowedFrequencyUse}/${frequencyInterval} ${limitTypeLabel}`
-    : `${allowedFrequencyUse}/${frequencyInterval}`;
+  return `${allowedFrequencyUse}/${frequencyInterval}`;
+};
+
+const getWaitingPeriodDays = (procedure: HospitalProcedureListingType) => {
+  const source = getProcedureSource(procedure);
+  return firstDefined(source.waitingPeriodDays, (procedure as any).waitingPeriodDays) ?? "-";
+};
+
+const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
+};
+
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getWaitingPeriodDays(procedure) : "-";
 };
 
 const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
@@ -331,12 +319,13 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
           <v-table density="compact" fixed-header height="560" class="procedure-table">
             <thead>
               <tr>
-                <th style="width: 12%">Codigo</th>
+                <th style="width: 12%">{{ $t('t-code') }}</th>
                 <th>{{ $t('t-procedures') }}</th>
+                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
                 <th style="width: 15%">{{ $t('t-fixed-amount') }}</th>
                 <th style="width: 12%">{{ $t('t-percentage') }}</th>
-                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
-                <th style="width: 14%">{{ $t('t-frequency-interval') }}</th>
+                <th style="width: 16%">{{ $t('t-allowed-frequency-use-frequency') }}</th>
+                <th style="width: 13%">{{ $t('t-waiting-period-days') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -345,7 +334,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                 :key="group.group"
               >
                 <tr class="group-row">
-                  <td colspan="6">
+                  <td colspan="7">
                     <div class="d-flex align-center justify-space-between">
                       <span>
                         <i class="ph-stack me-2" />
@@ -371,7 +360,7 @@ const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
                   :key="`${group.group}-${category.category}`"
                 >
                   <tr class="category-row">
-                    <td colspan="6">
+                    <td colspan="7">
                       <div class="d-flex align-center justify-space-between">
                         <span>
                           <i class="ph-folder-open me-2" />

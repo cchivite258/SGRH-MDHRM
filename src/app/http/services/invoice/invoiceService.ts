@@ -41,7 +41,7 @@ export default class InvoiceService extends HttpService {
       }); 
 
       if (globalSearch) {
-        params.append('query_props', 'invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
+        params.append('query_props', 'employee.contract.name,invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,invoiceStatus,employee.firstName,employee.lastName,serviceProvider.name,dependent.name,coveragePeriod.name,currency.name');
         params.append('query_operator', 'OR');
         params.append('query_value', globalSearch);
       }
@@ -54,7 +54,7 @@ export default class InvoiceService extends HttpService {
         params.append('query_operator', logicalOperator);
       }
 
-      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,coveragePeriod';
+      const includesToUse = 'employee,serviceProvider,currency,invoiceAttachment,contract,coveragePeriod';
       params.append(`includes`, includesToUse);
 
       const url = `/amm/invoices?${params.toString()}`;
@@ -169,7 +169,7 @@ export default class InvoiceService extends HttpService {
   async getInvoiceById(id: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.get<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,contract,coveragePeriod,invoiceAttachment`
+        `/amm/invoices/${id}?includes=employee,serviceProvider,currency,dependent,contract,coveragePeriod,invoiceAttachment,reason`
       );
       console.log('Resposta da requisição de facturas:------------------------', response);
 
@@ -196,10 +196,11 @@ export default class InvoiceService extends HttpService {
     };
   }
 
-  async postInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async postInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/post`
+        `/amm/invoices/${id}/post`,
+        { notes }
       );
       console.log('Resposta ao post da factura:------------------------', response);
 
@@ -211,10 +212,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async postFlaggedInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async postFlaggedInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/post-flagged`
+        `/amm/invoices/${id}/post-flagged`,
+        { notes, reasonId }
       );
       console.log('Resposta ao post flagged da factura:------------------------', response);
 
@@ -226,10 +228,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async cancelInvoice(id: string): Promise<{ data: InvoiceResponseType }> {
+  async cancelInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.put<{ data: InvoiceResponseType; meta: any }>(
-        `/amm/invoices/${id}/cancel`
+        `/amm/invoices/${id}/cancel`,
+        { notes, reasonId }
       );
       console.log('Resposta ao cancel da factura:------------------------', response);
 
@@ -241,11 +244,11 @@ export default class InvoiceService extends HttpService {
     }
   }
 
-  async reverseInvoice(id: string, notes: string): Promise<{ data: InvoiceResponseType }> {
+  async reverseInvoice(id: string, notes: string, reasonId: string): Promise<{ data: InvoiceResponseType }> {
     try {
       const response = await this.post<{ data: InvoiceResponseType; meta: any }>(
         `/amm/invoices/${id}/reverse`,
-        { notes }
+        { notes, reasonId }
       );
       //console.log('Resposta ao reverse da factura:------------------------', response);
 

@@ -5,16 +5,21 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import ContractAttachments from "@/components/institution/create/ContractAttachments.vue";
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
 import type { EntityListingType } from "@/components/entities/types";
 import { InstitutionInsertType } from "@/components/institution/types";
 import { useUserStore } from "@/store/userStore";
 import type { UserType1 } from "@/app/http/types";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const userStore = useUserStore();
+const { canAny } = usePermissions();
 
 const emit = defineEmits(["onStepChange", "save", "update:modelValue", "clear-server-error"]);
 
@@ -34,11 +39,20 @@ const props = defineProps({
   showActions: {
     type: Boolean,
     default: true
+  },
+  institutionId: {
+    type: String,
+    default: ""
   }
 });
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const companyDetails = ref<EntityListingType[]>([]);
+const canConsultContractAttachments = computed(() => canAny([
+  PERMISSIONS.CONTRACT_ATTACHMENTS.READ,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.CREATE,
+  PERMISSIONS.CONTRACT_ATTACHMENTS.DELETE,
+]));
 
 const institutionData = computed({
   get() {
@@ -119,6 +133,7 @@ watch(
 );
 
 watch(() => institutionData.value.name, () => emit("clear-server-error", "name"));
+watch(() => institutionData.value.erpCode, () => emit("clear-server-error", "erpCode"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "companyDetailsId"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "organizationId"));
 watch(() => institutionData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
@@ -154,7 +169,7 @@ onMounted(async () => {
     companyDetails.value = response.content || [];
     applySelectedEntityToForm();
   } catch (error) {
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
   }
 });
 </script>
@@ -175,7 +190,11 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n9">
-          <v-col cols="12" lg="12">
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">{{ $t('t-contract-code') }}</div>
+            <TextField :model-value="institutionData.code || ''" :disabled="true" />
+          </v-col>
+          <v-col cols="12" lg="8">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-name') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -183,6 +202,16 @@ onMounted(async () => {
               v-model="institutionData.name"
               :rules="requiredRules.name"
               :error-messages="getServerErrors('name')"
+            />
+          </v-col>
+        </v-row>
+
+        <v-row class="mt-n6">
+          <v-col cols="12" lg="12">
+            <div class="font-weight-bold mb-2">{{ $t('t-erp-code') }}</div>
+            <TextField
+              v-model="institutionData.erpCode"
+              :error-messages="getServerErrors('erpCode')"
             />
           </v-col>
         </v-row>
@@ -252,4 +281,10 @@ onMounted(async () => {
       </v-card-actions>
     </Card>
   </v-form>
+
+  <ContractAttachments
+    v-if="institutionId && canConsultContractAttachments"
+    class="mt-4"
+    :contract-id="institutionId"
+  />
 </template>

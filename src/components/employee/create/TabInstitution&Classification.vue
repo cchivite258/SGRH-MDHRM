@@ -17,6 +17,7 @@ import { useLayoutStore } from "@/store/app";
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ValidatedDatePicker from "@/app/common/components/ValidatedDatePicker.vue";
+import EmployeeRehireTracksTable from "@/components/employee/shared/EmployeeRehireTracksTable.vue";
 
 // Stores
 import { useInstitutionStore } from '@/store/institution/institutionStore';
@@ -52,6 +53,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: EmployeeInsertType): void;
   (e: 'clear-server-error', field: string): void;
   (e: 'terminate-contract'): void;
+  (e: 'rehire-contract'): void;
 }>();
 
 const props = withDefaults(defineProps<{
@@ -60,13 +62,21 @@ const props = withDefaults(defineProps<{
   serverErrors?: Record<string, string[]>,
   isEditMode?: boolean,
   employeeId?: string | null,
-  showActions?: boolean
+  rehireTracksRefreshKey?: number,
+  showActions?: boolean,
+  readonly?: boolean,
+  allowTerminateContract?: boolean,
+  allowRehireContract?: boolean
 }>(), {
   loading: false,
   serverErrors: () => ({}),
   isEditMode: false,
   employeeId: null,
-  showActions: true
+  rehireTracksRefreshKey: 0,
+  showActions: true,
+  readonly: false,
+  allowTerminateContract: false,
+  allowRehireContract: false
 });
 
 // Dados computados do employee
@@ -290,12 +300,15 @@ const handleError = (message: string, error: any) => {
 /**
  * Valida e envia o formulário
  */
-const validateForm = async () => {
+const validateForm = async (options: { showToast?: boolean } = {}) => {
   if (!form2.value) return false;
+  const showToast = options.showToast !== false;
 
   const { valid } = await form2.value.validate();
   if (!valid) {
-    toast.error(t('t-validation-error'));
+    if (showToast) {
+      toast.error(t('t-validation-error'));
+    }
     errorMsg.value = t('t-please-correct-errors');
     alertTimeout = setTimeout(() => {
       errorMsg.value = "";
@@ -308,6 +321,9 @@ const validateForm = async () => {
 };
 
 const saveData = async () => {
+  // Em modo consulta os campos ficam visíveis, mas a gravação fica bloqueada.
+  if (props.readonly) return;
+
   const valid = await validateForm();
   if (!valid) return;
 
@@ -321,8 +337,32 @@ const saveData = async () => {
   emit('save', payload);
 };
 
+const hasTerminationDateReached = (value?: string) => {
+  if (!value) return false;
+
+  const terminationDate = new Date(`${String(value).split("T")[0]}T00:00:00`);
+  if (Number.isNaN(terminationDate.getTime())) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return terminationDate <= today;
+};
+
 const canTerminateContract = computed(() => {
-  return props.isEditMode && !!props.employeeId && !employeeData.value.terminationDate;
+  // O botão de terminar contrato só aparece se a regra de negócio e a permissão passarem.
+  return (
+    props.isEditMode &&
+    !!props.employeeId &&
+    props.allowTerminateContract &&
+    employeeData.value.enabled !== false &&
+    !hasTerminationDateReached(employeeData.value.terminationDate)
+  );
+});
+
+const canRehireContract = computed(() => {
+  // Recontratar também é uma acção protegida por permissão própria.
+  return props.isEditMode && !!props.employeeId && props.allowRehireContract;
 });
 
 defineExpose({
@@ -341,17 +381,33 @@ defineExpose({
       title-class="pb-0"
     >
       <template #title-action>
-        <v-btn
-          v-if="canTerminateContract"
-          color="danger"
-          variant="tonal"
-          size="small"
-          :disabled="loading"
-          @click="emit('terminate-contract')"
-        >
-          <i class="ph-user-minus me-2" />
-          {{ $t('t-terminate-contract') }}
-        </v-btn>
+        <div class="d-flex flex-wrap ga-2 justify-end">
+          <v-btn
+            v-if="canRehireContract"
+            type="button"
+            color="primary"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('rehire-contract')"
+          >
+            <i class="ph-user-plus me-2" />
+            {{ $t('t-rehire-contract') }}
+          </v-btn>
+
+          <v-btn
+            v-if="canTerminateContract"
+            type="button"
+            color="danger"
+            variant="tonal"
+            size="small"
+            :disabled="loading"
+            @click.stop.prevent="emit('terminate-contract')"
+          >
+            <i class="ph-user-minus me-2" />
+            {{ $t('t-terminate-contract') }}
+          </v-btn>
+        </div>
       </template>
 
       <!-- Mensagem de erro -->
@@ -369,14 +425,14 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.company" :items="institutions" :loading="institutionStore.loading"
               :placeholder="t('t-select-institution')" clearable :rules="applyServerErrorsToRules('company', requiredRules.institution)"
-              :error-messages="getServerErrors('company')" />
+              :error-messages="getServerErrors('company')" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-department') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.department" :items="departments" :loading="departmentStore.loading"
-              :placeholder="t('t-select-department')" :disabled="!employeeData.company"
+              :placeholder="t('t-select-department')" :disabled="readonly || !employeeData.company"
               :rules="applyServerErrorsToRules('department', requiredRules.department)" @scroll-end="loadMoreDepartments"
               clearable :error-messages="getServerErrors('department')" />
           </v-col>
@@ -390,7 +446,7 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.position" :items="positions" :loading="positionStore.loading"
               :rules="applyServerErrorsToRules('position', requiredRules.position)" :placeholder="t('t-select-position')"
-              :disabled="!employeeData.department" @scroll-end="loadMorePositions" clearable
+              :disabled="readonly || !employeeData.department" @scroll-end="loadMorePositions" clearable
               :error-messages="getServerErrors('position')" />
           </v-col>
           <v-col cols="12" lg="6">
@@ -400,7 +456,7 @@ defineExpose({
             <TextField v-model="employeeData.baseSalary" type="number"
               :placeholder="t('t-enter-the-employee-base-salary')"
               :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2"
-              :disabled="!!isEditMode" />
+              :disabled="readonly || !!isEditMode" />
           </v-col>
         </v-row>
 
@@ -411,7 +467,7 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="hireDatePicker" v-model="employeeData.hireDate"
               :placeholder="$t('t-enter-hire-date')" :rules="applyServerErrorsToRules('hireDate', requiredRules.hireDate)" :teleport="true"
-              format="dd/MM/yyyy" />
+              format="dd/MM/yyyy" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -419,7 +475,7 @@ defineExpose({
             </div>
             <MenuSelect v-model="employeeData.contractDurationType" :items="contractDurationTypeOptions"
               :rules="applyServerErrorsToRules('contractDurationType', requiredRules.contractDurationType)"
-              :error-messages="getServerErrors('contractDurationType')" />
+              :error-messages="getServerErrors('contractDurationType')" :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -431,7 +487,8 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="terminationDatePicker" v-model="employeeData.terminationDate"
               :placeholder="$t('t-enter-termination-date')" :teleport="true" format="dd/MM/yyyy"
-              :rules="applyServerErrorsToRules('terminationDate', requiredRules.terminationDate)" />
+              :rules="applyServerErrorsToRules('terminationDate', requiredRules.terminationDate)"
+              :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -439,7 +496,7 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="rehireDatePicker" v-model="employeeData.rehireDate" :teleport="true"
               :placeholder="$t('t-enter-rehire-date')" format="dd/MM/yyyy"
-              :rules="applyServerErrorsToRules('rehireDate', [])" />
+              :rules="applyServerErrorsToRules('rehireDate', [])" :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -451,11 +508,17 @@ defineExpose({
           <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-general-info') }}
         </v-btn>
 
-        <v-btn color="secondary" variant="elevated" @click="saveData" :loading="loading">
+        <v-btn v-if="!readonly" color="secondary" variant="elevated" @click="saveData" :loading="loading">
           {{ $t('t-save') }}
         </v-btn>
       </v-card-actions>
     </Card>
+
+    <v-row v-if="isEditMode && employeeId" class="mt-2">
+      <v-col cols="12">
+        <EmployeeRehireTracksTable :employee-id="employeeId" :refresh-key="rehireTracksRefreshKey" />
+      </v-col>
+    </v-row>
   </v-form>
 </template>
 

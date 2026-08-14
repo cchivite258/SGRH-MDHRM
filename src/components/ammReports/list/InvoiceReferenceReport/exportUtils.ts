@@ -197,7 +197,7 @@ export class InvoiceReferenceReportExporter {
 
     autoTable(pdf, {
       startY: cardsY + cardHeight + 8,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [[
         this.tr("t-invoice-number"),
         this.tr("t-invoice-reference"),

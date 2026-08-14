@@ -69,6 +69,22 @@ const props = defineProps({
   serverErrors: {
     type: Object as () => Record<string, string[]>,
     default: () => ({})
+  },
+  readonly: {
+    type: Boolean,
+    default: false
+  },
+  hideIdentificationFields: {
+    type: Boolean,
+    default: false
+  },
+  identificationReadonly: {
+    type: Boolean,
+    default: false
+  },
+  contactReadonly: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -307,8 +323,9 @@ const onBack = () => {
 /**
  * Valida e envia o formulário
  */
-const validateForm = async () => {
+const validateForm = async (options: { showToast?: boolean } = {}) => {
   if (!form.value) return false;
+  const showToast = options.showToast !== false;
 
   try {
     // Forçar validação dos date pickers
@@ -322,7 +339,9 @@ const validateForm = async () => {
     const { valid } = await form.value.validate();
 
     if (!valid) {
-      toast.error(t('t-validation-error'));
+      if (showToast) {
+        toast.error(t('t-validation-error'));
+      }
       errorMsg.value = t('t-please-correct-errors');
       alertTimeout = setTimeout(() => {
         errorMsg.value = "";
@@ -341,6 +360,9 @@ const validateForm = async () => {
 
 // Atualize o submitForm para usar as refs
 const submitForm = async () => {
+  // Em modo consulta a tab mostra dados, mas nunca dispara gravação.
+  if (props.readonly) return;
+
   const valid = await validateForm();
   if (!valid) return;
 
@@ -370,7 +392,8 @@ defineExpose({
         <v-row class="mt-n9">
           <v-col cols="12" lg="12" class="text-right">
             <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-            <v-checkbox v-model="employeeData.enabled" density="compact" color="primary" class="d-inline-flex">
+            <v-checkbox v-model="employeeData.enabled" density="compact" color="primary" class="d-inline-flex"
+              :disabled="readonly">
               <template #label>
                 <span>{{ $t('t-is-enabled') }}</span>
               </template>
@@ -388,7 +411,8 @@ defineExpose({
               {{ $t('t-employeeNumber') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.employeeNumber" :placeholder="$t('t-enter-employee-number')"
-              :rules="applyServerErrorsToRules('employeeNumber', requiredRules.employeeNumber)" />
+              :rules="applyServerErrorsToRules('employeeNumber', requiredRules.employeeNumber)"
+              :disabled="readonly" />
           </v-col>
         </v-row>
         <!-- Nome completo -->
@@ -398,20 +422,22 @@ defineExpose({
               {{ $t('t-firstname') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.firstName" :placeholder="$t('t-enter-employee-number')"
-              :rules="applyServerErrorsToRules('firstName', requiredRules.firstName)" />
+              :rules="applyServerErrorsToRules('firstName', requiredRules.firstName)"
+              :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-middle-name') }}
             </div>
-            <TextField v-model="employeeData.middleName" :placeholder="$t('t-enter-middle-name')" />
+            <TextField v-model="employeeData.middleName" :placeholder="$t('t-enter-middle-name')" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-lastname') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.lastName" :placeholder="$t('t-enter-lastname')"
-              :rules="applyServerErrorsToRules('lastName', requiredRules.lastName)" />
+              :rules="applyServerErrorsToRules('lastName', requiredRules.lastName)"
+              :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -422,19 +448,19 @@ defineExpose({
               {{ $t('t-gender') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <MenuSelect v-model="employeeData.gender" :items="genderOptions" :rules="requiredRules.gender"
-              :error-messages="getServerErrors('gender')" />
+              :error-messages="getServerErrors('gender')" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-marital-status') }}
             </div>
-            <MenuSelect v-model="employeeData.maritalStatus" :items="maritalStatusOptions" />
+            <MenuSelect v-model="employeeData.maritalStatus" :items="maritalStatusOptions" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-blood-group') }}
             </div>
-            <MenuSelect v-model="employeeData.bloodGroup" :items="bloodGroupOptions" />
+            <MenuSelect v-model="employeeData.bloodGroup" :items="bloodGroupOptions" :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -446,42 +472,45 @@ defineExpose({
             </div>
             <ValidatedDatePicker ref="birthDatePicker" v-model="employeeData.birthDate" :teleport="true"
               :placeholder="$t('t-enter-birth-date')" :rules="applyServerErrorsToRules('birthDate', requiredRules.birthDate)"
-              format="dd/MM/yyyy" />
+              format="dd/MM/yyyy" :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-place-of-birth') }}
             </div>
-            <TextField v-model="employeeData.placeOfBirth" :placeholder="$t('t-enter-place-of-birth')" hide-details />
+            <TextField v-model="employeeData.placeOfBirth" :placeholder="$t('t-enter-place-of-birth')" hide-details
+              :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-nacionality') }}
             </div>
-            <MenuSelect v-model="employeeData.nationality" :items="nationalityOptions" /> 
+            <MenuSelect v-model="employeeData.nationality" :items="nationalityOptions" :disabled="readonly" />
           </v-col>
         </v-row>
 
         <!-- Documentos -->
-        <v-row class="mt-n6">
+        <v-row v-if="!hideIdentificationFields" class="mt-n6">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-nuit') }}
             </div>
-            <TextField v-model="employeeData.incomeTaxNumber" :placeholder="$t('t-enter-nuit')" hide-details />
+            <TextField v-model="employeeData.incomeTaxNumber" :placeholder="$t('t-enter-nuit')" hide-details
+              :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-social-security-number') }}
             </div>
             <TextField v-model="employeeData.socialSecurityNumber" :placeholder="$t('t-enter-social-security-number')"
-              hide-details />
+              hide-details :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-address') }}
             </div>
-            <TextField v-model="employeeData.address" :placeholder="$t('t-enter-address')" hide-details />
+            <TextField v-model="employeeData.address" :placeholder="$t('t-enter-address')" hide-details
+              :disabled="readonly" />
           </v-col>
         </v-row>
 
@@ -491,14 +520,15 @@ defineExpose({
             <div class="font-weight-bold mb-2">
               {{ $t('t-country') }}
             </div>
-            <MenuSelect v-model="employeeData.country" :items="countries" :loading="countryStore.loading" />
+            <MenuSelect v-model="employeeData.country" :items="countries" :loading="countryStore.loading"
+              :disabled="readonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-province') }}
             </div>
             <MenuSelect v-model="employeeData.province" :items="provinces" :loading="provinceStore.loading"
-              :disabled="!employeeData.country || !Array.isArray(provinceStore.provincesbyCountry)" />
+              :disabled="readonly || !employeeData.country || !Array.isArray(provinceStore.provincesbyCountry)" />
           </v-col>
         </v-row>
 
@@ -508,21 +538,22 @@ defineExpose({
             <div class="font-weight-bold mb-2">
               {{ $t('t-postal-code') }}
             </div>
-            <TextField v-model="employeeData.postalCode" :placeholder="$t('t-enter-postal-code')" hide-details />
+            <TextField v-model="employeeData.postalCode" :placeholder="$t('t-enter-postal-code')" hide-details
+              :disabled="contactReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-email') }}
             </div>
             <TextField v-model="employeeData.email" :placeholder="$t('t-enter-email')" hide-details
-              :rules="applyServerErrorsToRules('email', requiredRules.email)" />
+              :rules="applyServerErrorsToRules('email', requiredRules.email)" :disabled="contactReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-phone') }}
             </div>
             <MazPhoneNumberInput v-model="employeeData.phone" size="sm" fetchCountry
-              :placeholder="$t('t-enter-phone-number')" class="custom-phone-input" />
+              :placeholder="$t('t-enter-phone-number')" class="custom-phone-input" :disabled="contactReadonly" />
           </v-col>
         </v-row>
 
@@ -533,45 +564,48 @@ defineExpose({
               {{ $t('t-mobile') }}
             </div>
             <MazPhoneNumberInput v-model="employeeData.mobile" size="sm" :placeholder="$t('t-enter-phone-number')"
-              fetchCountry class="custom-phone-input" />
+              fetchCountry class="custom-phone-input" :disabled="contactReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-emergency-contact-name') }}
             </div>
             <TextField v-model="employeeData.emergencyContactName" :placeholder="$t('t-enter-phone-number')"
-              hide-details />
+              hide-details :disabled="contactReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-emergency-contact-phone') }}
             </div>
             <MazPhoneNumberInput v-model="employeeData.emergencyContactPhone" size="sm"
-              :placeholder="$t('t-enter-phone-number')" fetchCountry class="custom-phone-input" />
+              :placeholder="$t('t-enter-phone-number')" fetchCountry class="custom-phone-input" :disabled="contactReadonly" />
           </v-col>
         </v-row>
 
         <!-- Documentos de identificação -->
-        <v-row class="">
+        <v-row v-if="!hideIdentificationFields" class="">
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-number') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.idCardNumber" :placeholder="$t('t-id-card-number')"
-              :rules="applyServerErrorsToRules('idCardNumber', requiredRules.idCardNumber)" />
+              :rules="applyServerErrorsToRules('idCardNumber', requiredRules.idCardNumber)"
+              :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-issuer') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <TextField v-model="employeeData.idCardIssuer" :placeholder="$t('t-enter-id-card-issuer')"
-              :rules="applyServerErrorsToRules('idCardIssuer', requiredRules.idCardIssuer)" />
+              :rules="applyServerErrorsToRules('idCardIssuer', requiredRules.idCardIssuer)"
+              :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-is-lifetime-id-card') }}
             </div>
-            <v-checkbox v-model="employeeData.isLifeTimeCard" density="compact" color="primary" hide-details>
+            <v-checkbox v-model="employeeData.isLifeTimeCard" density="compact" color="primary" hide-details
+              :disabled="identificationReadonly">
               <template #label>
                 <span>{{ $t('t-is-lifetime-id-card') }}</span>
               </template>
@@ -579,14 +613,15 @@ defineExpose({
           </v-col>
         </v-row>
 
-        <v-row class="mt-n6">
+        <v-row v-if="!hideIdentificationFields" class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-card-issuance-date') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
             <ValidatedDatePicker ref="idCardIssuanceDatePicker" v-model="employeeData.idCardIssuanceDate"
               :teleport="true" :rules="applyServerErrorsToRules('idCardIssuanceDate', requiredRules.idCardIssuanceDate)"
-              :placeholder="$t('t-enter-id-card-issuance-date')" format="dd/MM/yyyy" />
+              :placeholder="$t('t-enter-id-card-issuance-date')" format="dd/MM/yyyy"
+              :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
@@ -595,43 +630,45 @@ defineExpose({
             <ValidatedDatePicker ref="idCardExpiryDatePicker" v-model="employeeData.idCardExpiryDate" :teleport="true"
               :rules="applyServerErrorsToRules('idCardExpiryDate', requiredRules.idCardExpiryDate)"
               :placeholder="$t('t-enter-id-card-expiry-date')" format="dd/MM/yyyy"
-              :disabled="employeeData.isLifeTimeCard" />
+              :disabled="identificationReadonly || employeeData.isLifeTimeCard" />
           </v-col>
         </v-row>
 
         <!-- Datas de emissão de documentos -->
-        <v-row class="">
+        <v-row v-if="!hideIdentificationFields" class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-number') }}
             </div>
             <TextField v-model="employeeData.passportNumber" :placeholder="$t('t-enter-passport-number')"
-              hide-details />
+              hide-details :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-issuer') }}
             </div>
             <TextField v-model="employeeData.passportIssuer" :placeholder="$t('t-enter-passport-issuer')"
-              hide-details />
+              hide-details :disabled="identificationReadonly" />
           </v-col>
         </v-row>
 
         <!-- Datas de passaporte -->
-        <v-row class="">
+        <v-row v-if="!hideIdentificationFields" class="">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-passport-issuance-date') }}
             </div>
             <VueDatePicker v-model="employeeData.passportIssuanceDate" :teleport="true"
-              :placeholder="$t('t-enter-passport-issuance-date')" :enable-time-picker="false" format="dd/MM/yyyy" />
+              :placeholder="$t('t-enter-passport-issuance-date')" :enable-time-picker="false" format="dd/MM/yyyy"
+              :disabled="identificationReadonly" />
           </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-id-passport-expiry-date') }}
             </div>
             <VueDatePicker v-model="employeeData.passportExpiryDate" :teleport="true"
-              :placeholder="$t('t-enter-id-passport-expiry-date')" :enable-time-picker="false" format="dd/MM/yyyy" />
+              :placeholder="$t('t-enter-id-passport-expiry-date')" :enable-time-picker="false" format="dd/MM/yyyy"
+              :disabled="identificationReadonly" />
           </v-col>
         </v-row>
       </v-card-text>
@@ -642,7 +679,7 @@ defineExpose({
           <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
         </v-btn>
 
-        <v-btn color="secondary" variant="elevated" @click="submitForm" :loading="loading">
+        <v-btn v-if="!readonly" color="secondary" variant="elevated" @click="submitForm" :loading="loading">
           {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
         </v-btn>
       </v-card-actions>

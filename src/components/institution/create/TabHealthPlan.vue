@@ -46,6 +46,9 @@ import type {
 import { healthPlanHeader, healthPlanLimitOptions, limitTypeDefinitionOptions, salaryComponentOptions } from "@/components/institution/create/utils";
 import { healthPlanOptions as Options } from "@/components/institution/create/utils";
 import { exportHealthPlanToPdf } from "@/components/institution/create/healthPlanPdfExporter";
+import { groupHealthPlanProcedures, orderHealthPlanProcedures } from "@/components/institution/create/healthPlanProcedureOrdering";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -53,6 +56,7 @@ const router = useRouter();
 const toast = useToast();
 const healthPlanStore = useHealthPlanStore();
 const hospitalProcedureStore = useHospitalProcedureStore();
+const { can } = usePermissions();
 
 // props
 const props = defineProps({
@@ -63,6 +67,14 @@ const props = defineProps({
   isViewMode: {
     type: Boolean,
     default: false
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
@@ -79,7 +91,7 @@ const healthPlanDataView = ref<HealthPlanListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
-const searchProps = "maxNumberOfDependents,childrenMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
+const searchProps = "coveragePeriod.name,maxNumberOfDependents,childrenMaxAge,childrenInUniversityMaxAge,healthPlanLimit,fixedAmount,salaryComponent,companyContributionPercentage";
 const itemsPerPage = ref(10);
 const selectedHealthPlans = ref<HealthPlanListingType[]>([]);
 const customerDetail = ref<any>(null); // Adicionado para resolver o erro
@@ -95,7 +107,12 @@ const healthPlanProcedureSearch = ref("");
 const loadingList = computed(() => healthPlanStore.loading);
 const totalItems = computed(() => healthPlanStore.pagination.totalElements);
 const activeHealthPlan = computed(() => healthPlanStore.activeHealthPlan);
-const activePlanProcedures = computed(() => hospitalProcedureStore.hospital_procedure_of_plan_scoped || []);
+const canCreateHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.CREATE));
+const canUpdateHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.UPDATE));
+const canDeleteHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.DELETE));
+const canCloneHealthPlan = computed(() => can(PERMISSIONS.CONTRACT_HEALTH_PLANS.CLONE));
+const canSelectHealthPlans = computed(() => !props.isViewMode && canDeleteHealthPlan.value);
+const activePlanProcedures = computed(() => orderHealthPlanProcedures(hospitalProcedureStore.hospital_procedure_of_plan_scoped || [], t("t-procedures")));
 
 const activePlanCoveragePeriod = computed(() =>
   activeHealthPlan.value?.coveragePeriod?.name
@@ -103,6 +120,11 @@ const activePlanCoveragePeriod = computed(() =>
   || activeHealthPlan.value?.name
   || "-"
 );
+
+const getCoveragePeriodName = (healthPlan: HealthPlanListingType) =>
+  healthPlan.coveragePeriod?.name
+  || (healthPlan as any).coveragePeriodName
+  || "-";
 
 const filteredPlanProcedures = computed(() => {
   const search = healthPlanProcedureSearch.value.trim().toLowerCase();
@@ -127,32 +149,7 @@ const filteredPlanProcedures = computed(() => {
 });
 
 const groupedPlanProcedureGroups = computed(() => {
-  const groupMap = filteredPlanProcedures.value.reduce((groups, procedure) => {
-    const group = getProcedureGroupName(procedure);
-    if (!groups[group]) groups[group] = [];
-
-    groups[group].push(procedure);
-    return groups;
-  }, {} as Record<string, HospitalProcedureListingType[]>);
-
-  return Object.entries(groupMap).map(([group, procedures]) => {
-    const categoryMap = procedures.reduce((categories, procedure) => {
-      const category = getProcedureCategoryName(procedure);
-      if (!categories[category]) categories[category] = [];
-
-      categories[category].push(procedure);
-      return categories;
-    }, {} as Record<string, HospitalProcedureListingType[]>);
-
-    return {
-      group,
-      procedures,
-      categories: Object.entries(categoryMap).map(([category, categoryProcedures]) => ({
-        category,
-        procedures: categoryProcedures
-      }))
-    };
-  });
+  return groupHealthPlanProcedures(filteredPlanProcedures.value, t("t-procedures"));
 });
 
 interface FetchParams {
@@ -242,6 +239,7 @@ const onCreateEditClick = (data: HealthPlanInsertType | HealthPlanListingType | 
       maxNumberOfDependents: 0,
       childrenMaxAge: 0,
       childrenInUniversityMaxAge: 0,
+      waitingPeriodDays: 0,
       healthPlanLimit: "",
       fixedAmount: 0,
       salaryComponent: "",
@@ -364,6 +362,9 @@ const getTranslatedEnum = (prefix: string, value: string | null | undefined) => 
 const getHealthPlanStatusLabel = (value: string | null | undefined) =>
   getTranslatedEnum("t", value) || "-";
 
+const isClosedHealthPlan = (healthPlan: HealthPlanListingType) =>
+  healthPlan.status?.toString().toUpperCase() === "CLOSED";
+
 const getLimitTypeDefinitionLabel = (value: string | null | undefined) =>
   value ? limitTypeDefinitionOptions.find(option => option.value === value)?.label || humanizeEnum(value) : "";
 
@@ -445,10 +446,22 @@ const getFrequencyLabel = (procedure: HospitalProcedureListingType) => {
   const frequencyInterval = firstDefined(source.frequencyInterval, procedure.frequencyInterval);
   if (!allowedFrequencyUse || !frequencyInterval) return "-";
 
-  const limitTypeLabel = getTranslatedEnum("t-limit-type", source.limitType || (procedure as any).limitType);
-  return limitTypeLabel
-    ? `${allowedFrequencyUse}/${frequencyInterval} ${limitTypeLabel}`
-    : `${allowedFrequencyUse}/${frequencyInterval}`;
+  return `${allowedFrequencyUse}/${frequencyInterval}`;
+};
+
+const getWaitingPeriodDays = (procedure: HospitalProcedureListingType) => {
+  const source = getProcedureSource(procedure);
+  return firstDefined(source.waitingPeriodDays, (procedure as any).waitingPeriodDays) ?? "-";
+};
+
+const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getFrequencyLabel(procedure) : "-";
+};
+
+const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) => {
+  const procedure = getGroupLimitProcedure(procedures);
+  return procedure ? getWaitingPeriodDays(procedure) : "-";
 };
 
 const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
@@ -484,7 +497,7 @@ const onConsultHealthPlan = async () => {
     healthPlanDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano activo:", error);
-    toast.error(t("t-no-active-health-plan"));
+    getApiErrorMessages(error, t("t-no-active-health-plan")).forEach((message) => toast.error(message));
   } finally {
     healthPlanConsultLoading.value = false;
   }
@@ -513,7 +526,7 @@ const onExportHealthPlanPdf = async () => {
     });
   } catch (error) {
     console.error("Erro ao exportar plano de saude:", error);
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanPdfExporting.value = false;
   }
@@ -536,8 +549,17 @@ const getDynamicOptions = (invoice: HealthPlanListingType) => {
   // Opções base
   let availableOptions = [...Options];
 
-  // Se o status for RUNNING, remove as opções de editar e deletar
-  if (invoice.coveragePeriod?.status === 'RUNNING') {
+  availableOptions = availableOptions.filter((option) => {
+    if (option.value === "edit") return canUpdateHealthPlan.value;
+    if (option.value === "delete") return canDeleteHealthPlan.value;
+    if (option.value === "clone") return canCloneHealthPlan.value;
+    return true;
+  });
+
+  const coveragePeriodStatus = invoice.coveragePeriod?.status?.toString().toUpperCase();
+
+  // Planos fechados não podem ser editados nem eliminados.
+  if (isClosedHealthPlan(invoice) || coveragePeriodStatus === "RUNNING") {
     availableOptions = availableOptions.filter(option =>
       option.value !== 'edit' && option.value !== 'delete'
     );
@@ -550,6 +572,10 @@ const getDynamicOptions = (invoice: HealthPlanListingType) => {
 };
 
 const onSelect = (option: string, data: HealthPlanListingType) => {
+  if ((option === "edit" || option === "delete") && isClosedHealthPlan(data)) {
+    return;
+  }
+
   switch (option) {
     case "view":
       onViewClick(data);
@@ -674,8 +700,8 @@ const onConfirmDelete = async () => {
     );
     toast.success(t('t-toast-message-deleted'));
   } catch (error) {
-    toast.error(t('t-toast-message-deleted-erros'));
     console.error("Delete error:", error);
+    getApiErrorMessages(error, t('t-toast-message-deleted-erros')).forEach((message) => toast.error(message));
   } finally {
     deleteLoading.value = false;
     deleteDialog.value = false;
@@ -705,7 +731,7 @@ onBeforeUnmount(() => {
           <i class="ph-first-aid-kit me-1" /> {{ $t('t-consult-health-plan') }}
         </v-btn>
 
-        <v-btn v-if="!props.isViewMode" color="secondary" class="mx-1" @click="onCreateEditClick(null)">
+        <v-btn v-if="!props.isViewMode && canCreateHealthPlan" color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-health-plan') }}
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">
@@ -731,13 +757,14 @@ onBeforeUnmount(() => {
         :headers="healthPlanHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="healthPlanStore.health_plans" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchHealthPlans"
-        item-value="id" :show-select="!props.isViewMode">
+        item-value="id" :show-select="canSelectHealthPlans">
         <template #body="{ items }">
           <tr v-for="item in items as HealthPlanListingType[]" :key="item.id" height="50">
-            <td v-if="!props.isViewMode">
+            <td v-if="canSelectHealthPlans">
               <v-checkbox :model-value="selectedHealthPlans.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
+            <td>{{ getCoveragePeriodName(item) }}</td>
             <td>{{ item.maxNumberOfDependents }}</td>
             <td>{{ item.childrenMaxAge }}</td>
             <td>{{ item.childrenInUniversityMaxAge }}</td>
@@ -876,12 +903,13 @@ onBeforeUnmount(() => {
           <v-table density="compact" fixed-header height="560" class="procedure-table">
             <thead>
               <tr>
-                <th style="width: 12%">Código</th>
+                <th style="width: 12%">{{ $t('t-code') }}</th>
                 <th>{{ $t('t-procedures') }}</th>
+                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
                 <th style="width: 15%">{{ $t('t-fixed-amount') }}</th>
                 <th style="width: 12%">{{ $t('t-percentage') }}</th>
-                <th style="width: 18%">{{ $t('t-limit-type') }}</th>
-                <th style="width: 14%">{{ $t('t-frequency-interval') }}</th>
+                <th style="width: 16%">{{ $t('t-allowed-frequency-use-frequency') }}</th>
+                <th style="width: 13%">{{ $t('t-waiting-period-days') }}</th>
               </tr>
             </thead>
             <tbody>
@@ -890,7 +918,7 @@ onBeforeUnmount(() => {
                 :key="group.group"
               >
                 <tr class="group-row">
-                  <td colspan="6">
+                  <td colspan="7">
                     <div class="d-flex align-center justify-space-between">
                       <span>
                         <i class="ph-stack me-2" />
@@ -916,7 +944,7 @@ onBeforeUnmount(() => {
                   :key="`${group.group}-${category.category}`"
                 >
                   <tr class="category-row">
-                    <td colspan="6">
+                    <td colspan="7">
                       <div class="d-flex align-center justify-space-between">
                         <span>
                           <i class="ph-folder-open me-2" />
@@ -952,11 +980,11 @@ onBeforeUnmount(() => {
     </v-card>
   </v-dialog>
 
-  <v-card-actions v-if="!props.isViewMode" class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 2)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-period') }}
+  <v-card-actions v-if="!props.isViewMode && (previousStep || nextStep)" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
-    <v-btn color="secondary" variant="elevated" @click="$emit('onStepChange', 4)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 

@@ -19,17 +19,12 @@ type EmployeeRow = {
   department: string;
   position: string;
   hireDate: string;
-  terminateDate: string;
-  baseSalary: number;
-  grossSalary: number;
   limitAmount: number;
   monthValues: Record<string, number>;
   totalBilled: number;
   totalAvailable: number;
 };
 type TotalsRow = {
-  baseSalary: number;
-  grossSalary: number;
   limitAmount: number;
   monthValues: Record<string, number>;
   totalBilled: number;
@@ -154,7 +149,6 @@ export class CompanyEmployeeLimitsReportExporter {
 
     const rows = (report.employees || []).map((employee) => {
       const employeeName = `${employee.employeeFirstName || ""} ${employee.employeeLastName || ""}`.trim() || "-";
-      const contractType = String(employee.employeeContractDurationType || "").toUpperCase();
       const monthValues: Record<string, number> = {};
       (employee.monthlyDetails || []).forEach((m) => {
         const key = this.toMonthKey(Number(m.year || 0), Number(m.month || 0));
@@ -170,11 +164,6 @@ export class CompanyEmployeeLimitsReportExporter {
         department: employee.departmentName || "-",
         position: employee.positionName || "-",
         hireDate: employee.employeeHireDate ? formateDate(employee.employeeHireDate) : "-",
-        terminateDate: contractType === "OPEN_ENDED"
-          ? "-"
-          : (employee.employeeTerminateDate ? formateDate(employee.employeeTerminateDate) : "-"),
-        baseSalary: Number(employee.employeeBaseSalary || 0),
-        grossSalary: Number(employee.employeeGrossSalary || 0),
         limitAmount,
         monthValues,
         totalBilled,
@@ -188,28 +177,8 @@ export class CompanyEmployeeLimitsReportExporter {
     return { months, rows };
   }
 
-  private static getLimitColumnTitle(report: CompanyEmployeeLimitsReportType): string {
-    const employee = (report.employees || [])[0];
-    if (!employee) return this.tr("t-cel-limit-amount");
-
-    const limitType = String(employee.healthPlanLimit || "");
-    const component = String(employee.salaryComponent || "");
-    const percentage = Number(employee.contractContributionPercentage || 0);
-
-    if (limitType === "FIXED_AMOUNT") return this.tr("t-cel-limit-fixed-amount");
-
-    if (limitType === "SALARY_PERCENTAGE" || limitType === "ANUAL_SALARY" || limitType === "ANNUAL_SALARY") {
-      const formattedPercentage = new Intl.NumberFormat(this.localeCode(), {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2
-      }).format(percentage);
-      const componentLabel = component === "GROSS_SALARY"
-        ? this.tr("t-cel-gross-salary-lower")
-        : this.tr("t-cel-base-salary-lower");
-      return `${formattedPercentage}% ${componentLabel}`;
-    }
-
-    return this.tr("t-cel-limit-amount");
+  private static getLimitColumnTitle(): string {
+    return this.tr("t-cel-global-limit");
   }
 
   private static calculateTotals(rows: EmployeeRow[], months: MonthKey[]): TotalsRow {
@@ -220,8 +189,6 @@ export class CompanyEmployeeLimitsReportExporter {
     });
 
     return {
-      baseSalary: rows.reduce((sum, row) => sum + row.baseSalary, 0),
-      grossSalary: rows.reduce((sum, row) => sum + row.grossSalary, 0),
       limitAmount: rows.reduce((sum, row) => sum + row.limitAmount, 0),
       monthValues,
       totalBilled: rows.reduce((sum, row) => sum + row.totalBilled, 0),
@@ -236,7 +203,7 @@ export class CompanyEmployeeLimitsReportExporter {
   ): Promise<void> {
     const { months, rows } = this.normalizeRows(report);
     const totals = this.calculateTotals(rows, months);
-    const limitColumnTitle = this.getLimitColumnTitle(report);
+    const limitColumnTitle = this.getLimitColumnTitle();
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
     const margin = 10;
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -383,9 +350,6 @@ export class CompanyEmployeeLimitsReportExporter {
       this.tr("t-department"),
       this.tr("t-position"),
       this.tr("t-hire-date"),
-      this.tr("t-termination-date"),
-      this.tr("t-base-salary"),
-      this.tr("t-gross-salary"),
       limitColumnTitle,
       ...monthHeaders,
       this.tr("t-cel-total-billed"),
@@ -403,9 +367,6 @@ export class CompanyEmployeeLimitsReportExporter {
         row.department,
         row.position,
         row.hireDate,
-        row.terminateDate,
-        amountFormate(row.baseSalary),
-        amountFormate(row.grossSalary),
         amountFormate(row.limitAmount),
         ...monthsData,
         amountFormate(row.totalBilled),
@@ -417,9 +378,6 @@ export class CompanyEmployeeLimitsReportExporter {
       "-",
       "-",
       "-",
-      "-",
-      amountFormate(totals.baseSalary),
-      amountFormate(totals.grossSalary),
       amountFormate(totals.limitAmount),
       ...months.map((m) => amountFormate(totals.monthValues[this.toMonthKey(m.year, m.month)] || 0)),
       amountFormate(totals.totalBilled),
@@ -428,7 +386,7 @@ export class CompanyEmployeeLimitsReportExporter {
 
     autoTable(pdf, {
       startY: cardsY + cardHeight + 6,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
       head: [headers],
       body,
       styles: { fontSize: 6.2, cellPadding: 1.2, lineWidth: 0.1, lineColor: [220, 220, 220] },
@@ -441,8 +399,8 @@ export class CompanyEmployeeLimitsReportExporter {
         if (data.section === "body") {
           const isTotalsRow = data.row.index === rows.length;
           const row = rows[data.row.index];
-          const colTotalBilled = 8 + months.length;
-          const colTotalAvailable = 9 + months.length;
+          const colTotalBilled = 5 + months.length;
+          const colTotalAvailable = 6 + months.length;
 
           if (isTotalsRow) {
             data.cell.styles.fontStyle = "bold";
@@ -497,7 +455,7 @@ export class CompanyEmployeeLimitsReportExporter {
   ): Promise<void> {
     const { months, rows } = this.normalizeRows(report);
     const totals = this.calculateTotals(rows, months);
-    const limitColumnTitle = this.getLimitColumnTitle(report);
+    const limitColumnTitle = this.getLimitColumnTitle();
     const workbook = XLSX.utils.book_new();
     const monthHeaders = months.map((m) => this.monthLabel(m.year, m.month));
     const headers = [
@@ -505,9 +463,6 @@ export class CompanyEmployeeLimitsReportExporter {
       this.tr("t-department"),
       this.tr("t-position"),
       this.tr("t-hire-date"),
-      this.tr("t-termination-date"),
-      this.tr("t-base-salary"),
-      this.tr("t-gross-salary"),
       limitColumnTitle,
       ...monthHeaders,
       this.tr("t-cel-total-billed"),
@@ -533,9 +488,6 @@ export class CompanyEmployeeLimitsReportExporter {
           row.department,
           row.position,
           row.hireDate,
-          row.terminateDate,
-          row.baseSalary,
-          row.grossSalary,
           row.limitAmount,
           ...monthsData,
           row.totalBilled,
@@ -547,9 +499,6 @@ export class CompanyEmployeeLimitsReportExporter {
         "-",
         "-",
         "-",
-        "-",
-        totals.baseSalary,
-        totals.grossSalary,
         totals.limitAmount,
         ...months.map((m) => totals.monthValues[this.toMonthKey(m.year, m.month)] || 0),
         totals.totalBilled,
@@ -559,13 +508,19 @@ export class CompanyEmployeeLimitsReportExporter {
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     const mergeEndCol = headers.length - 1;
+    const totalCols = mergeEndCol + 1;
+    const infoStartCol = 0;
+    const infoEndCol = Math.max(infoStartCol, Math.floor(totalCols / 3) - 1);
+    const employeesStartCol = infoEndCol + 1;
+    const employeesEndCol = Math.max(employeesStartCol, Math.floor((totalCols * 2) / 3) - 1);
+    const totalsStartCol = Math.min(employeesEndCol + 1, mergeEndCol);
     ws["!merges"] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: mergeEndCol } },
       { s: { r: 1, c: 0 }, e: { r: 1, c: mergeEndCol } },
       { s: { r: 2, c: 0 }, e: { r: 2, c: mergeEndCol } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 4 } },
-      { s: { r: 4, c: 5 }, e: { r: 4, c: 9 } },
-      { s: { r: 4, c: 10 }, e: { r: 4, c: mergeEndCol } }
+      { s: { r: 4, c: infoStartCol }, e: { r: 4, c: infoEndCol } },
+      { s: { r: 4, c: employeesStartCol }, e: { r: 4, c: employeesEndCol } },
+      { s: { r: 4, c: totalsStartCol }, e: { r: 4, c: mergeEndCol } }
     ];
 
     ws["!cols"] = headers.map((_, i) => {
@@ -579,18 +534,18 @@ export class CompanyEmployeeLimitsReportExporter {
       ws[addr] = { ...(ws[addr] || {}), t: "s", v: value };
     };
 
-    setCell(4, 0, this.tr("t-institution"));
-    setCell(5, 0, report.contractName || "-");
-    setCell(6, 0, `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`);
-    setCell(7, 0, `${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"}`);
+    setCell(4, infoStartCol, this.tr("t-institution"));
+    setCell(5, infoStartCol, report.contractName || "-");
+    setCell(6, infoStartCol, `${this.tr("t-coverage-period")}: ${report.coveragePeriodName || "-"}`);
+    setCell(7, infoStartCol, `${report.coveragePeriodStartDate ? formateDate(report.coveragePeriodStartDate) : "-"} - ${report.coveragePeriodEndDate ? formateDate(report.coveragePeriodEndDate) : "-"}`);
 
-    setCell(4, 5, this.tr("t-employees"));
-    setCell(5, 5, String(rows.length));
-    setCell(6, 5, `${this.tr("t-cel-total-limit")}: ${amountFormate(totals.limitAmount)} MT`);
+    setCell(4, employeesStartCol, this.tr("t-employees"));
+    setCell(5, employeesStartCol, String(rows.length));
+    setCell(6, employeesStartCol, `${this.tr("t-cel-total-limit")}: ${amountFormate(totals.limitAmount)} MT`);
 
-    setCell(4, 10, this.tr("t-cel-total-billed"));
-    setCell(5, 10, `${amountFormate(totals.totalBilled)} MT`);
-    setCell(6, 10, `${this.tr("t-cel-total-available")}: ${amountFormate(totals.totalAvailable)} MT`);
+    setCell(4, totalsStartCol, this.tr("t-cel-total-billed"));
+    setCell(5, totalsStartCol, `${amountFormate(totals.totalBilled)} MT`);
+    setCell(6, totalsStartCol, `${this.tr("t-cel-total-available")}: ${amountFormate(totals.totalAvailable)} MT`);
 
     if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: this.BRAND_BLUE } } };
     if (ws["A2"]) ws["A2"].s = { font: { sz: 11, color: { rgb: this.BRAND_BLUE } } };
@@ -617,8 +572,8 @@ export class CompanyEmployeeLimitsReportExporter {
       }
     }
 
-    const c2 = XLSX.utils.encode_cell({ r: 4, c: 5 });
-    const c3 = XLSX.utils.encode_cell({ r: 4, c: 10 });
+    const c2 = XLSX.utils.encode_cell({ r: 4, c: employeesStartCol });
+    const c3 = XLSX.utils.encode_cell({ r: 4, c: totalsStartCol });
     if (ws[c2]) ws[c2].s = { ...(ws[c2].s || {}), font: { bold: true, color: { rgb: this.BRAND_BLUE } } };
     if (ws[c3]) ws[c3].s = { ...(ws[c3].s || {}), font: { bold: true, color: { rgb: "B71C1C" } } };
 
@@ -636,10 +591,10 @@ export class CompanyEmployeeLimitsReportExporter {
 
     const dataStart = tableHeaderRow + 1;
     const dataEnd = data.length;
-    const totalAvailableCol = 9 + months.length;
+    const totalAvailableCol = 6 + months.length;
     const totalsRowNumber = dataStart + rows.length;
     for (let row = dataStart; row <= dataEnd; row++) {
-      for (let col = 5; col <= totalAvailableCol; col++) {
+      for (let col = 4; col <= totalAvailableCol; col++) {
         const addr = XLSX.utils.encode_cell({ r: row - 1, c: col });
         if (ws[addr]) ws[addr].z = "#,##0.00";
       }
@@ -680,7 +635,7 @@ export class CompanyEmployeeLimitsReportExporter {
   ): Promise<void> {
     const { months, rows } = this.normalizeRows(report);
     const totals = this.calculateTotals(rows, months);
-    const limitColumnTitle = this.getLimitColumnTitle(report);
+    const limitColumnTitle = this.getLimitColumnTitle();
     const monthHeaders = months.map((m) => this.monthLabel(m.year, m.month));
 
     let csv = `${this.tr("t-cel-report-title").toUpperCase()}\n`;
@@ -692,9 +647,6 @@ export class CompanyEmployeeLimitsReportExporter {
       this.tr("t-department"),
       this.tr("t-position"),
       this.tr("t-hire-date"),
-      this.tr("t-termination-date"),
-      this.tr("t-base-salary"),
-      this.tr("t-gross-salary"),
       limitColumnTitle,
       ...monthHeaders,
       this.tr("t-cel-total-billed"),
@@ -709,9 +661,6 @@ export class CompanyEmployeeLimitsReportExporter {
         row.department,
         row.position,
         row.hireDate,
-        row.terminateDate,
-        row.baseSalary,
-        row.grossSalary,
         row.limitAmount,
         ...monthsData,
         row.totalBilled,
@@ -725,9 +674,6 @@ export class CompanyEmployeeLimitsReportExporter {
       "-",
       "-",
       "-",
-      "-",
-      totals.baseSalary,
-      totals.grossSalary,
       totals.limitAmount,
       ...months.map((m) => totals.monthValues[this.toMonthKey(m.year, m.month)] || 0),
       totals.totalBilled,

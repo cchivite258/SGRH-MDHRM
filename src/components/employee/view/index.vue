@@ -18,12 +18,12 @@ import ButtonNav from "@/components/employee/view/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue";
+import RehireEmployeeContractDialog from "@/app/common/components/RehireEmployeeContractDialog.vue";
 import Step1 from "@/components/employee/view/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/view/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/view/TabSalaryReview.vue";
 import Step4 from "@/components/employee/view/TabDependents.vue";
 import Step5 from "@/components/employee/view/TabHealthPlan.vue";
-import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -31,10 +31,12 @@ import { useProvinceStore } from '@/store/baseTables/countryStore';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
 import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
+import { EMPLOYEE_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Services & Types
 import { employeeService } from "@/app/http/httpServiceProvider";
-import { EmployeeInsertType } from "../types";
+import type { EmployeeInsertType, EmployeeRehireType } from "../types";
 
 // Inicialização de stores
 const provinceStore = useProvinceStore();
@@ -56,7 +58,20 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { canAny } = usePermissions();
 const headerTitle = computed(() => props.cardTitle || t('t-view-employee'));
+const accessibleEmployeeFormTabs = computed(() => getAllowedFormTabs(EMPLOYEE_FORM_TABS, canAny));
+const employeeFormSteps = computed(() => accessibleEmployeeFormTabs.value.map((tab) => tab.value));
+const firstAllowedEmployeeStep = computed(() => employeeFormSteps.value[0] || 1);
+const currentEmployeeStepIndex = computed(() => employeeFormSteps.value.indexOf(step.value));
+const previousEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value - 1] || null);
+const nextEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value + 1] || null);
+const isEmployeeStepAllowed = (value: number) => employeeFormSteps.value.includes(value);
+const ensureEmployeeStepAllowed = () => {
+  if (!isEmployeeStepAllowed(step.value)) {
+    step.value = firstAllowedEmployeeStep.value;
+  }
+};
 
 const resolveRelationId = (value: unknown): string | number | undefined => {
   if (value == null) return undefined;
@@ -67,8 +82,22 @@ const resolveRelationId = (value: unknown): string | number | undefined => {
   return undefined;
 };
 
+const getRouteQueryString = (value: unknown): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString || null;
+  }
+  return null;
+};
+
+const getReturnToRoute = (): string | null => {
+  const returnTo = getRouteQueryString(route.query.returnTo);
+  return returnTo?.startsWith("/") ? returnTo : null;
+};
+
 const goBackToList = () => {
-  router.push('/employee/list');
+  router.push(getReturnToRoute() || '/employee/list');
 };
 
 // Refs
@@ -81,6 +110,10 @@ const errorMsg = ref(""); // Mensagem de erro global
 const terminateDialog = ref(false);
 const terminateLoading = ref(false);
 const terminateFieldErrors = ref<Record<string, string[]>>({});
+const rehireDialog = ref(false);
+const rehireLoading = ref(false);
+const rehireFieldErrors = ref<Record<string, string[]>>({});
+const rehireTracksRefreshKey = ref(0);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null; // Timeout para mensagens de erro
 
 // Dados reativos do formulário
@@ -167,6 +200,36 @@ const handleApiError = (error: any) => {
   }, 5000);
 };
 
+const hydrateEmployeeData = async (data: EmployeeInsertType) => {
+  Object.assign(employeeData, data);
+
+  employeeData.country = resolveRelationId(data.country) as string | undefined;
+  employeeData.province = resolveRelationId(data.province) as string | undefined;
+  employeeData.company = resolveRelationId(data.company);
+  employeeData.department = resolveRelationId(data.department) as string | undefined;
+  employeeData.position = resolveRelationId(data.position) as string | undefined;
+
+  if (employeeData.company) {
+    await departmentStore.fetchDepartments(employeeData.company);
+  }
+
+  if (employeeData.department) {
+    await positionStore.fetchPositions(employeeData.department);
+  }
+};
+
+const loadEmployeeData = async () => {
+  if (!employeeId.value) return;
+
+  const response = await employeeService.getEmployeeById(employeeId.value);
+
+  if (!response.data) {
+    throw new Error("Dados do funcionÃ¡rio nÃ£o disponÃ­veis.");
+  }
+
+  await hydrateEmployeeData(response.data as unknown as EmployeeInsertType);
+};
+
 /**
  * Carrega dados do employee quando em modo de edição
  */
@@ -216,6 +279,8 @@ onMounted(async () => {
  * @param value - Número da aba (1 ou 2)
  */
 const onStepChange = (value: number) => {
+  if (!isEmployeeStepAllowed(value)) return;
+
   // Permite sempre voltar para tabs anteriores
   if (value < step.value) {
     step.value = value;
@@ -239,6 +304,11 @@ const openTerminateDialog = () => {
   terminateDialog.value = true;
 };
 
+const openRehireDialog = () => {
+  rehireFieldErrors.value = {};
+  rehireDialog.value = true;
+};
+
 const clearTerminateFieldError = (field: string) => {
   if (!terminateFieldErrors.value[field]) return;
   const next = { ...terminateFieldErrors.value };
@@ -246,14 +316,21 @@ const clearTerminateFieldError = (field: string) => {
   terminateFieldErrors.value = next;
 };
 
-const terminateEmployeeContract = async (terminationDate: string) => {
+const clearRehireFieldError = (field: string) => {
+  if (!rehireFieldErrors.value[field]) return;
+  const next = { ...rehireFieldErrors.value };
+  delete next[field];
+  rehireFieldErrors.value = next;
+};
+
+const terminateEmployeeContract = async (payload: { terminationDate: string; reasonId: string | number }) => {
   if (!employeeId.value) return;
 
   terminateLoading.value = true;
   terminateFieldErrors.value = {};
 
   try {
-    const response = await employeeService.terminateEmployee(employeeId.value, { terminationDate });
+    const response = await employeeService.terminateEmployee(employeeId.value, payload);
 
     if (response.status === "error") {
       terminateFieldErrors.value = getApiValidationErrors(response.error);
@@ -263,7 +340,7 @@ const terminateEmployeeContract = async (terminationDate: string) => {
       return;
     }
 
-    employeeData.terminationDate = response.data?.terminationDate || terminationDate;
+    employeeData.terminationDate = response.data?.terminationDate || payload.terminationDate;
     employeeData.enabled = response.data?.enabled ?? false;
     toast.success(t("t-toast-message-terminate-contract-success"));
     terminateDialog.value = false;
@@ -277,16 +354,54 @@ const terminateEmployeeContract = async (terminationDate: string) => {
   }
 };
 
+const rehireEmployeeContract = async (payload: EmployeeRehireType) => {
+  if (!employeeId.value) return;
+
+  rehireLoading.value = true;
+  rehireFieldErrors.value = {};
+
+  try {
+    const response = await employeeService.rehireEmployee(employeeId.value, payload);
+
+    if (response.status === "error") {
+      rehireFieldErrors.value = getApiValidationErrors(response.error);
+      getApiErrorMessages(response.error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+        toast.error(message);
+      });
+      return;
+    }
+
+    if (response.data) {
+      await hydrateEmployeeData(response.data as unknown as EmployeeInsertType);
+    } else {
+      await loadEmployeeData();
+    }
+
+    toast.success(t("t-toast-message-rehire-contract-success"));
+    rehireDialog.value = false;
+    rehireTracksRefreshKey.value += 1;
+  } catch (error) {
+    rehireFieldErrors.value = getApiValidationErrors(error);
+    getApiErrorMessages(error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+      toast.error(message);
+    });
+  } finally {
+    rehireLoading.value = false;
+  }
+};
+
 
 // E o watcher deve ficar assim:
 watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber);
+      onStepChange(tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
+
+watch(accessibleEmployeeFormTabs, ensureEmployeeStepAllowed, { immediate: true });
 
 /**
  * Salva os dados do employee
@@ -320,7 +435,7 @@ const saveEmployee = async (isFinalStep: boolean = false) => {
     // Redirecionamento ou próxima etapa
     if (isFinalStep) {
       await employeeStore.fetchEmployees();
-      router.push('/employee/list');
+      goBackToList();
     } else {
       step.value++;
     }
@@ -352,7 +467,7 @@ onBeforeUnmount(() => {
 
   <ButtonNav v-model="step" class="employee-form-tabs" />
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 1 && isEmployeeStepAllowed(1)" class="employee-form-section">
       <!-- Indicador de loading -->
       <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4"></v-progress-linear>
 
@@ -368,31 +483,40 @@ onBeforeUnmount(() => {
 
   </FormCard>
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 2 && isEmployeeStepAllowed(2)" class="employee-form-section">
       <Step2 @onStepChange="onStepChange" v-model="employeeData" @save="saveEmployee(true)"
-        :loading="loading" :show-actions="false" :employee-id="employeeId" @terminate-contract="openTerminateDialog" />
+        :loading="loading" :show-actions="false" :employee-id="employeeId"
+        :rehire-tracks-refresh-key="rehireTracksRefreshKey"
+        @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
 
   </FormCard>
 
-  <FormCard v-if="step === 3" class="employee-form-section">
+  <FormCard v-if="step === 3 && isEmployeeStepAllowed(3)" class="employee-form-section">
       <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
         :allow-edit="false"
-        :previous-step="1" previous-label-key="t-general-information" :next-step="4" />
+        :previous-step="previousEmployeeStep" previous-label-key="t-back" :next-step="nextEmployeeStep" />
 
   </FormCard>
 
-  <FormCard v-if="step === 4" class="employee-form-section">
-      <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 4 && isEmployeeStepAllowed(4)" class="employee-form-section">
+      <Step4
+        @onStepChange="onStepChange"
+        :loading="loading"
+        :employee-id="employeeId"
+        :previous-step="previousEmployeeStep"
+        :next-step="nextEmployeeStep"
+      />
 
   </FormCard>
 
-  <FormCard v-if="step === 5" class="employee-form-section">
-      <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
-
-  </FormCard>
-
-  <FormCard v-if="step === 6" class="employee-form-section">
-      <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 5 && isEmployeeStepAllowed(5)" class="employee-form-section">
+      <Step5
+        @onStepChange="onStepChange"
+        :loading="loading"
+        :employee-id="employeeId"
+        :previous-step="previousEmployeeStep"
+        :next-step="nextEmployeeStep"
+      />
 
   </FormCard>
 
@@ -402,6 +526,15 @@ onBeforeUnmount(() => {
     :server-errors="terminateFieldErrors"
     @onConfirm="terminateEmployeeContract"
     @clear-server-error="clearTerminateFieldError"
+  />
+
+  <RehireEmployeeContractDialog
+    v-model="rehireDialog"
+    :loading="rehireLoading"
+    :server-errors="rehireFieldErrors"
+    :employee-data="employeeData"
+    @onConfirm="rehireEmployeeContract"
+    @clear-server-error="clearRehireFieldError"
   />
 </template>
 

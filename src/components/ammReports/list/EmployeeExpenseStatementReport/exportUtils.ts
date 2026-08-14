@@ -254,7 +254,7 @@ export class EmployeeExpenseStatementReportExporter {
       pdf.setFontSize(7.5);
     };
 
-    const maxBodyY = pageHeight - 22;
+    const maxBodyY = pageHeight - 40;
     drawTableHeader(currentY);
     currentY += headerHeight;
 

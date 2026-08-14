@@ -104,6 +104,7 @@ const healthPlanFormData = ref<HealthPlanInsertType>({
   maxNumberOfDependents: 0,
   childrenInUniversityMaxAge: 0,
   childrenMaxAge: 0,
+  waitingPeriodDays: 0,
   healthPlanLimit: "",
   fixedAmount: 0,
   salaryComponent: "",
@@ -147,6 +148,7 @@ onMounted(async () => {
           maxNumberOfDependents: healthPlan.maxNumberOfDependents,
           childrenInUniversityMaxAge: healthPlan.childrenInUniversityMaxAge,
           childrenMaxAge: healthPlan.childrenMaxAge,
+          waitingPeriodDays: healthPlan.waitingPeriodDays ?? 0,
           healthPlanLimit: healthPlan.healthPlanLimit,
           fixedAmount: healthPlan.fixedAmount,
           salaryComponent: healthPlan.salaryComponent,
@@ -166,8 +168,8 @@ onMounted(async () => {
         search: ""
       });
     } catch (e) {
-      toast.error(t('t-message-load-error'));
       console.error("Erro ao carregar dados dos procedimentos hospitalares:", e);
+      getApiErrorMessages(e, t('t-message-load-error')).forEach((message) => toast.error(message));
     }
   }
 });
@@ -232,7 +234,7 @@ const onConsultHealthPlan = async () => {
     healthPlanPreviewDialog.value = true;
   } catch (error) {
     console.error("Erro ao consultar plano:", error);
-    toast.error(t("t-message-load-error"));
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanConsultLoading.value = false;
   }
@@ -260,7 +262,7 @@ const onExportHealthPlanPdf = async () => {
     });
   } catch (error) {
     console.error("Erro ao exportar plano de saude:", error);
-    toast.error(t("t-message-save-error"));
+    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     healthPlanPdfExporting.value = false;
   }
@@ -418,15 +420,23 @@ const getSalaryComponentLabel = (value: string | undefined) => {
         </v-row>
         <v-row class="">
           <!-- Health Plan Limit - Expande para 12 colunas quando for ANUAL_SALARY -->
-          <v-col :cols="12" :lg="healthPlanFormData.healthPlanLimit === 'ANUAL_SALARY' ? 12 : 6">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-health-plan-limit') }}<i class="ph-asterisk ph-xs text-danger" />
             </div>
             <div>{{ getHealthPlanLimitLabel(healthPlanFormData.healthPlanLimit) || '-' }}</div>
           </v-col>
+          <v-col cols="12" lg="6">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-waiting-period-days') }}
+            </div>
+            <div>{{ healthPlanFormData.waitingPeriodDays ?? '-' }}</div>
+          </v-col>
+        </v-row>
 
+        <v-row class="" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
           <!-- Campo Fixed Amount - aparece apenas quando healthPlanLimit for FIXED_AMOUNT -->
-          <v-col cols="12" lg="6" v-if="healthPlanFormData.healthPlanLimit === 'FIXED_AMOUNT'">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-fixed-amount') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>

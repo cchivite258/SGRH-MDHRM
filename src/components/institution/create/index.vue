@@ -18,11 +18,14 @@ import Step7 from "@/components/institution/create/TabEmployees.vue";
 
 import { InstitutionInsertType } from "../types";
 import { institutionService } from "@/app/http/httpServiceProvider";
+import { CONTRACT_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { canAny } = usePermissions();
 
 const props = defineProps({
   cardTitle: {
@@ -40,7 +43,19 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (institutionId.value ? t("t-edit-institution") : t("t-add-institution")));
 const canUseHeaderSave = computed(() => step.value === 1);
-const headerSaveLabel = computed(() => t("t-save-and-proceed"));
+const headerSaveLabel = computed(() => institutionId.value ? t("t-save-and-proceed") : t("t-save"));
+const accessibleContractFormTabs = computed(() => getAllowedFormTabs(CONTRACT_FORM_TABS, canAny));
+const contractFormSteps = computed(() => accessibleContractFormTabs.value.map((tab) => tab.value));
+const firstAllowedContractStep = computed(() => contractFormSteps.value[0] || 1);
+const currentContractStepIndex = computed(() => contractFormSteps.value.indexOf(step.value));
+const previousContractStep = computed(() => contractFormSteps.value[currentContractStepIndex.value - 1] || null);
+const nextContractStep = computed(() => contractFormSteps.value[currentContractStepIndex.value + 1] || null);
+const isContractStepAllowed = (value: number) => contractFormSteps.value.includes(value);
+const ensureContractStepAllowed = () => {
+  if (!isContractStepAllowed(step.value)) {
+    step.value = firstAllowedContractStep.value;
+  }
+};
 
 const goBackToList = () => {
   router.push("/institution/list");
@@ -52,6 +67,8 @@ const onHeaderSave = async () => {
 };
 
 const institutionData = reactive<InstitutionInsertType>({
+  code: null,
+  erpCode: null,
   name: "",
   description: null,
   companyDetailsId: undefined,
@@ -95,6 +112,8 @@ const loadInstitutionData = async (id: string) => {
     const data = response.data;
 
     institutionData.name = data.name || data.companyDetails?.name || "";
+    institutionData.code = data.code || null;
+    institutionData.erpCode = data.erpCode || null;
     institutionData.description = data.description || data.companyDetails?.description || null;
     institutionData.companyDetailsId = data.companyDetailsId || data.companyDetails?.id;
     institutionData.responsibleId = data.responsibleId || data.responsible?.id || undefined;
@@ -107,21 +126,36 @@ const loadInstitutionData = async (id: string) => {
     institutionData.enabled = data.enabled;
     basicDataValidated.value = true;
   } catch (error) {
-    toast.error(t("t-error-loading-institution"));
+    getApiErrorMessages(error, t("t-error-loading-institution")).forEach((message) => toast.error(message));
   } finally {
     loading.value = false;
   }
 };
 
 const onStepChange = (value: number) => {
+  if (!isContractStepAllowed(value)) return;
   if (!institutionId.value && value > 1 && !basicDataValidated.value) return;
   step.value = value;
+};
+
+const goToNextAvailableStep = () => {
+  const currentStepIndex = contractFormSteps.value.indexOf(step.value);
+  if (currentStepIndex === -1) {
+    step.value = firstAllowedContractStep.value;
+    return;
+  }
+
+  const nextStep = contractFormSteps.value[currentStepIndex + 1];
+  if (nextStep) {
+    step.value = nextStep;
+  }
 };
 
 const saveInstitution = async () => {
   loading.value = true;
   errorMsg.value = "";
   apiFieldErrors.value = {};
+  const isNewInstitution = !institutionId.value;
 
   try {
     let response: any;
@@ -137,13 +171,22 @@ const saveInstitution = async () => {
         return;
       }
 
-      institutionId.value = response?.data?.id;
+      institutionId.value = response?.data?.id !== undefined && response?.data?.id !== null
+        ? String(response.data.id)
+        : undefined;
+
+      if (institutionId.value) {
+        const createdContract = await institutionService.getInstitutionById(institutionId.value);
+        institutionData.code = createdContract.data.code || null;
+        institutionData.erpCode = createdContract.data.erpCode || institutionData.erpCode || null;
+      }
+
       basicDataValidated.value = true;
       toast.success(t("t-institution-created-success"));
     }
 
-    if (step.value === 1) {
-      step.value = 2;
+    if (step.value === 1 && !isNewInstitution) {
+      goToNextAvailableStep();
     }
   } catch (error) {
     const messages = getApiErrorMessages(error, t("t-message-save-error"));
@@ -161,11 +204,13 @@ watch(
     if (!newTab) return;
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber) && tabNumber >= 1 && tabNumber <= 7) {
-      step.value = tabNumber;
+      onStepChange(tabNumber);
     }
   },
   { immediate: true }
 );
+
+watch(accessibleContractFormTabs, ensureContractStepAllowed, { immediate: true });
 
 onMounted(async () => {
   institutionId.value = getRouteInstitutionId();
@@ -189,7 +234,7 @@ onMounted(async () => {
   <ButtonNav
     v-model="step"
     class="institution-form-tabs"
-    :institution-id="institutionId as string"
+    :institution-id="institutionId || ''"
     :basic-data-validated="basicDataValidated"
   />
 
@@ -209,10 +254,11 @@ onMounted(async () => {
     />
   </transition>
 
-  <FormCard v-if="step === 1" class="institution-form-section">
+  <FormCard v-if="step === 1 && isContractStepAllowed(1)" class="institution-form-section">
     <Step1
       ref="step1Ref"
       v-model="institutionData"
+      :institution-id="institutionId || ''"
       @save="saveInstitution"
       :loading="loading"
       :server-errors="apiFieldErrors"
@@ -221,28 +267,58 @@ onMounted(async () => {
     />
   </FormCard>
 
-  <FormCard v-if="step === 2" class="institution-form-section">
-    <Step2 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 2 && isContractStepAllowed(2)" class="institution-form-section">
+    <Step2
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 3" class="institution-form-section">
-    <Step3 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 3 && isContractStepAllowed(3)" class="institution-form-section">
+    <Step3
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 4" class="institution-form-section">
-    <Step4 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 4 && isContractStepAllowed(4)" class="institution-form-section">
+    <Step4
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 5" class="institution-form-section">
-    <Step5 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 5 && isContractStepAllowed(5)" class="institution-form-section">
+    <Step5
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 6" class="institution-form-section">
-    <Step6 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 6 && isContractStepAllowed(6)" class="institution-form-section">
+    <Step6
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 7" class="institution-form-section">
-    <Step7 @onStepChange="onStepChange" :institution-id="institutionId" />
+  <FormCard v-if="step === 7 && isContractStepAllowed(7)" class="institution-form-section">
+    <Step7
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
   </FormCard>
 
   <div v-if="step === 1" class="institution-form-footer-actions">

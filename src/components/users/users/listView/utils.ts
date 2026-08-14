@@ -33,6 +33,11 @@ export const Options: OptionType[] = [
     value: "edit",
   },
   {
+    title: "manage-roles",
+    icon: "ph-user-gear",
+    value: "manage-roles",
+  },
+  {
     title: "delete",
     icon: "ph-trash",
     value: "delete",
@@ -48,4 +53,3 @@ export const Options: OptionType[] = [
     value: "enable",
   },
 ];
-

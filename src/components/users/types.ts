@@ -43,14 +43,12 @@ export type OptionType = {
 export type changePasswordType = {
   newPassword: string;
   confirmPassword: string;
-  passwordsMatching: boolean;
 }
 
 export type changePasswordListingType = {
   id: number;
   newPassword: string;
   confirmPassword: string;
-  passwordsMatching: boolean;
 }
 
 

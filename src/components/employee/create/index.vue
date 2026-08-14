@@ -19,12 +19,12 @@ import ButtonNav from "@/components/employee/create/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
 import TerminateEmployeeContractDialog from "@/app/common/components/TerminateEmployeeContractDialog.vue";
+import RehireEmployeeContractDialog from "@/app/common/components/RehireEmployeeContractDialog.vue";
 import Step1 from "@/components/employee/create/TabGeneralInfo.vue";
 import Step2 from "@/components/employee/create/TabInstitution&Classification.vue";
 import Step3 from "@/components/employee/create/TabSalaryReview.vue";
 import Step4 from "@/components/employee/create/TabDependents.vue";
 import Step5 from "@/components/employee/create/TabHealthPlan.vue";
-import Step6 from "@/components/employee/create/TabExpensesperProcedure.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -32,10 +32,13 @@ import { useProvinceStore } from '@/store/baseTables/countryStore';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
 import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { EMPLOYEE_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 // Services & Types
 import { employeeService } from "@/app/http/httpServiceProvider";
-import { EmployeeInsertType } from "../types";
+import type { EmployeeInsertType, EmployeeRehireType } from "../types";
 
 // Inicialização de stores
 const provinceStore = useProvinceStore();
@@ -57,6 +60,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const employeeStore = useEmployeeStore();
+const { can, canAny, useFieldAccess } = usePermissions();
 
 const isEmployeeEditRoute = () => route.name === "EditEmployee";
 const isEmployeeCreateRoute = () => route.name === "CreateEmployee";
@@ -70,6 +74,20 @@ const getRouteEmployeeId = (): string | null => {
   return null;
 };
 
+const getRouteQueryString = (value: unknown): string | null => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const firstString = value.find((item): item is string => typeof item === "string");
+    return firstString || null;
+  }
+  return null;
+};
+
+const getReturnToRoute = (): string | null => {
+  const returnTo = getRouteQueryString(route.query.returnTo);
+  return returnTo?.startsWith("/") ? returnTo : null;
+};
+
 const resolveRelationId = (value: unknown): string | number | undefined => {
   if (value == null) return undefined;
   if (typeof value === "string" || typeof value === "number") return value;
@@ -81,8 +99,11 @@ const resolveRelationId = (value: unknown): string | number | undefined => {
 
 // Refs
 const step = ref(1);
-const step1Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
-const step2Ref = ref<{ validateForm: () => Promise<boolean> } | null>(null);
+const step1Ref = ref<{
+  submitForm: () => Promise<void>;
+  validateForm: (options?: { showToast?: boolean }) => Promise<boolean>;
+} | null>(null);
+const step2Ref = ref<{ validateForm: (options?: { showToast?: boolean }) => Promise<boolean> } | null>(null);
 const employeeId = ref<string | null>(getRouteEmployeeId());
 const routeInstitutionId = ref<string | null>(route.query.institutionId as string || null);
 const loading = ref(false);
@@ -91,13 +112,58 @@ const apiFieldErrors = ref<Record<string, string[]>>({});
 const terminateDialog = ref(false);
 const terminateLoading = ref(false);
 const terminateFieldErrors = ref<Record<string, string[]>>({});
+const rehireDialog = ref(false);
+const rehireLoading = ref(false);
+const rehireFieldErrors = ref<Record<string, string[]>>({});
+const rehireTracksRefreshKey = ref(0);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const basicDataValidated = ref(false);
 const headerTitle = computed(() => props.cardTitle || (isEmployeeEditRoute() ? t('t-edit-employee') : t('t-add-employee')));
-const canUseHeaderSave = computed(() => step.value === 1);
-const headerSaveLabel = computed(() => t('t-save-and-proceed'));
-const employeeFormSteps = [1, 3, 4, 5, 6];
+const canUseHeaderSave = computed(() => step.value === 1 || step.value === 2);
+
+// Em criação exigimos permissão de criar; em edição exigimos permissão de actualizar.
+const canSaveEmployee = computed(() => (
+  isEmployeeCreateRoute()
+    ? can(PERMISSIONS.EMPLOYEE.CREATE)
+    : can(PERMISSIONS.EMPLOYEE.UPDATE)
+));
+const isFormReadonly = computed(() => !canSaveEmployee.value);
+const headerSaveLabel = computed(() => step.value === 1 ? t('t-proceed') : t('t-save-and-proceed'));
+const accessibleEmployeeFormTabs = computed(() => getAllowedFormTabs(EMPLOYEE_FORM_TABS, canAny));
+const employeeFormSteps = computed(() => accessibleEmployeeFormTabs.value.map((tab) => tab.value));
+const firstAllowedEmployeeStep = computed(() => employeeFormSteps.value[0] || 1);
+const currentEmployeeStepIndex = computed(() => employeeFormSteps.value.indexOf(step.value));
+const previousEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value - 1] || null);
+const nextEmployeeStep = computed(() => employeeFormSteps.value[currentEmployeeStepIndex.value + 1] || null);
+const isEmployeeStepAllowed = (value: number) => employeeFormSteps.value.includes(value);
+const ensureEmployeeStepAllowed = () => {
+  if (!isEmployeeStepAllowed(step.value)) {
+    step.value = firstAllowedEmployeeStep.value;
+  }
+};
+
+// Cada grupo de campos pode ter uma permissão de consulta e outra de edição.
+// Assim o ecrã consegue esconder, mostrar só para leitura ou permitir alteração.
+const identificationAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_IDENTIFICATION_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_IDENTIFICATION_UPDATE
+);
+const contactAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_CONTACT_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_CONTACT_UPDATE
+);
+const institutionAccess = useFieldAccess(
+  PERMISSIONS.EMPLOYEE.FORM_INSTITUTION_VIEW,
+  PERMISSIONS.EMPLOYEE.FORM_INSTITUTION_UPDATE
+);
+const hideIdentificationFields = computed(() => identificationAccess.hidden.value);
+const identificationReadonly = computed(() => identificationAccess.readonly.value || isFormReadonly.value);
+const contactReadonly = computed(() => contactAccess.readonly.value || isFormReadonly.value);
+const institutionReadonly = computed(() => institutionAccess.readonly.value || isFormReadonly.value);
+const canViewSalaryReview = computed(() =>
+  canAny([PERMISSIONS.EMPLOYEE.SALARY_REVIEW_VIEW, PERMISSIONS.EMPLOYEE.SALARY_REVIEW_UPDATE])
+);
 
 const getDefaultEmployeeData = (): EmployeeInsertType => ({
   // Dados da primeira tab
@@ -285,6 +351,8 @@ watch(
  */
 
 const onStepChange = (value: number) => {
+  if (!isEmployeeStepAllowed(value)) return;
+
   // Permite sempre voltar para tabs anteriores
   if (value < step.value) {
     step.value = value;
@@ -311,9 +379,18 @@ const onSalaryUpdated = (value: number) => {
   employeeData.baseSalary = value;
 };
 
+const proceedFromGeneralInfo = async () => {
+  await step1Ref.value?.submitForm();
+};
+
 const openTerminateDialog = () => {
   terminateFieldErrors.value = {};
   terminateDialog.value = true;
+};
+
+const openRehireDialog = () => {
+  rehireFieldErrors.value = {};
+  rehireDialog.value = true;
 };
 
 const clearTerminateFieldError = (field: string) => {
@@ -323,14 +400,21 @@ const clearTerminateFieldError = (field: string) => {
   terminateFieldErrors.value = next;
 };
 
-const terminateEmployeeContract = async (terminationDate: string) => {
+const clearRehireFieldError = (field: string) => {
+  if (!rehireFieldErrors.value[field]) return;
+  const next = { ...rehireFieldErrors.value };
+  delete next[field];
+  rehireFieldErrors.value = next;
+};
+
+const terminateEmployeeContract = async (payload: { terminationDate: string; reasonId: string | number }) => {
   if (!employeeId.value) return;
 
   terminateLoading.value = true;
   terminateFieldErrors.value = {};
 
   try {
-    const response = await employeeService.terminateEmployee(employeeId.value, { terminationDate });
+    const response = await employeeService.terminateEmployee(employeeId.value, payload);
 
     if (response.status === "error") {
       terminateFieldErrors.value = getApiValidationErrors(response.error);
@@ -340,7 +424,7 @@ const terminateEmployeeContract = async (terminationDate: string) => {
       return;
     }
 
-    employeeData.terminationDate = response.data?.terminationDate || terminationDate;
+    employeeData.terminationDate = response.data?.terminationDate || payload.terminationDate;
     employeeData.enabled = response.data?.enabled ?? false;
     toast.success(t("t-toast-message-terminate-contract-success"));
     terminateDialog.value = false;
@@ -354,26 +438,69 @@ const terminateEmployeeContract = async (terminationDate: string) => {
   }
 };
 
+const rehireEmployeeContract = async (payload: EmployeeRehireType) => {
+  if (!employeeId.value) return;
+
+  rehireLoading.value = true;
+  rehireFieldErrors.value = {};
+
+  try {
+    const response = await employeeService.rehireEmployee(employeeId.value, payload);
+
+    if (response.status === "error") {
+      rehireFieldErrors.value = getApiValidationErrors(response.error);
+      getApiErrorMessages(response.error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+        toast.error(message);
+      });
+      return;
+    }
+
+    toast.success(t("t-toast-message-rehire-contract-success"));
+    rehireDialog.value = false;
+    await loadEmployeeData(employeeId.value);
+    rehireTracksRefreshKey.value += 1;
+  } catch (error) {
+    rehireFieldErrors.value = getApiValidationErrors(error);
+    getApiErrorMessages(error, t("t-toast-message-rehire-contract-error")).forEach((message) => {
+      toast.error(message);
+    });
+  } finally {
+    rehireLoading.value = false;
+  }
+};
+
 const goBackToList = () => {
-  router.push('/employee/list');
+  router.push(getReturnToRoute() || '/employee/list');
 };
 
 const goToNextAvailableStep = () => {
-  const currentStepIndex = employeeFormSteps.indexOf(step.value);
+  const currentStepIndex = employeeFormSteps.value.indexOf(step.value);
   if (currentStepIndex === -1) return;
 
-  const nextStep = employeeFormSteps[currentStepIndex + 1];
+  const nextStep = employeeFormSteps.value[currentStepIndex + 1];
   if (nextStep) {
     step.value = nextStep;
   }
 };
 
 const onHeaderSave = async () => {
-  if (step.value === 1) {
-    const isGeneralInfoValid = await step1Ref.value?.validateForm();
-    const isInstitutionValid = await step2Ref.value?.validateForm();
+  if (!canSaveEmployee.value) {
+    toast.warning("Sem permissão para gravar dados do colaborador.");
+    return;
+  }
 
-    if (!isGeneralInfoValid || !isInstitutionValid) return;
+  if (step.value === 1) {
+    await proceedFromGeneralInfo();
+    return;
+  }
+
+  if (step.value === 2) {
+    const isInstitutionValid = await step2Ref.value?.validateForm({ showToast: false });
+
+    if (!isInstitutionValid) {
+      toast.error(t('t-validation-error'));
+      return;
+    }
 
     await saveEmployee({ ...employeeData }, false);
   }
@@ -389,13 +516,15 @@ watch(
   { deep: true }
 );
 
+watch(accessibleEmployeeFormTabs, ensureEmployeeStepAllowed, { immediate: true });
+
 
 // E o watcher deve ficar assim:
 watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 2 ? 1 : tabNumber);
+      onStepChange(tabNumber === 6 ? 5 : tabNumber);
     }
   }
 }, { immediate: true });
@@ -406,10 +535,16 @@ watch(() => route.query.tab, (newTab) => {
  * @param isFinalStep - Indica se é o passo final (salvar e sair)
  */
 const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = false) => {
+  if (!canSaveEmployee.value) {
+    toast.warning("Sem permissão para gravar dados do colaborador.");
+    return;
+  }
+
   try {
     loading.value = true;
     errorMsg.value = "";
     apiFieldErrors.value = {};
+    const isEdit = !!employeeId.value;
     console.log('EmployeeInsertType:', payload);
 
     // Usa os dados recebidos do payload
@@ -439,9 +574,13 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     });
 
     let response;
-    if (employeeId.value) {
+    if (isEdit) {
       // Modo edição
-      response = await employeeService.updateEmployee(employeeId.value, normalizedPayload);
+      const currentEmployeeId = employeeId.value;
+      if (!currentEmployeeId) {
+        throw new Error(t('t-error-saving-employee'));
+      }
+      response = await employeeService.updateEmployee(currentEmployeeId, normalizedPayload);
     } else {
       // Modo criação
       response = await employeeService.createEmployee(normalizedPayload);
@@ -451,7 +590,8 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
         employeeStore.setCurrentEmployeeId(response.data.id);
         basicDataValidated.value = true;
       } else {
-        throw new Error(response?.error?.message || t('t-error-creating-employee'));
+        handleApiError(response?.error || new Error(t('t-error-creating-employee')));
+        return;
       }
     }
 
@@ -464,14 +604,14 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
 
 
     // Feedback de sucesso
-    toast.success(employeeId.value
+    toast.success(isEdit
       ? t('t-employee-updated-success')
       : t('t-employee-created-success'));
 
     // Redirecionamento ou próxima etapa
     if (isFinalStep) {
       await employeeStore.fetchEmployees();
-      router.push('/employee/list');
+      goBackToList();
     } else {
       goToNextAvailableStep();
     }
@@ -497,14 +637,16 @@ onBeforeUnmount(() => {
     :title="headerTitle"
     subtitle="Crie e organize os dados do colaborador em blocos claros."
     :save-label="headerSaveLabel"
+    save-icon="ph-arrow-right"
+    save-icon-position="end"
     :loading="loading"
-    :show-save="canUseHeaderSave"
-    :save-disabled="!canUseHeaderSave"
+    :show-save="canUseHeaderSave && canSaveEmployee"
+    :save-disabled="!canUseHeaderSave || !canSaveEmployee"
     @back="goBackToList"
     @save="onHeaderSave"
   />
 
-  <ButtonNav v-model="step" class="employee-form-tabs" :employee-id="employeeId as string"
+  <ButtonNav v-model="step" class="employee-form-tabs" :employee-id="employeeId || ''"
     :basic-data-validated="basicDataValidated" />
 
   <!-- Barra de progresso para carregamento -->
@@ -517,58 +659,73 @@ onBeforeUnmount(() => {
   </transition>
 
   <!-- Abas do formulário -->
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 1 && isEmployeeStepAllowed(1)" class="employee-form-section">
     <Step1 ref="step1Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
-      :show-actions="false" @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
+      :show-actions="false" :readonly="isFormReadonly" :hide-identification-fields="hideIdentificationFields"
+      :identification-readonly="identificationReadonly" :contact-readonly="contactReadonly"
+      @clear-server-error="clearApiFieldError" @validated="onBasicDataValidated" />
   </FormCard>
 
-  <FormCard v-if="step === 1" class="employee-form-section">
+  <FormCard v-if="step === 2 && isEmployeeStepAllowed(2)" class="employee-form-section">
     <Step2 ref="step2Ref" @onStepChange="onStepChange" v-model="employeeData"
       @save="(payload) => saveEmployee(payload, false)" :loading="loading" :server-errors="apiFieldErrors"
       :show-actions="false" @clear-server-error="clearApiFieldError" :is-edit-mode="isEmployeeEditRoute()"
-      :employee-id="employeeId" @terminate-contract="openTerminateDialog" />
+      :employee-id="employeeId" :rehire-tracks-refresh-key="rehireTracksRefreshKey"
+      :readonly="institutionReadonly" :allow-terminate-contract="can(PERMISSIONS.EMPLOYEE.TERMINATE_CONTRACT)"
+      :allow-rehire-contract="can(PERMISSIONS.EMPLOYEE.REHIRE_CONTRACT)"
+      @terminate-contract="openTerminateDialog" @rehire-contract="openRehireDialog" />
   </FormCard>
 
-  <FormCard v-if="step === 3" class="employee-form-section">
+  <FormCard v-if="step === 3 && isEmployeeStepAllowed(3) && canViewSalaryReview" class="employee-form-section">
     <Step3 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId"
-      :previous-step="1" previous-label-key="t-back-to-general-info" :next-step="4" @salaryUpdated="onSalaryUpdated" />
+      :previous-step="previousEmployeeStep" previous-label-key="t-back" :next-step="nextEmployeeStep"
+      :allow-edit="can(PERMISSIONS.EMPLOYEE.SALARY_REVIEW_UPDATE)" @salaryUpdated="onSalaryUpdated" />
   </FormCard>
 
-  <FormCard v-if="step === 4" class="employee-form-section">
-    <Step4 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 4 && isEmployeeStepAllowed(4)" class="employee-form-section">
+    <Step4
+      @onStepChange="onStepChange"
+      :loading="loading"
+      :employee-id="employeeId"
+      :previous-step="previousEmployeeStep"
+      :next-step="nextEmployeeStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 5" class="employee-form-section">
-    <Step5 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
+  <FormCard v-if="step === 5 && isEmployeeStepAllowed(5)" class="employee-form-section">
+    <Step5
+      @onStepChange="onStepChange"
+      :loading="loading"
+      :employee-id="employeeId"
+      :previous-step="previousEmployeeStep"
+      :next-step="nextEmployeeStep"
+    />
   </FormCard>
 
-  <FormCard v-if="step === 6" class="employee-form-section">
-    <Step6 @onStepChange="onStepChange" :loading="loading" :employee-id="employeeId" />
-  </FormCard>
-
-  <div v-if="step === 1" class="employee-form-footer-actions">
+  <div v-if="step === 1 || step === 2" class="employee-form-footer-actions">
     <v-btn
       class="employee-form-footer-actions__back"
       color="secondary"
       variant="outlined"
       :disabled="loading"
-      @click="goBackToList"
+      @click="step === 1 ? goBackToList() : onStepChange(1)"
     >
       <i class="ph-arrow-left me-2" />
-      {{ $t('t-back-to-list') }}
+      {{ step === 1 ? $t('t-back-to-list') : $t('t-back-to-general-info') }}
     </v-btn>
 
     <v-btn
       class="employee-form-footer-actions__save"
+      v-if="canSaveEmployee"
       color="secondary"
       variant="elevated"
       :loading="loading"
-      :disabled="!canUseHeaderSave"
-      @click="onHeaderSave"
+      :disabled="loading"
+      @click="step === 1 ? proceedFromGeneralInfo() : onHeaderSave()"
     >
-      <i class="ph-floppy-disk me-2" />
-      {{ headerSaveLabel }}
+      {{ step === 1 ? $t('t-proceed') : headerSaveLabel }}
+      <i class="ph-arrow-right ms-2" />
     </v-btn>
   </div>
 
@@ -578,6 +735,15 @@ onBeforeUnmount(() => {
     :server-errors="terminateFieldErrors"
     @onConfirm="terminateEmployeeContract"
     @clear-server-error="clearTerminateFieldError"
+  />
+
+  <RehireEmployeeContractDialog
+    v-model="rehireDialog"
+    :loading="rehireLoading"
+    :server-errors="rehireFieldErrors"
+    :employee-data="employeeData"
+    @onConfirm="rehireEmployeeContract"
+    @clear-server-error="clearRehireFieldError"
   />
 </template>
 

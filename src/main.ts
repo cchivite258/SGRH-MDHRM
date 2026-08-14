@@ -28,15 +28,10 @@ import Breadcrumb from "@/app/common/components/Breadcrumb.vue";
 import TextField from "@/app/common/validationComponents/TextField.vue";
 import CurrencyField from "@/app/common/components/CurrencyField.vue";
 import TextArea from "@/app/common/validationComponents/TextArea.vue";
+import Can from "@/components/Can.vue";
 
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
-
-import { createPinia } from 'pinia'
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-
-const pinia = createPinia();
-pinia.use(piniaPluginPersistedstate);
 
 const app: App = createApp(AppMain);
 registerPlugins(app);
@@ -62,7 +57,7 @@ app.component("Breadcrumb", Breadcrumb);
 app.component("TextField", TextField);
 app.component("CurrencyField", CurrencyField);
 app.component("TextArea", TextArea);
+app.component("Can", Can);
 app.directive("maska", vMaska);
 app.component("MazPhoneNumberInput", MazPhoneNumberInput);
-app.use(pinia);
 app.mount("#app");

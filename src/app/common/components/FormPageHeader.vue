@@ -22,6 +22,14 @@ defineProps({
     type: String,
     default: "t-save"
   },
+  saveIcon: {
+    type: String,
+    default: "ph-floppy-disk"
+  },
+  saveIconPosition: {
+    type: String,
+    default: "start"
+  },
   loading: {
     type: Boolean,
     default: false
@@ -80,8 +88,9 @@ defineEmits<{
           :disabled="saveDisabled"
           @click="$emit('save')"
         >
-          <i class="ph-floppy-disk me-2" />
+          <i v-if="saveIcon && saveIconPosition === 'start'" :class="`${saveIcon} me-2`" />
           {{ saveLabel.startsWith('t-') ? $t(saveLabel) : saveLabel }}
+          <i v-if="saveIcon && saveIconPosition === 'end'" :class="`${saveIcon} ms-2`" />
         </v-btn>
       </slot>
     </div>

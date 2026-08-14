@@ -20,6 +20,7 @@ type HospitalProcedureUpdatePayload = {
   limitTypeDefinition?: string;
   fixedAmount?: number;
   percentage?: number;
+  waitingPeriodDays?: number;
   groupFixedAmount?: number;
   groupPercentage?: number;
   hospitalProcedureGroupLimit?: string;
@@ -91,7 +92,7 @@ export default class HospitalProcedureService extends HttpService {
       const queryString = queryParams.join('&');
       const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
-      console.log('URL da requisiÃ§Ã£o:', url);
+      console.log('URL:', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -131,7 +132,7 @@ export default class HospitalProcedureService extends HttpService {
       const queryString = queryParams.join('&');
       const url = `${CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT}?${queryString}`;
 
-      console.log('URL da requisiÃ§Ã£o:', url);
+      console.log('URL :', url);
       const response = await this.get<ApiResponse<HospitalProcedureListingType[]>>(url);
 
       return {
@@ -140,7 +141,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("âŒ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -226,7 +227,7 @@ export default class HospitalProcedureService extends HttpService {
       };
 
     } catch (error) {
-      console.error("Ã¢ÂÅ’ Erro ao buscar procedimentos hospitalares:", error);
+      console.error("Erro ao buscar procedimentos hospitalares:", error);
       throw error;
     }
   }
@@ -275,12 +276,21 @@ export default class HospitalProcedureService extends HttpService {
 
   async createHospitalProcedure(hospitalProcedureData: HospitalProcedureInsertType): Promise<ServiceResponse<HospitalProcedureListingType>> {
     try {
-      const payload = this.removeNullUndefinedAndEmptyFields({
+      const rawPayload = {
         ...hospitalProcedureData,
+        fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
+        percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        waitingPeriodDays: toOptionalNumber(hospitalProcedureData.waitingPeriodDays) ?? 0,
+        groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
+        groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
+        limitType: hospitalProcedureData.limitType || "NONE",
+        frequencyInterval: toOptionalNumber(hospitalProcedureData.frequencyInterval),
+        allowedFrequencyUse: toOptionalNumber(hospitalProcedureData.allowedFrequencyUse) ?? 0,
         contractHealthPlan: hospitalProcedureData.companyHealthPlan,
         companyHealthPlan: undefined,
         company: undefined
-      });
+      };
+      const payload = this.removeNullUndefinedAndEmptyFields(rawPayload);
       const response = await this.post<ApiResponse<HospitalProcedureListingType>>(CONTRACT_HOSPITAL_PROCEDURES_ENDPOINT, payload);
       return {
         status: 'success',
@@ -365,6 +375,7 @@ export default class HospitalProcedureService extends HttpService {
         limitTypeDefinition: hospitalProcedureData.limitTypeDefinition || undefined,
         fixedAmount: toOptionalNumber(hospitalProcedureData.fixedAmount),
         percentage: toOptionalNumber(hospitalProcedureData.percentage),
+        waitingPeriodDays: toOptionalNumber(hospitalProcedureData.waitingPeriodDays) ?? 0,
         groupFixedAmount: toOptionalNumber(hospitalProcedureData.groupFixedAmount),
         groupPercentage: toOptionalNumber(hospitalProcedureData.groupPercentage),
         hospitalProcedureGroupLimit: hospitalProcedureData.hospitalProcedureGroupLimit || undefined,

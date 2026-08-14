@@ -1,3 +1,10 @@
+export type InvoiceReasonSummary = {
+    id?: string | number;
+    name?: string;
+    type?: string;
+    description?: string | null;
+} | string;
+
 export type InvoiceListingType = {
     id: string ;
     invoiceNumber: string;
@@ -12,6 +19,15 @@ export type InvoiceListingType = {
         id: string | number;
         name: string;
         description?: string;
+    };
+    coveragePeriod?: {
+        id?: string | number;
+        name?: string;
+        contract?: {
+            id: string | number;
+            name: string;
+            description?: string;
+        };
     };
     invoiceStatus: string;
     employee: {
@@ -51,6 +67,9 @@ export type InvoiceListingType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     flag?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
@@ -76,6 +95,15 @@ export type InvoiceResponseType = {
         id: string | number;
         name: string;
         description?: string;
+    };
+    coveragePeriod?: {
+        id?: string | number;
+        name?: string;
+        contract?: {
+            id: string | number;
+            name: string;
+            description?: string;
+        };
     };
     invoiceStatus: string;
     employee: {
@@ -113,6 +141,9 @@ export type InvoiceResponseType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     areItemsFlagged?: boolean;
     enable: boolean;
     createdAt: Date ;
@@ -139,8 +170,12 @@ export type InvoiceInsertType = {
     authorizedBy?: string;
     invoiceReferenceNumber?: string;
     notes?: string;
+    reason?: InvoiceReasonSummary;
+    reasonId?: string;
+    reasonName?: string;
     coveragePeriod?: any;
     invoiceAttachment?: any;
+    invoiceStatus?: string;
     companyLabel?: string;
     serviceProviderLabel?: string;
     employeeLabel?: string;
@@ -153,7 +188,8 @@ export type InvoiceItemFlag =
     | "EXCEEDS_LIMIT"
     | "FREQUENCY_FLAGGED"
     | "INSUFFICIENT_FUNDS"
-    | "UNFLAGGED";
+    | "UNFLAGGED"
+    | "WAITING_PERIOD";
 
 export type InvoiceItemInsertType = {
     id?: string;

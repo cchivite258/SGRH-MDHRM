@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 import i18n from "@/plugins/i18n";
 import { formateDate } from "@/app/common/dateFormate";
 import type {
-  EmployeeFrequencyTrendDetailType,
+  EmployeeFrequencyTrendEmployeeType,
   EmployeeFrequencyTrendReportType
 } from "@/components/ammReports/types";
 
@@ -15,14 +15,12 @@ export interface ExportOptions {
 type NormalizedRow = {
   employeeName: string;
   employeeNumber: string;
-  procedureName: string;
-  totalUsages: number;
+  frequency: number;
 };
 
 export class EmployeeFrequencyTrendReportExporter {
   private static readonly BRAND_BLUE = "1F3A93";
   private static readonly SOFT_BLUE = "DCEBFF";
-  private static readonly SOFT_BLUE_LIGHT = "EEF4FF";
 
   private static tr(key: string, params?: Record<string, unknown>): string {
     const translated = (i18n as any).global.t(key, params);
@@ -39,34 +37,21 @@ export class EmployeeFrequencyTrendReportExporter {
     return new Intl.NumberFormat(this.localeCode()).format(Number(value || 0));
   }
 
-  private static employeeName(item: EmployeeFrequencyTrendDetailType): string {
+  private static employeeName(item: EmployeeFrequencyTrendEmployeeType): string {
     const employee = item.employee;
     return `${employee?.firstName || ""} ${employee?.middleName || ""} ${employee?.lastName || ""}`.replace(/\s+/g, " ").trim() || "-";
   }
 
   private static normalizeRows(report: EmployeeFrequencyTrendReportType): NormalizedRow[] {
-    return (report.details || []).flatMap((item) => {
-      const procedures = item.hospitalProcedures || [];
-      if (!procedures.length) {
-        return [{
-          employeeName: this.employeeName(item),
-          employeeNumber: item.employee?.employeeNumber || "-",
-          procedureName: "-",
-          totalUsages: 0
-        }];
-      }
-
-      return procedures.map((procedure) => ({
-        employeeName: this.employeeName(item),
-        employeeNumber: item.employee?.employeeNumber || "-",
-        procedureName: procedure.hospitalProcedureTypeName || this.tr("t-hpt-unknown-procedure"),
-        totalUsages: Number(procedure.totalUsages || 0)
-      }));
-    });
+    return (report.employees || []).map((item) => ({
+      employeeName: this.employeeName(item),
+      employeeNumber: item.employee?.employeeNumber || "-",
+      frequency: Number(item.frequency || 0)
+    })).sort((a, b) => b.frequency - a.frequency);
   }
 
-  private static totalUsages(rows: NormalizedRow[]): number {
-    return rows.reduce((sum, row) => sum + row.totalUsages, 0);
+  private static frequencySum(rows: NormalizedRow[]): number {
+    return rows.reduce((sum, row) => sum + row.frequency, 0);
   }
 
   private static generatedAt(): string {
@@ -92,14 +77,9 @@ export class EmployeeFrequencyTrendReportExporter {
     options?: ExportOptions
   ): Promise<void> {
     const rows = this.normalizeRows(report);
-    const total = this.totalUsages(rows);
-    const employeesCount = report.details?.length || 0;
-    const topEmployee = [...(report.details || [])]
-      .map((item) => ({
-        name: this.employeeName(item),
-        usages: (item.hospitalProcedures || []).reduce((sum, procedure) => sum + Number(procedure.totalUsages || 0), 0)
-      }))
-      .sort((a, b) => b.usages - a.usages)[0];
+    const frequencySum = this.frequencySum(rows);
+    const employeesCount = report.employees?.length || 0;
+    const topEmployee = rows[0];
 
     const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
     const margin = 10;
@@ -215,8 +195,8 @@ export class EmployeeFrequencyTrendReportExporter {
       this.tr("t-employees"),
       this.formatNumber(employeesCount),
       [
-        `${this.tr("t-eft-procedures-recorded")}: ${this.formatNumber(rows.length)}`,
-        `${this.tr("t-eft-average-frequency")}: ${this.formatNumber(employeesCount ? Math.round(total / employeesCount) : 0)}`
+        `${this.tr("t-employees")}: ${this.formatNumber(rows.length)}`,
+        `${this.tr("t-eft-average-frequency")}: ${this.formatNumber(employeesCount ? Math.round(frequencySum / employeesCount) : 0)}`
       ],
       { headlineColor: [46, 125, 50] }
     );
@@ -226,40 +206,40 @@ export class EmployeeFrequencyTrendReportExporter {
       cardWidth,
       cardHeight,
       [255, 235, 238],
-      this.tr("t-eft-total-frequency"),
-      this.formatNumber(total),
+      this.tr("t-eft-top-employee"),
+      topEmployee?.employeeName || "-",
       [
-        `${this.tr("t-eft-top-employee")}: ${topEmployee?.name || "-"}`,
-        `${this.tr("t-hpt-total-usages")}: ${this.formatNumber(topEmployee?.usages || 0)}`
+        `${this.tr("t-eft-frequency")}: ${this.formatNumber(topEmployee?.frequency || 0)}`
       ],
       { headlineColor: [183, 28, 28] }
     );
 
+    const tableWidth = pageWidth - (margin * 2);
+    const employeeColumnWidth = tableWidth * 0.54;
+    const employeeNumberColumnWidth = tableWidth * 0.26;
+    const frequencyColumnWidth = tableWidth * 0.20;
+
     autoTable(pdf, {
       startY: cardsY + cardHeight + 6,
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: margin, bottom: 40 },
+      tableWidth,
       head: [[
         this.tr("t-employee"),
         this.tr("t-employee-number"),
-        this.tr("t-procedure"),
-        this.tr("t-hpt-total-usages")
+        this.tr("t-eft-frequency")
       ]],
       body: rows.map((row) => [
         row.employeeName,
         row.employeeNumber,
-        row.procedureName,
-        this.formatNumber(row.totalUsages)
+        this.formatNumber(row.frequency)
       ]),
-      foot: [[this.tr("t-totals"), "-", "-", this.formatNumber(total)]],
       theme: "grid",
       styles: { fontSize: 7, cellPadding: 1.5, lineWidth: 0.1, lineColor: [220, 220, 220] },
       headStyles: { fillColor: [66, 66, 66], textColor: [255, 255, 255], fontStyle: "bold" },
-      footStyles: { fillColor: [238, 244, 255], textColor: [31, 58, 147], fontStyle: "bold" },
       columnStyles: {
-        0: { cellWidth: 62 },
-        1: { cellWidth: 30 },
-        2: { cellWidth: "auto" },
-        3: { cellWidth: 32, halign: "right" }
+        0: { cellWidth: employeeColumnWidth },
+        1: { cellWidth: employeeNumberColumnWidth },
+        2: { cellWidth: frequencyColumnWidth, halign: "right" }
       }
     });
 
@@ -297,7 +277,6 @@ export class EmployeeFrequencyTrendReportExporter {
     options?: ExportOptions
   ): Promise<void> {
     const rows = this.normalizeRows(report);
-    const total = this.totalUsages(rows);
     const workbook = XLSX.utils.book_new();
     const data = [
       [this.tr("t-eft-report-title").toUpperCase()],
@@ -305,34 +284,28 @@ export class EmployeeFrequencyTrendReportExporter {
       [`${this.tr("t-institution")}: ${report.contract?.name || "-"} | ${this.tr("t-coverage-period")}: ${this.periodLabel(report)}`],
       [`${this.tr("t-generated-by")}: ${userName || this.tr("t-spr-system-user")} | ${this.tr("t-spr-generated-at")}: ${this.generatedAt()}`],
       [],
-      [this.tr("t-employee"), this.tr("t-employee-number"), this.tr("t-procedure"), this.tr("t-hpt-total-usages")],
-      ...rows.map((row) => [row.employeeName, row.employeeNumber, row.procedureName, row.totalUsages]),
-      [this.tr("t-totals"), "-", "-", total]
+      [this.tr("t-employee"), this.tr("t-employee-number"), this.tr("t-eft-frequency")],
+      ...rows.map((row) => [row.employeeName, row.employeeNumber, row.frequency])
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
     ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
-      { s: { r: 3, c: 0 }, e: { r: 3, c: 3 } }
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 2 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 2 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 2 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 2 } }
     ];
-    ws["!cols"] = [{ wch: 34 }, { wch: 18 }, { wch: 52 }, { wch: 18 }];
+    ws["!cols"] = [{ wch: 34 }, { wch: 18 }, { wch: 18 }];
 
     if (ws["A1"]) ws["A1"].s = { font: { bold: true, sz: 14, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: this.BRAND_BLUE } } };
     if (ws["A2"]) ws["A2"].s = { font: { bold: true, color: { rgb: this.BRAND_BLUE } } };
-    for (let col = 0; col <= 3; col++) {
+    for (let col = 0; col <= 2; col++) {
       const addr = XLSX.utils.encode_cell({ r: 5, c: col });
       if (ws[addr]) ws[addr].s = { font: { bold: true, color: { rgb: this.BRAND_BLUE } }, fill: { fgColor: { rgb: this.SOFT_BLUE } } };
     }
 
-    const totalsRow = data.length;
-    for (let col = 0; col <= 3; col++) {
-      const addr = XLSX.utils.encode_cell({ r: totalsRow - 1, c: col });
-      if (ws[addr]) ws[addr].s = { font: { bold: true, color: { rgb: this.BRAND_BLUE } }, fill: { fgColor: { rgb: this.SOFT_BLUE_LIGHT } } };
-    }
-    for (let row = 7; row <= totalsRow; row++) {
-      const addr = XLSX.utils.encode_cell({ r: row - 1, c: 3 });
+    for (let row = 7; row <= data.length; row++) {
+      const addr = XLSX.utils.encode_cell({ r: row - 1, c: 2 });
       if (ws[addr]) ws[addr].z = "#,##0";
     }
 
@@ -348,18 +321,16 @@ export class EmployeeFrequencyTrendReportExporter {
     options?: ExportOptions
   ): Promise<void> {
     const rows = this.normalizeRows(report);
-    const total = this.totalUsages(rows);
     const escapeCsv = (value: string | number) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
     let csv = `${escapeCsv(this.tr("t-eft-report-title").toUpperCase())}\n`;
     csv += `${escapeCsv(this.tr("t-institution"))},${escapeCsv(report.contract?.name || "-")}\n`;
     csv += `${escapeCsv(this.tr("t-coverage-period"))},${escapeCsv(this.periodLabel(report))}\n`;
     csv += `${escapeCsv(this.tr("t-generated-by"))},${escapeCsv(userName || this.tr("t-spr-system-user"))}\n\n`;
-    csv += [this.tr("t-employee"), this.tr("t-employee-number"), this.tr("t-procedure"), this.tr("t-hpt-total-usages")].map(escapeCsv).join(",") + "\n";
+    csv += [this.tr("t-employee"), this.tr("t-employee-number"), this.tr("t-eft-frequency")].map(escapeCsv).join(",") + "\n";
     rows.forEach((row) => {
-      csv += [row.employeeName, row.employeeNumber, row.procedureName, row.totalUsages].map(escapeCsv).join(",") + "\n";
+      csv += [row.employeeName, row.employeeNumber, row.frequency].map(escapeCsv).join(",") + "\n";
     });
-    csv += [this.tr("t-totals"), "-", "-", total].map(escapeCsv).join(",") + "\n";
 
     const bom = "\uFEFF";
     const blob = new Blob([bom, csv], { type: "text/csv;charset=utf-8;" });

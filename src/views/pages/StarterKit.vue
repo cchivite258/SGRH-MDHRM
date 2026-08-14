@@ -35,6 +35,20 @@ type TrendChart = {
   errorKey: string | null;
 };
 
+type DistributionChart = {
+  key: string;
+  titleKey: string;
+  seriesNameKey: string;
+  chartType: "bar" | "donut";
+  colors: string[];
+  labels: string[];
+  values: number[];
+  percentages: number[];
+  total: number | null;
+  loading: boolean;
+  errorKey: string | null;
+};
+
 const { t } = useI18n();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
@@ -98,6 +112,35 @@ const trendCharts = ref<TrendChart[]>([
     color: "#2e7d32",
     labels: [],
     values: [],
+    loading: false,
+    errorKey: null
+  }
+]);
+
+const distributionCharts = ref<DistributionChart[]>([
+  {
+    key: "revenueByServiceProvider",
+    titleKey: "t-dashboard-revenue-by-service-provider-title",
+    seriesNameKey: "t-dashboard-revenue-by-service-provider-series",
+    chartType: "bar",
+    colors: ["#0f766e"],
+    labels: [],
+    values: [],
+    percentages: [],
+    total: null,
+    loading: false,
+    errorKey: null
+  },
+  {
+    key: "revenueByServiceProviderContract",
+    titleKey: "t-dashboard-revenue-by-provider-contract-title",
+    seriesNameKey: "t-dashboard-revenue-by-provider-contract-series",
+    chartType: "donut",
+    colors: ["#2563eb", "#f97316"],
+    labels: [],
+    values: [],
+    percentages: [],
+    total: null,
     loading: false,
     errorKey: null
   }
@@ -234,8 +277,117 @@ const normalizeTrendDetails = (details: unknown) => {
   };
 };
 
+const getDashboardPayload = (data: Record<string, any> | null) => {
+  let payload = data;
+
+  while (
+    payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    !("totalBilled" in payload) &&
+    !("details" in payload) &&
+    !("totalNetworkUtilizationFee" in payload) &&
+    !("totalNonNetworkUtilizationFee" in payload)
+  ) {
+    payload = payload.data as Record<string, any>;
+  }
+
+  return payload ?? {};
+};
+
+const parseDashboardNumber = (value: unknown) => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string") return null;
+
+  const normalized = value
+    .replace(/\s/g, "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+    .replace(",", ".");
+  const numberValue = Number(normalized);
+
+  return Number.isFinite(numberValue) ? numberValue : null;
+};
+
+const getFirstDashboardNumber = (source: Record<string, any>, fields: string[]) => {
+  for (const field of fields) {
+    const numberValue = parseDashboardNumber(source?.[field]);
+    if (numberValue !== null) return numberValue;
+  }
+
+  return null;
+};
+
+const normalizeRevenueByServiceProvider = (data: Record<string, any> | null) => {
+  const payload = getDashboardPayload(data);
+  const details = Array.isArray(payload.details) ? payload.details : [];
+
+  const entries = details
+    .map((item: Record<string, any>) => ({
+      label: item?.serviceProvider?.name || item?.provider?.name || item?.name || t("t-dashboard-unknown-service-provider"),
+      value: getFirstDashboardNumber(item, ["totalAmount", "amount", "total", "value", "totalBilled", "totalRevenue"]),
+      percentage: getFirstDashboardNumber(item, ["percentageOfTotalAmount", "percentage", "percent"])
+    }))
+    .filter((item): item is { label: string; value: number; percentage: number | null } => item.value !== null && item.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  return {
+    labels: entries.map((item) => item.label),
+    values: entries.map((item) => item.value),
+    percentages: entries.map((item) => item.percentage ?? 0),
+    total: getFirstDashboardNumber(payload, ["totalBilled", "totalRevenue", "totalAmount"])
+  };
+};
+
+const normalizeRevenueByProviderContract = (data: Record<string, any> | null) => {
+  const payload = getDashboardPayload(data);
+  const total = getFirstDashboardNumber(payload, ["totalBilled", "totalRevenue", "totalAmount"]);
+  const networkPercentage = getFirstDashboardNumber(payload, ["percentageOfNetworkUtilizationFee", "networkPercentage"]);
+  const nonNetworkPercentage = getFirstDashboardNumber(payload, [
+    "percentageOfNonNetworkUtilizationFee",
+    "nonNetworkPercentage"
+  ]);
+  const networkValue =
+    getFirstDashboardNumber(payload, ["totalNetworkUtilizationFee", "networkUtilizationFee", "totalNetwork"]) ??
+    (total !== null && networkPercentage !== null ? (total * networkPercentage) / 100 : null);
+  const nonNetworkValue =
+    getFirstDashboardNumber(payload, [
+      "totalNonNetworkUtilizationFee",
+      "nonNetworkUtilizationFee",
+      "totalNonNetwork"
+    ]) ?? (total !== null && nonNetworkPercentage !== null ? (total * nonNetworkPercentage) / 100 : null);
+
+  const entries = [
+    {
+      label: t("t-dashboard-network-provider-label"),
+      value: networkValue ?? 0,
+      percentage: networkPercentage ?? 0
+    },
+    {
+      label: t("t-dashboard-non-network-provider-label"),
+      value: nonNetworkValue ?? 0,
+      percentage: nonNetworkPercentage ?? 0
+    }
+  ].filter((item) => item.value > 0);
+
+  return {
+    labels: entries.map((item) => item.label),
+    values: entries.map((item) => item.value),
+    percentages: entries.map((item) => item.percentage),
+    total
+  };
+};
+
 const setAllTrendChartsLoading = (loading: boolean) => {
   trendCharts.value = trendCharts.value.map((chart) => ({
+    ...chart,
+    loading,
+    errorKey: loading ? null : chart.errorKey
+  }));
+};
+
+const setAllDistributionChartsLoading = (loading: boolean) => {
+  distributionCharts.value = distributionCharts.value.map((chart) => ({
     ...chart,
     loading,
     errorKey: loading ? null : chart.errorKey
@@ -247,6 +399,18 @@ const resetTrendCharts = () => {
     ...chart,
     labels: [],
     values: [],
+    loading: false,
+    errorKey: null
+  }));
+};
+
+const resetDistributionCharts = () => {
+  distributionCharts.value = distributionCharts.value.map((chart) => ({
+    ...chart,
+    labels: [],
+    values: [],
+    percentages: [],
+    total: null,
     loading: false,
     errorKey: null
   }));
@@ -272,12 +436,48 @@ const setTrendChartResult = (
   );
 };
 
+const setDistributionChartResult = (
+  key: string,
+  data: Record<string, any> | null,
+  errorKey: string | null = null
+) => {
+  const normalized =
+    key === "revenueByServiceProvider"
+      ? normalizeRevenueByServiceProvider(data)
+      : normalizeRevenueByProviderContract(data);
+
+  distributionCharts.value = distributionCharts.value.map((chart) =>
+    chart.key === key
+      ? {
+          ...chart,
+          labels: normalized.labels,
+          values: normalized.values,
+          percentages: normalized.percentages,
+          total: normalized.total,
+          loading: false,
+          errorKey
+        }
+      : chart
+  );
+};
+
 const getTrendChartSeries = (chart: TrendChart) => [
   {
     name: t(chart.seriesNameKey),
     data: chart.values
   }
 ];
+
+const getDistributionChartSeries = (chart: DistributionChart) => {
+  if (chart.chartType === "donut") return chart.values;
+
+  return [
+    {
+      name: t(chart.seriesNameKey),
+      data: chart.values
+    }
+  ];
+};
 
 const getTrendChartOptions = (chart: TrendChart) => ({
   chart: {
@@ -330,6 +530,103 @@ const getTrendChartOptions = (chart: TrendChart) => ({
   }
 });
 
+const getDistributionChartOptions = (chart: DistributionChart) => {
+  if (chart.chartType === "donut") {
+    return {
+      chart: {
+        type: "donut",
+        fontFamily: "inherit"
+      },
+      labels: chart.labels,
+      colors: chart.colors,
+      legend: {
+        position: "bottom",
+        fontSize: "12px",
+        markers: {
+          radius: 4
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        formatter: (_value: number, options: any) => {
+          const percentage = chart.percentages[options.seriesIndex];
+          return Number.isFinite(percentage) ? formatPercentage(percentage) : formatPercentage(_value);
+        }
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: "64%",
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: t("t-dashboard-total-billed"),
+                formatter: () => formatCurrency(chart.total ?? chart.values.reduce((sum, value) => sum + value, 0))
+              }
+            }
+          }
+        }
+      },
+      tooltip: {
+        y: {
+          formatter: (value: number) => formatCurrency(value)
+        }
+      }
+    };
+  }
+
+  return {
+    chart: {
+      type: "bar",
+      toolbar: { show: false },
+      fontFamily: "inherit"
+    },
+    colors: chart.colors,
+    dataLabels: {
+      enabled: false
+    },
+    grid: {
+      borderColor: "#edf1f5",
+      strokeDashArray: 3
+    },
+    plotOptions: {
+      bar: {
+        borderRadius: 4,
+        horizontal: true,
+        barHeight: "58%"
+      }
+    },
+    xaxis: {
+      categories: chart.labels,
+      labels: {
+        formatter: (value: number) => Number(value).toLocaleString("pt-MZ"),
+        style: {
+          colors: "#6b7280",
+          fontSize: "12px"
+        }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: {
+          colors: "#4b5563",
+          fontSize: "12px"
+        }
+      }
+    },
+    tooltip: {
+      y: {
+        formatter: (value: number, options: any) => {
+          const percentage = chart.percentages[options.dataPointIndex];
+          const percentageText = Number.isFinite(percentage) ? ` (${formatPercentage(percentage)})` : "";
+          return `${formatCurrency(value)}${percentageText}`;
+        }
+      }
+    }
+  };
+};
+
 const setAllCardsLoading = (loading: boolean) => {
   cards.value = cards.value.map((card) => ({
     ...card,
@@ -351,6 +648,7 @@ const resetCardValues = () => {
 const resetDashboardData = () => {
   resetCardValues();
   resetTrendCharts();
+  resetDistributionCharts();
 };
 
 const setCardResult = (
@@ -412,6 +710,7 @@ const loadDashboardCards = async () => {
 
   setAllCardsLoading(true);
   setAllTrendChartsLoading(true);
+  setAllDistributionChartsLoading(true);
   dashboardErrorKey.value = null;
 
   const cardResults = await Promise.allSettled([
@@ -424,6 +723,34 @@ const loadDashboardCards = async () => {
     dashboardService.getRevenueTrend(payload),
     dashboardService.getHealthcareServiceUseTrends(payload)
   ]);
+
+  const distributionResults = await Promise.allSettled([
+    dashboardService.getDistributionOfRevenueByServiceProvider(payload),
+    dashboardService.getDistributionOfRevenueFromServiceProvidersContracts(payload)
+  ]);
+  const distributionData = distributionResults.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : []
+  );
+  const revenueByServiceProviderData =
+    distributionData.find((data) => Array.isArray(getDashboardPayload(data).details)) ?? null;
+  const revenueByProviderContractData =
+    distributionData.find((data) => {
+      const responsePayload = getDashboardPayload(data);
+      return (
+        getFirstDashboardNumber(responsePayload, [
+          "totalNetworkUtilizationFee",
+          "networkUtilizationFee",
+          "totalNetwork"
+        ]) !== null ||
+        getFirstDashboardNumber(responsePayload, [
+          "percentageOfNetworkUtilizationFee",
+          "networkPercentage"
+        ]) !== null
+      );
+    }) ?? null;
+  const distributionErrorKey = distributionResults.some((result) => result.status === "rejected")
+    ? "t-dashboard-error-loading-distribution"
+    : null;
 
   setCardResult(
     "budgetExecution",
@@ -455,9 +782,21 @@ const loadDashboardCards = async () => {
     trendResults[1].status === "rejected" ? "t-dashboard-error-loading-trend" : null
   );
 
+  setDistributionChartResult(
+    "revenueByServiceProvider",
+    revenueByServiceProviderData,
+    revenueByServiceProviderData ? null : distributionErrorKey
+  );
+  setDistributionChartResult(
+    "revenueByServiceProviderContract",
+    revenueByProviderContractData,
+    revenueByProviderContractData ? null : distributionErrorKey
+  );
+
   if (
     cardResults.some((result) => result.status === "rejected") ||
-    trendResults.some((result) => result.status === "rejected")
+    trendResults.some((result) => result.status === "rejected") ||
+    distributionResults.some((result) => result.status === "rejected")
   ) {
     dashboardErrorKey.value = "t-dashboard-some-indicators-not-loaded";
   }
@@ -600,10 +939,11 @@ onMounted(async () => {
       </v-col>
     </v-row>
 
-    <v-row class="mt-4">
+    <v-row class="dashboard-chart-row mt-4">
       <v-col
         v-for="chart in trendCharts"
         :key="chart.key"
+        class="dashboard-chart-col"
         cols="12"
         lg="6"
       >
@@ -635,12 +975,65 @@ onMounted(async () => {
             </div>
 
             <apexchart
-              v-else
+              v-if="chart.values.length > 0 && !chart.errorKey"
               class="dashboard-trend-card__chart"
               height="270"
               type="line"
               :series="getTrendChartSeries(chart)"
               :options="getTrendChartOptions(chart)"
+            />
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-row class="dashboard-chart-row mt-4">
+      <v-col
+        v-for="chart in distributionCharts"
+        :key="chart.key"
+        class="dashboard-chart-col"
+        cols="12"
+        lg="6"
+      >
+        <v-card class="dashboard-trend-card dashboard-distribution-card" elevation="0">
+          <v-card-text>
+            <div class="dashboard-trend-card__header">
+              <div>
+                <h5>{{ $t(chart.titleKey) }}</h5>
+                <div v-if="chart.total !== null" class="dashboard-distribution-card__total">
+                  {{ $t("t-dashboard-total-billed") }}: {{ formatCurrency(chart.total) }}
+                </div>
+              </div>
+              <v-progress-circular
+                v-if="chart.loading"
+                indeterminate
+                size="22"
+                width="3"
+                :color="chart.colors[0]"
+              />
+            </div>
+
+            <v-alert
+              v-if="chart.errorKey"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              {{ $t(chart.errorKey) }}
+            </v-alert>
+
+            <div v-if="chart.values.length === 0 && !chart.loading && !chart.errorKey" class="dashboard-trend-card__empty">
+              {{ $t("t-dashboard-no-distribution-data") }}
+            </div>
+
+            <apexchart
+              v-if="chart.values.length > 0 && !chart.errorKey"
+              class="dashboard-trend-card__chart"
+              height="320"
+              :type="chart.chartType"
+              :series="getDistributionChartSeries(chart)"
+              :options="getDistributionChartOptions(chart)"
             />
           </v-card-text>
         </v-card>
@@ -850,13 +1243,27 @@ onMounted(async () => {
   line-height: 1.35;
 }
 
+.dashboard-chart-row {
+  align-items: stretch;
+}
+
+.dashboard-chart-col {
+  display: flex;
+}
+
 .dashboard-trend-card {
   border: 1px solid #e9edf3;
   border-radius: 8px !important;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.045) !important;
+  display: flex;
+  height: 100%;
+  width: 100%;
 }
 
 .dashboard-trend-card :deep(.v-card-text) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 20px 22px 16px;
 }
 
@@ -872,6 +1279,12 @@ onMounted(async () => {
   font-size: 0.98rem;
   font-weight: 700;
   margin: 0;
+}
+
+.dashboard-distribution-card__total {
+  color: #6b7280;
+  font-size: 0.78rem;
+  margin-top: 4px;
 }
 
 .dashboard-trend-card__empty {

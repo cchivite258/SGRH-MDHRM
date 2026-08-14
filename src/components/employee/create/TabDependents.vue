@@ -25,7 +25,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 // Stores e Services
 import { useDependentEmployeeStore } from "@/store/employee/dependentStore";
-import { dependentEmployeeService, employeeService } from "@/app/http/httpServiceProvider";
+import { dependentEmployeeService, employeeService, healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 
 // Types
 import type {
@@ -37,11 +37,14 @@ import { getApiErrorMessages } from "@/app/common/apiErrors";
 
 // Utils
 import { dependentHeader } from "@/components/employee/list/utils";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const router = useRouter();
 const toast = useToast();
 const dependentStore = useDependentEmployeeStore();
+const { can, canAny } = usePermissions();
 
 
 // Utils
@@ -54,6 +57,14 @@ import {
 const props = defineProps({
   employeeId: {
     type: String as PropType<string | null>,
+    default: null
+  },
+  previousStep: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  nextStep: {
+    type: Number as PropType<number | null>,
     default: null
   }
 });
@@ -81,11 +92,17 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 // Computed properties
 const loadingList = computed(() => dependentStore.loading);
 const totalItems = computed(() => dependentStore.pagination.totalElements);
+const canCreateDependent = computed(() => can(PERMISSIONS.EMPLOYEE_DEPENDENTS.CREATE));
+const canUpdateDependent = computed(() => can(PERMISSIONS.EMPLOYEE_DEPENDENTS.UPDATE));
+const canDeleteDependent = computed(() => can(PERMISSIONS.EMPLOYEE_DEPENDENTS.DELETE));
+const canConsultDependent = computed(() => canAny(PERMISSIONS.EMPLOYEE.DEPENDENTS_VIEW));
+const canConsultDependentHealthPlan = computed(() => canAny(PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW));
+const canSelectDependents = computed(() => canDeleteDependent.value);
 const dependentActionOptions = computed(() => [
-  { title: t("t-view"), value: "view", icon: "ph-eye" },
-  { title: t("t-edit"), value: "edit", icon: "ph-pencil-simple" },
-  { title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" },
-  { title: t("t-delete"), value: "delete", icon: "ph-trash" }
+  ...(canConsultDependent.value ? [{ title: t("t-view"), value: "view", icon: "ph-eye" }] : []),
+  ...(canUpdateDependent.value ? [{ title: t("t-edit"), value: "edit", icon: "ph-pencil-simple" }] : []),
+  ...(canConsultDependentHealthPlan.value ? [{ title: t("t-consult-health-plan"), value: "consult-plan", icon: "ph-clipboard-text" }] : []),
+  ...(canDeleteDependent.value ? [{ title: t("t-delete"), value: "delete", icon: "ph-trash" }] : [])
 ]);
 
 const showDependentApiErrors = (error: unknown, fallbackKey = "t-message-save-error") => {
@@ -293,16 +310,47 @@ const onViewClick = (data: DependentInsertType | DependentListingType) => {
   viewDialog.value = true;
 };
 
-const onConsultPlan = (data: DependentListingType) => {
+const getActiveHealthPlanId = async () => {
+  if (!employeeId.value) return null;
+
+  const { content } = await healthPlanEmployeeService.getHealthPlansByEmployee(
+    employeeId.value,
+    0,
+    1000,
+    "createdAt",
+    "asc",
+    "",
+    "employee.id",
+    false
+  );
+
+  return content.find(plan => plan.status === "ACTIVE")?.id || null;
+};
+
+const onConsultPlan = async (data: DependentListingType) => {
   if (!employeeId.value) return;
 
-  router.push({
-    name: "ViewDependentHealthPlan",
-    params: {
-      employeeId: employeeId.value,
-      dependentId: data.id
+  try {
+    const activeHealthPlanId = await getActiveHealthPlanId();
+
+    if (!activeHealthPlanId) {
+      toast.error(t("t-no-active-health-plan"));
+      return;
     }
-  });
+
+    router.push({
+      name: "EditEmployeeHealthPlan",
+      params: { id: activeHealthPlanId },
+      query: {
+        employeeId: employeeId.value,
+        isEmployee: "false",
+        dependentId: data.id
+      }
+    });
+  } catch (error) {
+    toast.error(t("t-message-load-error"));
+    console.error("Erro ao consultar plano do dependente:", error);
+  }
 };
 
 const onActionSelect = (action: string, item: DependentListingType) => {
@@ -380,7 +428,7 @@ onMounted(async () => {
   <Card :title="$t('t-dependent-list')" title-class="py-5">
     <template #title-action>
       <div>
-        <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
+        <v-btn v-if="canCreateDependent" color="secondary" class="mx-1" @click="onCreateEditClick(null)">
           <i class="ph-plus-circle me-1" /> {{ $t('t-add-dependent') }}
         </v-btn>
         <!--<v-btn color="secondary" class="mx-1">
@@ -409,10 +457,10 @@ onMounted(async () => {
         :headers="dependentHeader.map(item => ({ ...item, title: $t(`t-${item.title}`) }))"
         :items="dependentStore.dependents" :items-per-page="itemsPerPage" :total-items="totalItems"
         :loading="loadingList" :search-query="searchQuery" :search-props="searchProps" @load-items="fetchContactPersons"
-        item-value="id" show-select>
+        item-value="id" :show-select="canSelectDependents">
         <template #body="{ items }">
           <tr v-for="item in items as DependentListingType[]" :key="item.id" height="50">
-            <td>
+            <td v-if="canSelectDependents">
               <v-checkbox :model-value="selectedDependentData.some(selected => selected.id === item.id)"
                 @update:model-value="toggleSelection(item)" hide-details density="compact" />
             </td>
@@ -450,12 +498,12 @@ onMounted(async () => {
   <ViewDependentsDialog v-model="viewDialog" :data="dependentViewData" />
   <RemoveItemConfirmationDialog v-model="deleteDialog" :loading="deleteLoading" @onConfirm="onConfirmDelete" />
 
-  <v-card-actions class="d-flex justify-space-between mt-5">
-    <v-btn color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', 3)">
-      <i class="ph-arrow-left me-2" /> {{ $t('t-back-to-salary-review') }}
+  <v-card-actions v-if="previousStep || nextStep" class="d-flex justify-space-between mt-5">
+    <v-btn v-if="previousStep" color="secondary" variant="outlined" class="me-2" @click="$emit('onStepChange', previousStep)">
+      <i class="ph-arrow-left me-2" /> {{ $t('t-back') }}
     </v-btn>
 
-    <v-btn color="secondary" variant="elevated" class="me-2" @click="$emit('onStepChange', 5)">
+    <v-btn v-if="nextStep" color="secondary" variant="elevated" class="me-2" @click="$emit('onStepChange', nextStep)">
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
   </v-card-actions>

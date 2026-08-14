@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
@@ -13,6 +13,8 @@ import ButtonNav from "@/components/serviceProvider/view/ButtonNav.vue";
 import { serviceProviderService } from "@/app/http/httpServiceProvider";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
+import { SERVICE_PROVIDER_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
+import { usePermissions } from "@/composables/usePermissions";
 
 const props = defineProps({
   cardTitle: {
@@ -26,6 +28,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const serviceProviderStore = useServiceProviderStore();
+const { canAny } = usePermissions();
 
 const step = ref(1);
 const serviceProviderId = ref<string | null>(
@@ -36,8 +39,23 @@ const errorMsg = ref("");
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const headerTitle = computed(() => props.cardTitle || t("t-view-service-provider"));
+const accessibleServiceProviderFormTabs = computed(() => getAllowedFormTabs(SERVICE_PROVIDER_FORM_TABS, canAny));
+const serviceProviderFormSteps = computed(() => accessibleServiceProviderFormTabs.value.map((tab) => tab.value));
+const firstAllowedServiceProviderStep = computed(() => serviceProviderFormSteps.value[0] || 1);
+const currentStepIndex = computed(() => serviceProviderFormSteps.value.indexOf(step.value));
+const isLastStep = computed(() => currentStepIndex.value === serviceProviderFormSteps.value.length - 1);
+const previousServiceProviderStep = computed(() => serviceProviderFormSteps.value[currentStepIndex.value - 1]);
+const nextServiceProviderStep = computed(() => serviceProviderFormSteps.value[currentStepIndex.value + 1]);
+const isServiceProviderStepAllowed = (value: number) => serviceProviderFormSteps.value.includes(value);
+const ensureServiceProviderStepAllowed = () => {
+  if (!isServiceProviderStepAllowed(step.value)) {
+    step.value = firstAllowedServiceProviderStep.value;
+  }
+};
 
 let serviceProviderData = reactive<ServiceProviderInsertType>({
+  code: null,
+  erpCode: null,
   name: "",
   description: "",
   address: "",
@@ -55,6 +73,9 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   responsibleId: undefined,
   contractStartDate: undefined,
   contractEndDate: undefined,
+  isBusinessDays: false,
+  gracePeriod: null,
+  maxDaysAfterService: null,
   enabled: true,
   countryId: undefined,
   provinceId: undefined
@@ -106,8 +127,11 @@ onMounted(async () => {
 });
 
 const onStepChange = (value: number) => {
+  if (!isServiceProviderStepAllowed(value)) return;
   step.value = value;
 };
+
+watch(accessibleServiceProviderFormTabs, ensureServiceProviderStepAllowed, { immediate: true });
 
 const saveServiceProvider = async (isFinalStep: boolean = false) => {
   try {
@@ -168,7 +192,7 @@ onBeforeUnmount(() => {
     <ButtonNav v-model="step" @update:model-value="onStepChange" />
   </div>
 
-  <FormCard v-show="step === 1" class="service-provider-form-section">
+  <FormCard v-show="step === 1 && isServiceProviderStepAllowed(1)" class="service-provider-form-section">
     <transition name="fade">
       <v-alert
         v-if="errorMsg"
@@ -192,7 +216,7 @@ onBeforeUnmount(() => {
     />
   </FormCard>
 
-  <FormCard v-show="step === 2" class="service-provider-form-section">
+  <FormCard v-show="step === 2 && isServiceProviderStepAllowed(2)" class="service-provider-form-section">
     <Step2
       v-model="serviceProviderData"
       :loading="loading"
@@ -202,7 +226,7 @@ onBeforeUnmount(() => {
     />
   </FormCard>
 
-  <FormCard v-show="step === 3" class="service-provider-form-section">
+  <FormCard v-show="step === 3 && isServiceProviderStepAllowed(3)" class="service-provider-form-section">
     <Step3
       v-model="serviceProviderData"
       :loading="loading"
@@ -218,19 +242,19 @@ onBeforeUnmount(() => {
       color="secondary"
       variant="outlined"
       :disabled="loading"
-      @click="step === 1 ? goBackToList() : onStepChange(step - 1)"
+      @click="previousServiceProviderStep ? onStepChange(previousServiceProviderStep) : goBackToList()"
     >
       <i class="ph-arrow-left me-2" />
-      {{ step === 1 ? $t("t-back-to-list") : $t("t-back") }}
+      {{ previousServiceProviderStep ? $t("t-back") : $t("t-back-to-list") }}
     </v-btn>
 
     <v-btn
-      v-if="step < 3"
+      v-if="!isLastStep"
       class="service-provider-form-footer-actions__next"
       color="secondary"
       variant="elevated"
       :disabled="loading"
-      @click="onStepChange(step + 1)"
+      @click="nextServiceProviderStep && onStepChange(nextServiceProviderStep)"
     >
       {{ $t("t-proceed") }} <i class="ph-arrow-right ms-2" />
     </v-btn>

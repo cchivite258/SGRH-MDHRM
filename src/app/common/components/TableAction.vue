@@ -1,9 +1,38 @@
 <script lang="ts" setup>
+import type { PermissionRequirement } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
+
 const emit = defineEmits(["onView", "onEdit", "onDelete"]);
+
+const props = withDefaults(
+  defineProps<{
+    canView?: boolean;
+    canEdit?: boolean;
+    canDelete?: boolean;
+    viewPermission?: PermissionRequirement;
+    editPermission?: PermissionRequirement;
+    deletePermission?: PermissionRequirement;
+  }>(),
+  {
+    canView: true,
+    canEdit: true,
+    canDelete: true,
+    viewPermission: undefined,
+    editPermission: undefined,
+    deletePermission: undefined,
+  }
+);
+
+const { canAny } = usePermissions();
+
+// Estes botões continuam genéricos, mas agora só aparecem quando a permissão existe.
+const showView = () => props.canView && canAny(props.viewPermission);
+const showEdit = () => props.canEdit && canAny(props.editPermission);
+const showDelete = () => props.canDelete && canAny(props.deletePermission);
 </script>
 <template>
   <div class="d-flex" style="justify-content: inherit">
-    <v-hover>
+    <v-hover v-if="showView()">
       <template v-slot:default="{ isHovering, props }">
         <v-btn
           v-bind="props"
@@ -16,7 +45,7 @@ const emit = defineEmits(["onView", "onEdit", "onDelete"]);
         />
       </template>
     </v-hover>
-    <v-hover>
+    <v-hover v-if="showEdit()">
       <template v-slot:default="{ isHovering, props }">
         <v-btn
           v-bind="props"
@@ -30,7 +59,7 @@ const emit = defineEmits(["onView", "onEdit", "onDelete"]);
         />
       </template>
     </v-hover>
-    <v-hover>
+    <v-hover v-if="showDelete()">
       <template v-slot:default="{ isHovering, props }">
         <v-btn
           v-bind="props"

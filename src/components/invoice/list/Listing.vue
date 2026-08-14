@@ -16,25 +16,33 @@ import { formateDate } from "@/app/common/dateFormate"
 import { invoiceService } from "@/app/http/httpServiceProvider"
 import AdvancedFilter from "@/components/invoice/list/AdvancedFilter.vue"
 import { invoiceHeader, Options } from "@/components/invoice/list/utils"
+import type { ReasonType } from "@/components/baseTables/reason/types"
 import type { InvoiceListingType } from "@/components/invoice/types"
 import { useInvoiceStore } from "@/store/invoice/invoiceStore"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const invoiceStore = useInvoiceStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
-const searchProps = "invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
+const searchProps = "employee.contract.name,invoiceNumber,issueDate,serviceProvisionDate,dueDate,totalAmount,employee.firstName,clinic.name,invoiceReferenceNumber,invoiceStatus"
 const postDialog = ref(false)
+const postNotesDialog = ref(false)
 const postFlaggedDialog = ref(false)
+const postFlaggedNotesDialog = ref(false)
 const postId = ref<string | null>(null)
 const postFlaggedId = ref<string | null>(null)
 const postLoading = ref(false)
 const postFlaggedLoading = ref(false)
 const cancelDialog = ref(false)
+const cancelNotesDialog = ref(false)
 const cancelId = ref<string | null>(null)
 const cancelLoading = ref(false)
 const reverseDialog = ref(false)
@@ -44,6 +52,12 @@ const reverseLoading = ref(false)
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const selectedInvoices = ref<any[]>([])
+type InvoiceActionReasonPayload = { notes: string; reasonId: string }
+const invoiceReasonTypes = {
+  postFlagged: "INVOICE_POSTING_FLAGGED" as ReasonType,
+  cancel: "INVOICE_CANCELATION" as ReasonType,
+  reverse: "INVOICE_REVERSAL" as ReasonType,
+}
 
 const resetListingFilters = () => {
   invoiceStore.clearFilters()
@@ -54,6 +68,29 @@ const resetListingFilters = () => {
 const loading = computed(() => invoiceStore.loading)
 const totalItems = computed(() => invoiceStore.pagination.totalElements)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
+
+// Quem tem apenas leitura consulta a lista e o detalhe da factura.
+// Cada accao operacional continua amarrada a sua permissao exacta.
+const canListInvoices = computed(() => canAny(PERMISSIONS.INVOICES.LIST))
+const canViewInvoice = computed(() => can(PERMISSIONS.INVOICES.VIEW))
+const canCreateInvoice = computed(() => can(PERMISSIONS.INVOICES.CREATE))
+const canSelectInvoices = computed(() =>
+  canAny([
+    PERMISSIONS.INVOICES.POST,
+    PERMISSIONS.INVOICES.POST_FLAGGED,
+    PERMISSIONS.INVOICES.CANCEL,
+    PERMISSIONS.INVOICES.REVERSE,
+  ])
+)
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.INVOICES.VIEW,
+  edit: PERMISSIONS.INVOICES.UPDATE,
+  post: PERMISSIONS.INVOICES.POST,
+  "force-post": PERMISSIONS.INVOICES.POST_FLAGGED,
+  cancel: PERMISSIONS.INVOICES.CANCEL,
+  reverse: PERMISSIONS.INVOICES.REVERSE,
+}
 
 watch(selectedInvoices, newSelection => {
   console.log("Facturas selecionadas:", newSelection)
@@ -75,20 +112,27 @@ const fetchInvoices = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
 }
 
 const onView = (id: string) => {
+  if (!canViewInvoice.value) return
   router.push(`/invoices/view/${id}`)
 }
 
 const openPostFlaggedDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.POST_FLAGGED)) return
   postFlaggedId.value = id
   postFlaggedDialog.value = true
 }
 
-const postFlaggedInvoice = async () => {
-  if (!postFlaggedId.value) return
+const openPostFlaggedNotesDialog = () => {
+  postFlaggedDialog.value = false
+  postFlaggedNotesDialog.value = true
+}
+
+const postFlaggedInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
+  if (!postFlaggedId.value || !can(PERMISSIONS.INVOICES.POST_FLAGGED)) return
 
   postFlaggedLoading.value = true
   try {
-    await invoiceService.postFlaggedInvoice(postFlaggedId.value)
+    await invoiceService.postFlaggedInvoice(postFlaggedId.value, notes, reasonId)
     toast.success(t("t-toast-message-post"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -101,20 +145,27 @@ const postFlaggedInvoice = async () => {
   } finally {
     postFlaggedLoading.value = false
     postFlaggedDialog.value = false
+    postFlaggedNotesDialog.value = false
   }
 }
 
 const openPostDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.POST)) return
   postId.value = id
   postDialog.value = true
 }
 
-const postInvoice = async () => {
-  if (!postId.value) return
+const openPostNotesDialog = () => {
+  postDialog.value = false
+  postNotesDialog.value = true
+}
+
+const postInvoice = async (notes: string) => {
+  if (!postId.value || !can(PERMISSIONS.INVOICES.POST)) return
 
   postLoading.value = true
   try {
-    await invoiceService.postInvoice(postId.value)
+    await invoiceService.postInvoice(postId.value, notes)
     toast.success(t("t-toast-message-post"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -127,20 +178,27 @@ const postInvoice = async () => {
   } finally {
     postLoading.value = false
     postDialog.value = false
+    postNotesDialog.value = false
   }
 }
 
 const openCancelDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.CANCEL)) return
   cancelId.value = id
   cancelDialog.value = true
 }
 
-const cancelInvoice = async () => {
-  if (!cancelId.value) return
+const openCancelNotesDialog = () => {
+  cancelDialog.value = false
+  cancelNotesDialog.value = true
+}
+
+const cancelInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
+  if (!cancelId.value || !can(PERMISSIONS.INVOICES.CANCEL)) return
 
   cancelLoading.value = true
   try {
-    await invoiceService.cancelInvoice(cancelId.value)
+    await invoiceService.cancelInvoice(cancelId.value, notes, reasonId)
     toast.success(t("t-toast-message-cancel"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -153,10 +211,12 @@ const cancelInvoice = async () => {
   } finally {
     cancelLoading.value = false
     cancelDialog.value = false
+    cancelNotesDialog.value = false
   }
 }
 
 const openReverseDialog = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.REVERSE)) return
   reverseId.value = id
   reverseDialog.value = true
 }
@@ -166,12 +226,12 @@ const openReverseNotesDialog = () => {
   reverseNotesDialog.value = true
 }
 
-const reverseInvoice = async (notes: string) => {
-  if (!reverseId.value) return
+const reverseInvoice = async ({ notes, reasonId }: InvoiceActionReasonPayload) => {
+  if (!reverseId.value || !can(PERMISSIONS.INVOICES.REVERSE)) return
 
   reverseLoading.value = true
   try {
-    await invoiceService.reverseInvoice(reverseId.value, notes)
+    await invoiceService.reverseInvoice(reverseId.value, notes, reasonId)
     toast.success(t("t-toast-message-reverse"))
     await invoiceStore.fetchInvoices(0, itemsPerPage.value)
   } catch (error: unknown) {
@@ -198,6 +258,7 @@ const toggleSelection = (item: InvoiceListingType) => {
 }
 
 const onCreateEditClick = (id: string) => {
+  if (!can(PERMISSIONS.INVOICES.UPDATE)) return
   router.push(`/invoices/edit/${id}`)
 }
 
@@ -214,6 +275,8 @@ const onCancel = (id: string) => {
 }
 
 const onReverse = (invoice: InvoiceListingType) => {
+  if (!can(PERMISSIONS.INVOICES.REVERSE)) return
+
   if (invoice.invoiceStatus !== "POSTED") {
     toast.error(t("t-invoice-reverse-only-posted"))
     return
@@ -231,10 +294,12 @@ const getDynamicOptions = (invoice: InvoiceListingType) => {
     availableOptions = Options.filter(option => option.title === "view" || option.title === "reverse")
   }
 
-  return availableOptions.map(option => ({
-    ...option,
-    title: t(`t-${option.title}`)
-  }))
+  return availableOptions
+    .filter(option => canAny(actionPermissionByValue[option.value]))
+    .map(option => ({
+      ...option,
+      title: t(`t-${option.title}`)
+    }))
 }
 
 const onSelect = (option: string, data: InvoiceListingType) => {
@@ -271,6 +336,10 @@ const formatAmount = (amount: number | string) => {
   }).format(num)
 }
 
+const getContractName = (invoice: InvoiceListingType) => {
+  return invoice.contract?.name || invoice.coveragePeriod?.contract?.name || "N/A"
+}
+
 const getInvoiceAlerts = (invoice: InvoiceListingType) => {
   const alerts: string[] = []
 
@@ -302,12 +371,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão das facturas registadas."
     :action-label="$t('t-add-invoice')"
     action-to="/invoices/create"
+    :show-action="canCreateInvoice"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListInvoices" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissao para listar facturas.
+    </v-alert>
+
     <template #filters>
       <AdvancedFilter />
     </template>
@@ -332,7 +406,7 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canSelectInvoices"
       @load-items="fetchInvoices"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
@@ -341,7 +415,7 @@ onBeforeRouteLeave(() => {
           :key="item.id"
           :class="[shouldHighlight(item) ? 'bg-danger-subtle' : '', 'invoice-listing-table__row']"
         >
-          <td data-label="">
+          <td v-if="canSelectInvoices" data-label="">
             <v-checkbox
               :model-value="selectedInvoices.some(selected => selected.id === item.id)"
               hide-details
@@ -349,7 +423,15 @@ onBeforeRouteLeave(() => {
               @update:model-value="toggleSelection(item)"
             />
           </td>
-          <td data-label="Factura" class="invoice-listing-table__primary-cell cursor-pointer" @click="onView(item.id)">
+          <td data-label="Contrato">
+            {{ getContractName(item) }}
+          </td>
+          <td
+            data-label="Factura"
+            class="invoice-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewInvoice }"
+            @click="onView(item.id)"
+          >
             <div class="d-flex align-center ga-2">
               <span>{{ item.invoiceNumber || "N/A" }}</span>
               <v-tooltip v-if="getInvoiceAlerts(item).length" location="top">
@@ -373,14 +455,19 @@ onBeforeRouteLeave(() => {
             <Status :status="item.invoiceStatus" />
           </td>
           <td data-label="Acção" class="invoice-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menuItems="getDynamicOptions(item)" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon
+              v-if="getDynamicOptions(item).length"
+              align="center"
+              :menuItems="getDynamicOptions(item)"
+              @onSelect="onSelect($event, item)"
+            />
           </td>
         </tr>
       </template>
 
       <template v-if="invoiceStore.invoices.length === 0" #body>
         <tr>
-          <td :colspan="invoiceHeader.length" class="invoice-listing-table__empty-state text-center py-10">
+          <td :colspan="invoiceHeader.length + (canSelectInvoices ? 1 : 0)" class="invoice-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="invoice-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>
@@ -396,11 +483,53 @@ onBeforeRouteLeave(() => {
     </DataTableServer>
   </ListingPageShell>
 
-  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="postInvoice" />
-  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" :loading="postFlaggedLoading" @onConfirm="postFlaggedInvoice" />
-  <CancelInvoiceConfirmationDialog v-model="cancelDialog" :loading="cancelLoading" @onConfirm="cancelInvoice" />
+  <PostInvoiceConfirmationDialog v-model="postDialog" :loading="postLoading" @onConfirm="openPostNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="postNotesDialog"
+    :loading="postLoading"
+    title-key="t-post-invoice-notes-title"
+    placeholder-key="t-post-invoice-notes-placeholder"
+    required-key="t-post-invoice-notes-required"
+    submit-key="t-submit-post"
+    submit-color="info"
+    :notes-required="false"
+    :confirm-on-close="true"
+    @onConfirm="postInvoice"
+  />
+
+  <PostInvoiceConfirmationDialog v-model="postFlaggedDialog" :loading="postFlaggedLoading" @onConfirm="openPostFlaggedNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="postFlaggedNotesDialog"
+    :loading="postFlaggedLoading"
+    title-key="t-post-flagged-invoice-notes-title"
+    placeholder-key="t-post-flagged-invoice-notes-placeholder"
+    required-key="t-post-flagged-invoice-notes-required"
+    submit-key="t-submit-post"
+    submit-color="info"
+    :reason-type="invoiceReasonTypes.postFlagged"
+    @onConfirm="postFlaggedInvoice"
+  />
+
+  <CancelInvoiceConfirmationDialog v-model="cancelDialog" :loading="cancelLoading" @onConfirm="openCancelNotesDialog" />
+  <ReverseInvoiceNotesDialog
+    v-model="cancelNotesDialog"
+    :loading="cancelLoading"
+    title-key="t-cancel-invoice-notes-title"
+    placeholder-key="t-cancel-invoice-notes-placeholder"
+    required-key="t-cancel-invoice-notes-required"
+    submit-key="t-submit-cancel"
+    submit-color="danger"
+    :reason-type="invoiceReasonTypes.cancel"
+    @onConfirm="cancelInvoice"
+  />
+
   <ReverseInvoiceConfirmationDialog v-model="reverseDialog" :loading="reverseLoading" @onConfirm="openReverseNotesDialog" />
-  <ReverseInvoiceNotesDialog v-model="reverseNotesDialog" :loading="reverseLoading" @onConfirm="reverseInvoice" />
+  <ReverseInvoiceNotesDialog
+    v-model="reverseNotesDialog"
+    :loading="reverseLoading"
+    :reason-type="invoiceReasonTypes.reverse"
+    @onConfirm="reverseInvoice"
+  />
 </template>
 
 <style scoped>

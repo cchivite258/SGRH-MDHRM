@@ -16,12 +16,16 @@ import Status from "@/app/common/components/Status.vue"
 import type { EntityListingType } from "@/components/entities/types"
 import AdvancedFilter from "@/components/entities/list/AdvancedFilter.vue"
 import type { OptionType } from "@/app/common/types/option.type"
+import { PERMISSIONS } from "@/app/permissions/constants"
+import { usePermissions } from "@/composables/usePermissions"
+import type { PermissionRequirement } from "@/app/permissions/constants"
 
 const { t } = useI18n()
 const toast = useToast()
 const router = useRouter()
 const layoutStore = useLayoutStore()
 const companyDetailsStore = useCompanyDetailsStore()
+const { can, canAny } = usePermissions()
 const isDarkMode = computed(() => layoutStore.mode === "dark")
 
 const searchQuery = ref("")
@@ -44,6 +48,19 @@ const loading = computed(() => companyDetailsStore.loading)
 const totalItems = computed(() => companyDetailsStore.pagination.totalElements)
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)))
 
+// Quem tem apenas leitura ve a listagem e somente a accao "Consultar".
+// Criar, editar e eliminar continuam a exigir a permissao exacta.
+const canListEntities = computed(() => canAny(PERMISSIONS.ENTITIES.LIST))
+const canViewEntity = computed(() => can(PERMISSIONS.ENTITIES.VIEW))
+const canCreateEntity = computed(() => can(PERMISSIONS.ENTITIES.CREATE))
+const canDeleteEntity = computed(() => can(PERMISSIONS.ENTITIES.DELETE))
+
+const actionPermissionByValue: Record<string, PermissionRequirement> = {
+  view: PERMISSIONS.ENTITIES.VIEW,
+  edit: PERMISSIONS.ENTITIES.UPDATE,
+  delete: PERMISSIONS.ENTITIES.DELETE,
+}
+
 watch(selectedEntities, (newSelection) => {
   console.log("Entidades selecionadas:", newSelection)
 }, { deep: true })
@@ -64,6 +81,7 @@ const fetchEntities = async ({ page, itemsPerPage, sortBy }: FetchParams) => {
 }
 
 const onView = (id: string) => {
+  if (!canViewEntity.value) return
   router.push(`/entities/view/${id}`)
 }
 
@@ -73,7 +91,7 @@ const openDeleteDialog = (id: string) => {
 }
 
 const deleteEntity = async () => {
-  if (!deleteId.value) return
+  if (!deleteId.value || !canDeleteEntity.value) return
 
   deleteLoading.value = true
   try {
@@ -111,10 +129,14 @@ const getEntityTypeColor = (type?: string | null) => {
 }
 
 const entityOptions: OptionType[] = [
-  { title: "Ver", value: "view", icon: "ph-eye" },
+  { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" }
 ]
+
+const getDynamicOptions = () => {
+  return entityOptions.filter(option => canAny(actionPermissionByValue[option.value]))
+}
 
 const onSelect = (option: string, item: EntityListingType) => {
   switch (option) {
@@ -122,9 +144,11 @@ const onSelect = (option: string, item: EntityListingType) => {
       onView(item.id)
       break
     case "edit":
+      if (!can(PERMISSIONS.ENTITIES.UPDATE)) return
       router.push(`/entities/edit/${item.id}`)
       break
     case "delete":
+      if (!canDeleteEntity.value) return
       openDeleteDialog(item.id)
       break
   }
@@ -147,12 +171,17 @@ onBeforeRouteLeave(() => {
     subtitle="Consulte, pesquise e faça a gestão das entidades registadas."
     :action-label="$t('t-add-entity')"
     action-to="/entities/create"
+    :show-action="canCreateEntity"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
     :total-pages="totalPages"
     @update:page="currentPage = $event"
   >
+    <v-alert v-if="!canListEntities" type="warning" variant="tonal" color="warning" density="compact" class="mb-4">
+      Sem permissao para listar entidades.
+    </v-alert>
+
     <template #filters>
       <AdvancedFilter />
     </template>
@@ -177,12 +206,12 @@ onBeforeRouteLeave(() => {
       :search-props="searchProps"
       item-value="id"
       :show-pagination="false"
-      show-select
+      :show-select="canDeleteEntity"
       @load-items="fetchEntities"
     >
       <template #body="{ items }: { items: readonly unknown[] }">
         <tr v-for="item in items as EntityListingType[]" :key="item.id" class="entity-listing-table__row">
-          <td data-label="">
+          <td v-if="canDeleteEntity" data-label="">
             <v-checkbox
               :model-value="selectedEntities.some(selected => selected.id === item.id)"
               hide-details
@@ -192,13 +221,14 @@ onBeforeRouteLeave(() => {
           </td>
           <td
             data-label="Nome da Entidade"
-            class="entity-listing-table__primary-cell cursor-pointer"
+            class="entity-listing-table__primary-cell"
+            :class="{ 'cursor-pointer': canViewEntity }"
             @click="onView(item.id)"
           >
             <div class="entity-listing-table__identity">
               <div class="entity-listing-table__identity-content">
                 <div class="entity-listing-table__identity-name">
-                  {{ item.name || "N/A" }}
+                  {{ item.name ?? "N/A" }}
                 </div>
               </div>
             </div>
@@ -235,14 +265,19 @@ onBeforeRouteLeave(() => {
             <Status :status="item.enabled ? 'enabled' : 'disabled'" />
           </td>
           <td data-label="Acção" class="entity-listing-table__actions-cell">
-            <ListMenuWithIcon align="center" :menu-items="entityOptions" @onSelect="onSelect($event, item)" />
+            <ListMenuWithIcon
+              v-if="getDynamicOptions().length"
+              align="center"
+              :menu-items="getDynamicOptions()"
+              @onSelect="onSelect($event, item)"
+            />
           </td>
         </tr>
       </template>
 
       <template v-if="companyDetailsStore.entities.length === 0" #body>
         <tr>
-          <td :colspan="entitiesHeader.length" class="entity-listing-table__empty-state text-center py-10">
+          <td :colspan="entitiesHeader.length + (canDeleteEntity ? 1 : 0)" class="entity-listing-table__empty-state text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal" class="entity-listing-table__empty-avatar">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>
