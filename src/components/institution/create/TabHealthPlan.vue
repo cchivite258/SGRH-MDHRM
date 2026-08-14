@@ -464,11 +464,6 @@ const getGroupWaitingPeriodDays = (procedures: HospitalProcedureListingType[]) =
   return procedure ? getWaitingPeriodDays(procedure) : "-";
 };
 
-const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getFrequencyLabel(procedure) : "-";
-};
-
 const onConsultHealthPlan = async () => {
   if (!institutionId.value) {
     toast.error(t("t-institution-required"));

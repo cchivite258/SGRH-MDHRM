@@ -15,6 +15,11 @@ type ExportHealthPlanPdfOptions = {
   contextLabel?: string;
   fileName?: string;
   showUsageBalances?: boolean;
+  isEmployee?: boolean;
+  mainMemberName?: string;
+  dependentName?: string;
+  allocatedBalance?: DisplayValue;
+  remainingBalance?: DisplayValue;
 };
 
 const BRAND_BLUE: [number, number, number] = [31, 58, 147];
@@ -255,107 +260,6 @@ const getPlanUsedBalanceTotal = (procedures: HospitalProcedureListingType[]) => 
   return total;
 };
 
-const hasBalanceColumns = (procedures: HospitalProcedureListingType[]) =>
-  procedures.some((procedure) => {
-    const item = procedure as any;
-    return firstDefined(
-      item.allocatedBalance,
-      item.usedBalance,
-      item.totalUsedBalance,
-      item.remainingBalance,
-      item.groupAllocatedBalance,
-      item.groupUsedBalance,
-      item.groupRemainingBalance
-    ) !== undefined;
-  });
-
-const getBalanceValue = (
-  procedure: HospitalProcedureListingType,
-  individualKey: "allocatedBalance" | "usedBalance" | "remainingBalance",
-  groupKey: "groupAllocatedBalance" | "groupUsedBalance" | "groupRemainingBalance"
-) => {
-  const item = procedure as any;
-  const value = procedureUsesGroupLimit(procedure)
-    ? item[groupKey] as DisplayValue
-    : item[individualKey] as DisplayValue;
-
-  return Number(value || 0);
-};
-
-const getProcedureAllocatedBalance = (procedure: HospitalProcedureListingType) =>
-  getBalanceValue(procedure, "allocatedBalance", "groupAllocatedBalance");
-
-const getProcedureRemainingBalance = (procedure: HospitalProcedureListingType) =>
-  getBalanceValue(procedure, "remainingBalance", "groupRemainingBalance");
-
-const getProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
-  Number(firstDefined((procedure as any).totalUsedBalance) || 0);
-
-const hasProcedureTotalUsedBalance = (procedure: HospitalProcedureListingType) =>
-  getProcedureTotalUsedBalance(procedure) !== 0;
-
-const getGroupLimitProcedure = (procedures: HospitalProcedureListingType[]) =>
-  procedures.find(procedure => procedureUsesGroupLimit(procedure)) || procedures[0];
-
-const groupUsesGroupLimit = (procedures: HospitalProcedureListingType[]) =>
-  procedures.some(procedure => procedureUsesGroupLimit(procedure));
-
-const getGroupFixedAmount = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getProcedureFixedAmount(procedure) : null;
-};
-
-const getGroupPercentage = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getProcedurePercentage(procedure) : null;
-};
-
-const getGroupAllocatedBalance = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getProcedureAllocatedBalance(procedure) : null;
-};
-
-const getGroupUsedBalance = (procedures: HospitalProcedureListingType[]) => {
-  const groupUsedBalances = procedures.map(procedure => Number((procedure as any).groupUsedBalance || 0));
-  return groupUsedBalances.find(value => value !== 0) || 0;
-};
-
-const getGroupRemainingBalance = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getProcedureRemainingBalance(procedure) : null;
-};
-
-const getGroupLimitLabel = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getProcedureLimitLabel(procedure) : "-";
-};
-
-const getGroupFrequencyLabel = (procedures: HospitalProcedureListingType[]) => {
-  const procedure = getGroupLimitProcedure(procedures);
-  return procedure ? getFrequencyLabel(procedure) : "-";
-};
-
-const getPlanUsedBalanceTotal = (procedures: HospitalProcedureListingType[]) => {
-  const groupedProcedures = new Map<string, HospitalProcedureListingType[]>();
-  let total = 0;
-
-  procedures.forEach((procedure) => {
-    if (procedureUsesGroupLimit(procedure)) {
-      const groupKey = getProcedureGroupIdentity(procedure);
-      groupedProcedures.set(groupKey, [...(groupedProcedures.get(groupKey) || []), procedure]);
-      return;
-    }
-
-    total += getProcedureTotalUsedBalance(procedure);
-  });
-
-  groupedProcedures.forEach((groupProcedures) => {
-    total += Number(getGroupUsedBalance(groupProcedures) || 0);
-  });
-
-  return total;
-};
-
 const getPlanName = (healthPlan: any) =>
   healthPlan?.coveragePeriod?.name
   || healthPlan?.coveragePeriodName
@@ -484,7 +388,12 @@ export const exportHealthPlanToPdf = async ({
   procedures,
   contextLabel,
   fileName,
-  showUsageBalances
+  showUsageBalances,
+  isEmployee = true,
+  mainMemberName,
+  dependentName,
+  allocatedBalance,
+  remainingBalance
 }: ExportHealthPlanPdfOptions) => {
   const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
   const pageWidth = pdf.internal.pageSize.getWidth();
@@ -494,6 +403,7 @@ export const exportHealthPlanToPdf = async ({
   const planName = getPlanName(healthPlan);
   const generatedAt = new Date().toLocaleString("pt-PT");
   const includeBalances = showUsageBalances ?? hasBalanceColumns(procedures);
+  const isDependentPlan = !isEmployee;
   const tableHead = includeBalances
     ? [[
       tr("t-code", "Codigo"),
@@ -564,9 +474,9 @@ export const exportHealthPlanToPdf = async ({
 
   const cards = includeBalances
     ? [
-      ["Alocado", formatMoney(healthPlan?.allocatedBalance)],
+      ["Alocado", formatMoney(firstDefined(allocatedBalance, healthPlan?.allocatedBalance))],
       ["Gasto", formatMoney(getPlanUsedBalanceTotal(procedures))],
-      ["Remanescente", formatMoney(healthPlan?.remainingBalance)],
+      ["Remanescente", formatMoney(firstDefined(remainingBalance, healthPlan?.remainingBalance))],
       [tr("t-procedures", "Procedimentos"), String(procedures.length)]
     ]
     : [
