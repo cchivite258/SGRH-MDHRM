@@ -6,7 +6,7 @@ import { filters } from "@/components/institution/create/utils";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import Table from "@/app/common/components/Table.vue";
 import { listViewHeader } from "@/components/baseTables/country/editCountry/listView/utils";
-import { CountryListingType, CountryInsertType } from "@/components/baseTables/country/types";
+import { CountryListingType } from "@/components/baseTables/country/types";
 import Status from "@/app/common/components/Status.vue";
 import TableAction from "@/app/common/components/TableAction.vue";
 import CreateUpdateProvinceModal from "@/components/baseTables/country/editCountry/CreateUpdateProvinceModal.vue";
@@ -141,44 +141,6 @@ const validateForm = () => {
   if (!form.value.name) {
     formErrors.value.name = t('t-please-enter-name');
     isValid = false;
-  }
-  if (!form.value.code) {
-    formErrors.value.code = t('t-please-enter-code');
-    isValid = false;
-  } else {
-    formErrors.value.code = '';
-  }
-
-  if (!form.value.iso2Code) {
-    formErrors.value.iso2Code = t('t-please-enter-iso2-code');
-    isValid = false;
-  }
-  if (!form.value.iso3Code) {
-    formErrors.value.iso3Code = t('t-please-enter-iso3-code');
-    isValid = false;
-  }
-
-  if (!form.value.phoneCode) {
-    formErrors.value.phoneCode = t('t-please-enter-phone-code');
-    isValid = false;
-  }
-
-  if (!form.value.currency) {
-    formErrors.value.currency = t('t-please-enter-currency');
-    isValid = false;
-  }
-  if (!form.value.currencySymbol) {
-    formErrors.value.currencySymbol = t('t-please-enter-currency-symbol');
-    isValid = false;
-  } else {
-    formErrors.value.currencySymbol = '';
-  }
-
-  if (!form.value.currencyCode) {
-    formErrors.value.currencyCode = t('t-please-enter-currency-code');
-    isValid = false;
-  } else {
-    formErrors.value.currencyCode = '';
   }
 
   return isValid;
@@ -428,7 +390,13 @@ const handleSubmit = async () => {
       nationality: "trimToEmpty"
     });
 
-    await countryService.updateCountry(form.value.id!, payload as CountryInsertType);
+    Object.keys(payload).forEach((key) => {
+      if (typeof payload[key] === "string" && !payload[key]) {
+        delete payload[key];
+      }
+    });
+
+    await countryService.updateCountry(form.value.id!, payload);
     const refreshedCountry = await countryStoreID.fetchCountryByID(form.value.id!);
     if (refreshedCountry) {
       countryData.value = refreshedCountry;
@@ -465,7 +433,7 @@ const handleSubmit = async () => {
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-country-code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-country-code') }}
               </div>
               <TextField v-model="form.code" :placeholder="$t('t-enter-code')" hide-details />
             </v-col>
@@ -474,13 +442,13 @@ const handleSubmit = async () => {
           <v-row class="">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-iso2Code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-iso2Code') }}
               </div>
               <TextField v-model="form.iso2Code" :placeholder="$t('t-enter-iso2-code')" hide-details />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-iso3Code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-iso3Code') }}
               </div>
               <TextField v-model="form.iso3Code" :placeholder="$t('t-enter-iso3-code')" hide-details />
             </v-col>
@@ -489,13 +457,13 @@ const handleSubmit = async () => {
           <v-row class="">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-phone-code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-phone-code') }}
               </div>
               <TextField v-model="form.phoneCode" :placeholder="$t('t-enter-phone-code')" hide-details />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-currency') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-currency') }}
               </div>
               <TextField v-model="form.currency" :placeholder="$t('t-enter-currency')" hide-details />
             </v-col>
@@ -504,13 +472,13 @@ const handleSubmit = async () => {
           <v-row class="">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-currency-symbol') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-currency-symbol') }}
               </div>
               <TextField v-model="form.currencySymbol" :placeholder="$t('t-enter-currency-symbol')" hide-details />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold mb-2">
-                {{ $t('t-currency-code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-currency-code') }}
               </div>
               <TextField v-model="form.currencyCode" :placeholder="$t('t-enter-currency-code')" hide-details />
             </v-col>
@@ -586,7 +554,7 @@ const handleSubmit = async () => {
         <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()">
           {{ $t('t-back') }} <i class="ph-arrow-left ms-2" />
         </v-btn>
-        <v-btn color="success" variant="elevated" :loading="loading" :disabled="!form.name || !form.code"
+        <v-btn color="success" variant="elevated" :loading="loading" :disabled="!form.name"
           @click="handleSubmit">
           {{ $t('t-save') }} <i class="ph-floppy-disk ms-2" />
         </v-btn>

@@ -40,13 +40,6 @@ const localLoading = ref(false);
 
 const requiredRules = {
   name: [(v: string) => !!v?.trim() || t("t-please-enter-name")],
-  code: [(v: string) => !!v?.trim() || t("t-please-enter-code")],
-  iso2Code: [(v: string) => !!v?.trim() || t("t-please-enter-iso2-code")],
-  iso3Code: [(v: string) => !!v?.trim() || t("t-please-enter-iso3-code")],
-  phoneCode: [(v: string) => !!v?.trim() || t("t-please-enter-phone-code")],
-  currency: [(v: string) => !!v?.trim() || t("t-please-enter-currency")],
-  currencySymbol: [(v: string) => !!v?.trim() || t("t-please-enter-currency-symbol")],
-  currencyCode: [(v: string) => !!v?.trim() || t("t-please-enter-currency-code")],
 };
 
 const onSubmit = async () => {
@@ -60,7 +53,7 @@ const onSubmit = async () => {
 
   localLoading.value = true;
 
-  const data = {
+  const data: Record<string, any> = {
     ...(!isCreate.value && { id: id.value }),
     name: name.value,
     code: code.value,
@@ -81,6 +74,12 @@ const onSubmit = async () => {
     currency: "trimToEmpty",
     currencySymbol: "trimToEmpty",
     currencyCode: "trimToEmpty"
+  });
+
+  Object.keys(data).forEach((key) => {
+    if (typeof data[key] === "string" && !data[key]) {
+      delete data[key];
+    }
   });
 
   emit('onSubmit', data, {
@@ -116,58 +115,58 @@ const onSubmit = async () => {
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-country-code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-country-code') }}
               </div>
-              <TextField v-model="code" :placeholder="$t('t-enter-code')" :rules="requiredRules.code" />
+              <TextField v-model="code" :placeholder="$t('t-enter-code')" />
             </v-col>
           </v-row>
 
-          <v-row>
-            <v-col cols="12" lg="6">
+          <v-row class="mt-n6">
+            <v-col cols="12" lg="6" >
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-iso2Code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-iso2Code') }}
               </div>
-              <TextField v-model="iso2Code" :placeholder="$t('t-enter-iso2-code')" :rules="requiredRules.iso2Code" />
+              <TextField v-model="iso2Code" :placeholder="$t('t-enter-iso2-code')" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-iso3Code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-iso3Code') }}
               </div>
-              <TextField v-model="iso3Code" :placeholder="$t('t-enter-iso3-code')" :rules="requiredRules.iso3Code" />
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-phone-code') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField v-model="phoneCode" :placeholder="$t('t-enter-phone-code')" :rules="requiredRules.phoneCode" />
-            </v-col>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-currency') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField v-model="currency" :placeholder="$t('t-enter-currency')" :rules="requiredRules.currency" />
+              <TextField v-model="iso3Code" :placeholder="$t('t-enter-iso3-code')" />
             </v-col>
           </v-row>
 
-          <v-row>
+          <v-row class="mt-n6">
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-currency-symbol') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-phone-code') }}
               </div>
-              <TextField v-model="currencySymbol" :placeholder="$t('t-enter-currency-symbol')" :rules="requiredRules.currencySymbol" />
+              <TextField v-model="phoneCode" :placeholder="$t('t-enter-phone-code')" />
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-currency-code') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-currency') }}
               </div>
-              <TextField v-model="currencyCode" :placeholder="$t('t-enter-currency-code')" :rules="requiredRules.currencyCode" />
+              <TextField v-model="currency" :placeholder="$t('t-enter-currency')" />
             </v-col>
           </v-row>
 
-          <v-row class="">
+          <v-row class="mt-n6">
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-currency-symbol') }}
+              </div>
+              <TextField v-model="currencySymbol" :placeholder="$t('t-enter-currency-symbol')" />
+            </v-col>
+            <v-col cols="12" lg="6">
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-currency-code') }}
+              </div>
+              <TextField v-model="currencyCode" :placeholder="$t('t-enter-currency-code')" />
+            </v-col>
+          </v-row>
+
+          <v-row class="mt-n6">
             <v-col cols="12" lg="12" class="">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">

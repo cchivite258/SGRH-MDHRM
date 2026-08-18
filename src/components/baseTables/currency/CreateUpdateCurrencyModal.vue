@@ -112,7 +112,7 @@ const onSubmit = async () => {
               <TextField v-model="symbol" :placeholder="$t('t-enter-symbol')" :rules="requiredRules.symbol" />
             </v-col>
           </v-row>
-          <v-row class="">
+          <v-row class="mt-n6">
             <v-col cols="12" lg="12" class="">
               <div class="font-weight-bold">{{ $t('t-availability') }}</div>
               <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
