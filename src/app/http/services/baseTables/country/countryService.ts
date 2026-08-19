@@ -1,5 +1,5 @@
 import HttpService from "@/app/http/httpService";
-import type { CountryInsertType, CountryListingType, CountryUpdateType, CountryResponseType } from "@/components/baseTables/country/types";
+import type { CountryInsertType, CountryListingType, CountryResponseType } from "@/components/baseTables/country/types";
 import type { ProvinceUpdateType, ProvinceListingType, ProvinceInsertType, ProvinceResponseType } from "@/components/baseTables/country/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -51,6 +51,40 @@ const getEntity = <T>(response: ApiResponse<T> | T): T | undefined => {
   }
 
   return response as T;
+};
+
+const buildCountryPayload = (countryData: Partial<CountryInsertType>): Record<string, string | boolean> => {
+  const payload: Record<string, string | boolean> = {};
+  const fields: Array<keyof CountryInsertType> = [
+    "name",
+    "code",
+    "iso2Code",
+    "iso3Code",
+    "phoneCode",
+    "currency",
+    "currencySymbol",
+    "currencyCode",
+    "nationality",
+    "enabled"
+  ];
+
+  fields.forEach((field) => {
+    const value = countryData[field];
+
+    if (typeof value === "string") {
+      const normalizedValue = value.trim();
+      if (normalizedValue) {
+        payload[field] = normalizedValue;
+      }
+      return;
+    }
+
+    if (typeof value === "boolean") {
+      payload[field] = value;
+    }
+  });
+
+  return payload;
 };
 
 export default class CountryService extends HttpService {
@@ -123,9 +157,9 @@ export default class CountryService extends HttpService {
     };
   }
 
-  async createCountry(userData: CountryInsertType): Promise<ServiceResponse<CountryResponseType>> {
+  async createCountry(userData: Partial<CountryInsertType>): Promise<ServiceResponse<CountryResponseType>> {
     try {
-      const response = await this.post<ApiResponse<CountryResponseType>>("/administration/setup/countries", userData);
+      const response = await this.post<ApiResponse<CountryResponseType>>("/administration/setup/countries", buildCountryPayload(userData));
       console.log('response create country', response);
       return {
         status: 'success',
@@ -166,22 +200,11 @@ export default class CountryService extends HttpService {
     }
   }
 
-  async updateCountry(id: string, countryData: CountryInsertType): Promise<CountryResponseType> {
+  async updateCountry(id: string, countryData: Partial<CountryInsertType>): Promise<CountryResponseType> {
 
     try {
       // Corpo da requisição conforme especificado
-      const payload = {
-        name: countryData.name,
-        code: countryData.code,
-        iso2Code: countryData.iso2Code,
-        iso3Code: countryData.iso3Code,
-        phoneCode: countryData.phoneCode,
-        currency: countryData.currency,
-        currencySymbol: countryData.currencySymbol,
-        currencyCode: countryData.currencyCode,
-        nationality: countryData.nationality,
-        enabled: countryData.enabled
-      };
+      const payload = buildCountryPayload(countryData);
 
 
       const response = await this.put<CountryResponseType>(`/administration/setup/countries/${id}`, payload);

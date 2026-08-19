@@ -119,13 +119,13 @@ const onSubmit = async () => {
               </div>
               <TextField v-model="code" :placeholder="$t('t-enter-code')" hide-details />
             </v-col>
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="6" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-localized-name') }}
               </div>
               <TextField v-model="localizedName" :placeholder="$t('t-enter-localized-name')" hide-details />
             </v-col>
-            <v-col cols="12" lg="6">
+            <v-col cols="12" lg="6" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-region') }}
               </div>
