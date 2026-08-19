@@ -177,7 +177,14 @@ const onSubmit = async (
 ) => {
   try {
     if (!data.id) {
-      await departmentService.createDepartment(data);
+      const response = await departmentService.createDepartment(data);
+
+      if (response.status === 'error') {
+        getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+        callbacks?.onError?.(response.error);
+        return;
+      }
+
       toast.success(t('t-toast-message-created'));
     } else {
       await departmentService.updateDepartment(data.id, data);
