@@ -106,7 +106,7 @@ const onSubmit = async () => {
               </div>
               <TextField v-model="name" :placeholder="$t('t-enter-name')" :rules="requiredRules.name" />
             </v-col>
-            <v-col cols="12" lg="12">
+            <v-col cols="12" lg="12" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-description') }}
               </div>

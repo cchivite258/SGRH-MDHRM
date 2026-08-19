@@ -256,7 +256,13 @@ const handleSubmit = async () => {
       await departmentService.updateDepartment(form.value.id, form.value);
       toast.success(t('t-toast-message-update'));
     } else {
-      await departmentService.createDepartment(form.value);
+      const response = await departmentService.createDepartment(form.value);
+
+      if (response.status === 'error') {
+        getApiErrorMessages(response.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+        return;
+      }
+
       toast.success(t('t-toast-message-created'));
     }
 

@@ -128,7 +128,7 @@ const onSubmit = async () => {
               </div>
               <TextField type="number" v-model="rate" :placeholder="$t('t-enter-rate')" :rules="requiredRules.rate" />
             </v-col>
-            <v-col cols="12" lg="12">
+            <v-col cols="12" lg="12" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-description') }}
               </div>

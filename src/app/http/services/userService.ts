@@ -145,7 +145,6 @@ export default class UserService extends HttpService {
           oldPassword: userData.oldPassword,
           newPassword: userData.newPassword,
           confirmPassword: userData.confirmPassword,
-          passwordsMatching: userData.passwordsMatching,
         };
         
   
