@@ -1,7 +1,7 @@
 // stores/userStore.ts
 import { defineStore } from 'pinia';
 import { languageService } from "@/app/http/httpServiceProvider";
-import type { LanguagesUpdate, LanguagesListing, LanguagesInsert } from "@/components/baseTables/languages/types";
+import type { LanguagesListing, LanguagesInsert } from "@/components/baseTables/languages/types";
 
 export const useLanguagesStore = defineStore('languages', {
   state: () => ({
@@ -92,4 +92,3 @@ export const useLanguagesStore = defineStore('languages', {
     }
   }
 });
-

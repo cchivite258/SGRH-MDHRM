@@ -617,7 +617,7 @@
   "t-please-enter-iso2-code": "Por favor, insira o iso 2 code!",
   "t-please-enter-iso3-code": "Por favor, insira o iso 3 code!",
   "t-please-enter-name": "Por favor, insira o nome.",
-  "t-please-enter-code": "Por favor, insira o código do país.",
+  "t-please-enter-code": "Por favor, insira o código.",
   "t-iso2-must-have-2-characters": "O código ISO2 deve ter exatamente 2 caracteres.",
   "t-iso3-must-have-3-characters": "O código ISO3 deve ter exatamente 3 caracteres.",
   "t-please-enter-phone-code": "Por favor, insira o código de chamada.",
