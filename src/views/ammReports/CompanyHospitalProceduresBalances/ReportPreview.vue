@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useHospitalProceduresReportStore } from "@/store/reports/companyHospitalProceduresBalancesStore";
 import ReportPreview from "@/components/ammReports/list/HospitalProceduresReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 import { useRouter } from "vue-router";
 
 const store = useHospitalProceduresReportStore();
@@ -12,6 +13,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100001" :report="store.report" />
+
   <div v-if="store.report">
     <ReportPreview :report="store.report" />
   </div>

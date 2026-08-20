@@ -11,6 +11,9 @@ import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
 import type { EmployeeHealthPlanLimitsTrendFilterType } from "@/components/ammReports/types";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -18,6 +21,7 @@ const router = useRouter();
 const reportStore = useEmployeeHealthPlanLimitsTrendReportStore();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -92,6 +96,11 @@ const onSubmit = async () => {
     }
 
     reportStore.setReport(response.data);
+    previewFiltersStore.setParameters("100012", buildPreviewParameters([
+      { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+      { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+      { label: t("t-ehplt-usage-percentage-above"), value: `${usagePercentageAbove.value}%` },
+    ]));
     emit("update:modelValue", false);
     router.push({ name: "ReportPreview100012" });
   } catch (error: any) {
@@ -109,7 +118,7 @@ onMounted(async () => {
 <template>
   <v-dialog :model-value="props.modelValue" width="520" persistent>
     <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100012">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
         </template>
@@ -157,7 +166,7 @@ onMounted(async () => {
             {{ localLoading ? $t("t-preparing") : $t("t-preview") }}
           </v-btn>
         </v-card-actions>
-      </Card>
+      </ReportFilterCard>
     </v-form>
   </v-dialog>
 </template>

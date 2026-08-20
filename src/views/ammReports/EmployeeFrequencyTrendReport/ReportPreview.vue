@@ -2,6 +2,7 @@
 import { useRouter } from "vue-router";
 import { useEmployeeFrequencyTrendReportStore } from "@/store/reports/employeeFrequencyTrendReportStore";
 import ReportPreview from "@/components/ammReports/list/EmployeeFrequencyTrendReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 
 const store = useEmployeeFrequencyTrendReportStore();
 const router = useRouter();
@@ -12,6 +13,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100013" :report="store.report" />
+
   <div v-if="store.report">
     <ReportPreview :report="store.report" />
   </div>

@@ -3,6 +3,7 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useServiceProviderComparisonReportStore } from "@/store/reports/serviceProviderComparisonReportStore";
 import ReportPreview from "@/components/ammReports/list/ServiceProviderComparisonReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 import type { ServiceProviderComparisonReportType } from "@/components/ammReports/types";
 
 const store = useServiceProviderComparisonReportStore();
@@ -59,6 +60,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100005" :report="reportData" />
+
   <div v-if="reportData && reportData.length">
     <ReportPreview :report="reportData" />
   </div>
