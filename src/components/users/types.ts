@@ -14,10 +14,11 @@ export type UserListingType  = {
   lastName: string;
   password: string;
   email: string;
+  username?: string;
   enabled: boolean;
   accountLocked: boolean;
   twoFactor: boolean;
-  failedsLogin: string;
+  failedsLogin: string | number;
   lastSucessfulLogin: string | Date;
   lastFailedLogin: string | Date;
   lastPasswordUpdate: string | Date;

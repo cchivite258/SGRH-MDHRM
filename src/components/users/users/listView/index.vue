@@ -142,7 +142,7 @@ const onCreateEditClick = (data: UserListingType | null) => {
       lastName: "",
       email: "",
       password: "",
-      requiredChangePassword: true,
+      requiredChangePassword: false,
       enabled: false,
       accountLocked: false,
       twoFactor: false,

@@ -15,7 +15,7 @@ export default {
 <template>
   <v-card>
     <v-card-title
-      class="card-title d-flex justify-space-between align-start py-4"
+      class="card-title d-flex justify-space-between align-center py-4"
       :class="titleClass"
     >
       <div class="card-title-content d-flex align-center">
@@ -35,6 +35,7 @@ export default {
 <style scoped>
 .card-title {
   gap: 12px;
+  min-height: 64px;
 }
 
 .card-title-content {
@@ -43,11 +44,14 @@ export default {
 
 .card-title-text {
   line-height: 1.35;
+  margin: 0;
   overflow-wrap: anywhere;
   white-space: normal;
 }
 
 .card-title-action {
+  align-items: center;
+  display: flex;
   flex: 0 0 auto;
 }
 </style>
