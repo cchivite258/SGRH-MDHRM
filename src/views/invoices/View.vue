@@ -33,6 +33,12 @@ const buildReturnBreadcrumb = (target: string, targetTitle: string): BreadcrumbT
   if (institutionMatch) {
     const [, mode] = institutionMatch;
     const institutionTitle = mode === "view" ? "view-institution" : "edit-institution";
+    let targetWithPeriodTab = target;
+    if (mode === "edit" && targetTitle === "periods" && !parsedReturnTo.searchParams.has("tab")) {
+      parsedReturnTo.searchParams.set("tab", "2");
+      targetWithPeriodTab = `${parsedReturnTo.pathname}?${parsedReturnTo.searchParams.toString()}`;
+    }
+
     const items: BreadcrumbType[] = [
       {
         title: "institution-list",
@@ -42,7 +48,9 @@ const buildReturnBreadcrumb = (target: string, targetTitle: string): BreadcrumbT
       {
         title: institutionTitle,
         disabled: false,
-        to: targetTitle === institutionTitle ? target : parsedReturnTo.pathname
+        to: targetTitle === institutionTitle || targetTitle === "periods"
+          ? targetWithPeriodTab
+          : parsedReturnTo.pathname
       }
     ];
 
@@ -50,7 +58,7 @@ const buildReturnBreadcrumb = (target: string, targetTitle: string): BreadcrumbT
       items.push({
         title: targetTitle,
         disabled: false,
-        to: target
+        to: targetWithPeriodTab
       });
     }
 

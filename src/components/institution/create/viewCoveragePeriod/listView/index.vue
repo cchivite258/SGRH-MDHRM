@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { budgetHeader } from "@/components/institution/create/utils";
 import { CoveragePeriodInsertType, BudgetInsertType, BudgetListingType, CoveragePeriodListingType } from "@/components/institution/types";
@@ -57,6 +57,14 @@ const searchQuery = ref("");
 // Computed properties
 const loadingList = computed(() => budgetStore.loading);
 const totalItems = computed(() => budgetStore.pagination.totalElements);
+
+const toSingleString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.find((item): item is string => typeof item === "string");
+  }
+  return undefined;
+};
 
 // Buscar dados iniciais
 onMounted(async () => {
@@ -128,6 +136,35 @@ const onViewClick = (data: BudgetListingType) => {
   budgetFormData.value = { ...data };
   viewDialog.value = true;
 };
+
+const openBudgetModalById = async (budgetId: string) => {
+  if (viewDialog.value && budgetFormData.value?.id === budgetId) return;
+
+  try {
+    const response = await budgetService.getBudgetById(budgetId);
+    budgetFormData.value = { ...response.data };
+    viewDialog.value = true;
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  }
+};
+
+watch(
+  () => route.query.budgetId,
+  async (budgetId) => {
+    const id = toSingleString(budgetId);
+    if (!id) return;
+    await openBudgetModalById(id);
+  },
+  { immediate: true }
+);
+
+watch(viewDialog, (isOpen) => {
+  if (isOpen || !route.query.budgetId) return;
+
+  const { budgetId, ...query } = route.query;
+  router.replace({ path: route.path, query });
+});
 
 
 
