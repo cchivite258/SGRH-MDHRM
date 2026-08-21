@@ -51,6 +51,14 @@ const currentReport = computed(() => {
   return availableReports.value[currentIndex.value] || availableReports.value.find((report) => report.id === props.currentReportId);
 });
 
+const currentReportTitle = computed(() => {
+  return currentReport.value?.translatedTitle || t("t-report");
+});
+
+const previewTitle = computed(() => {
+  return `${t("t-report")} #${props.currentReportId} - ${currentReportTitle.value}`;
+});
+
 const previousReport = computed(() => {
   if (currentIndex.value <= 0) return undefined;
   return availableReports.value[currentIndex.value - 1];
@@ -179,86 +187,89 @@ const goToReportsList = () => {
             </v-tooltip>
           </v-btn>
 
+          <div class="report-preview-title-icon">
+            <i class="ph-file-text"></i>
+          </div>
+
           <div class="report-preview-title-block">
             <div class="report-preview-eyebrow">
-              <i class="ph-file-text"></i>
               <span>{{ $t("t-preview-report") }}</span>
             </div>
             <div class="report-preview-title">
-              {{ currentReport?.translatedTitle || $t("t-report") }}
+              {{ previewTitle }}
             </div>
           </div>
         </div>
 
         <div class="report-preview-actions">
-          <v-btn
-            icon
-            rounded
-            variant="outlined"
-            density="comfortable"
-            class="report-preview-step"
-            :disabled="!previousReport"
-            @click="goToReport(previousReport)"
-          >
-            <i class="ph-caret-left"></i>
-            <v-tooltip activator="parent" location="bottom">
-              {{ previousReport?.translatedTitle || $t("t-back") }}
-            </v-tooltip>
-          </v-btn>
+          <div class="report-preview-switcher">
+            <v-btn
+              icon
+              variant="text"
+              density="comfortable"
+              class="report-preview-step"
+              :disabled="!previousReport"
+              @click="goToReport(previousReport)"
+            >
+              <i class="ph-caret-left"></i>
+              <v-tooltip activator="parent" location="bottom">
+                {{ previousReport?.translatedTitle || $t("t-back") }}
+              </v-tooltip>
+            </v-btn>
 
-          <v-menu location="bottom end">
-            <template #activator="{ props: menuProps }">
-              <v-btn
-                v-bind="menuProps"
-                color="primary"
-                variant="outlined"
-                class="report-preview-menu-btn"
-              >
-                <i class="ph-squares-four me-2"></i>
-                <span class="report-preview-menu-label">{{ $t("t-switch-report") }}</span>
-                <span class="report-preview-code">#{{ currentReportId }}</span>
-                <i class="ph-caret-down ms-2"></i>
-              </v-btn>
-            </template>
+            <v-menu location="bottom end">
+              <template #activator="{ props: menuProps }">
+                <v-btn
+                  v-bind="menuProps"
+                  color="primary"
+                  variant="text"
+                  class="report-preview-menu-btn"
+                >
+                  <i class="ph-squares-four me-2"></i>
+                  <span class="report-preview-menu-label">{{ $t("t-switch-report") }}</span>
+                  <span class="report-preview-code">#{{ currentReportId }}</span>
+                  <i class="ph-caret-down ms-2"></i>
+                </v-btn>
+              </template>
 
-            <v-list density="compact" class="report-preview-list">
-              <v-list-item
-                v-for="report in availableReports"
-                :key="report.id"
-                :active="report.id === currentReportId"
-                :disabled="report.id === currentReportId"
-                class="report-preview-list-item"
-                @click="goToReport(report)"
-              >
-                <template #prepend>
-                  <v-avatar size="28" color="primary" variant="tonal">
-                    <i :class="report.img"></i>
-                  </v-avatar>
-                </template>
-                <v-list-item-title class="report-preview-list-title">
-                  {{ report.translatedTitle }}
-                </v-list-item-title>
-                <v-list-item-subtitle>
-                  #{{ report.id }}
-                </v-list-item-subtitle>
-              </v-list-item>
-            </v-list>
-          </v-menu>
+              <v-list density="compact" class="report-preview-list">
+                <v-list-item
+                  v-for="report in availableReports"
+                  :key="report.id"
+                  :active="report.id === currentReportId"
+                  :disabled="report.id === currentReportId"
+                  class="report-preview-list-item"
+                  @click="goToReport(report)"
+                >
+                  <template #prepend>
+                    <v-avatar size="28" color="primary" variant="tonal">
+                      <i :class="report.img"></i>
+                    </v-avatar>
+                  </template>
+                  <v-list-item-title class="report-preview-list-title">
+                    {{ report.translatedTitle }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle>
+                    #{{ report.id }}
+                  </v-list-item-subtitle>
+                </v-list-item>
+              </v-list>
+            </v-menu>
 
-          <v-btn
-            icon
-            rounded
-            variant="outlined"
-            density="comfortable"
-            class="report-preview-step"
-            :disabled="!nextReport"
-            @click="goToReport(nextReport)"
-          >
-            <i class="ph-caret-right"></i>
-            <v-tooltip activator="parent" location="bottom">
-              {{ nextReport?.translatedTitle || $t("t-report") }}
-            </v-tooltip>
-          </v-btn>
+            <v-btn
+              icon
+              variant="text"
+              density="comfortable"
+              class="report-preview-step"
+              :disabled="!nextReport"
+              @click="goToReport(nextReport)"
+            >
+              <i class="ph-caret-right"></i>
+              <v-tooltip activator="parent" location="bottom">
+                {{ nextReport?.translatedTitle || $t("t-report") }}
+              </v-tooltip>
+            </v-btn>
+          </div>
 
           <v-btn
             color="primary"
@@ -303,30 +314,54 @@ const goToReportsList = () => {
 .report-preview-navigator {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 12px 14px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.1);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(var(--v-theme-primary), 0.08), rgba(var(--v-theme-surface), 0.96)),
-    rgb(var(--v-theme-surface));
-  box-shadow: 0 8px 22px rgba(var(--v-theme-on-surface), 0.06);
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 8px 22px rgba(var(--v-theme-on-surface), 0.05);
 }
 
 .report-preview-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
 }
 
 .report-preview-current,
-.report-preview-actions {
+.report-preview-actions,
+.report-preview-switcher {
   display: flex;
   align-items: center;
-  gap: 10px;
   min-width: 0;
+}
+
+.report-preview-current {
+  flex: 1 1 auto;
+  gap: 12px;
+}
+
+.report-preview-actions {
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.report-preview-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.16);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-primary), 0.06);
+  color: rgb(var(--v-theme-primary));
+  font-size: 17px;
 }
 
 .report-preview-title-block {
@@ -337,7 +372,8 @@ const goToReportsList = () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: rgb(var(--v-theme-primary));
+  margin-bottom: 2px;
+  color: rgba(var(--v-theme-primary), 0.86);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -345,23 +381,50 @@ const goToReportsList = () => {
 
 .report-preview-title {
   color: rgb(var(--v-theme-on-surface));
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.25;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .report-preview-back,
 .report-preview-step {
-  border: 1px solid rgba(var(--v-theme-primary), 0.24);
+  width: 36px;
+  height: 36px;
   box-shadow: none;
 }
 
+.report-preview-back {
+  border: 1px solid rgba(var(--v-theme-primary), 0.16);
+  background: rgba(var(--v-theme-primary), 0.06);
+}
+
+.report-preview-switcher {
+  overflow: hidden;
+  height: 38px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.18);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-surface), 0.94);
+}
+
+.report-preview-step {
+  border-radius: 0;
+  color: rgba(var(--v-theme-on-surface), 0.72);
+}
+
+.report-preview-step:first-child {
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.report-preview-step:last-child {
+  border-left: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
 .report-preview-menu-btn {
-  min-height: 38px;
-  border-color: rgba(var(--v-theme-primary), 0.38);
+  min-width: 250px;
+  min-height: 36px;
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -371,7 +434,7 @@ const goToReportsList = () => {
   margin-left: 8px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(var(--v-theme-primary), 0.13);
+  background: rgba(var(--v-theme-primary), 0.1);
   color: rgb(var(--v-theme-primary));
   font-size: 11px;
   font-weight: 700;
@@ -379,16 +442,19 @@ const goToReportsList = () => {
 
 .report-preview-change-btn {
   min-height: 38px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.12);
   box-shadow: none;
 }
 
 .report-preview-parameters {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding-top: 12px;
-  border-top: 1px solid rgba(var(--v-theme-on-surface), 0.1);
+  padding: 11px 12px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.07);
+  border-radius: 8px;
+  background: rgba(var(--v-theme-on-surface), 0.025);
 }
 
 .report-preview-parameters-label {
@@ -396,8 +462,8 @@ const goToReportsList = () => {
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  min-height: 26px;
-  color: rgba(var(--v-theme-on-surface), 0.68);
+  min-height: 28px;
+  color: rgba(var(--v-theme-on-surface), 0.66);
   font-size: 12px;
   font-weight: 700;
 }
@@ -415,13 +481,14 @@ const goToReportsList = () => {
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  min-height: 26px;
-  padding: 3px 9px;
-  border: 1px solid rgba(var(--v-theme-primary), 0.22);
+  min-height: 28px;
+  padding: 3px 10px;
+  border: 1px solid rgba(var(--v-theme-primary), 0.16);
   border-radius: 999px;
-  background: rgba(var(--v-theme-primary), 0.08);
+  background: rgb(var(--v-theme-surface));
   color: rgb(var(--v-theme-on-surface));
   font-size: 12px;
+  box-shadow: 0 1px 2px rgba(var(--v-theme-on-surface), 0.04);
 }
 
 .report-preview-parameter-label {
@@ -430,6 +497,7 @@ const goToReportsList = () => {
 }
 
 .report-preview-parameter-value {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -453,22 +521,55 @@ const goToReportsList = () => {
   font-weight: 700;
 }
 
-@media (max-width: 700px) {
-  .report-preview-top,
-  .report-preview-navigator,
-  .report-preview-parameters {
-    align-items: stretch;
+@media (max-width: 900px) {
+  .report-preview-top {
     flex-direction: column;
   }
 
   .report-preview-actions {
-    justify-content: space-between;
     width: 100%;
+  }
+
+  .report-preview-switcher {
+    flex: 1 1 auto;
   }
 
   .report-preview-menu-btn {
     flex: 1 1 auto;
     min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .report-preview-navigator,
+  .report-preview-current,
+  .report-preview-parameters {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-preview-current {
+    position: relative;
+    padding-left: 48px;
+  }
+
+  .report-preview-back {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  .report-preview-title-icon {
+    display: none;
+  }
+
+  .report-preview-actions {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .report-preview-switcher {
+    width: 100%;
   }
 
   .report-preview-menu-label {

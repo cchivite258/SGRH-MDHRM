@@ -398,7 +398,8 @@ export class EmployeeHealthPlanLimitsTrendReportExporter {
     let csv = `${escapeCsv(this.tr("t-ehplt-report-title").toUpperCase())}\n`;
     csv += `${escapeCsv(this.tr("t-institution"))},${escapeCsv(report.contract?.name || "-")}\n`;
     csv += `${escapeCsv(this.tr("t-coverage-period"))},${escapeCsv(`${report.coveragePeriod?.name || "-"} (${this.periodRange(report)})`)}\n`;
-    csv += `${escapeCsv(this.tr("t-generated-by"))},${escapeCsv(userName || this.tr("t-spr-system-user"))}\n\n`;
+    csv += `${escapeCsv(this.tr("t-generated-by"))},${escapeCsv(userName || this.tr("t-spr-system-user"))}\n`;
+    csv += `${escapeCsv(this.tr("t-spr-generated-at"))},${escapeCsv(this.generatedAt())}\n\n`;
     csv += [
       this.tr("t-employee"),
       this.tr("t-employee-number"),

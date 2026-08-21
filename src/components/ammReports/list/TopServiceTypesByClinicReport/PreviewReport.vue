@@ -7,6 +7,9 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/store/authStore";
 import { TopServiceTypesByClinicReportExporter } from "./exportUtils";
 import { useI18n } from "vue-i18n";
+import ReportPreviewFooter from "@/components/ammReports/list/ReportPreviewFooter.vue";
+import ReportPreviewPagination from "@/components/ammReports/list/ReportPreviewPagination.vue";
+import { useReportPreviewPagination } from "@/components/ammReports/list/reportPreviewPagination";
 
 const props = defineProps<{
   report: TopServiceTypesByClinicReportType
@@ -67,6 +70,8 @@ const groupedRows = computed<GroupedRow[]>(() => {
   });
   return rows;
 });
+
+const { page, itemsPerPage, paginatedRows: paginatedGroupedRows } = useReportPreviewPagination(groupedRows);
 
 const userName = computed(() => {
   const user = authStore.user;
@@ -279,7 +284,7 @@ const exportOptions = [
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, i) in groupedRows" :key="i" class="table-row">
+            <tr v-for="(row, i) in paginatedGroupedRows" :key="i" class="table-row">
               <template v-if="row.type === 'provider'">
                 <td colspan="3" class="pa-4 provider-separator font-weight-bold">
                   <v-icon size="small" class="mr-2">mdi-hospital-box</v-icon>
@@ -310,30 +315,14 @@ const exportOptions = [
             </tr>
           </tfoot>
         </v-table>
+        <ReportPreviewPagination
+          v-model:page="page"
+          v-model:items-per-page="itemsPerPage"
+          :total-items="groupedRows.length"
+        />
       </div>
     </v-card>
-
-    <v-card variant="outlined" class="mt-8" elevation="0">
-      <v-card-text class="pa-4">
-        <div class="d-flex justify-space-between align-center flex-wrap">
-          <div class="text-caption text-grey">
-            <div class="d-flex align-center">
-              <v-icon size="small" class="mr-2">mdi-information</v-icon>
-              {{ $t("t-report-generated-automatically") }}
-            </div>
-            <div class="mt-1">
-              {{ $t("t-spr-system-footer") }} - {{ currentDate }}
-            </div>
-          </div>
-
-          <div class="text-right">
-            <div class="text-caption text-grey">
-              {{ $t("t-generated-by") }}: {{ userName }}
-            </div>
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
+    <ReportPreviewFooter system-footer-key="t-spr-system-footer" :generated-by="userName" />
 
     <v-card-actions class="d-flex justify-space-between mt-3">
       <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack">

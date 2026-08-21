@@ -91,7 +91,7 @@ export class ReportExporter {
         const tableResult = this.addPDFTable(pdf, report, margin, currentY);
         currentY = tableResult.finalY;
 
-        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight, generatedAt);
+        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight, generatedAt, userName);
 
         const fileName = options?.fileName
           ? `${options.fileName}.pdf`
@@ -341,7 +341,8 @@ export class ReportExporter {
     margin: number,
     pageWidth: number,
     pageHeight: number,
-    generatedAt: string
+    generatedAt: string,
+    userName: string
   ): void {
     const currentDate = this.getCurrentDate();
     const totalPages = pdf.getNumberOfPages();
@@ -362,6 +363,7 @@ export class ReportExporter {
       const footerText = this.tr('t-hpr-system-footer');
       const dateText = `${this.tr('t-hpr-date')}: ${currentDate}`;
       const generatedAtText = `${this.tr('t-hpr-generated-at')}: ${generatedAt}`;
+      const generatedByText = `${this.tr('t-generated-by')}: ${userName || this.tr('t-hpr-system-user')}`;
       const pageText = this.tr('t-hpr-page-of', { current: i, total: totalPages });
 
       pdf.text(footerText, margin, footerY - 5);
@@ -373,6 +375,7 @@ export class ReportExporter {
       pdf.text(dateText, pageWidth - margin - dateTextWidth, footerY - 12);
 
       pdf.text(generatedAtText, margin, footerY - 12);
+      pdf.text(generatedByText, margin, footerY - 19);
     }
   }
 
