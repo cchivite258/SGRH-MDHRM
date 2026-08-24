@@ -62,7 +62,7 @@ export class CostPerEmployeeReportExporter {
 
   static async exportToPDF(
     report: CompanyCostPerEmployeeReportType,
-    _userName: string,
+    userName: string,
     options?: ExportOptions
   ): Promise<void> {
     return new Promise(async (resolve, reject) => {
@@ -96,7 +96,7 @@ export class CostPerEmployeeReportExporter {
           currentY = this.addFinancialSummary(pdf, totals, margin, contentWidth, currentY);
         }
 
-        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight, generatedAt);
+        this.addPDFFooterAllPages(pdf, margin, pageWidth, pageHeight, generatedAt, userName);
 
         const fileName = options?.fileName
           ? `${options.fileName}.pdf`
@@ -426,7 +426,8 @@ export class CostPerEmployeeReportExporter {
     margin: number,
     pageWidth: number,
     pageHeight: number,
-    generatedAt: string
+    generatedAt: string,
+    userName: string
   ): void {
     const currentDate = this.getCurrentDate();
     const totalPages = pdf.getNumberOfPages();
@@ -447,10 +448,12 @@ export class CostPerEmployeeReportExporter {
       const footerText = this.tr('t-cpe-system-footer');
       const dateText = `${this.tr('t-cpe-date')}: ${currentDate}`;
       const generatedText = `${this.tr('t-cpe-generated-at')}: ${generatedAt}`;
+      const userText = `${this.tr('t-generated-by')}: ${userName || this.tr('t-cpe-system-user')}`;
       const pageText = this.tr('t-cpe-page-of', { current: i, total: totalPages });
 
       pdf.text(footerText, margin, footerY - 5);
       pdf.text(generatedText, margin, footerY - 12);
+      pdf.text(userText, margin, footerY - 19);
 
       const pageTextWidth = pdf.getTextWidth(pageText);
       pdf.text(pageText, pageWidth - margin - pageTextWidth, footerY - 5);
