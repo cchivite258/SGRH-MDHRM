@@ -198,15 +198,24 @@ const saveInstitution = async () => {
   }
 };
 
+const applyRouteTab = () => {
+  const routeTab = toSingleString(route.query.tab);
+  if (!routeTab) return;
+
+  const tabNumber = Number(routeTab);
+  if (isNaN(tabNumber) || tabNumber < 1 || tabNumber > 7) return;
+
+  onStepChange(tabNumber);
+};
+
 watch(
-  () => route.query.tab,
-  (newTab) => {
-    if (!newTab) return;
-    const tabNumber = Number(newTab);
-    if (!isNaN(tabNumber) && tabNumber >= 1 && tabNumber <= 7) {
-      onStepChange(tabNumber);
-    }
-  },
+  [
+    () => route.query.tab,
+    institutionId,
+    basicDataValidated,
+    () => contractFormSteps.value.join(",")
+  ],
+  applyRouteTab,
   { immediate: true }
 );
 

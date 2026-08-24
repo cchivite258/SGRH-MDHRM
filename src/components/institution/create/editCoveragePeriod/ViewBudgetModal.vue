@@ -91,13 +91,31 @@ const resolveReturnTitle = () => {
   return "view-budget";
 };
 
+const resolveReturnTo = () => {
+  if (
+    route.path.startsWith("/institution/edit/") ||
+    route.path.startsWith("/institution/coveragePeriod/view/")
+  ) {
+    return router.resolve({
+      path: route.path,
+      query: {
+        ...route.query,
+        ...(route.path.startsWith("/institution/edit/") ? { tab: "2" } : {}),
+        budgetId: props.data?.id || undefined
+      }
+    }).fullPath;
+  }
+
+  return route.fullPath;
+};
+
 const onViewClick = (invoiceId?: string) => {
   if (!invoiceId) return;
 
   router.push({
     path: `/invoices/view/${invoiceId}`,
     query: {
-      returnTo: route.fullPath,
+      returnTo: resolveReturnTo(),
       returnTitle: resolveReturnTitle()
     }
   });

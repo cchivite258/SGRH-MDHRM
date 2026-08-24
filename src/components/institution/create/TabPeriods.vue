@@ -127,6 +127,14 @@ const canConsultBudget = computed(() => canAny([
 ]));
 const canSelectCoveragePeriods = computed(() => !props.isViewMode && canDeleteCoveragePeriod.value);
 
+const toSingleString = (value: unknown): string | undefined => {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.find((item): item is string => typeof item === "string");
+  }
+  return undefined;
+};
+
 interface FetchParams {
   page: number;
   itemsPerPage: number;
@@ -509,6 +517,36 @@ const onViewBudgetClick = async (data: CoveragePeriodListingType) => {
     getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
   }
 };
+
+const openBudgetModalById = async (budgetId: string) => {
+  if (!canConsultBudget.value) return;
+  if (budgetViewDialog.value && budgetFormData.value?.id === budgetId) return;
+
+  try {
+    const response = await budgetService.getBudgetById(budgetId);
+    budgetFormData.value = { ...response.data };
+    budgetViewDialog.value = true;
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  }
+};
+
+watch(
+  () => route.query.budgetId,
+  async (budgetId) => {
+    const id = toSingleString(budgetId);
+    if (!id) return;
+    await openBudgetModalById(id);
+  },
+  { immediate: true }
+);
+
+watch(budgetViewDialog, (isOpen) => {
+  if (isOpen || !route.query.budgetId) return;
+
+  const { budgetId, ...query } = route.query;
+  router.replace({ path: route.path, query });
+});
 
 const onSubmitBudget = async (
   data: BudgetInsertType,
