@@ -58,9 +58,17 @@ export default class LanguagesService extends HttpService {
 
   async createLanguages(data: LanguagesInsert): Promise<ServiceResponse<LanguagesResponse>> {
     try {
+      const payload = Object.fromEntries(Object.entries({
+        code: data.code,
+        name: data.name,
+        localizedName: data.localizedName,
+        region: data.region,
+        rtl: data.rtl
+      }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
+
       const response = await this.post<ApiResponse<LanguagesResponse>>(
         "/administration/languages",
-        data
+        payload
       );
       return {
         status: 'success',
@@ -80,10 +88,8 @@ export default class LanguagesService extends HttpService {
         name: data.name,
         localizedName: data.localizedName,
         region: data.region,
-        rtl: data.rtl,
-        enabled: data.enabled
+        rtl: data.rtl
       };
-      console.log("enabled languages" ,payload)
 
       const response = await this.put<LanguagesResponse>(`/administration/languages/${id}`, payload);
       return response;

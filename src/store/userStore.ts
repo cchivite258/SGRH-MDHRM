@@ -3,10 +3,11 @@ import { defineStore } from 'pinia';
 import { userService } from "@/app/http/httpServiceProvider";
 import { authService } from "@/app/http/httpServiceProvider";
 import type { UserType1 } from '@/app/http/types';
+import type { UserListingType } from "@/components/users/types";
 
 export const useUserStore = defineStore('users', {
   state: () => ({
-    users: [] as UserType1[],
+    users: [] as UserListingType[],
     pagination: {
       totalElements: 0,
       currentPage: 0,
@@ -110,4 +111,3 @@ export const useProfileStore = defineStore('profile', {
     },
   },
 });
-

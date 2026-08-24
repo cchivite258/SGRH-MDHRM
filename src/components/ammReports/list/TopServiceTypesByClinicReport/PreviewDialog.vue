@@ -11,6 +11,9 @@ import type { TopServiceTypesByClinicFilterType } from "@/components/ammReports/
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, formatPreviewParameterDate, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -18,6 +21,7 @@ const router = useRouter();
 const reportStore = useTopServiceTypesByClinicReportStore();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -123,6 +127,13 @@ const onSubmit = async () => {
   }
 
   reportStore.setReport(response.data || []);
+  previewFiltersStore.setParameters("100004", buildPreviewParameters([
+    { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+    { label: t("t-filter-by"), value: filterType.value === "1" ? t("t-coverage-period") : t("t-dates") },
+    filterType.value === "1" && { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+    { label: t("t-start-period"), value: formatPreviewParameterDate(finalStartDate) },
+    { label: t("t-end-period"), value: formatPreviewParameterDate(finalEndDate) },
+  ]));
   emit("update:modelValue", false);
   router.push({ name: "ReportPreview100004" });
 };
@@ -135,7 +146,7 @@ onMounted(async () => {
 <template>
   <v-dialog :model-value="props.modelValue" width="500" persistent>
     <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100004">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
         </template>
@@ -204,7 +215,7 @@ onMounted(async () => {
             {{ localLoading ? $t("t-preparing") : $t("t-preview") }}
           </v-btn>
         </v-card-actions>
-      </Card>
+      </ReportFilterCard>
     </v-form>
   </v-dialog>
 </template>

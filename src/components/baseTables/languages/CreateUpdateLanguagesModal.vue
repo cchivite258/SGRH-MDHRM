@@ -45,13 +45,13 @@ const code = ref(formData.value.code || "");
 const localizedName = ref(formData.value.localizedName || "");
 const region = ref(formData.value.region || "");
 const rtl = ref(isCreate.value ? null : formData.value.rtl ?? false);
-const enabled = ref(formData.value.enabled);
 const errorMessage = computed(() => prop.error);
 
 const { t } = useI18n();
 
 const requiredRules = {
   name: [(v: string) => !!v?.trim() || t("t-please-enter-language")],
+  code: [(v: string) => !!v?.trim() || t("t-please-enter-code")],
 };
 
 const onSubmit = async () => {
@@ -71,8 +71,7 @@ const onSubmit = async () => {
     code: code.value,
     localizedName: localizedName.value,
     region: region.value,
-    rtl: rtl.value,
-    enabled: enabled.value
+    rtl: rtl.value
   };
   normalizeObjectStringFieldsInPlace(data as Record<string, any>, {
     name: "trimToEmpty",
@@ -115,9 +114,9 @@ const onSubmit = async () => {
             </v-col>
             <v-col cols="12" lg="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-code') }}
+                {{ $t('t-code') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
-              <TextField v-model="code" :placeholder="$t('t-enter-code')" hide-details />
+              <TextField v-model="code" :placeholder="$t('t-enter-code')" :rules="requiredRules.code" />
             </v-col>
             <v-col cols="12" lg="6" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
@@ -136,16 +135,6 @@ const onSubmit = async () => {
                 {{ $t('t-right-to-left') }}
               </div>
               <MenuSelect v-model="rtl as any" :items="propertyTypes" />
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="12" class="">
-              <div class="font-weight-bold">{{ $t('t-availability') }}</div>
-              <v-checkbox v-model="enabled" density="compact" color="primary" class="d-inline-flex">
-                <template #label>
-                  <span>{{ $t('t-is-enabled') }}</span>
-                </template>
-              </v-checkbox>
             </v-col>
           </v-row>
         </v-card-text>

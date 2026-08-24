@@ -1,11 +1,10 @@
 export type LanguagesInsert = {
-  id: string;
+  id?: string;
   code: string,
   name: string,
   localizedName: string,
   region: string,
   rtl: boolean
-  enabled: boolean;
 };
 
 export type LanguagesListing = {
@@ -23,8 +22,7 @@ export type LanguagesUpdate = {
   name: string,
   localizedName: string,
   region: string,
-  rtl: boolean,
-  enabled: boolean;
+  rtl: boolean
 };
 
 export type LanguagesResponse = {

@@ -11,6 +11,9 @@ import { useInstitutionStore } from "@/store/institution/institutionStore";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { useEmployeeStore } from "@/store/employee/employeeStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -20,6 +23,7 @@ const reportStore = useEmployeeExpenseStatementReportStore();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
 const employeeStore = useEmployeeStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 
 const props = defineProps({
   modelValue: {
@@ -116,6 +120,11 @@ const onSubmit = async () => {
     coveragePeriodId: coveragePeriodId.value,
     coveragePeriodName: selectedCoverage?.name || "",
   });
+  previewFiltersStore.setParameters("100009", buildPreviewParameters([
+    { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+    { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+    { label: t("t-employee"), value: getOptionLabel(employees.value, employeeId.value) },
+  ]));
 
   emit("update:modelValue", false);
   router.push({ name: "ReportPreview100009" });
@@ -129,7 +138,7 @@ onMounted(async () => {
 <template>
   <v-dialog :model-value="props.modelValue" width="500" persistent>
     <v-form @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100009">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
         </template>
@@ -186,7 +195,7 @@ onMounted(async () => {
             {{ localLoading ? $t("t-preparing") : $t("t-preview") }}
           </v-btn>
         </v-card-actions>
-      </Card>
+      </ReportFilterCard>
     </v-form>
   </v-dialog>
 </template>

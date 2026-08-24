@@ -9,6 +9,9 @@ import { serviceProviderReportService } from "@/app/http/httpServiceProvider";
 import { useRouter } from "vue-router";
 import { useServiceProviderReportStore } from "@/store/reports/serviceProviderReportStore";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, formatPreviewParameterDate, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
@@ -18,6 +21,7 @@ const toast = useToast();
 const router = useRouter();
 const reportStore = useServiceProviderReportStore();
 const serviceProviderStore = useServiceProviderStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 const coveragePeriodStore = useCoveragePeriodStore();
 const institutionStore = useInstitutionStore();
 
@@ -143,6 +147,14 @@ const onSubmit = async () => {
   }
 
   reportStore.setReport(response.data);
+  previewFiltersStore.setParameters("100003", buildPreviewParameters([
+    { label: t("t-service-provider"), value: getOptionLabel(providers.value, serviceProviderId.value) },
+    { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+    { label: t("t-filter-by"), value: filter === "1" ? t("t-coverage-period") : t("t-dates") },
+    filter === "1" && { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+    filter === "2" && { label: t("t-start-period"), value: formatPreviewParameterDate(startDate.value) },
+    filter === "2" && { label: t("t-end-period"), value: formatPreviewParameterDate(endDate.value) },
+  ]));
   emit("update:modelValue", false);
   router.push({ name: "ReportPreview100003" });
 };
@@ -156,7 +168,7 @@ onMounted(async () => {
 <template>
   <v-dialog :model-value="props.modelValue" width="500" persistent>
     <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100003">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
         </template>
@@ -243,7 +255,7 @@ onMounted(async () => {
             {{ localLoading ? $t('t-preparing') : $t('t-preview') }}
           </v-btn>
         </v-card-actions>
-      </Card>
+      </ReportFilterCard>
     </v-form>
   </v-dialog>
 </template>

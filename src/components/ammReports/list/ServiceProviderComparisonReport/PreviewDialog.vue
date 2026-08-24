@@ -13,6 +13,9 @@ import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore"
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import type { CoveragePeriodListingType } from "@/components/institution/types";
 import type { ServiceProviderComparisonReportType, ServiceProviderReportType } from "@/components/ammReports/types";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, formatPreviewParameterDate, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -21,6 +24,7 @@ const reportStore = useServiceProviderComparisonReportStore();
 const institutionStore = useInstitutionStore();
 const coveragePeriodStore = useCoveragePeriodStore();
 const serviceProviderStore = useServiceProviderStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -199,6 +203,15 @@ const onSubmit = async () => {
 
   const normalizedData = normalizeComparisonData(response.data || []);
   reportStore.setReport(normalizedData);
+  previewFiltersStore.setParameters("100005", buildPreviewParameters([
+    { label: t("t-spc-provider-1"), value: getOptionLabel(providers.value, serviceProvider1Id.value) },
+    { label: t("t-spc-provider-2"), value: getOptionLabel(providers.value, serviceProvider2Id.value) },
+    { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+    { label: t("t-filter-by"), value: filterType.value === "1" ? t("t-coverage-period") : t("t-dates") },
+    filterType.value === "1" && { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+    { label: t("t-start-period"), value: formatPreviewParameterDate(finalStartDate) },
+    { label: t("t-end-period"), value: formatPreviewParameterDate(finalEndDate) },
+  ]));
 
   const reportKey = `spc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   sessionStorage.setItem(reportKey, JSON.stringify(normalizedData));
@@ -222,7 +235,7 @@ onMounted(async () => {
 <template>
   <v-dialog :model-value="props.modelValue" width="500" persistent>
     <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100005">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)" />
         </template>
@@ -315,7 +328,7 @@ onMounted(async () => {
             {{ localLoading ? $t("t-preparing") : $t("t-preview") }}
           </v-btn>
         </v-card-actions>
-      </Card>
+      </ReportFilterCard>
     </v-form>
   </v-dialog>
 </template>

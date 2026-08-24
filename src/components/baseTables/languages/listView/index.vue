@@ -14,7 +14,7 @@ import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConf
 import { languageService } from "@/app/http/httpServiceProvider";
 import { useLanguagesStore } from "@/store/baseTables/languageStore";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
-import { LanguagesListing, LanguagesOption } from "@/components/baseTables/languages/types";
+import { LanguagesInsert, LanguagesListing, LanguagesOption } from "@/components/baseTables/languages/types";
 import { listViewHeader } from "@/components/baseTables/languages/listView/utils";
 
 const { t } = useI18n();
@@ -23,7 +23,7 @@ const languagesStore = useLanguagesStore();
 
 const dialog = ref(false);
 const viewDialog = ref(false);
-const languagesData = ref<LanguagesListing | null>(null);
+const languagesData = ref<LanguagesInsert | LanguagesListing | null>(null);
 const deleteDialog = ref(false);
 const deleteId = ref<string | null>(null);
 const deleteLoading = ref(false);
@@ -61,11 +61,22 @@ const toggleSelection = (item: LanguagesListing) => {
 
 watch(dialog, newVal => { if (!newVal) languagesData.value = null; });
 const onCreateEditClick = (data: LanguagesListing | null) => {
-  languagesData.value = data || { id: "-1", code: "", name: "", localizedName: "", region: "", rtl: false, enabled: true };
+  if (data) {
+    languagesData.value = {
+      id: data.id,
+      code: data.code,
+      name: data.name,
+      localizedName: data.localizedName,
+      region: data.region,
+      rtl: data.rtl
+    };
+  } else {
+    languagesData.value = { id: "-1", code: "", name: "", localizedName: "", region: "", rtl: false };
+  }
   dialog.value = true;
 };
 
-const onSubmit = async (data: LanguagesListing, callbacks?: { onSuccess?: () => void, onFinally?: () => void }) => {
+const onSubmit = async (data: LanguagesInsert, callbacks?: { onSuccess?: () => void, onFinally?: () => void }) => {
   try {
     if (!data.id) { await languageService.createLanguages(data); toast.success(t('t-toast-message-created')); }
     else { await languageService.updateLanguages(data.id, data); toast.success(t('t-toast-message-update')); }
@@ -79,7 +90,7 @@ const onSubmit = async (data: LanguagesListing, callbacks?: { onSuccess?: () => 
 
 watch(viewDialog, newVal => { if (!newVal) languagesData.value = null; });
 const onViewClick = (data: LanguagesListing | null) => {
-  languagesData.value = data || { id: "-1", code: "", name: "", localizedName: "", region: "", rtl: false, enabled: true };
+  languagesData.value = data || { id: "-1", code: "", name: "", localizedName: "", region: "", rtl: false };
   viewDialog.value = true;
 };
 

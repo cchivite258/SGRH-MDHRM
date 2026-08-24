@@ -1,8 +1,9 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useServiceProviderComparisonReportStore } from "@/store/reports/serviceProviderComparisonReportStore";
 import ReportPreview from "@/components/ammReports/list/ServiceProviderComparisonReport/PreviewReport.vue";
+import ReportPreviewShell from "@/components/ammReports/list/ReportPreviewShell.vue";
 import type { ServiceProviderComparisonReportType } from "@/components/ammReports/types";
 
 const store = useServiceProviderComparisonReportStore();
@@ -59,14 +60,17 @@ const onBackToReports = () => {
 </script>
 
 <template>
-  <div v-if="reportData && reportData.length">
-    <ReportPreview :report="reportData" />
-  </div>
+  <ReportPreviewShell current-report-id="100005" :report="reportData">
 
-  <div v-else class="pa-10 text-center">
-    <h3>{{ $t("t-noDataForPreview") }}</h3>
-    <v-btn color="secondary" variant="outlined" class="mt-4" @click="onBackToReports">
-      {{ $t("t-back") }} <i class="ph-arrow-left ms-2" />
-    </v-btn>
-  </div>
+    <div v-if="reportData && reportData.length">
+      <ReportPreview :report="reportData" />
+    </div>
+
+    <div v-else class="pa-10 text-center">
+      <h3>{{ $t("t-noDataForPreview") }}</h3>
+      <v-btn color="secondary" variant="outlined" class="mt-4" @click="onBackToReports">
+        {{ $t("t-back") }} <i class="ph-arrow-left ms-2" />
+      </v-btn>
+    </div>
+  </ReportPreviewShell>
 </template>

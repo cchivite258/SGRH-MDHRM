@@ -326,7 +326,8 @@ export class EmployeeFrequencyTrendReportExporter {
     let csv = `${escapeCsv(this.tr("t-eft-report-title").toUpperCase())}\n`;
     csv += `${escapeCsv(this.tr("t-institution"))},${escapeCsv(report.contract?.name || "-")}\n`;
     csv += `${escapeCsv(this.tr("t-coverage-period"))},${escapeCsv(this.periodLabel(report))}\n`;
-    csv += `${escapeCsv(this.tr("t-generated-by"))},${escapeCsv(userName || this.tr("t-spr-system-user"))}\n\n`;
+    csv += `${escapeCsv(this.tr("t-generated-by"))},${escapeCsv(userName || this.tr("t-spr-system-user"))}\n`;
+    csv += `${escapeCsv(this.tr("t-spr-generated-at"))},${escapeCsv(this.generatedAt())}\n\n`;
     csv += [this.tr("t-employee"), this.tr("t-employee-number"), this.tr("t-eft-frequency")].map(escapeCsv).join(",") + "\n";
     rows.forEach((row) => {
       csv += [row.employeeName, row.employeeNumber, row.frequency].map(escapeCsv).join(",") + "\n";

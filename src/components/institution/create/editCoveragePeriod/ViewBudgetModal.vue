@@ -9,11 +9,12 @@ import { formateDate } from "@/app/common/dateFormate";
 import { amountFormate } from "@/app/common/amountFormate";
 import { transactionHeaders } from "@/components/institution/create/utils";
 import TableActionView from "@/app/common/components/TableActionView.vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const { t } = useI18n();
 const emit = defineEmits(["update:modelValue"]);
 const router = useRouter();
+const route = useRoute();
 
 const props = defineProps({
   modelValue: {
@@ -74,10 +75,50 @@ const toggleSelection = (item: TransactionType) => {
   }
 };
 
-const onViewClick = (transactionId: string) => {
-  
-  // Implemente a lógica para visualizar a transação
-  router.push(`/invoices/view/`+transactionId);
+const resolveReturnTitle = () => {
+  if (route.path.startsWith("/institution/coveragePeriod/view/")) {
+    return "view-coverage-period";
+  }
+
+  if (route.path.startsWith("/institution/edit/")) {
+    return "periods";
+  }
+
+  if (route.path.startsWith("/institution/view/")) {
+    return "view-institution";
+  }
+
+  return "view-budget";
+};
+
+const resolveReturnTo = () => {
+  if (
+    route.path.startsWith("/institution/edit/") ||
+    route.path.startsWith("/institution/coveragePeriod/view/")
+  ) {
+    return router.resolve({
+      path: route.path,
+      query: {
+        ...route.query,
+        ...(route.path.startsWith("/institution/edit/") ? { tab: "2" } : {}),
+        budgetId: props.data?.id || undefined
+      }
+    }).fullPath;
+  }
+
+  return route.fullPath;
+};
+
+const onViewClick = (invoiceId?: string) => {
+  if (!invoiceId) return;
+
+  router.push({
+    path: `/invoices/view/${invoiceId}`,
+    query: {
+      returnTo: resolveReturnTo(),
+      returnTitle: resolveReturnTitle()
+    }
+  });
 }
 
 const remainingBalance = computed(() => {
@@ -156,7 +197,7 @@ const remainingBalance = computed(() => {
                       <Status :status="item.invoice?.invoiceStatus" />
                     </td>
                     <td style="padding-right: 0px;">
-                      <TableActionView @onView="onViewClick(item?.invoice.id)" />
+                      <TableActionView @onView="onViewClick(item?.invoice?.id)" />
                     </td>
                   </tr>
 

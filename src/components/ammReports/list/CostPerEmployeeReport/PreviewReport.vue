@@ -205,7 +205,7 @@
           </thead>
           
           <tbody>
-            <tr v-for="(employee, i) in employees" :key="i" class="table-row">
+            <tr v-for="(employee, i) in paginatedEmployees" :key="i" class="table-row">
               <td class="pa-4">
                 <div class="employee-name">{{ employee.employeeName }}</div>
               </td>
@@ -259,6 +259,11 @@
             </tr>
           </tfoot>
         </v-table>
+        <ReportPreviewPagination
+          v-model:page="page"
+          v-model:items-per-page="itemsPerPage"
+          :total-items="employees.length"
+        />
       </div>
     </v-card>
 
@@ -305,27 +310,7 @@
     </v-row>
 
     <!-- RODAPÉ MINIMALISTA -->
-    <v-card variant="outlined" class="mt-8" elevation="0">
-      <v-card-text class="pa-4">
-        <div class="d-flex justify-space-between align-center flex-wrap">
-          <div class="text-caption text-grey">
-            <div class="d-flex align-center">
-              <v-icon size="small" class="mr-2">mdi-information</v-icon>
-              {{ $t('t-report-generated-automatically') }}
-            </div>
-            <div class="mt-1">
-              {{ $t('t-cpe-system-footer') }} • {{ currentDate }}
-            </div>
-          </div>
-          
-          <div class="text-right">
-            <div class="text-caption text-grey">
-              {{ $t('t-generated-by') }}: {{ userName }}
-            </div>
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
+    <ReportPreviewFooter system-footer-key="t-cpe-system-footer" :generated-by="userName" />
 
     <v-card-actions class="d-flex justify-space-between mt-3">
       <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack()">
@@ -345,6 +330,9 @@ import { useAuthStore } from '@/store/authStore';
 import { CostPerEmployeeReportExporter } from '@/components/ammReports/list/CostPerEmployeeReport/exportUtils';
 import { useI18n } from "vue-i18n";
 import { institutionService } from '@/app/http/httpServiceProvider';
+import ReportPreviewFooter from "@/components/ammReports/list/ReportPreviewFooter.vue";
+import ReportPreviewPagination from "@/components/ammReports/list/ReportPreviewPagination.vue";
+import { useReportPreviewPagination } from "@/components/ammReports/list/reportPreviewPagination";
 
 const props = defineProps<{
   report: CompanyCostPerEmployeeReportType
@@ -369,6 +357,8 @@ const exporting = ref(false);
 const exportType = ref<'pdf' | 'excel' | 'csv' | null>(null);
 
 // Nome do usuário
+const { page, itemsPerPage, paginatedRows: paginatedEmployees } = useReportPreviewPagination(employees);
+
 const userName = computed(() => {
   const user = authStore.user;
   if (!user) return '';

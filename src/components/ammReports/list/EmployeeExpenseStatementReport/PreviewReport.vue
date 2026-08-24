@@ -9,6 +9,9 @@ import {
   EmployeeExpenseStatementReportExporter,
   formatEmployeeExpenseServiceProvisionDate,
 } from "./exportUtils";
+import ReportPreviewFooter from "@/components/ammReports/list/ReportPreviewFooter.vue";
+import ReportPreviewPagination from "@/components/ammReports/list/ReportPreviewPagination.vue";
+import { useReportPreviewPagination } from "@/components/ammReports/list/reportPreviewPagination";
 
 const props = defineProps<{
   report: EmployeeExpenseStatementReportType;
@@ -35,6 +38,7 @@ const employeeFullName = computed(() => {
 });
 
 const details = computed(() => props.report?.details || []);
+const { page, itemsPerPage, paginatedRows: paginatedDetails } = useReportPreviewPagination(details);
 
 const currentDate = computed(() => {
   const uiLocale = locale.value === "en" ? "en-US" : "pt-PT";
@@ -237,7 +241,7 @@ const exportOptions = [
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(row, index) in details" :key="row.invoiceId || index" class="table-row">
+            <tr v-for="(row, index) in paginatedDetails" :key="row.invoiceId || index" class="table-row">
               <td class="pa-4">{{ formatEmployeeExpenseServiceProvisionDate(row) }}</td>
               <td class="pa-4">{{ row.invoiceNumber || "-" }}</td>
               <td class="pa-4">{{ row.serviceProviderName || "-" }}</td>
@@ -259,25 +263,14 @@ const exportOptions = [
             </tr>
           </tfoot>
         </v-table>
+        <ReportPreviewPagination
+          v-model:page="page"
+          v-model:items-per-page="itemsPerPage"
+          :total-items="details.length"
+        />
       </div>
     </v-card>
-
-    <v-card variant="outlined" class="mt-8" elevation="0">
-      <v-card-text class="pa-4">
-        <div class="d-flex justify-space-between align-center flex-wrap">
-          <div class="text-caption text-grey">
-            <div class="d-flex align-center">
-              <v-icon size="small" class="mr-2">mdi-information</v-icon>
-              {{ $t("t-report-generated-automatically") }}
-            </div>
-            <div class="mt-1">{{ $t("t-spr-system-footer") }} - {{ currentDate }}</div>
-          </div>
-          <div class="text-right">
-            <div class="text-caption text-grey">{{ $t("t-generated-by") }}: {{ userName }}</div>
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
+    <ReportPreviewFooter system-footer-key="t-spr-system-footer" :generated-by="userName" />
 
     <v-card-actions class="d-flex justify-space-between mt-3">
       <v-btn color="secondary" variant="outlined" class="me-2" @click="onBack">
