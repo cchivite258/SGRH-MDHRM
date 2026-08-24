@@ -11,11 +11,15 @@ import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import { costPerEmployeeService } from "@/app/http/httpServiceProvider";
 import { useRouter } from "vue-router";
 import { useCostPerEmployeeStore } from "@/store/reports/costPerEmployeeStore";
+import { useReportPreviewFiltersStore } from "@/store/reports/reportPreviewFiltersStore";
+import { buildPreviewParameters, formatPreviewParameterDate, getOptionLabel } from "@/components/ammReports/list/reportPreviewFilterUtils";
+import ReportFilterCard from "@/components/ammReports/list/ReportFilterCard.vue";
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const reportStore = useCostPerEmployeeStore();
+const previewFiltersStore = useReportPreviewFiltersStore();
 
 
 const props = defineProps({
@@ -151,6 +155,13 @@ const onSubmit = async () => {
     contractName: response.data?.contractName ?? selectedContract.value?.name,
     organization: response.data?.organization ?? selectedOrganization.value
   });
+  previewFiltersStore.setParameters("100002", buildPreviewParameters([
+    { label: t("t-institution"), value: getOptionLabel(institutions.value, contractId.value) },
+    { label: t("t-filter-by"), value: filterType.value === "1" ? t("t-coverage-period") : t("t-dates") },
+    filterType.value === "1" && { label: t("t-coverage-period"), value: getOptionLabel(coveragePeriods.value, coveragePeriodId.value) },
+    filterType.value === "2" && { label: t("t-start-period"), value: formatPreviewParameterDate(fromDate.value) },
+    filterType.value === "2" && { label: t("t-end-period"), value: formatPreviewParameterDate(toDate.value) },
+  ]));
 
   emit("update:modelValue", false);
 
@@ -173,7 +184,7 @@ onMounted(async () => {
   <v-dialog :model-value="props.modelValue" width="500" persistent>
 
     <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="$t('t-filters')" title-class="py-0">
+      <ReportFilterCard report-id="100002">
         <template #title-action>
           <v-btn icon="ph-x" variant="plain" @click="emit('update:modelValue', false)"
  />
@@ -244,7 +255,7 @@ onMounted(async () => {
           </v-btn>
         </v-card-actions>
 
-      </Card>
+      </ReportFilterCard>
     </v-form>
 
   </v-dialog>

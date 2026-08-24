@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useCostPerEmployeeStore } from "@/store/reports/costPerEmployeeStore";
 import ReportPreview from "@/components/ammReports/list/CostPerEmployeeReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 import { useRouter } from "vue-router";
 
 const store = useCostPerEmployeeStore();
@@ -12,6 +13,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100002" :report="store.report" />
+
   <div v-if="store.report">
     <ReportPreview :report="store.report" />
   </div>

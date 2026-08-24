@@ -2,6 +2,7 @@
 import { useRouter } from "vue-router";
 import { useHospitalProcedureTrendReportStore } from "@/store/reports/hospitalProcedureTrendReportStore";
 import ReportPreview from "@/components/ammReports/list/HospitalProcedureTrendReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 
 const store = useHospitalProcedureTrendReportStore();
 const router = useRouter();
@@ -12,6 +13,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100011" :report="store.report" />
+
   <div v-if="store.report">
     <ReportPreview :report="store.report" />
   </div>

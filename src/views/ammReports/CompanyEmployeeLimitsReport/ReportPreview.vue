@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useCompanyEmployeeLimitsReportStore } from "@/store/reports/companyEmployeeLimitsReportStore";
 import ReportPreview from "@/components/ammReports/list/CompanyEmployeeLimitsReport/PreviewReport.vue";
+import ReportPreviewNavigator from "@/components/ammReports/list/ReportPreviewNavigator.vue";
 import { useRouter } from "vue-router";
 
 const store = useCompanyEmployeeLimitsReportStore();
@@ -12,6 +13,8 @@ const onBackToReports = () => {
 </script>
 
 <template>
+  <ReportPreviewNavigator current-report-id="100006" :report="store.report" />
+
   <div v-if="store.report">
     <ReportPreview :report="store.report" />
   </div>
@@ -23,4 +26,3 @@ const onBackToReports = () => {
     </v-btn>
   </div>
 </template>
-
