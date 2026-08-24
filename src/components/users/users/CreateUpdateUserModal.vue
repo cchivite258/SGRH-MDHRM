@@ -37,7 +37,7 @@ const id = ref(formData.value.id || "");
 const firstName = ref(formData.value.firstName || "");
 const lastName = ref(formData.value.lastName || "");
 const email = ref(formData.value.email || "");
-const requiredChangePassword = ref(formData.value.requiredChangePassword ?? isCreate.value);
+const requiredChangePassword = ref(formData.value.requiredChangePassword ?? false);
 const password = ref<{ value: string; isValid: boolean }>({ value: "", isValid: false });
 const password_confirm = ref<{ value: string; isValid: boolean }>({ value: "", isValid: false });
 
