@@ -657,6 +657,7 @@
   "t-save-dependent-before-attach": "Save the dependent first before attaching documents",
   "t-add-at-least-one-document": "Add at least one document to attach",
   "t-documents-attached-success": "Documents attached successfully!",
+  "t-retry": "Retry",
   "t-edit-institution": "Edit Contract",
   "t-view-institution": "View Contract",
   "t-middle-name": "Middle Name",

@@ -1282,6 +1282,7 @@
   "t-save-dependent-before-attach": "Grave primeiro o dependente para poder anexar documentos",
   "t-add-at-least-one-document": "Adicione pelo menos um documento para anexar",
   "t-documents-attached-success": "Documentos anexados com sucesso!",
+  "t-retry": "Tentar novamente",
   "t-upload-file-or-drag-here": "Carregue arquivo ou arraste aqui.",
   "t-download-original-invoice": "Baixar Factura Original",
   "t-delete-original-invoice": "Eliminar Factura Original",
