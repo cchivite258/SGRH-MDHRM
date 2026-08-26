@@ -22,6 +22,10 @@ const prop = defineProps({
     type: Boolean,
     default: true,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Cria o texto final dinamicamente, com fallback
@@ -92,6 +96,7 @@ const onRemove = (item: any) => {
       prepend-icon=""
       class="file-uploader"
       :accept="'.png, .pdf, .jpg, .jpeg'"
+      :disabled="disabled"
     />
 
     <div class="file-uploader-content">
@@ -122,7 +127,7 @@ const onRemove = (item: any) => {
             <span> {{ Math.ceil(Number(file.size) / 1024) }} kb </span>
           </div>
         </div>
-        <v-btn size="x-small" color="danger" @click="onRemove(file)">
+        <v-btn size="x-small" color="danger" :disabled="disabled" @click="onRemove(file)">
           {{ t('t-delete') }}
         </v-btn>
       </v-card-text>
