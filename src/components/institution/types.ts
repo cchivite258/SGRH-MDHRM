@@ -385,7 +385,6 @@ export type ServiceProviderInsertType = {
     serviceProvider: string; 
     company: string; 
     isBusinessDays?: boolean | null;
-    gracePeriod?: number | null;
     maxDaysAfterService?: number | null;
     enabled: boolean;
 };

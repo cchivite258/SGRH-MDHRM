@@ -32,7 +32,6 @@ const toContractServiceProviderPayload = (serviceProviderData: ServiceProviderIn
     serviceProvider: serviceProviderData.serviceProvider,
     contract: serviceProviderData.company,
     isBusinessDays: !!serviceProviderData.isBusinessDays,
-    gracePeriod: toNullableNumber(serviceProviderData.gracePeriod),
     maxDaysAfterService: toNullableNumber(serviceProviderData.maxDaysAfterService)
 });
 

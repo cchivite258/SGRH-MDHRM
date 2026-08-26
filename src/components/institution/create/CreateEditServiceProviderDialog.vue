@@ -42,7 +42,6 @@ const serverErrors = ref<Record<string, string[]>>({});
 const id = ref("");
 const serviceProvider = ref<string | number>(""); // Pode ser string ou number
 const isBusinessDays = ref(false);
-const gracePeriod = ref<number | string | null>(null);
 const maxDaysAfterService = ref<number | string | null>(null);
 const suppressServiceProviderDefaults = ref(false);
 
@@ -53,7 +52,6 @@ const applyServiceProviderDefaults = () => {
   if (!selectedServiceProvider) return;
 
   maxDaysAfterService.value = selectedServiceProvider.maxDaysAfterService ?? null;
-  gracePeriod.value = selectedServiceProvider.gracePeriod ?? null;
   isBusinessDays.value = !!selectedServiceProvider.isBusinessDays;
 };
 
@@ -72,7 +70,6 @@ watch(() => props.data, async (newData) => {
     serviceProvider.value = newData.serviceProvider; // Para ServiceProviderInsertType
   }
   isBusinessDays.value = !!newData.isBusinessDays;
-  gracePeriod.value = newData.gracePeriod ?? null;
   maxDaysAfterService.value = newData.maxDaysAfterService ?? null;
 
   await nextTick();
@@ -93,9 +90,6 @@ const dialogValue = computed({
 const requiredRules = {
   serviceProvider: [
     (v: string) => !!v || t('t-please-enter-service-provider'),
-  ],
-  optionalPositiveNumber: [
-    (v: string | number | null | undefined) => v === null || v === undefined || v === "" || Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
   ],
   requiredPositiveNumber: [
     (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" || t("t-required-field"),
@@ -152,7 +146,6 @@ const onSubmit = async () => {
     serviceProvider: serviceProvider.value.toString(), // Garante que seja string
     company: props.data?.company ?? "",
     isBusinessDays: isBusinessDays.value,
-    gracePeriod: toNullableNumber(gracePeriod.value),
     maxDaysAfterService: toNullableNumber(maxDaysAfterService.value),
     enabled: true
   };
@@ -214,7 +207,7 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n6">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="12">
             <div class="font-weight-bold mb-2">
               {{ $t('t-max-days-after-service') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -223,18 +216,6 @@ onMounted(async () => {
               type="number"
               :placeholder="$t('t-enter-max-days-after-service')"
               :rules="requiredRules.requiredPositiveNumber"
-            />
-          </v-col>
-
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-grace-period') }}
-            </div>
-            <TextField
-              v-model="gracePeriod"
-              type="number"
-              :placeholder="$t('t-enter-grace-period')"
-              :rules="requiredRules.optionalPositiveNumber"
             />
           </v-col>
         </v-row>
