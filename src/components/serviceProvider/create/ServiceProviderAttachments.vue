@@ -30,6 +30,18 @@ const props = defineProps({
   serviceProviderId: {
     type: String,
     default: ""
+  },
+  serviceProviderContractExtensionId: {
+    type: [String, Number],
+    default: null
+  },
+  title: {
+    type: String,
+    default: "Documentos do Contrato do Provedor"
+  },
+  allowAttach: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -52,6 +64,15 @@ const canConsultAttachments = computed(() => canAny([
 ]));
 const canAttachDocuments = computed(() => can(PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.CREATE));
 const canDeleteDocuments = computed(() => can(PERMISSIONS.SERVICE_PROVIDER_ATTACHMENTS.DELETE));
+const canShowAttachDocuments = computed(() => props.allowAttach && canAttachDocuments.value);
+const hasServiceProviderContractExtensionFilter = computed(() =>
+  props.serviceProviderContractExtensionId !== undefined
+  && props.serviceProviderContractExtensionId !== null
+  && props.serviceProviderContractExtensionId !== ""
+);
+const serviceProviderContractExtensionIdValue = computed(() =>
+  hasServiceProviderContractExtensionFilter.value ? String(props.serviceProviderContractExtensionId) : ""
+);
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
   id: uuidv4(),
@@ -81,7 +102,7 @@ const pendingUploadsValidationMessage = computed(() => {
 });
 
 const getUploadKey = (serviceProviderDocumentType: ServiceProviderDocumentType | "", file: File) =>
-  `${serviceProviderDocumentType}-${file.name}-${file.size}-${file.lastModified || ""}`;
+  `${serviceProviderDocumentType}-${serviceProviderContractExtensionIdValue.value}-${file.name}-${file.size}-${file.lastModified || ""}`;
 
 const resetAttachmentUploadRowState = (row: AttachmentUploadRow) => {
   row.status = "idle";
@@ -93,7 +114,7 @@ const isEmptyAttachmentUploadRow = (row: AttachmentUploadRow) =>
   !row.serviceProviderDocumentType && row.files.length === 0 && row.status === "idle";
 
 const ensureEmptyAttachmentUploadRow = () => {
-  if (!canAttachDocuments.value) return;
+  if (!canShowAttachDocuments.value) return;
   if (attachmentUploads.value.some(isEmptyAttachmentUploadRow)) return;
 
   attachmentUploads.value = [...attachmentUploads.value, createAttachmentUploadRow()];
@@ -132,11 +153,13 @@ const getAttachmentExtension = (attachment: ServiceProviderAttachmentType) =>
   attachment.attachment?.extension || attachment.extension || attachment.fileMetadata?.extension || "";
 
 const refreshServiceProviderAttachments = async () => {
-  if (!props.serviceProviderId) return;
+  if (!props.serviceProviderId && !hasServiceProviderContractExtensionFilter.value) return;
 
   loading.value = true;
   try {
-    const response = await serviceProviderAttachmentService.getAttachmentsByServiceProvider(props.serviceProviderId);
+    const response = hasServiceProviderContractExtensionFilter.value
+      ? await serviceProviderAttachmentService.getAttachmentsByServiceProviderContractExtension(serviceProviderContractExtensionIdValue.value)
+      : await serviceProviderAttachmentService.getAttachmentsByServiceProvider(props.serviceProviderId);
     if (response.status === "error") {
       getApiErrorMessages(response.error, t("t-message-load-error")).forEach((message) => toast.error(message));
       return;
@@ -151,19 +174,20 @@ const refreshServiceProviderAttachments = async () => {
 };
 
 watch(
-  () => props.serviceProviderId,
-  async (serviceProviderId) => {
+  [() => props.serviceProviderId, () => props.serviceProviderContractExtensionId],
+  async ([serviceProviderId]) => {
     attachmentUploads.value = [];
     currentAttachments.value = [];
     errorMsg.value = "";
 
-    if (!serviceProviderId) return;
+    if (!serviceProviderId && !hasServiceProviderContractExtensionFilter.value) return;
     await refreshServiceProviderAttachments();
   },
   { immediate: true }
 );
 
 const addAttachmentUploadRow = () => {
+  if (!canShowAttachDocuments.value) return;
   attachmentUploads.value = [...attachmentUploads.value, createAttachmentUploadRow()];
 };
 
@@ -172,7 +196,7 @@ const removeAttachmentUploadRow = (rowId: string) => {
 };
 
 const tryAutoUploadAttachmentRow = async (rowId: string, force = false) => {
-  if (!props.serviceProviderId) return;
+  if (!canShowAttachDocuments.value || !props.serviceProviderId) return;
 
   const row = attachmentUploads.value.find((item) => item.id === rowId);
   if (!row || row.status === "uploading") return;
@@ -312,7 +336,7 @@ const onConfirmDeleteAttachment = async () => {
 </script>
 
 <template>
-  <Card title="Documentos do Contrato do Provedor" elevation="0" title-class="pb-0">
+  <Card :title="title" elevation="0" title-class="pb-0">
     <v-card-text class="pt-0">
       <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mb-3" density="compact" />
 
@@ -320,7 +344,7 @@ const onConfirmDeleteAttachment = async () => {
         <div class="font-weight-bold text-caption">
           {{ $t('t-document-file') }}
         </div>
-        <div v-if="canAttachDocuments" class="d-flex ga-2">
+        <div v-if="canShowAttachDocuments" class="d-flex ga-2">
           <v-btn
             color="secondary"
             size="small"
@@ -345,8 +369,8 @@ const onConfirmDeleteAttachment = async () => {
       </v-alert>
 
       <v-card v-for="attachment in currentAttachments" :key="getServiceProviderAttachmentId(attachment)" class="border mb-3" elevation="0">
-        <v-card-text class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between ga-3">
-          <div class="d-flex flex-column">
+        <v-card-text class="service-provider-attachment__content">
+          <div class="service-provider-attachment__info">
             <span class="font-weight-bold">
               {{ getAttachmentFileName(attachment) }}
             </span>
@@ -357,7 +381,7 @@ const onConfirmDeleteAttachment = async () => {
               {{ getAttachmentFileSize(attachment) }} kb
             </span>
           </div>
-          <div class="d-flex ga-2 flex-wrap justify-end">
+          <div class="service-provider-attachment__actions">
             <v-btn
               v-if="canConsultAttachments"
               color="black"
@@ -384,7 +408,7 @@ const onConfirmDeleteAttachment = async () => {
         </v-card-text>
       </v-card>
 
-      <template v-if="canAttachDocuments">
+      <template v-if="canShowAttachDocuments">
         <v-card v-for="row in attachmentUploads" :key="row.id" class="border mt-3" elevation="0">
           <v-card-text class="position-relative">
             <div class="d-flex align-center justify-space-between ga-2 flex-wrap mb-3 pe-8">
@@ -464,3 +488,32 @@ const onConfirmDeleteAttachment = async () => {
     @onConfirm="onConfirmDeleteAttachment"
   />
 </template>
+
+<style scoped>
+.service-provider-attachment__content {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.service-provider-attachment__info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.service-provider-attachment__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.service-provider-attachment__actions :deep(.v-btn) {
+  white-space: nowrap;
+}
+</style>

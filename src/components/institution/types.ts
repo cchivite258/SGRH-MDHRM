@@ -142,6 +142,7 @@ export type ContractDocumentType =
 export type ContractAttachmentType = {
   id: string;
   contractId?: string | number;
+  coveragePeriodExtensionId?: string | number | null;
   contract?: any;
   contractDocumentType: ContractDocumentType;
   originalFilename?: string;
@@ -177,6 +178,7 @@ export type ContractAttachmentType = {
 
 export type ContractAttachmentUploadType = {
   contractDocumentType: ContractDocumentType | "";
+  coveragePeriodExtensionId?: string | number | null;
   file: File | null;
 };
 
@@ -459,6 +461,7 @@ export type CoveragePeriodExtensionPayloadType = {
     budgetAmount?: number | null;
     reasonId: string | number;
     notes: string;
+    file?: File | null;
 };
 
 export type CoveragePeriodExtensionType = {

@@ -772,6 +772,7 @@ onBeforeUnmount(() => {
   <ViewCoveragePeriodDialog v-model="viewDialog" :data="coveragePeriodData" />
   <CoveragePeriodExtensionsDialog
     v-model="coveragePeriodExtensionDialog"
+    :contract-id="institutionId || null"
     :coverage-period-id="selectedCoveragePeriodForExtension?.id || null"
     :coverage-period-name="selectedCoveragePeriodForExtension?.name || ''"
     :current-end-date="selectedCoveragePeriodForExtension?.endDate || null"
