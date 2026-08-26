@@ -180,6 +180,47 @@ export type ContractAttachmentUploadType = {
   file: File | null;
 };
 
+export type ContractParticipantRole = "RESPONSIBLE" | "PARTICIPANT";
+
+export type ContractParticipantType = {
+  id: string;
+  contractId: string | number;
+  participantId: string | number;
+  role: ContractParticipantRole;
+  contract?: {
+    id: string | number;
+    code?: string | null;
+    erpCode?: string | null;
+    name?: string | null;
+    description?: string | null;
+    organizationId?: string | number | null;
+    responsibleId?: string | number | null;
+    enabled?: boolean;
+  } | null;
+  participant?: {
+    id: string | number;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    username?: string | null;
+    enabled?: boolean;
+  } | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
+
+export type ContractParticipantPayloadType = {
+  contractId: string | number;
+  participantId: string | number;
+  role: ContractParticipantRole;
+};
+
 export type DepartmentInsertType = {
     id?: string | null;
     name: string;

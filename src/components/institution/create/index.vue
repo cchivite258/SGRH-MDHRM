@@ -8,6 +8,7 @@ import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErr
 import ButtonNav from "@/components/institution/create/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
 import FormPageHeader from "@/app/common/components/FormPageHeader.vue";
+import ContractResponsibles from "@/components/institution/create/ContractResponsibles.vue";
 import Step1 from "@/components/institution/create/TabGeneralInfo.vue";
 import Step2 from "@/components/institution/create/TabPeriods.vue";
 import Step3 from "@/components/institution/create/TabHealthPlan.vue";
@@ -276,6 +277,10 @@ onMounted(async () => {
     />
   </FormCard>
 
+  <FormCard v-if="step === 1 && isContractStepAllowed(1) && institutionId" class="institution-form-section institution-form-section--responsibles">
+    <ContractResponsibles :contract-id="institutionId" />
+  </FormCard>
+
   <FormCard v-if="step === 2 && isContractStepAllowed(2)" class="institution-form-section">
     <Step2
       @onStepChange="onStepChange"
@@ -362,6 +367,10 @@ onMounted(async () => {
 
 .institution-form-section + .institution-form-section {
   margin-top: 24px;
+}
+
+.institution-form-section--responsibles :deep(.form-card__body) {
+  padding-top: 0 !important;
 }
 
 .institution-form-footer-actions {
