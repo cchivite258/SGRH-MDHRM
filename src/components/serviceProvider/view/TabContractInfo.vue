@@ -82,25 +82,18 @@ onMounted(async () => {
       </v-row>
 
       <v-row>
-        <v-col cols="12" lg="4">
+        <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-2">
             {{ $t("t-is-business-days") }}
           </div>
           <div>{{ serviceProviderData.isBusinessDays ? $t("t-yes") : $t("t-no") }}</div>
         </v-col>
 
-        <v-col cols="12" lg="4">
+        <v-col cols="12" lg="6">
           <div class="font-weight-bold mb-2">
             {{ $t("t-max-days-after-service") }}
           </div>
           <div>{{ serviceProviderData.maxDaysAfterService ?? "-" }}</div>
-        </v-col>
-
-        <v-col cols="12" lg="4">
-          <div class="font-weight-bold mb-2">
-            {{ $t("t-grace-period") }}
-          </div>
-          <div>{{ serviceProviderData.gracePeriod ?? "-" }}</div>
         </v-col>
       </v-row>
 

@@ -74,7 +74,6 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   contractStartDate: undefined,
   contractEndDate: undefined,
   isBusinessDays: false,
-  gracePeriod: null,
   maxDaysAfterService: null,
   enabled: true,
   countryId: undefined,

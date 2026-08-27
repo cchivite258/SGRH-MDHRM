@@ -24,7 +24,6 @@ export type ServiceProviderUpdateType = {
     email?: string;
   } | undefined;
   isBusinessDays?: boolean | null;
-  gracePeriod?: number | null;
   maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
@@ -60,7 +59,6 @@ export type ServiceProviderResponseType = {
     email?: string;
   } | undefined;
   isBusinessDays?: boolean | null;
-  gracePeriod?: number | null;
   maxDaysAfterService?: number | null;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
@@ -98,7 +96,6 @@ export type ServiceProviderInsertType = {
     email?: string;
   } | undefined;
   isBusinessDays?: boolean | null;
-  gracePeriod?: number | null;
   maxDaysAfterService?: number | null;
   contractEndDate: Date | undefined;
   contractStartDate: Date | undefined;
@@ -139,7 +136,6 @@ export type ServiceProviderListingType = {
     email?: string;
   } | undefined;
   isBusinessDays?: boolean | null;
-  gracePeriod?: number | null;
   maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
@@ -178,7 +174,6 @@ export type ServiceProviderListingForListType = {
     email?: string;
   } | undefined;
   isBusinessDays?: boolean | null;
-  gracePeriod?: number | null;
   maxDaysAfterService?: number | null;
   providerTypes?: {
     id: number;
