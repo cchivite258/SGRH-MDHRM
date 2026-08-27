@@ -1227,6 +1227,8 @@
   "t-provider-type": "Tipo de Provedor",
   "t-contract-start-date": "Data de Início do Contrato",
   "t-contract-end-date": "Data de Término do Contrato",
+  "t-contract-previous-end-date": "Data de Término Anterior",
+  "t-new-contract-end-date": "Nova Data de Termino de Contrato",
   "t-enter-contract-start-date": "Insira a data de início do contrato",
   "t-enter-contract-end-date": "Insira a data de término do contrato",
   "t-please-enter-contract-start-date": "Por favor, insira a data de início do contrato",
