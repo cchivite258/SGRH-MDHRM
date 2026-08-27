@@ -39,7 +39,6 @@ const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType
   contractStartDate: serviceProviderData.contractStartDate,
   contractEndDate: serviceProviderData.contractEndDate,
   isBusinessDays: !!serviceProviderData.isBusinessDays,
-  gracePeriod: toNullableNumber(serviceProviderData.gracePeriod),
   maxDaysAfterService: toNullableNumber(serviceProviderData.maxDaysAfterService),
   enabled: serviceProviderData.enabled,
   provinceId: serviceProviderData.provinceId,

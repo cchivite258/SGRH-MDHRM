@@ -98,9 +98,6 @@ const requiredRules = {
       return endDate >= startDate || t("t-contract-end-date-must-be-after-start-date");
     }
   ],
-  optionalPositiveNumber: [
-    (v: string | number | null | undefined) => v === null || v === undefined || v === "" || Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
-  ],
   requiredPositiveNumber: [
     (v: string | number | null | undefined) => v !== null && v !== undefined && v !== "" || t("t-required-field"),
     (v: string | number | null | undefined) => Number(v) >= 0 || t("t-value-must-be-zero-or-greater")
@@ -140,7 +137,6 @@ watch(() => serviceProviderData.value.contractEndDate, () => emit("clear-server-
 watch(() => serviceProviderData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
 watch(() => serviceProviderData.value.erpCode, () => emit("clear-server-error", "erpCode"));
 watch(() => serviceProviderData.value.isBusinessDays, () => emit("clear-server-error", "isBusinessDays"));
-watch(() => serviceProviderData.value.gracePeriod, () => emit("clear-server-error", "gracePeriod"));
 watch(() => serviceProviderData.value.maxDaysAfterService, () => emit("clear-server-error", "maxDaysAfterService"));
 
 const showError = () => {
@@ -236,8 +232,8 @@ defineExpose({ submitForm, validateForm });
           </v-col>
         </v-row>
 
-        <v-row class="mt-n2">
-          <v-col cols="12" lg="4">
+        <v-row class="mt-n4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-is-business-days') }}
             </div>
@@ -248,7 +244,7 @@ defineExpose({ submitForm, validateForm });
             </v-checkbox>
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-max-days-after-service') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -257,18 +253,6 @@ defineExpose({ submitForm, validateForm });
               type="number"
               :placeholder="$t('t-enter-max-days-after-service')"
               :rules="applyServerErrorsToRules('maxDaysAfterService', requiredRules.requiredPositiveNumber)"
-            />
-          </v-col>
-
-          <v-col cols="12" lg="4">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-grace-period') }}
-            </div>
-            <TextField
-              v-model="serviceProviderData.gracePeriod"
-              type="number"
-              :placeholder="$t('t-enter-grace-period')"
-              :rules="applyServerErrorsToRules('gracePeriod', requiredRules.optionalPositiveNumber)"
             />
           </v-col>
         </v-row>
