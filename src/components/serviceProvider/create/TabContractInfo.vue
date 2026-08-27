@@ -37,6 +37,7 @@ const props = withDefaults(defineProps<{
 });
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
+const attachmentsRef = ref<{ refreshServiceProviderAttachments: () => Promise<void> } | null>(null);
 const startDatePickerRef = ref<{ validate: () => boolean | Promise<boolean> } | null>(null);
 const endDatePickerRef = ref<{ validate: () => boolean | Promise<boolean> } | null>(null);
 const errorMsg = ref("");
@@ -175,6 +176,11 @@ const submitForm = async () => {
 
   emit("validated");
   emit("onStepChange", 3);
+};
+
+const refreshContractDocuments = async () => {
+  await nextTick();
+  await attachmentsRef.value?.refreshServiceProviderAttachments();
 };
 
 defineExpose({ submitForm, validateForm });
@@ -329,11 +335,13 @@ defineExpose({ submitForm, validateForm });
       :service-provider-name="serviceProviderData.name || ''"
       :current-contract-end-date="serviceProviderData.contractEndDate || null"
       :read-only="!canManageContractExtensions"
+      @saved="refreshContractDocuments"
     />
   </v-form>
 
   <ServiceProviderAttachments
     v-if="serviceProviderId && canConsultAttachments"
+    ref="attachmentsRef"
     class="mt-4"
     :service-provider-id="serviceProviderId"
   />

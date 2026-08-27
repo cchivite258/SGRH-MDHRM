@@ -149,7 +149,7 @@ export default class ServiceProviderAttachmentService extends HttpService {
   ): Promise<ServiceResponse<ServiceProviderAttachmentType[]>> {
     try {
       const response = await this.get<ApiResponse<ServiceProviderAttachmentType[] | ServiceProviderAttachmentType>>(
-        `${SERVICE_PROVIDER_ATTACHMENTS_ENDPOINT}/by-service-provider-contract-extension/${serviceProviderContractExtensionId}?includes=attachment`
+        `${SERVICE_PROVIDER_ATTACHMENTS_ENDPOINT}/by-service-provider-contract-extension/${serviceProviderContractExtensionId}?includes=serviceProviderContractExtension,fileMetadata,attachment`
       );
 
       return {

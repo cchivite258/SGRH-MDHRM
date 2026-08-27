@@ -31,12 +31,23 @@ const formatDateForApi = (value: Date | string | null): string | null => {
     return String(value).split("T")[0];
 };
 
-const toPayload = (data: ServiceProviderContractExtensionPayloadType) => ({
-    serviceProviderId: data.serviceProviderId,
-    contractEndDate: formatDateForApi(data.contractEndDate),
-    reasonId: data.reasonId,
-    notes: data.notes
-});
+const toPayload = (data: ServiceProviderContractExtensionPayloadType) => {
+    const formData = new FormData();
+
+    formData.append("serviceProviderId", String(data.serviceProviderId));
+    formData.append("contractEndDate", String(formatDateForApi(data.contractEndDate) || ""));
+    formData.append("reasonId", String(data.reasonId));
+
+    if (data.notes !== undefined && data.notes !== null) {
+        formData.append("notes", data.notes);
+    }
+
+    if (data.file) {
+        formData.append("file", data.file);
+    }
+
+    return formData;
+};
 
 export default class ServiceProviderContractExtensionService extends HttpService {
     async getByServiceProvider(
@@ -70,7 +81,7 @@ export default class ServiceProviderContractExtensionService extends HttpService
         data: ServiceProviderContractExtensionPayloadType
     ): Promise<ServiceResponse<ServiceProviderContractExtensionType>> {
         try {
-            const response = await this.post<ApiResponse<ServiceProviderContractExtensionType>>(
+            const response = await this.postFile<ApiResponse<ServiceProviderContractExtensionType>>(
                 SERVICE_PROVIDER_CONTRACT_EXTENSIONS_ENDPOINT,
                 toPayload(data)
             );
@@ -103,7 +114,7 @@ export default class ServiceProviderContractExtensionService extends HttpService
         data: ServiceProviderContractExtensionPayloadType
     ): Promise<ServiceResponse<ServiceProviderContractExtensionType>> {
         try {
-            const response = await this.put<ApiResponse<ServiceProviderContractExtensionType>>(
+            const response = await this.putFile<ApiResponse<ServiceProviderContractExtensionType>>(
                 `${SERVICE_PROVIDER_CONTRACT_EXTENSIONS_ENDPOINT}/${id}`,
                 toPayload(data)
             );

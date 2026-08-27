@@ -8,6 +8,7 @@ import FileUploader from "@/app/common/components/FileUploader.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
 import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
+import ConfirmCreateCoveragePeriodExtensionDialog from "@/components/institution/create/ConfirmCreateCoveragePeriodExtensionDialog.vue";
 import ViewCoveragePeriodExtensionDialog from "@/components/institution/create/ViewCoveragePeriodExtensionDialog.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
@@ -84,6 +85,7 @@ const formLoading = ref(false);
 const reasonsLoading = ref(false);
 const errorMsg = ref("");
 const fileError = ref("");
+const createConfirmationDialog = ref(false);
 const extensionAttachmentLoading = ref(false);
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<CoveragePeriodExtensionType[]>([]);
@@ -228,6 +230,9 @@ const getAttachmentFileSize = (attachment: ContractAttachmentType) =>
     || 0
   ) / 1024);
 
+const canEditExtension = (item: CoveragePeriodExtensionType) =>
+  String(item.status || "").toUpperCase() === "ACTIVE";
+
 const loadExistingExtensionAttachment = async (coveragePeriodExtensionId: string | number) => {
   existingExtensionAttachment.value = null;
   extensionAttachmentLoading.value = true;
@@ -370,26 +375,15 @@ const closeFormDialog = () => {
   formDialog.value = false;
 };
 
-const onSubmit = async () => {
-  if (!form.value || !props.coveragePeriodId) return;
-  serverErrors.value = {};
+const saveExtension = async () => {
+  if (!props.coveragePeriodId) return;
 
-  const { valid } = await form.value.validate();
-  const isEndDateValid = endDatePickerRef.value?.validate() ?? true;
-
-  if (!valid || !isEndDateValid || !hasExtensionDocument.value) {
-    if (!hasExtensionDocument.value) {
-      fileError.value = t("t-please-select-file");
-    }
-    toast.error(t("t-validation-error"));
-    setError(t("t-please-correct-errors"));
-    return;
-  }
+  const coveragePeriodId = props.coveragePeriodId;
 
   try {
     formLoading.value = true;
     const payload: CoveragePeriodExtensionPayloadType = {
-      coveragePeriodId: props.coveragePeriodId,
+      coveragePeriodId,
       endDate: extensionForm.value.endDate,
       budgetAmount:
         extensionForm.value.budgetAmount === null ||
@@ -406,21 +400,52 @@ const onSubmit = async () => {
       : await coveragePeriodExtensionService.create(payload);
 
     if (response.status === "error") {
+      createConfirmationDialog.value = false;
       serverErrors.value = getApiValidationErrors(response.error);
       getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
       return;
     }
 
     toast.success(extensionForm.value.id ? t("t-period-extension-updated-success") : t("t-period-extension-created-success"));
+    createConfirmationDialog.value = false;
     formDialog.value = false;
     await reloadExtensions();
     emit("saved");
   } catch (error) {
+    createConfirmationDialog.value = false;
     console.error("Erro ao gravar adenda do perÃ­odo:", error);
     getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
   } finally {
     formLoading.value = false;
   }
+};
+
+const onSubmit = async () => {
+  if (!form.value || !props.coveragePeriodId) return;
+  serverErrors.value = {};
+
+  const { valid } = await form.value.validate();
+  const isEndDateValid = endDatePickerRef.value?.validate() ?? true;
+
+  if (!valid || !isEndDateValid || !hasExtensionDocument.value) {
+    if (!hasExtensionDocument.value) {
+      fileError.value = t("t-please-select-file");
+    }
+    toast.error(t("t-validation-error"));
+    setError(t("t-please-correct-errors"));
+    return;
+  }
+
+  if (isCreate.value) {
+    createConfirmationDialog.value = true;
+    return;
+  }
+
+  await saveExtension();
+};
+
+const onConfirmCreate = async () => {
+  await saveExtension();
 };
 
 watch(dialogValue, async (isOpen) => {
@@ -439,6 +464,7 @@ watch(formDialog, (isOpen) => {
   if (isOpen) {
     fetchPeriodExtensionReasons();
   } else {
+    createConfirmationDialog.value = false;
     resetForm();
   }
 });
@@ -506,7 +532,7 @@ watch(viewDialog, (isOpen) => {
                 </td>
                 <td class="text-end">
                   <v-btn
-                    v-if="!readOnly"
+                    v-if="!readOnly && canEditExtension(item)"
                     icon="ph-pencil-simple ph-sm"
                     color="primary"
                     density="compact"
@@ -660,6 +686,12 @@ watch(viewDialog, (isOpen) => {
     v-model="viewDialog"
     :data="selectedExtension"
     :contract-id="contractId"
+  />
+
+  <ConfirmCreateCoveragePeriodExtensionDialog
+    v-model="createConfirmationDialog"
+    :loading="formLoading"
+    @onConfirm="onConfirmCreate"
   />
 </template>
 
