@@ -22,6 +22,10 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false
+  },
+  attach: {
+    type: [Boolean, String, Object] as PropType<boolean | string | Element>,
+    default: "body"
   }
 });
 
@@ -129,6 +133,8 @@ defineExpose({ validate });
       origin="top end"
       offset="4"
       scroll-strategy="reposition"
+      :attach="attach"
+      :min-width="0"
       @update:model-value="(value) => !value && closeMenu()"
     >
       <template #activator="{ props: menuProps }">

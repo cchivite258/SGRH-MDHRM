@@ -92,19 +92,14 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-3">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-is-business-days') }}</div>
             <div>{{ props.data?.isBusinessDays ? $t('t-yes') : $t('t-no') }}</div>
           </v-col>
 
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t('t-max-days-after-service') }}</div>
             <div>{{ props.data?.maxDaysAfterService ?? "-" }}</div>
-          </v-col>
-
-          <v-col cols="12" lg="4">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-grace-period') }}</div>
-            <div>{{ props.data?.gracePeriod ?? "-" }}</div>
           </v-col>
         </v-row>
       </v-card-text>

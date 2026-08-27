@@ -1,21 +1,17 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch, type PropType } from "vue";
+import { computed, ref, watch, type PropType } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
-import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
-import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
+import CreateEditServiceProviderContractExtensionDialog from "@/components/serviceProvider/create/CreateEditServiceProviderContractExtensionDialog.vue";
+import ViewServiceProviderContractExtensionDialog from "@/components/serviceProvider/create/ViewServiceProviderContractExtensionDialog.vue";
 import { formateDate } from "@/app/common/dateFormate";
-import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
-import { reasonService, serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
-import type { ReasonListing } from "@/components/baseTables/reason/types";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
 import { serviceProviderContractExtensionHeader } from "@/components/serviceProvider/create/utils";
-import type {
-  ServiceProviderContractExtensionPayloadType,
-  ServiceProviderContractExtensionType
-} from "@/components/serviceProvider/types";
+import type { ServiceProviderContractExtensionType } from "@/components/serviceProvider/types";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -45,6 +41,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
+  (e: "saved"): void;
 }>();
 
 interface FetchParams {
@@ -69,17 +66,12 @@ const tableHeaders = computed(() =>
 
 const formDialog = ref(false);
 const viewDialog = ref(false);
-const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
-const contractEndDatePickerRef = ref<{ validate: () => boolean } | null>(null);
 const loading = ref(false);
-const formLoading = ref(false);
-const reasonsLoading = ref(false);
 const errorMsg = ref("");
-const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<ServiceProviderContractExtensionType[]>([]);
 const extensions = ref<ServiceProviderContractExtensionType[]>([]);
-const selectedExtension = ref<ServiceProviderContractExtensionType | null>(null);
-const contractExtensionReasons = ref<ReasonListing[]>([]);
+const formExtension = ref<ServiceProviderContractExtensionType | null>(null);
+const viewExtension = ref<ServiceProviderContractExtensionType | null>(null);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -87,26 +79,10 @@ const pagination = ref({
   itemsPerPage: 10,
   totalPages: 0
 });
-const extensionForm = ref<ServiceProviderContractExtensionPayloadType>({
-  id: undefined,
-  serviceProviderId: "",
-  contractEndDate: new Date().toISOString().split("T")[0],
-  reasonId: "",
-  notes: ""
-});
 
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const isCreate = computed(() => !extensionForm.value.id);
 const totalItems = computed(() => pagination.value.totalElements);
-const contractExtensionReasonOptions = computed(() =>
-  contractExtensionReasons.value
-    .filter(reason => reason.enabled)
-    .map(reason => ({
-      label: reason.name,
-      value: reason.id
-    }))
-);
 
 const clearErrorLater = () => {
   if (alertTimeout) {
@@ -123,35 +99,6 @@ const setError = (message: string) => {
   errorMsg.value = message;
   clearErrorLater();
 };
-
-const getServerErrors = (field: string) => serverErrors.value[field] || [];
-const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
-  ...rules,
-  (value: any) => {
-    const hasFrontendError = rules.some((rule) => rule(value) !== true);
-    if (hasFrontendError) return true;
-    return getServerErrors(field)[0] || true;
-  }
-];
-
-const requiredRules = {
-  contractEndDate: [
-    (v: Date | string | null) => !!v || t("t-please-enter-contract-end-date")
-  ],
-  reasonId: [
-    (v: string | number | null | undefined) => !!v || t("t-please-select-reason")
-  ],
-  notes: [
-    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
-  ]
-};
-
-watch(serverErrors, async (errors) => {
-  if (Object.keys(errors).length > 0) {
-    await nextTick();
-    await form.value?.validate();
-  }
-}, { deep: true });
 
 const fetchContractExtensions = async ({
   page,
@@ -178,7 +125,7 @@ const fetchContractExtensions = async ({
       totalPages: meta.totalPages ?? Math.ceil((meta.totalElements ?? content.length) / itemsPerPage)
     };
   } catch (error) {
-    console.error("Erro ao carregar adendas do provedor de serviço:", error);
+    console.error("Erro ao carregar adendas do provedor de servico:", error);
     getApiErrorMessages(error, t("t-error-loading-contract-addenda")).forEach((message) => {
       toast.error(message);
       setError(message);
@@ -197,114 +144,31 @@ const reloadContractExtensions = async () => {
   });
 };
 
-const fetchContractExtensionReasons = async () => {
-  reasonsLoading.value = true;
-  try {
-    const { content } = await reasonService.getReasonsByType("SERVICE_PROVIDER_CONTRACT_EXTENSION");
-    contractExtensionReasons.value = content;
-  } catch (error) {
-    contractExtensionReasons.value = [];
-    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
-  } finally {
-    reasonsLoading.value = false;
-  }
-};
-
-const resetForm = () => {
-  extensionForm.value = {
-    id: undefined,
-    serviceProviderId: props.serviceProviderId || "",
-    contractEndDate: new Date().toISOString().split("T")[0],
-    reasonId: "",
-    notes: ""
-  };
-  serverErrors.value = {};
-  errorMsg.value = "";
-};
-
 const openCreateDialog = () => {
-  resetForm();
+  formExtension.value = null;
+  formDialog.value = true;
+};
+
+const canEditExtension = (item: ServiceProviderContractExtensionType) =>
+  String(item.status || "").toUpperCase() === "ACTIVE";
+
+const openEditDialog = (item: ServiceProviderContractExtensionType) => {
+  formExtension.value = { ...item };
   formDialog.value = true;
 };
 
 const openViewDialog = (item: ServiceProviderContractExtensionType) => {
-  selectedExtension.value = { ...item };
+  viewExtension.value = { ...item };
   viewDialog.value = true;
 };
 
-const openEditDialog = async (item: ServiceProviderContractExtensionType) => {
-  try {
-    formLoading.value = true;
-    serverErrors.value = {};
-    const response = await serviceProviderContractExtensionService.getById(item.id);
-    const extension = response.data;
-
-    extensionForm.value = {
-      id: extension.id,
-      serviceProviderId: extension.serviceProviderId || props.serviceProviderId || "",
-      contractEndDate: extension.contractEndDate,
-      reasonId: extension.reasonId || extension.reason?.id || "",
-      notes: extension.notes || ""
-    };
-    formDialog.value = true;
-  } catch (error) {
-    console.error("Erro ao carregar adenda:", error);
-    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
-  } finally {
-    formLoading.value = false;
-  }
-};
-
-const closeFormDialog = () => {
-  formDialog.value = false;
-};
-
-const onSubmit = async () => {
-  if (!form.value || !props.serviceProviderId) return;
-  serverErrors.value = {};
-
-  const { valid } = await form.value.validate();
-  const isContractEndDateValid = contractEndDatePickerRef.value?.validate() ?? true;
-
-  if (!valid || !isContractEndDateValid) {
-    toast.error(t("t-validation-error"));
-    setError(t("t-please-correct-errors"));
-    return;
-  }
-
-  try {
-    formLoading.value = true;
-    const payload: ServiceProviderContractExtensionPayloadType = {
-      serviceProviderId: props.serviceProviderId,
-      contractEndDate: extensionForm.value.contractEndDate,
-      reasonId: extensionForm.value.reasonId,
-      notes: extensionForm.value.notes.trim()
-    };
-
-    const response = extensionForm.value.id
-      ? await serviceProviderContractExtensionService.update(extensionForm.value.id, payload)
-      : await serviceProviderContractExtensionService.create(payload);
-
-    if (response.status === "error") {
-      serverErrors.value = getApiValidationErrors(response.error);
-      getApiErrorMessages(response.error, t("t-message-save-error")).forEach((message) => toast.error(message));
-      return;
-    }
-
-    toast.success(extensionForm.value.id ? t("t-contract-addendum-updated-success") : t("t-contract-addendum-created-success"));
-    formDialog.value = false;
-    await reloadContractExtensions();
-  } catch (error) {
-    console.error("Erro ao gravar adenda:", error);
-    getApiErrorMessages(error, t("t-message-save-error")).forEach((message) => toast.error(message));
-  } finally {
-    formLoading.value = false;
-  }
+const onFormSaved = async () => {
+  await reloadContractExtensions();
+  emit("saved");
 };
 
 watch(dialogValue, async (isOpen) => {
   if (isOpen) {
-    resetForm();
     await fetchContractExtensions({
       page: 1,
       itemsPerPage: itemsPerPage.value,
@@ -315,16 +179,14 @@ watch(dialogValue, async (isOpen) => {
 });
 
 watch(formDialog, (isOpen) => {
-  if (isOpen) {
-    fetchContractExtensionReasons();
-  } else {
-    resetForm();
+  if (!isOpen) {
+    formExtension.value = null;
   }
 });
 
 watch(viewDialog, (isOpen) => {
   if (!isOpen) {
-    selectedExtension.value = null;
+    viewExtension.value = null;
   }
 });
 </script>
@@ -379,7 +241,7 @@ watch(viewDialog, (isOpen) => {
                 <td class="text-end contract-extension-actions-cell">
                   <div class="contract-extension-actions">
                     <v-btn
-                      v-if="!readOnly"
+                      v-if="!readOnly && canEditExtension(item)"
                       icon="ph-pencil-simple ph-sm"
                       color="primary"
                       density="compact"
@@ -417,112 +279,19 @@ watch(viewDialog, (isOpen) => {
     </Card>
   </v-dialog>
 
-  <v-dialog v-model="formDialog" width="500" :persistent="true">
-    <v-form ref="form" @submit.prevent="onSubmit">
-      <Card :title="isCreate ? $t('t-add-contract-addendum') : $t('t-edit-contract-addendum')" title-class="py-0" style="overflow: hidden">
-        <template #title-action>
-          <v-btn icon="ph-x" variant="plain" @click="closeFormDialog" />
-        </template>
-        <v-divider />
+  <CreateEditServiceProviderContractExtensionDialog
+    v-model="formDialog"
+    :data="formExtension"
+    :service-provider-id="serviceProviderId"
+    @saved="onFormSaved"
+  />
 
-        <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
-
-        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
-          <v-row>
-            <v-col cols="12">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <MenuDatePicker
-                ref="contractEndDatePickerRef"
-                v-model="extensionForm.contractEndDate"
-                :placeholder="$t('t-enter-contract-end-date')"
-                :rules="applyServerErrorsToRules('contractEndDate', requiredRules.contractEndDate)"
-                :error-messages="getServerErrors('contractEndDate')"
-              />
-            </v-col>
-            <v-col cols="12" class="mt-n2">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-reason') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <MenuSelect
-                v-model="extensionForm.reasonId"
-                :items="contractExtensionReasonOptions"
-                :placeholder="$t('t-select-reason')"
-                :rules="applyServerErrorsToRules('reasonId', requiredRules.reasonId)"
-                :disabled="formLoading || reasonsLoading"
-              />
-            </v-col>
-            <v-col cols="12" class="mt-n7">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextArea
-                v-model="extensionForm.notes"
-                :placeholder="$t('t-enter-notes')"
-                :rules="applyServerErrorsToRules('notes', requiredRules.notes)"
-                rows="3"
-                hide-details="auto"
-              />
-            </v-col>
-          </v-row>
-        </v-card-text>
-
-        <v-divider />
-        <v-card-actions class="d-flex justify-end">
-          <div>
-            <v-btn color="danger" class="me-1" @click="closeFormDialog">
-              <i class="ph-x me-1" /> {{ $t('t-close') }}
-            </v-btn>
-            <v-btn color="primary" variant="elevated" @click="onSubmit" :loading="formLoading" :disabled="formLoading">
-              {{ formLoading ? $t('t-saving') : $t('t-save') }}
-            </v-btn>
-          </div>
-        </v-card-actions>
-      </Card>
-    </v-form>
-  </v-dialog>
-
-  <v-dialog v-model="viewDialog" width="500">
-    <Card :title="$t('t-contract-addendum')" title-class="py-0" style="overflow: hidden">
-      <template #title-action>
-        <v-btn icon="ph-x" variant="plain" @click="viewDialog = false" />
-      </template>
-      <v-divider />
-
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-start-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.contractStartDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-end-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.contractEndDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
-            <Status :status="selectedExtension?.status || 'INACTIVE'" />
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-reason') }}</div>
-            <div>{{ selectedExtension?.reason?.name || selectedExtension?.reasonId || '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
-            <div>{{ selectedExtension?.notes || '-' }}</div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-divider />
-      <v-card-actions class="d-flex justify-end">
-        <v-btn color="danger" @click="viewDialog = false">
-          <i class="ph-x me-1" /> {{ $t('t-close') }}
-        </v-btn>
-      </v-card-actions>
-    </Card>
-  </v-dialog>
+  <ViewServiceProviderContractExtensionDialog
+    v-if="viewExtension"
+    v-model="viewDialog"
+    :data="viewExtension"
+    :service-provider-id="serviceProviderId"
+  />
 </template>
 
 <style scoped>

@@ -14,9 +14,6 @@ import { useAuthStore } from "@/store/authStore";
 // `${appConfigs.baseUrl}/users`.
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: appConfigs.baseUrl,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Campo interno que marca uma request que já foi repetida depois de renovar o

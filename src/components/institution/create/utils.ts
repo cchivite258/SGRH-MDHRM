@@ -95,6 +95,11 @@ export const contractDocumentTypeOptions: MenuSelectItemType[] = [
   { label: "Proposta Financeira", value: "FINANCIAL_PROPOSAL" }
 ];
 
+export const contractParticipantRoleOptions: MenuSelectItemType[] = [
+  { label: "Responsável", value: "RESPONSIBLE" },
+  { label: "Participante", value: "PARTICIPANT" }
+];
+
 export const limitTypeDefinitionOptions: MenuSelectItemType[] = [
   {
     label: "Valor Fixo",
@@ -159,6 +164,14 @@ export const contactPersonHeader: DataTableHeaderType[] = [
   { title: "phone", key: "phone", sortable: true },
   { title: "is-enabled", key: "enabled", sortable: true },
   { title: "action", sortable: false }
+];
+
+export const contractParticipantHeader: DataTableHeaderType[] = [
+  { title: "user", key: "participant.firstName", sortable: true },
+  { title: "email", key: "participant.email", sortable: true },
+  { title: "role", key: "role", sortable: true },
+  { title: "is-enabled", key: "enabled", sortable: true },
+  { title: "action", sortable: false, align: "end" }
 ];
 
 export const departmentHeader: DataTableHeaderType[] = [
@@ -236,7 +249,6 @@ export const serviceProviderHeader: TableHeaderType[] = [
   //{ title: "id" },
   { title: "service-provider", sortable: true },
   { title: "max-days-after-service", sortable: true },
-  { title: "grace-period", sortable: true },
   { title: "is-business-days", sortable: true },
   { title: "action", align: 'end' },
 ];

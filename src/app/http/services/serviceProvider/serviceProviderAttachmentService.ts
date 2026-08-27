@@ -43,10 +43,17 @@ export default class ServiceProviderAttachmentService extends HttpService {
     return (payload.data ?? payload.content ?? response) as T;
   }
 
-  private resolveListResponse<T>(response: ApiResponse<T[]> | T[]): T[] {
+  private resolveListResponse<T>(response: ApiResponse<T[] | T> | T[] | T): T[] {
     if (Array.isArray(response)) return response;
 
-    return response.data ?? response.content ?? [];
+    const payload = response as ApiResponse<T[] | T>;
+    const value = payload.data ?? payload.content;
+
+    if (Array.isArray(value)) return value;
+    if (value) return [value as T];
+    if ((response as any)?.id) return [response as T];
+
+    return [];
   }
 
   async uploadAttachment(
@@ -141,8 +148,8 @@ export default class ServiceProviderAttachmentService extends HttpService {
     serviceProviderContractExtensionId: string
   ): Promise<ServiceResponse<ServiceProviderAttachmentType[]>> {
     try {
-      const response = await this.get<ApiResponse<ServiceProviderAttachmentType[]>>(
-        `${SERVICE_PROVIDER_ATTACHMENTS_ENDPOINT}/by-service-provider-contract-extension/${serviceProviderContractExtensionId}`
+      const response = await this.get<ApiResponse<ServiceProviderAttachmentType[] | ServiceProviderAttachmentType>>(
+        `${SERVICE_PROVIDER_ATTACHMENTS_ENDPOINT}/by-service-provider-contract-extension/${serviceProviderContractExtensionId}?includes=serviceProviderContractExtension,fileMetadata,attachment`
       );
 
       return {

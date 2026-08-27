@@ -21,13 +21,6 @@ export type InstitutionListingType = {
         incomeTaxNumber?: string | null;
         institutionType?: { id: string | number; name: string } | null;
     } | null;
-    responsibleId?: string | number | null;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     institutionType?: {
         id: number;
         name: string
@@ -72,13 +65,6 @@ export type InstitutionResponseType = {
         incomeTaxNumber?: string | null;
         institutionType?: { id: string | number; name: string } | null;
     } | null;
-    responsibleId?: string | number | null;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     institutionType: {
         id: string;
         name: string
@@ -106,13 +92,6 @@ export type InstitutionInsertType = {
     name: string;
     description: string | null;
     companyDetailsId: string | number | undefined;
-    responsibleId: string | number | undefined;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     address?: string | null;
     phone?: string;
     email?: string;
@@ -142,6 +121,7 @@ export type ContractDocumentType =
 export type ContractAttachmentType = {
   id: string;
   contractId?: string | number;
+  coveragePeriodExtensionId?: string | number | null;
   contract?: any;
   contractDocumentType: ContractDocumentType;
   originalFilename?: string;
@@ -177,7 +157,48 @@ export type ContractAttachmentType = {
 
 export type ContractAttachmentUploadType = {
   contractDocumentType: ContractDocumentType | "";
+  coveragePeriodExtensionId?: string | number | null;
   file: File | null;
+};
+
+export type ContractParticipantRole = "RESPONSIBLE" | "PARTICIPANT";
+
+export type ContractParticipantType = {
+  id: string;
+  contractId: string | number;
+  participantId: string | number;
+  role: ContractParticipantRole;
+  contract?: {
+    id: string | number;
+    code?: string | null;
+    erpCode?: string | null;
+    name?: string | null;
+    description?: string | null;
+    organizationId?: string | number | null;
+    enabled?: boolean;
+  } | null;
+  participant?: {
+    id: string | number;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+    username?: string | null;
+    enabled?: boolean;
+  } | null;
+  removable: boolean;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  deletedBy: string | null;
+};
+
+export type ContractParticipantPayloadType = {
+  contractId: string | number;
+  participantId: string | number;
+  role: ContractParticipantRole;
 };
 
 export type DepartmentInsertType = {
@@ -344,7 +365,6 @@ export type ServiceProviderInsertType = {
     serviceProvider: string; 
     company: string; 
     isBusinessDays?: boolean | null;
-    gracePeriod?: number | null;
     maxDaysAfterService?: number | null;
     enabled: boolean;
 };
@@ -419,6 +439,7 @@ export type CoveragePeriodExtensionPayloadType = {
     budgetAmount?: number | null;
     reasonId: string | number;
     notes: string;
+    file?: File | null;
 };
 
 export type CoveragePeriodExtensionType = {

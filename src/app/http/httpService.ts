@@ -21,6 +21,20 @@ export default class HttpService {
     }
   }
 
+  async postFile<T>(path: string, formData: FormData): Promise<T> {
+    try {
+      const response = await axios.post<T>(path, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("Erro no POST de ficheiro:", error);
+      throw error;
+    }
+  }
+
   async delete<T = void>(path: string): Promise<T> {
     try {
       const response = await axios.delete<T>(path);
@@ -45,8 +59,8 @@ export default class HttpService {
     try {
       const response = await axios.put<T>(path, formData, {
         headers: {
-          "Content-Type": "multipart/form-data",
-        },
+          "Content-Type": "multipart/form-data"
+        }
       });
       return response.data;
     } catch (error: any) {

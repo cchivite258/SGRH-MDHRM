@@ -14,6 +14,7 @@ import PositionService from "@/app/http/services/institution/positionService";
 import ServiceProviderInstitutionService from "@/app/http/services/institution/serviceProviderService";
 import ServiceProviderContractExtensionService from "@/app/http/services/institution/serviceProviderContractExtensionService";
 import ContractAttachmentService from "@/app/http/services/institution/contractAttachmentService";
+import ContractParticipantService from "@/app/http/services/institution/contractParticipantService";
 import CoveragePeriodExtensionService from "@/app/http/services/institution/coveragePeriodExtensionService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ServiceProviderAttachmentService from "@/app/http/services/serviceProvider/serviceProviderAttachmentService";
@@ -82,6 +83,7 @@ const serviceProviderService = new ServiceProviderService();
 const serviceProviderAttachmentService = new ServiceProviderAttachmentService();
 const serviceProviderContractExtensionService = new ServiceProviderContractExtensionService();
 const contractAttachmentService = new ContractAttachmentService();
+const contractParticipantService = new ContractParticipantService();
 const coveragePeriodExtensionService = new CoveragePeriodExtensionService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
@@ -157,6 +159,7 @@ export {
     serviceProviderAttachmentService,
     serviceProviderContractExtensionService,
     contractAttachmentService,
+    contractParticipantService,
     coveragePeriodExtensionService,
     contactPersonService,
     serviceProviderInstitutionService,
