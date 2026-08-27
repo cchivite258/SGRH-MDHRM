@@ -19,6 +19,8 @@
   "t-error-loading-period-extensions": "Error loading period extensions",
   "t-contract-start-date": "Contract Start Date",
   "t-contract-end-date": "Contract End Date",
+  "t-contract-previous-end-date": "Previous Contract End Date",
+  "t-new-contract-end-date": "New Contract End Date",
   "t-start-date": "Start Date",
   "t-end-date": "End Date",
   "t-enter-end-date": "Enter the end date",

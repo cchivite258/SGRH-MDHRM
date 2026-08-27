@@ -36,7 +36,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "saved"): void;
+  (e: "saved", action: "created" | "updated", extension?: ServiceProviderContractExtensionType): void;
 }>();
 
 const dialogValue = computed({
@@ -236,7 +236,8 @@ const saveExtension = async () => {
       file: selectedExtensionFile.value || undefined
     };
 
-    const response = extensionForm.value.id
+    const action = extensionForm.value.id ? "updated" : "created";
+    const response = action === "updated" && extensionForm.value.id
       ? await serviceProviderContractExtensionService.update(extensionForm.value.id, payload)
       : await serviceProviderContractExtensionService.create(payload);
 
@@ -247,10 +248,12 @@ const saveExtension = async () => {
       return;
     }
 
+    const savedExtension = response.data || ({ contractEndDate: payload.contractEndDate } as ServiceProviderContractExtensionType);
+
     toast.success(extensionForm.value.id ? t("t-contract-addendum-updated-success") : t("t-contract-addendum-created-success"));
     createConfirmationDialog.value = false;
     dialogValue.value = false;
-    emit("saved");
+    emit("saved", action, savedExtension);
   } catch (error) {
     createConfirmationDialog.value = false;
     console.error("Erro ao gravar adenda:", error);
@@ -331,7 +334,7 @@ watch(dialogValue, (isOpen) => {
           <v-row>
             <v-col cols="12" md="6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-new-contract-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuDatePicker
                 ref="contractEndDatePickerRef"

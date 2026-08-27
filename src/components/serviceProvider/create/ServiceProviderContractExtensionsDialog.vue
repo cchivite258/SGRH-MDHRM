@@ -41,7 +41,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: boolean): void;
-  (e: "saved"): void;
+  (e: "saved", extension?: ServiceProviderContractExtensionType): void;
 }>();
 
 interface FetchParams {
@@ -72,7 +72,9 @@ const selectedExtensions = ref<ServiceProviderContractExtensionType[]>([]);
 const extensions = ref<ServiceProviderContractExtensionType[]>([]);
 const formExtension = ref<ServiceProviderContractExtensionType | null>(null);
 const viewExtension = ref<ServiceProviderContractExtensionType | null>(null);
+const tablePage = ref(1);
 const itemsPerPage = ref(10);
+const tableSortBy = ref<FetchParams["sortBy"]>([]);
 const pagination = ref({
   totalElements: 0,
   currentPage: 0,
@@ -107,14 +109,18 @@ const fetchContractExtensions = async ({
 }: FetchParams) => {
   if (!props.serviceProviderId) return;
 
+  tablePage.value = page;
+  tableSortBy.value = sortBy;
+
   try {
     loading.value = true;
+    const activeSort = sortBy[0];
     const { content, meta } = await serviceProviderContractExtensionService.getByServiceProvider(
       props.serviceProviderId,
       page - 1,
       itemsPerPage,
-      sortBy[0]?.key || "contractStartDate",
-      sortBy[0]?.order || "desc"
+      activeSort?.key || "contractStartDate",
+      activeSort?.order || "desc"
     );
 
     extensions.value = content;
@@ -135,11 +141,14 @@ const fetchContractExtensions = async ({
   }
 };
 
-const reloadContractExtensions = async () => {
+const reloadContractExtensions = async (resetPage = false) => {
+  const page = resetPage ? 1 : tablePage.value;
+  tablePage.value = page;
+
   await fetchContractExtensions({
-    page: pagination.value.currentPage + 1 || 1,
+    page,
     itemsPerPage: itemsPerPage.value,
-    sortBy: [],
+    sortBy: tableSortBy.value,
     search: ""
   });
 };
@@ -162,9 +171,10 @@ const openViewDialog = (item: ServiceProviderContractExtensionType) => {
   viewDialog.value = true;
 };
 
-const onFormSaved = async () => {
-  await reloadContractExtensions();
-  emit("saved");
+const onFormSaved = async (action: "created" | "updated", extension?: ServiceProviderContractExtensionType) => {
+  selectedExtensions.value = [];
+  await reloadContractExtensions(action === "created");
+  emit("saved", extension);
 };
 
 watch(dialogValue, async (isOpen) => {
@@ -220,9 +230,10 @@ watch(viewDialog, (isOpen) => {
 
         <DataTableServer
           v-model="selectedExtensions"
+          v-model:page="tablePage"
+          v-model:items-per-page="itemsPerPage"
           :headers="tableHeaders"
           :items="extensions"
-          :items-per-page="itemsPerPage"
           :total-items="totalItems"
           :loading="loading"
           :show-select="false"
