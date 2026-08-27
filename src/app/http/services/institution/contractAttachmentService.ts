@@ -43,22 +43,33 @@ export default class ContractAttachmentService extends HttpService {
     return (payload.data ?? payload.content ?? response) as T;
   }
 
-  private resolveListResponse<T>(response: ApiResponse<T[]> | T[]): T[] {
+  private resolveListResponse<T>(response: ApiResponse<T[] | T> | T[] | T): T[] {
     if (Array.isArray(response)) return response;
 
-    return response.data ?? response.content ?? [];
+    const payload = response as ApiResponse<T[] | T>;
+    const value = payload.data ?? payload.content;
+
+    if (Array.isArray(value)) return value;
+    if (value) return [value as T];
+    if ((response as any)?.id) return [response as T];
+
+    return [];
   }
 
   async uploadAttachment(
     contractId: string,
     file: File,
-    contractDocumentType: ContractDocumentType
+    contractDocumentType: ContractDocumentType,
+    coveragePeriodExtensionId?: string | number | null
   ): Promise<ServiceResponse<ContractAttachmentType>> {
     try {
       const formData = new FormData();
       formData.append("contractId", contractId);
       formData.append("file", file);
       formData.append("contractDocumentType", contractDocumentType);
+      if (coveragePeriodExtensionId !== undefined && coveragePeriodExtensionId !== null && coveragePeriodExtensionId !== "") {
+        formData.append("coveragePeriodExtensionId", String(coveragePeriodExtensionId));
+      }
 
       const response = await this.putFile<ApiResponse<ContractAttachmentType>>(
         `${CONTRACT_ATTACHMENTS_ENDPOINT}/${contractId}/attach-file`,
@@ -112,10 +123,21 @@ export default class ContractAttachmentService extends HttpService {
     };
   }
 
-  async getAttachmentsByContract(contractId: string): Promise<ServiceResponse<ContractAttachmentType[]>> {
+  async getAttachmentsByContract(
+    contractId: string,
+    queryProps?: string,
+    queryValue?: string | number
+  ): Promise<ServiceResponse<ContractAttachmentType[]>> {
     try {
+      const params = new URLSearchParams();
+      if (queryProps && queryValue !== undefined && queryValue !== null && queryValue !== "") {
+        params.append("query_props", queryProps);
+        params.append("query_value", String(queryValue));
+      }
+
+      const queryString = params.toString();
       const response = await this.get<ApiResponse<ContractAttachmentType[]>>(
-        `${CONTRACT_ATTACHMENTS_ENDPOINT}/by-contract/${contractId}`
+        `${CONTRACT_ATTACHMENTS_ENDPOINT}/by-contract/${contractId}${queryString ? `?${queryString}` : ""}`
       );
 
       return {
@@ -133,6 +155,33 @@ export default class ContractAttachmentService extends HttpService {
       return {
         status: "error",
         error: this.createNetworkErrorResponse(`${CONTRACT_ATTACHMENTS_ENDPOINT}/by-contract`)
+      };
+    }
+  }
+
+  async getAttachmentsByCoveragePeriodExtension(
+    coveragePeriodExtensionId: string | number
+  ): Promise<ServiceResponse<ContractAttachmentType[]>> {
+    try {
+      const response = await this.get<ApiResponse<ContractAttachmentType[] | ContractAttachmentType>>(
+        `${CONTRACT_ATTACHMENTS_ENDPOINT}/by-coverage-period-extension/${coveragePeriodExtensionId}?includes=attachment`
+      );
+
+      return {
+        status: "success",
+        data: this.resolveListResponse(response)
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
+        error: this.createNetworkErrorResponse(`${CONTRACT_ATTACHMENTS_ENDPOINT}/by-coverage-period-extension`)
       };
     }
   }

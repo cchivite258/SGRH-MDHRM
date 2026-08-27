@@ -30,6 +30,26 @@ const props = defineProps({
   contractId: {
     type: String,
     default: ""
+  },
+  coveragePeriodExtensionId: {
+    type: [String, Number],
+    default: null
+  },
+  title: {
+    type: String,
+    default: "Documentos do Contrato"
+  },
+  documentType: {
+    type: String as () => ContractDocumentType | "",
+    default: ""
+  },
+  showDocumentType: {
+    type: Boolean,
+    default: true
+  },
+  allowAttach: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -52,10 +72,19 @@ const canConsultContractAttachments = computed(() => canAny([
 ]));
 const canAttachContractDocuments = computed(() => can(PERMISSIONS.CONTRACT_ATTACHMENTS.CREATE));
 const canDeleteContractDocuments = computed(() => can(PERMISSIONS.CONTRACT_ATTACHMENTS.DELETE));
+const canShowAttachDocuments = computed(() => props.allowAttach && canAttachContractDocuments.value);
+const hasCoveragePeriodExtensionFilter = computed(() =>
+  props.coveragePeriodExtensionId !== undefined
+  && props.coveragePeriodExtensionId !== null
+  && props.coveragePeriodExtensionId !== ""
+);
+const coveragePeriodExtensionIdValue = computed(() =>
+  hasCoveragePeriodExtensionFilter.value ? String(props.coveragePeriodExtensionId) : ""
+);
 
 const createAttachmentUploadRow = (): AttachmentUploadRow => ({
   id: uuidv4(),
-  contractDocumentType: "",
+  contractDocumentType: props.documentType,
   files: [],
   status: "idle",
   errorMessage: "",
@@ -70,6 +99,10 @@ const resolveUploadedFile = (files: any[]) =>
 const pendingUploadsValidationMessage = computed(() => {
   const hasIncompleteRow = attachmentUploads.value.some((item) => {
     const selectedFile = resolveUploadedFile(item.files);
+    if (!props.showDocumentType) {
+      return item.files.length > 0 && !selectedFile;
+    }
+
     return (!!item.contractDocumentType && !selectedFile) || (!item.contractDocumentType && !!selectedFile);
   });
 
@@ -81,7 +114,7 @@ const pendingUploadsValidationMessage = computed(() => {
 });
 
 const getUploadKey = (contractDocumentType: ContractDocumentType | "", file: File) =>
-  `${contractDocumentType}-${file.name}-${file.size}-${file.lastModified || ""}`;
+  `${contractDocumentType}-${coveragePeriodExtensionIdValue.value}-${file.name}-${file.size}-${file.lastModified || ""}`;
 
 const resetAttachmentUploadRowState = (row: AttachmentUploadRow) => {
   row.status = "idle";
@@ -90,10 +123,10 @@ const resetAttachmentUploadRowState = (row: AttachmentUploadRow) => {
 };
 
 const isEmptyAttachmentUploadRow = (row: AttachmentUploadRow) =>
-  !row.contractDocumentType && row.files.length === 0 && row.status === "idle";
+  (!row.contractDocumentType || !props.showDocumentType) && row.files.length === 0 && row.status === "idle";
 
 const ensureEmptyAttachmentUploadRow = () => {
-  if (!canAttachContractDocuments.value) return;
+  if (!canShowAttachDocuments.value) return;
   if (attachmentUploads.value.some(isEmptyAttachmentUploadRow)) return;
 
   attachmentUploads.value = [...attachmentUploads.value, createAttachmentUploadRow()];
@@ -129,11 +162,13 @@ const getAttachmentExtension = (attachment: ContractAttachmentType) =>
   attachment.attachment?.extension || attachment.extension || attachment.fileMetadata?.extension || "";
 
 const refreshContractAttachments = async () => {
-  if (!props.contractId || !canConsultContractAttachments.value) return;
+  if ((!props.contractId && !hasCoveragePeriodExtensionFilter.value) || !canConsultContractAttachments.value) return;
 
   loading.value = true;
   try {
-    const response = await contractAttachmentService.getAttachmentsByContract(props.contractId);
+    const response = hasCoveragePeriodExtensionFilter.value
+      ? await contractAttachmentService.getAttachmentsByCoveragePeriodExtension(coveragePeriodExtensionIdValue.value)
+      : await contractAttachmentService.getAttachmentsByContract(props.contractId);
     if (response.status === "error") {
       getApiErrorMessages(response.error, t("t-message-load-error")).forEach((message) => toast.error(message));
       return;
@@ -148,20 +183,20 @@ const refreshContractAttachments = async () => {
 };
 
 watch(
-  [() => props.contractId, canConsultContractAttachments],
-  async ([contractId, canConsult]) => {
+  [() => props.contractId, () => props.coveragePeriodExtensionId, () => props.documentType, canConsultContractAttachments],
+  async ([contractId, _coveragePeriodExtensionId, _documentType, canConsult]) => {
     attachmentUploads.value = [];
     currentAttachments.value = [];
     errorMsg.value = "";
 
-    if (!contractId || !canConsult) return;
+    if ((!contractId && !hasCoveragePeriodExtensionFilter.value) || !canConsult) return;
     await refreshContractAttachments();
   },
   { immediate: true }
 );
 
 const addAttachmentUploadRow = () => {
-  if (!canAttachContractDocuments.value) return;
+  if (!canShowAttachDocuments.value) return;
   attachmentUploads.value = [...attachmentUploads.value, createAttachmentUploadRow()];
 };
 
@@ -170,15 +205,16 @@ const removeAttachmentUploadRow = (rowId: string) => {
 };
 
 const tryAutoUploadAttachmentRow = async (rowId: string, force = false) => {
-  if (!canAttachContractDocuments.value || !props.contractId) return;
+  if (!canShowAttachDocuments.value || !props.contractId) return;
 
   const row = attachmentUploads.value.find((item) => item.id === rowId);
   if (!row || row.status === "uploading") return;
 
   const selectedFile = resolveUploadedFile(row.files);
-  if (!row.contractDocumentType || !selectedFile) return;
+  const contractDocumentType = row.contractDocumentType || props.documentType;
+  if (!contractDocumentType || !selectedFile) return;
 
-  const uploadKey = getUploadKey(row.contractDocumentType, selectedFile);
+  const uploadKey = getUploadKey(contractDocumentType, selectedFile);
   if (!force && row.status === "error" && row.lastUploadKey === uploadKey) return;
 
   row.status = "uploading";
@@ -190,7 +226,8 @@ const tryAutoUploadAttachmentRow = async (rowId: string, force = false) => {
     const response = await contractAttachmentService.uploadAttachment(
       props.contractId,
       selectedFile,
-      row.contractDocumentType
+      contractDocumentType,
+      props.coveragePeriodExtensionId
     );
 
     if (response.status === "error") {
@@ -216,6 +253,8 @@ const tryAutoUploadAttachmentRow = async (rowId: string, force = false) => {
 };
 
 const setAttachmentUploadDocumentType = (rowId: string, value: unknown) => {
+  if (!props.showDocumentType) return;
+
   const row = attachmentUploads.value.find((item) => item.id === rowId);
   if (!row || row.status === "uploading" || typeof value !== "string") return;
 
@@ -303,7 +342,7 @@ const onConfirmDeleteAttachment = async () => {
 </script>
 
 <template>
-  <Card v-if="canConsultContractAttachments" title="Documentos do Contrato" elevation="0" title-class="pb-0">
+  <Card v-if="canConsultContractAttachments" :title="title" elevation="0" title-class="pb-0">
     <v-card-text class="pt-0">
       <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mb-3" density="compact" />
 
@@ -311,7 +350,7 @@ const onConfirmDeleteAttachment = async () => {
         <div class="font-weight-bold text-caption">
           {{ $t('t-document-file') }}
         </div>
-        <div v-if="canAttachContractDocuments" class="d-flex ga-2">
+        <div v-if="canShowAttachDocuments" class="d-flex ga-2">
           <v-btn
             color="secondary"
             size="small"
@@ -336,8 +375,8 @@ const onConfirmDeleteAttachment = async () => {
       </v-alert>
 
       <v-card v-for="attachment in currentAttachments" :key="getAttachmentId(attachment)" class="border mb-3" elevation="0">
-        <v-card-text class="d-flex flex-column flex-sm-row align-start align-sm-center justify-space-between ga-3">
-          <div class="d-flex flex-column">
+        <v-card-text class="contract-attachment__content">
+          <div class="contract-attachment__info">
             <span class="font-weight-bold">
               {{ getAttachmentFileName(attachment) }}
             </span>
@@ -348,7 +387,7 @@ const onConfirmDeleteAttachment = async () => {
               {{ getAttachmentFileSize(attachment) }} kb
             </span>
           </div>
-          <div class="d-flex ga-2 flex-wrap justify-end">
+          <div class="contract-attachment__actions">
             <v-btn
               v-if="canConsultContractAttachments"
               color="black"
@@ -375,7 +414,7 @@ const onConfirmDeleteAttachment = async () => {
         </v-card-text>
       </v-card>
 
-      <template v-if="canAttachContractDocuments">
+      <template v-if="canShowAttachDocuments">
         <v-card v-for="row in attachmentUploads" :key="row.id" class="border mt-3" elevation="0">
           <v-card-text class="position-relative">
             <div class="d-flex align-center justify-space-between ga-2 flex-wrap mb-3 pe-8">
@@ -415,7 +454,7 @@ const onConfirmDeleteAttachment = async () => {
             @click="removeAttachmentUploadRow(row.id)"
           />
           <v-row>
-            <v-col cols="12">
+            <v-col v-if="showDocumentType" cols="12">
               <div class="font-weight-bold text-caption">
                 {{ $t('t-document-type') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -427,7 +466,7 @@ const onConfirmDeleteAttachment = async () => {
               />
             </v-col>
             <v-col cols="12">
-              <div class="font-weight-bold text-caption mt-n6">
+              <div class="font-weight-bold text-caption" :class="{ 'mt-n6': showDocumentType }">
                 {{ $t('t-document-file') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
               <FileUploader
@@ -455,3 +494,32 @@ const onConfirmDeleteAttachment = async () => {
     @onConfirm="onConfirmDeleteAttachment"
   />
 </template>
+
+<style scoped>
+.contract-attachment__content {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.contract-attachment__info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.contract-attachment__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.contract-attachment__actions :deep(.v-btn) {
+  white-space: nowrap;
+}
+</style>

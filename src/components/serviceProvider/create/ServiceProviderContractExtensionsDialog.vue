@@ -7,6 +7,7 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
 import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
+import ViewServiceProviderContractExtensionDialog from "@/components/serviceProvider/create/ViewServiceProviderContractExtensionDialog.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { reasonService, serviceProviderContractExtensionService } from "@/app/http/httpServiceProvider";
@@ -483,46 +484,12 @@ watch(viewDialog, (isOpen) => {
     </v-form>
   </v-dialog>
 
-  <v-dialog v-model="viewDialog" width="500">
-    <Card :title="$t('t-contract-addendum')" title-class="py-0" style="overflow: hidden">
-      <template #title-action>
-        <v-btn icon="ph-x" variant="plain" @click="viewDialog = false" />
-      </template>
-      <v-divider />
-
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-start-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.contractStartDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-end-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.contractEndDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
-            <Status :status="selectedExtension?.status || 'INACTIVE'" />
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-reason') }}</div>
-            <div>{{ selectedExtension?.reason?.name || selectedExtension?.reasonId || '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
-            <div>{{ selectedExtension?.notes || '-' }}</div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-divider />
-      <v-card-actions class="d-flex justify-end">
-        <v-btn color="danger" @click="viewDialog = false">
-          <i class="ph-x me-1" /> {{ $t('t-close') }}
-        </v-btn>
-      </v-card-actions>
-    </Card>
-  </v-dialog>
+  <ViewServiceProviderContractExtensionDialog
+    v-if="selectedExtension"
+    v-model="viewDialog"
+    :data="selectedExtension"
+    :service-provider-id="serviceProviderId"
+  />
 </template>
 
 <style scoped>

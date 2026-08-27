@@ -31,15 +31,25 @@ const formatDateForApi = (value: Date | string | null): string | null => {
     return String(value).split("T")[0];
 };
 
-const toPayload = (data: CoveragePeriodExtensionPayloadType) => ({
-    coveragePeriodId: data.coveragePeriodId,
-    endDate: formatDateForApi(data.endDate),
-    reasonId: data.reasonId,
-    notes: data.notes,
-    ...(data.budgetAmount !== null && data.budgetAmount !== undefined
-        ? { budgetAmount: data.budgetAmount }
-        : {})
-});
+const toFormData = (data: CoveragePeriodExtensionPayloadType) => {
+    const formData = new FormData();
+    const endDate = formatDateForApi(data.endDate);
+
+    formData.append("coveragePeriodId", String(data.coveragePeriodId));
+    if (endDate) formData.append("endDate", endDate);
+    formData.append("reasonId", String(data.reasonId));
+    formData.append("notes", data.notes || "");
+
+    if (data.budgetAmount !== null && data.budgetAmount !== undefined) {
+        formData.append("budgetAmount", String(data.budgetAmount));
+    }
+
+    if (data.file) {
+        formData.append("file", data.file);
+    }
+
+    return formData;
+};
 
 export default class CoveragePeriodExtensionService extends HttpService {
     async getAll(
@@ -99,9 +109,9 @@ export default class CoveragePeriodExtensionService extends HttpService {
 
     async create(data: CoveragePeriodExtensionPayloadType): Promise<ServiceResponse<CoveragePeriodExtensionType>> {
         try {
-            const response = await this.post<ApiResponse<CoveragePeriodExtensionType>>(
+            const response = await this.postFile<ApiResponse<CoveragePeriodExtensionType>>(
                 COVERAGE_PERIOD_EXTENSIONS_ENDPOINT,
-                toPayload(data)
+                toFormData(data)
             );
 
             return {
@@ -132,9 +142,9 @@ export default class CoveragePeriodExtensionService extends HttpService {
         data: CoveragePeriodExtensionPayloadType
     ): Promise<ServiceResponse<CoveragePeriodExtensionType>> {
         try {
-            const response = await this.put<ApiResponse<CoveragePeriodExtensionType>>(
+            const response = await this.putFile<ApiResponse<CoveragePeriodExtensionType>>(
                 `${COVERAGE_PERIOD_EXTENSIONS_ENDPOINT}/${id}`,
-                toPayload(data)
+                toFormData(data)
             );
 
             return {

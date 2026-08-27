@@ -4,15 +4,18 @@ import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 
 import DataTableServer from "@/app/common/components/DataTableServer.vue";
+import FileUploader from "@/app/common/components/FileUploader.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import Status from "@/app/common/components/Status.vue";
 import MenuDatePicker from "@/app/common/components/MenuDatePicker.vue";
+import ViewCoveragePeriodExtensionDialog from "@/components/institution/create/ViewCoveragePeriodExtensionDialog.vue";
 import { formateDate } from "@/app/common/dateFormate";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
-import { coveragePeriodExtensionService, reasonService } from "@/app/http/httpServiceProvider";
+import { contractAttachmentService, coveragePeriodExtensionService, reasonService } from "@/app/http/httpServiceProvider";
 import type { ReasonListing } from "@/components/baseTables/reason/types";
 import { coveragePeriodExtensionHeader } from "@/components/institution/create/utils";
 import type {
+  ContractAttachmentType,
   CoveragePeriodExtensionPayloadType,
   CoveragePeriodExtensionType
 } from "@/components/institution/types";
@@ -26,6 +29,10 @@ const props = defineProps({
     default: false
   },
   coveragePeriodId: {
+    type: [String, Number] as PropType<string | number | null>,
+    default: null
+  },
+  contractId: {
     type: [String, Number] as PropType<string | number | null>,
     default: null
   },
@@ -76,11 +83,15 @@ const loading = ref(false);
 const formLoading = ref(false);
 const reasonsLoading = ref(false);
 const errorMsg = ref("");
+const fileError = ref("");
+const extensionAttachmentLoading = ref(false);
 const serverErrors = ref<Record<string, string[]>>({});
 const selectedExtensions = ref<CoveragePeriodExtensionType[]>([]);
 const extensions = ref<CoveragePeriodExtensionType[]>([]);
 const selectedExtension = ref<CoveragePeriodExtensionType | null>(null);
+const existingExtensionAttachment = ref<ContractAttachmentType | null>(null);
 const periodExtensionReasons = ref<ReasonListing[]>([]);
+const extensionFile = ref<any[]>([]);
 const itemsPerPage = ref(10);
 const pagination = ref({
   totalElements: 0,
@@ -156,6 +167,7 @@ const setError = (message: string) => {
 };
 
 const getServerErrors = (field: string) => serverErrors.value[field] || [];
+const displayedFileError = computed(() => fileError.value || getServerErrors("file")[0] || "");
 const applyServerErrorsToRules = (field: string, rules: Array<(value: any) => string | boolean>) => [
   ...rules,
   (value: any) => {
@@ -187,9 +199,52 @@ const requiredRules = {
   reasonId: [
     (v: string | number | null | undefined) => !!v || t("t-please-select-reason")
   ],
-  notes: [
-    (v: string | null | undefined) => !!String(v || "").trim() || t("t-please-enter-notes")
-  ]
+  notes: []
+};
+
+const resolveUploadedFile = (files: any[]) =>
+  files.find((fileItem) => fileItem instanceof File)
+  || files.find((fileItem) => fileItem?.file instanceof File)?.file
+  || null;
+
+const selectedExtensionFile = computed(() => resolveUploadedFile(extensionFile.value));
+const hasExtensionDocument = computed(() => !!selectedExtensionFile.value || !!existingExtensionAttachment.value);
+
+const getAttachmentFileName = (attachment: ContractAttachmentType) =>
+  attachment.attachment?.originalFilename
+  || attachment.originalFilename
+  || attachment.fileMetadata?.originalFilename
+  || attachment.name
+  || attachment.fileMetadata?.name
+  || "documento";
+
+const getAttachmentFileSize = (attachment: ContractAttachmentType) =>
+  Math.ceil(Number(
+    attachment.attachment?.fileSize
+    || attachment.fileSize
+    || attachment.fileMetadata?.fileSize
+    || attachment.size
+    || attachment.fileMetadata?.size
+    || 0
+  ) / 1024);
+
+const loadExistingExtensionAttachment = async (coveragePeriodExtensionId: string | number) => {
+  existingExtensionAttachment.value = null;
+  extensionAttachmentLoading.value = true;
+
+  try {
+    const response = await contractAttachmentService.getAttachmentsByCoveragePeriodExtension(coveragePeriodExtensionId);
+    if (response.status === "error") {
+      getApiErrorMessages(response.error, t("t-message-load-error")).forEach((message) => toast.error(message));
+      return;
+    }
+
+    existingExtensionAttachment.value = response.data?.[0] || null;
+  } catch (error) {
+    getApiErrorMessages(error, t("t-message-load-error")).forEach((message) => toast.error(message));
+  } finally {
+    extensionAttachmentLoading.value = false;
+  }
 };
 
 watch(serverErrors, async (errors) => {
@@ -265,6 +320,10 @@ const resetForm = () => {
     reasonId: "",
     notes: ""
   };
+  extensionFile.value = [];
+  existingExtensionAttachment.value = null;
+  extensionAttachmentLoading.value = false;
+  fileError.value = "";
   serverErrors.value = {};
   errorMsg.value = "";
 };
@@ -283,6 +342,9 @@ const openEditDialog = async (item: CoveragePeriodExtensionType) => {
   try {
     formLoading.value = true;
     serverErrors.value = {};
+    extensionFile.value = [];
+    existingExtensionAttachment.value = null;
+    fileError.value = "";
     const response = await coveragePeriodExtensionService.getById(item.id);
     const extension = response.data;
 
@@ -294,6 +356,7 @@ const openEditDialog = async (item: CoveragePeriodExtensionType) => {
       reasonId: extension.reasonId || extension.reason?.id || "",
       notes: extension.notes || ""
     };
+    await loadExistingExtensionAttachment(extension.id);
     formDialog.value = true;
   } catch (error) {
     console.error("Erro ao carregar adenda do perÃ­odo:", error);
@@ -314,7 +377,10 @@ const onSubmit = async () => {
   const { valid } = await form.value.validate();
   const isEndDateValid = endDatePickerRef.value?.validate() ?? true;
 
-  if (!valid || !isEndDateValid) {
+  if (!valid || !isEndDateValid || !hasExtensionDocument.value) {
+    if (!hasExtensionDocument.value) {
+      fileError.value = t("t-please-select-file");
+    }
     toast.error(t("t-validation-error"));
     setError(t("t-please-correct-errors"));
     return;
@@ -331,7 +397,8 @@ const onSubmit = async () => {
           ? undefined
           : Number(extensionForm.value.budgetAmount),
       reasonId: extensionForm.value.reasonId,
-      notes: extensionForm.value.notes.trim()
+      notes: extensionForm.value.notes.trim(),
+      file: selectedExtensionFile.value || undefined
     };
 
     const response = extensionForm.value.id
@@ -376,6 +443,13 @@ watch(formDialog, (isOpen) => {
   }
 });
 
+watch(extensionFile, () => {
+  fileError.value = "";
+  const nextServerErrors = { ...serverErrors.value };
+  delete nextServerErrors.file;
+  serverErrors.value = nextServerErrors;
+}, { deep: true });
+
 watch(viewDialog, (isOpen) => {
   if (!isOpen) {
     selectedExtension.value = null;
@@ -384,7 +458,7 @@ watch(viewDialog, (isOpen) => {
 </script>
 
 <template>
-  <v-dialog v-model="dialogValue" width="900">
+  <v-dialog v-model="dialogValue" width="960">
     <Card :title="$t('t-period-extension')" title-class="py-0" style="overflow: hidden">
       <template #title-action>
         <div class="d-flex align-center" style="gap: 8px">
@@ -470,7 +544,7 @@ watch(viewDialog, (isOpen) => {
     </Card>
   </v-dialog>
 
-  <v-dialog v-model="formDialog" width="500" :persistent="true">
+  <v-dialog v-model="formDialog" width="760" :persistent="true" :retain-focus="false" scrollable>
     <v-form ref="form" @submit.prevent="onSubmit">
       <Card :title="isCreate ? $t('t-add-period-extension') : $t('t-edit-period-extension')" title-class="py-0" style="overflow: hidden">
         <template #title-action>
@@ -480,9 +554,9 @@ watch(viewDialog, (isOpen) => {
 
         <v-alert v-if="errorMsg" :text="errorMsg" variant="tonal" color="danger" class="mx-5 mt-3" density="compact" />
 
-        <v-card-text class="overflow-y-auto" style="max-height: 70vh">
+        <v-card-text class="overflow-y-auto" style="max-height: calc(90vh - 132px)">
           <v-row>
-            <v-col cols="12">
+            <v-col cols="12" md="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-end-date') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -494,7 +568,7 @@ watch(viewDialog, (isOpen) => {
                 :error-messages="getServerErrors('endDate')"
               />
             </v-col>
-            <v-col cols="12" class="mt-n1">
+            <v-col cols="12" md="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-budget-amount') }}
               </div>
@@ -505,7 +579,7 @@ watch(viewDialog, (isOpen) => {
                 :rules="applyServerErrorsToRules('budgetAmount', requiredRules.budgetAmount)"
               />
             </v-col>
-            <v-col cols="12" class="mt-n8">
+            <v-col cols="12" md="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t('t-reason') }} <i class="ph-asterisk ph-xs text-danger" />
               </div>
@@ -519,7 +593,7 @@ watch(viewDialog, (isOpen) => {
             </v-col>
             <v-col cols="12" class="mt-n6">
               <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-notes') }} <i class="ph-asterisk ph-xs text-danger" />
+                {{ $t('t-notes') }}
               </div>
               <TextArea
                 v-model="extensionForm.notes"
@@ -528,6 +602,40 @@ watch(viewDialog, (isOpen) => {
                 rows="3"
                 hide-details="auto"
               />
+            </v-col>
+            <v-col cols="12" >
+              <div class="font-weight-bold text-caption mb-1">
+                {{ $t('t-document-file') }} <i class="ph-asterisk ph-xs text-danger" />
+              </div>
+              <FileUploader
+                v-model="extensionFile"
+                :multiple="false"
+                :text="$t('t-upload-document-file')"
+                :disabled="formLoading"
+              />
+              <div v-if="displayedFileError" class="coverage-period-extension__file-error">
+                {{ displayedFileError }}
+              </div>
+              <v-progress-linear
+                v-if="extensionAttachmentLoading && !selectedExtensionFile"
+                indeterminate
+                color="primary"
+                class="mt-2"
+              />
+              <v-card
+                v-else-if="existingExtensionAttachment && !selectedExtensionFile"
+                class="border"
+                elevation="0"
+              >
+                <v-card-text class="coverage-period-extension__existing-file">
+                  <div class="coverage-period-extension__existing-file-info">
+                    <span class="font-weight-bold">
+                      {{ getAttachmentFileName(existingExtensionAttachment) }}
+                    </span>
+                    <span>{{ getAttachmentFileSize(existingExtensionAttachment) }} kb</span>
+                  </div>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
         </v-card-text>
@@ -547,48 +655,34 @@ watch(viewDialog, (isOpen) => {
     </v-form>
   </v-dialog>
 
-  <v-dialog v-model="viewDialog" width="500">
-    <Card :title="$t('t-period-extension')" title-class="py-0" style="overflow: hidden">
-      <template #title-action>
-        <v-btn icon="ph-x" variant="plain" @click="viewDialog = false" />
-      </template>
-      <v-divider />
-
-      <v-card-text>
-        <v-row>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-start-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.startDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-end-date') }}</div>
-            <div>{{ formateDate(selectedExtension?.endDate || undefined) || '-' }}</div>
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-status') }}</div>
-            <Status :status="selectedExtension?.status || 'INACTIVE'" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-budget-amount') }}</div>
-            <div>{{ selectedExtension?.budgetAmount ?? '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-reason') }}</div>
-            <div>{{ selectedExtension?.reason?.name || selectedExtension?.reasonId || '-' }}</div>
-          </v-col>
-          <v-col cols="12">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-notes') }}</div>
-            <div>{{ selectedExtension?.notes || '-' }}</div>
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-divider />
-      <v-card-actions class="d-flex justify-end">
-        <v-btn color="danger" @click="viewDialog = false">
-          <i class="ph-x me-1" /> {{ $t('t-close') }}
-        </v-btn>
-      </v-card-actions>
-    </Card>
-  </v-dialog>
+  <ViewCoveragePeriodExtensionDialog
+    v-if="selectedExtension"
+    v-model="viewDialog"
+    :data="selectedExtension"
+    :contract-id="contractId"
+  />
 </template>
+
+<style scoped>
+.coverage-period-extension__file-error {
+  color: #ff5252;
+  font-size: 0.65rem;
+  margin-left: 15px;
+  margin-top: 4px;
+}
+
+.coverage-period-extension__existing-file {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.coverage-period-extension__existing-file-info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+</style>

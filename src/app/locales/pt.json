@@ -1271,6 +1271,8 @@
   "t-message-download-error": "Erro ao baixar anexo!",
   "t-dependent-documents": "Documentos do Dependente",
   "t-add-document": "Adicionar Documento",
+  "t-addendum-documents": "Documentos da Adenda",
+  "t-please-select-file": "Por favor, selecione o ficheiro",
   "t-document-file": "Ficheiro",
   "t-upload-document-file": "Carregar ficheiro do documento",
   "t-dependent-document-max-file-size": "Cada ficheiro do dependente deve ter no máximo 25 MB",
