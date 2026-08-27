@@ -44,11 +44,11 @@ const dialogValue = computed({
       <v-card-text class="overflow-y-auto" style="max-height: calc(90vh - 132px)">
         <v-row>
           <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-start-date') }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-previous-end-date') }}</div>
             <div>{{ formateDate(data?.contractStartDate || undefined) || '-' }}</div>
           </v-col>
           <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t('t-contract-end-date') }}</div>
+            <div class="font-weight-bold text-caption mb-1">{{ $t('t-new-contract-end-date') }}</div>
             <div>{{ formateDate(data?.contractEndDate || undefined) || '-' }}</div>
           </v-col>
           <v-col cols="12">

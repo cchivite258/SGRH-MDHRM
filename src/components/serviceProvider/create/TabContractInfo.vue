@@ -174,7 +174,19 @@ const submitForm = async () => {
   emit("onStepChange", 3);
 };
 
-const refreshContractDocuments = async () => {
+const toContractDate = (value?: Date | string | null): Date | undefined => {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+
+  const parsedDate = new Date(value);
+  return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
+};
+
+const refreshContractDocuments = async (extension?: { contractEndDate?: Date | string | null }) => {
+  if (extension?.contractEndDate) {
+    serviceProviderData.value.contractEndDate = toContractDate(extension.contractEndDate);
+  }
+
   await nextTick();
   await attachmentsRef.value?.refreshServiceProviderAttachments();
 };

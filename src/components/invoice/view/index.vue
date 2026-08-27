@@ -17,6 +17,13 @@ const router = useRouter(); // Controle de navegação
 const toast = useToast(); // Notificações
 const invoiceStore = useInvoiceStore(); // Store de faturas
 
+const props = defineProps({
+  backRoute: {
+    type: String,
+    default: "/invoices/list"
+  }
+});
+
 /**
  * Emits - Eventos que este componente emite
  */
@@ -205,8 +212,8 @@ const handleSaveSuccess = (response: any) => {
     emit('invoice-created', response.data.id);
   }
 
-  // Redireciona para a lista
-  router.push('/invoices/list');
+  // Respeita a origem usada no breadcrumb quando a factura foi aberta a partir de outro ecrã.
+  router.push(props.backRoute || '/invoices/list');
 };
 
 /**
@@ -378,6 +385,7 @@ const saveInvoiceItems = async (invoiceId: string, items: InvoiceItemInsertType[
     <v-row justify="center">
       <v-col cols="12" xl="9">
         <InvoiceForm v-model="invoiceData" :is-edit-mode="isEditMode" :loading="loading" :initial-items="invoiceItems"
+          :back-route="props.backRoute"
           @save="saveInvoice" @items-ready="(items: InvoiceItemInsertType[]) => saveInvoice(items)" />
       </v-col>
     </v-row>

@@ -28,7 +28,7 @@ const isDarkMode = computed(() => layoutStore.mode === "dark");
 
 .form-card__body {
   color: var(--form-card-text);
-  padding: 14px 30px 30px;
+  padding: 42px 30px 30px;
 }
 
 .form-card__body :deep(form > .v-card) {
@@ -81,7 +81,7 @@ const isDarkMode = computed(() => layoutStore.mode === "dark");
   }
 
   .form-card__body {
-    padding: 12px 18px 22px;
+    padding: 30px 18px 22px;
   }
 }
 </style>

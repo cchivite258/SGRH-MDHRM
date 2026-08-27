@@ -10,11 +10,17 @@ export default {
       default: "",
     },
   },
+  computed: {
+    hasHeader() {
+      return !!this.title || !!this.$slots["title-action"] || !!this.$slots["title-badge"];
+    },
+  },
 };
 </script>
 <template>
   <v-card>
     <v-card-title
+      v-if="hasHeader"
       class="card-title d-flex justify-space-between align-center py-4"
       :class="titleClass"
     >
