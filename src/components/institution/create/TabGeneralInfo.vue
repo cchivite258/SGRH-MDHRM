@@ -9,8 +9,6 @@ import ContractAttachments from "@/components/institution/create/ContractAttachm
 import { companyDetailsService } from "@/app/http/httpServiceProvider";
 import type { EntityListingType } from "@/components/entities/types";
 import { InstitutionInsertType } from "@/components/institution/types";
-import { useUserStore } from "@/store/userStore";
-import type { UserType1 } from "@/app/http/types";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 import { PERMISSIONS } from "@/app/permissions/constants";
 import { usePermissions } from "@/composables/usePermissions";
@@ -18,7 +16,6 @@ import { usePermissions } from "@/composables/usePermissions";
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
-const userStore = useUserStore();
 const { canAny } = usePermissions();
 
 const emit = defineEmits(["onStepChange", "save", "update:modelValue", "clear-server-error"]);
@@ -77,16 +74,6 @@ const companyDetailsOptions = computed(() => {
     }));
 });
 
-const userOptions = computed(() =>
-  (userStore.users as UserType1[]).map((user) => {
-    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
-    return {
-      value: String(user.id),
-      label: fullName ? `${fullName} (${user.email})` : user.email,
-    };
-  })
-);
-
 const getServerErrors = (field: string) => {
   if (field === "companyDetailsId") {
     return props.serverErrors?.companyDetailsId || props.serverErrors?.organizationId || [];
@@ -97,8 +84,7 @@ const getServerErrors = (field: string) => {
 
 const requiredRules = {
   name: [(v: string) => !!String(v || "").trim() || t("t-please-enter-institution-name")],
-  companyDetailsId: [(v: string | number) => !!v || t("t-please-enter-institution")],
-  responsibleId: [(v: string | number) => !!v || t("t-please-select-contract-responsible")]
+  companyDetailsId: [(v: string | number) => !!v || t("t-please-enter-institution")]
 };
 
 watch(
@@ -136,7 +122,6 @@ watch(() => institutionData.value.name, () => emit("clear-server-error", "name")
 watch(() => institutionData.value.erpCode, () => emit("clear-server-error", "erpCode"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "companyDetailsId"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "organizationId"));
-watch(() => institutionData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
 watch(() => institutionData.value.description, () => emit("clear-server-error", "description"));
 
 const onBack = () => {
@@ -159,13 +144,7 @@ defineExpose({ submitGeneralInfo });
 
 onMounted(async () => {
   try {
-    const [response] = await Promise.all([
-      companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc"),
-      (async () => {
-        userStore.clearFilters();
-        await userStore.fetchUsers(0, 10000000);
-      })()
-    ]);
+    const response = await companyDetailsService.getCompanyDetails(0, 500, "createdAt", "asc");
     companyDetails.value = response.content || [];
     applySelectedEntityToForm();
   } catch (error) {
@@ -190,11 +169,11 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n9">
-          <v-col cols="12" lg="4">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">{{ $t('t-contract-code') }}</div>
             <TextField :model-value="institutionData.code || ''" :disabled="true" />
           </v-col>
-          <v-col cols="12" lg="8">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-contract-name') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -207,16 +186,13 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n6">
-          <v-col cols="12" lg="12">
+          <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">{{ $t('t-erp-code') }}</div>
             <TextField
               v-model="institutionData.erpCode"
               :error-messages="getServerErrors('erpCode')"
             />
           </v-col>
-        </v-row>
-
-        <v-row class="mt-n6">
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-entity') }} <i class="ph-asterisk ph-xs text-danger" />
@@ -226,20 +202,6 @@ onMounted(async () => {
               :items="companyDetailsOptions"
               :rules="requiredRules.companyDetailsId"
               :error-messages="getServerErrors('companyDetailsId')"
-            />
-          </v-col>
-          
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-contract-responsible') }} <i class="ph-asterisk ph-xs text-danger" />
-            </div>
-            <MenuSelect
-              v-model="institutionData.responsibleId"
-              :items="userOptions"
-              :loading="userStore.loading"
-              :placeholder="$t('t-select-contract-responsible')"
-              :rules="requiredRules.responsibleId"
-              :error-messages="getServerErrors('responsibleId')"
             />
           </v-col>
         </v-row>

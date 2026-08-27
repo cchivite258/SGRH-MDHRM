@@ -16,7 +16,7 @@ interface ServiceResponse<T> {
 }
 
 const CONTRACTS_ENDPOINT = "/administration/contracts";
-const CONTRACTS_INCLUDES = "organization,responsible,departments,personsOfContacts,contractHealthPlans,coveragePeriods";
+const CONTRACTS_INCLUDES = "organization,departments,personsOfContacts,contractHealthPlans,coveragePeriods";
 const CONTRACTS_INCLUDE_QUERY = `includes=${CONTRACTS_INCLUDES}`;
 
 export default class InstitutionService extends HttpService {
@@ -64,7 +64,6 @@ export default class InstitutionService extends HttpService {
       ...item,
       companyDetails: item.companyDetails ?? organization,
       companyDetailsId: item.companyDetailsId ?? item.organizationId ?? organization.id,
-      responsibleId: item.responsibleId ?? item.responsible?.id,
       address: item.address ?? organization.address,
       phone: item.phone ?? organization.phone,
       email: item.email ?? organization.email,
@@ -178,7 +177,6 @@ export default class InstitutionService extends HttpService {
         erpCode: institutionData.erpCode || null,
         description: institutionData.description,
         organizationId: institutionData.companyDetailsId,
-        responsibleId: institutionData.responsibleId,
         enabled: institutionData.enabled
       };
       console.log(" payload", payload);
@@ -261,7 +259,6 @@ export default class InstitutionService extends HttpService {
       erpCode: institutionData.erpCode || null,
       description: institutionData.description,
       organizationId: institutionData.companyDetailsId,
-      responsibleId: institutionData.responsibleId,
       enabled: institutionData.enabled
     };
      console.log("payload", payload);

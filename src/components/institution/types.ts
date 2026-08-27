@@ -21,13 +21,6 @@ export type InstitutionListingType = {
         incomeTaxNumber?: string | null;
         institutionType?: { id: string | number; name: string } | null;
     } | null;
-    responsibleId?: string | number | null;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     institutionType?: {
         id: number;
         name: string
@@ -72,13 +65,6 @@ export type InstitutionResponseType = {
         incomeTaxNumber?: string | null;
         institutionType?: { id: string | number; name: string } | null;
     } | null;
-    responsibleId?: string | number | null;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     institutionType: {
         id: string;
         name: string
@@ -106,13 +92,6 @@ export type InstitutionInsertType = {
     name: string;
     description: string | null;
     companyDetailsId: string | number | undefined;
-    responsibleId: string | number | undefined;
-    responsible?: {
-        id: string | number;
-        firstName?: string | null;
-        lastName?: string | null;
-        email?: string | null;
-    } | null;
     address?: string | null;
     phone?: string;
     email?: string;
@@ -196,7 +175,6 @@ export type ContractParticipantType = {
     name?: string | null;
     description?: string | null;
     organizationId?: string | number | null;
-    responsibleId?: string | number | null;
     enabled?: boolean;
   } | null;
   participant?: {
