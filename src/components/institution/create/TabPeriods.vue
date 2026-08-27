@@ -700,7 +700,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card :title="$t('t-coverage-period-list')" title-class="py-5">
+  <Card :title="$t('t-coverage-period-list')" title-class="py-4">
     <template v-if="!props.isViewMode && canCreateCoveragePeriod" #title-action>
       <div>
         <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
@@ -716,7 +716,7 @@ onBeforeUnmount(() => {
     </template>
   </Card>
 
-  <v-row class="mt-5">
+  <v-row class="mt-4">
     <v-col cols="12" lg="12">
       <v-card-text>
         <v-row>
