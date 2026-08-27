@@ -51,6 +51,10 @@ const props = defineProps({
   initialItems: {
     type: Array as () => InvoiceItemInsertType[],
     default: () => []
+  },
+  backRoute: {
+    type: String,
+    default: "/invoices/list"
   }
 });
 
@@ -697,7 +701,8 @@ const handleItemsReady = (items: InvoiceItemInsertType[]) => {
 
 const onBack = () => {
   institutionStore.clearDraft();
-  router.push('/invoices/list');
+  // Quando existe breadcrumb de origem, o botão volta para o mesmo destino.
+  router.push(props.backRoute || '/invoices/list');
 };
 
 const onNewInvoice = () => {

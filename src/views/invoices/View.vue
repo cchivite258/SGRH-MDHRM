@@ -98,6 +98,76 @@ const buildReturnBreadcrumb = (target: string, targetTitle: string): BreadcrumbT
     return items;
   }
 
+  const employeeHealthPlanMatch = parsedReturnTo.pathname.match(/^\/employee\/healthPlan\/(edit|view)\/([^/]+)$/);
+
+  if (employeeHealthPlanMatch) {
+    const [, mode] = employeeHealthPlanMatch;
+    const employeeId = parsedReturnTo.searchParams.get("employeeId");
+    const employeeTitle = mode === "view" ? "view-employee" : "edit-employee";
+    const items: BreadcrumbType[] = [
+      {
+        title: "employee-list",
+        disabled: false,
+        to: "/employee/list"
+      }
+    ];
+
+    if (employeeId) {
+      items.push({
+        title: employeeTitle,
+        disabled: false,
+        to: {
+          path: `/employee/${mode === "view" ? "view" : "edit"}/${employeeId}`,
+          query: { tab: "5" }
+        }
+      });
+    }
+
+    items.push({
+      title: "view-health-plan",
+      disabled: false,
+      to: target
+    });
+
+    if (parsedReturnTo.searchParams.get("tab") === "global-usage") {
+      items.push({
+        title: "health-plan-global-usage",
+        disabled: false,
+        to: target
+      });
+    }
+
+    return items;
+  }
+
+  const dependentHealthPlanMatch = parsedReturnTo.pathname.match(/^\/employee\/dependent-health-plan\/([^/]+)\/([^/]+)$/);
+
+  if (dependentHealthPlanMatch) {
+    const [, employeeId] = dependentHealthPlanMatch;
+    const isViewMode = parsedReturnTo.searchParams.get("mode") === "view";
+
+    return [
+      {
+        title: "employee-list",
+        disabled: false,
+        to: "/employee/list"
+      },
+      {
+        title: isViewMode ? "view-employee" : "edit-employee",
+        disabled: false,
+        to: {
+          path: `/employee/${isViewMode ? "view" : "edit"}/${employeeId}`,
+          query: { tab: "4" }
+        }
+      },
+      {
+        title: "dependent-health-plan",
+        disabled: false,
+        to: target
+      }
+    ];
+  }
+
   return [
     {
       title: targetTitle,
@@ -122,5 +192,5 @@ const breadcrumb = computed<BreadcrumbType[]>(() => {
 
 <template>
   <Breadcrumb title="view-invoice" :items="breadcrumb" />
-  <View :card-title="t('t-view-invoice')" />
+  <View :card-title="t('t-view-invoice')" :back-route="returnTo || '/invoices/list'" />
 </template>
