@@ -195,6 +195,7 @@ export type ServiceProviderContractExtensionPayloadType = {
   contractEndDate: Date | string | null;
   reasonId: string | number;
   notes: string;
+  file?: File;
 };
 
 export type ServiceProviderContractExtensionType = {

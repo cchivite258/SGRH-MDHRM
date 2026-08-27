@@ -333,6 +333,8 @@ const onConfirmDeleteAttachment = async () => {
     attachmentToDelete.value = null;
   }
 };
+
+defineExpose({ refreshServiceProviderAttachments });
 </script>
 
 <template>
