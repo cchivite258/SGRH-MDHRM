@@ -41,6 +41,10 @@ const route = useRoute();
 type DisplayValue = number | string | null | undefined;
 
 const activeTab = ref("main-member-plan");
+const healthPlanTabQuery = computed(() => {
+  const value = route.query.tab;
+  return typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
+});
 const healthPlanTabs = computed(() => {
   const tabs: Array<{ value: string; label: string }> = [{
     value: "main-member-plan",
@@ -58,6 +62,16 @@ watch(
   () => props.isEmployee,
   (isEmployee) => {
     if (!isEmployee) activeTab.value = "main-member-plan";
+  },
+  { immediate: true }
+);
+
+watch(
+  healthPlanTabQuery,
+  (tab) => {
+    if (props.isEmployee && (tab === "main-member-plan" || tab === "global-usage")) {
+      activeTab.value = tab;
+    }
   },
   { immediate: true }
 );
@@ -494,6 +508,15 @@ const getUsageInvoiceNumber = (item: UsagesListingType) =>
 const getUsageInvoiceId = (item: UsagesListingType) =>
   item.invoiceId || item.invoice?.id;
 
+const getReturnToWithActiveTab = () =>
+  router.resolve({
+    path: route.path,
+    query: {
+      ...route.query,
+      tab: activeTab.value
+    }
+  }).fullPath;
+
 const onViewInvoice = (item: UsagesListingType) => {
   const invoiceId = getUsageInvoiceId(item);
   if (!invoiceId) return;
@@ -501,7 +524,7 @@ const onViewInvoice = (item: UsagesListingType) => {
   router.push({
     path: `/invoices/view/${invoiceId}`,
     query: {
-      returnTo: route.fullPath,
+      returnTo: getReturnToWithActiveTab(),
       returnTitle: "view-health-plan"
     }
   });
