@@ -1,5 +1,6 @@
 import axios from "@/app/http/axios";
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import type {
   RolePermissionCreateType,
@@ -20,7 +21,7 @@ export default class RolePermissionService extends HttpService {
     try {
       const params = new URLSearchParams({
         page: "0",
-        size: "10000000",
+        size: String(MAX_PAGE_SIZE),
         sortColumn: "id",
         direction: "asc",
         query_props: "role.id",

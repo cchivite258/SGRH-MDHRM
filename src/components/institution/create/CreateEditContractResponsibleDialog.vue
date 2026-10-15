@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, nextTick, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 
@@ -132,7 +133,7 @@ const onSubmit = async () => {
 onMounted(async () => {
   try {
     userStore.clearFilters();
-    await userStore.fetchUsers(0, 10000000);
+    await userStore.fetchUsers(0, MAX_PAGE_SIZE);
   } catch (error) {
     errorMsg.value = t("t-message-load-error");
   }

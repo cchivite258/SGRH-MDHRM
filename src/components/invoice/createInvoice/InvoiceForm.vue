@@ -4,6 +4,7 @@
 // =============================================
 // Vue e Vue Utilities
 import { ref, computed, onMounted, watch, reactive } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRouter } from "vue-router";
 import { useI18n } from 'vue-i18n';
 import { useToast } from 'vue-toastification';
@@ -660,7 +661,7 @@ const onConsultHealthPlan = async () => {
       invoiceData.value.employee,
       {
         page: 0,
-        size: 1000000000,
+        size: MAX_PAGE_SIZE,
         sortColumn: "createdAt",
         direction: "asc",
         query_value: "",
@@ -976,7 +977,7 @@ const postInvoice = async (notes: string) => {
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
   if (newInstitutionId) {
     try {
-      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, 1000000000);
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, MAX_PAGE_SIZE);
 
       if (invoiceData.value.employee) {
         const currentEmployee = employeeStore.employeesForDropdown.find(
@@ -1003,7 +1004,7 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
 
   if (newEmployeeId) {
     try {
-      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, 1000000000);
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, MAX_PAGE_SIZE);
 
       if (invoiceData.value.dependent) {
         const currentDependent = dependentStore.dependentsForDropdown.find(
@@ -1028,9 +1029,9 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutionsforListing(0, 100000000),
-      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
-      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
+      institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE),
+      currencyStore.fetchCurrenciesForDropdown(0, MAX_PAGE_SIZE),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, MAX_PAGE_SIZE)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);

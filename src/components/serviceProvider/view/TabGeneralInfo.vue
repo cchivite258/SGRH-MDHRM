@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
@@ -50,7 +51,7 @@ const loadProvinces = async (countryId?: string) => {
 
 onMounted(async () => {
   try {
-    await countryStore.fetchCountries();
+    await countryStore.fetchCountries(0, MAX_PAGE_SIZE);
     await loadProvinces(serviceProviderData.value.countryId);
   } catch (error) {
     console.error("Failed to load countries:", error);

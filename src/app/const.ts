@@ -60,3 +60,6 @@ export const DIR = {
   LTR: "ltr",
   RTL: "rtl",
 };
+
+// Limite máximo de registos por página aceite pela API (selects / dropdowns).
+export const MAX_PAGE_SIZE: number = 500;

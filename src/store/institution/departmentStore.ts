@@ -1,5 +1,6 @@
 // stores/departmentStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { departmentService } from "@/app/http/httpServiceProvider";
 import type { DepartmentListingType, DepartmentListingForListType } from '@/components/institution/types';
 
@@ -10,7 +11,7 @@ export const useDepartmentStore = defineStore('departments', {
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10000000, 
+      itemsPerPage: MAX_PAGE_SIZE, 
       totalPages: 0
     },
     loading: false,
@@ -31,7 +32,7 @@ export const useDepartmentStore = defineStore('departments', {
       this.error = null;
     
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
     
       try {
         const { content, meta } = await departmentService.getDepartmentsByInstitution(

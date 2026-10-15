@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { HealthPlanInsertType, HospitalProcedureListingType, HospitalProcedureInsertType } from "@/components/institution/types";
 import { CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
@@ -204,8 +205,8 @@ onMounted(async () => {
         healthPlanData.value = healthPlan;
 
         // Carrega períodos de cobertura
-        await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, 10000000);
-        await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
+        await coveragePeriodStore.fetchCoveragePeriodsForDropdown(healthPlan.company?.id, 0, MAX_PAGE_SIZE);
+        await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, MAX_PAGE_SIZE);
 
         healthPlanFormData.value = {
           id: healthPlan.id,
@@ -285,7 +286,7 @@ const onConsultHealthPlan = async () => {
     const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlan(
       planIdFromRoute,
       0,
-      1000000000,
+      MAX_PAGE_SIZE,
       "categoryName",
       "asc"
     );
@@ -310,7 +311,7 @@ const onExportHealthPlanPdf = async () => {
     const { content } = await hospitalProcedureService.getHospitalProcedureByHealthPlanFull(
       planIdFromRoute,
       0,
-      1000000000,
+      MAX_PAGE_SIZE,
       "categoryName",
       "asc"
     );

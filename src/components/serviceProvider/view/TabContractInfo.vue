@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { formateDate } from "@/app/common/dateFormate";
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
 import { useUserStore } from "@/store/userStore";
@@ -58,7 +59,7 @@ onMounted(async () => {
   if (serviceProviderData.value.responsible && userStore.users.length > 0) return;
 
   userStore.clearFilters();
-  await userStore.fetchUsers(0, 10000000);
+  await userStore.fetchUsers(0, MAX_PAGE_SIZE);
 });
 </script>
 

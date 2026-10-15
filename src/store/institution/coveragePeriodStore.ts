@@ -1,5 +1,6 @@
 // stores/departmentStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { coveragePeriodsService } from "@/app/http/httpServiceProvider";
 import type { CoveragePeriodListingType } from '@/components/institution/types';
 
@@ -75,7 +76,7 @@ export const useCoveragePeriodStore = defineStore('coverage_periods', {
       this.error = null;
     
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
     
       try {
         const { content, meta } = await coveragePeriodsService.getCoveragePeriodByInstitutionForDropdown(

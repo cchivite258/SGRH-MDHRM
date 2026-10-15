@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType, EmployeeRehireType, EmployeeRehireTrackType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -101,7 +102,7 @@ export default class EmployeeService extends HttpService {
   async getEmployeesForDropdown(
     id: string | undefined,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_props?: string,
@@ -153,7 +154,7 @@ export default class EmployeeService extends HttpService {
   async getCompanyEmployees(
     id: string | undefined,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_props?: string,

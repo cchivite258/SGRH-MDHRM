@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { HealthPlanListingType, HospitalProcedureInsertType, HospitalProcedureListingType } from "@/components/institution/types";
 import { HospitalProcedureTypeListing } from "@/components/baseTables/hospitalProcedureType/types";
 import { HospitalProcedureGroupListing } from "@/components/baseTables/hospitalProcedureGroup/types";
@@ -387,9 +388,9 @@ const onSubmit = async () => {
 watch(() => props.data?.companyHealthPlan, (newCompanyHealthPlan) => {
   if (newCompanyHealthPlan) {
     companyHealthPlan.value = newCompanyHealthPlan;
-    hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0, 10000000);
-    healthPlanStore.fetchHealthPlansForDropdown(newCompanyHealthPlan, 0, 10000000);
-    hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
+    hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0, MAX_PAGE_SIZE);
+    healthPlanStore.fetchHealthPlansForDropdown(newCompanyHealthPlan, 0, MAX_PAGE_SIZE);
+    hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, MAX_PAGE_SIZE);
   }
 }, { immediate: true });
 
@@ -400,9 +401,9 @@ onMounted(async () => {
   
   try {
     if (companyHealthPlan.value) {
-      await hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0,10000000);
-      await healthPlanStore.fetchHealthPlansForDropdown(companyHealthPlan.value, 0, 10000000);
-      await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, 10000000);
+      await hospitalProcedureTypeStore.fetchHospitalProcedureTypesForDropdown(0,MAX_PAGE_SIZE);
+      await healthPlanStore.fetchHealthPlansForDropdown(companyHealthPlan.value, 0, MAX_PAGE_SIZE);
+      await hospitalProcedureGroupStore.fetchHospitalProcedureGroupsForDropdown(0, MAX_PAGE_SIZE);
     }
   } catch (error) {
     console.error("Failed to load procedimentos hospitalares:", error);

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, onMounted, nextTick } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { HealthPlanInsertType, HospitalProcedureListingType, CoveragePeriodListingType, HealthPlanListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
@@ -263,7 +264,7 @@ watch(
 watch(() => props.data?.company, (newCompany) => {
   if (newCompany) {
     company.value = newCompany;
-    coveragePeriodStore.fetchCoveragePeriodsForDropdown(newCompany, 0, 10000000);
+    coveragePeriodStore.fetchCoveragePeriodsForDropdown(newCompany, 0, MAX_PAGE_SIZE);
   }
 }, { immediate: true });
 
@@ -279,7 +280,7 @@ onMounted(async () => {
 
   try {
     if (company.value) {
-      await coveragePeriodStore.fetchCoveragePeriodsForDropdown(company.value, 0, 10000000);
+      await coveragePeriodStore.fetchCoveragePeriodsForDropdown(company.value, 0, MAX_PAGE_SIZE);
 
     }
   } catch (error) {

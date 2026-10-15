@@ -4,6 +4,7 @@
 // =============================================
 // Vue e Vue Utilities
 import { ref, computed, onMounted, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 
@@ -253,14 +254,14 @@ const loadProcedures = async () => {
     const loadPlanProcedures = isHistoricalInvoicePlan
       ? hospitalProcedureStore
           // Endpoint full inclui procedimentos de planos não activos, necessário para consulta histórica.
-          .fetchHospitalProceduresOfPlanScopedFull(activeHealthPlanId.value, 0, 1000000000)
+          .fetchHospitalProceduresOfPlanScopedFull(activeHealthPlanId.value, 0, MAX_PAGE_SIZE)
           .then((content) => {
             historicalPlanProcedures.value = content;
           })
-      : hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000);
+      : hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, MAX_PAGE_SIZE);
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
+      taxRateStore.fetchTaxRatesForDropdown(0, MAX_PAGE_SIZE),
       loadPlanProcedures
     ]);
 

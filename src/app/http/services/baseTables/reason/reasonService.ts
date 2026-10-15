@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   ReasonInsert,
   ReasonListing,
@@ -47,7 +48,7 @@ export default class ReasonService extends HttpService {
   async getReasonsByType(
     type: ReasonType,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = "name",
     direction: string = "asc"
   ): Promise<{ content: ReasonListing[]; meta: any }> {

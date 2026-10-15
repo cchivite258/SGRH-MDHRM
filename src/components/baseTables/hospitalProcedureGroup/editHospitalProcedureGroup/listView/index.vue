@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
@@ -37,7 +38,7 @@ const errorMsg = ref("");
 const insertByCategoryErrorMsg = ref("");
 const searchProps = "code,name,description";
 const allHospitalProcedureTypes = ref<HospitalProcedureTypeListing[]>([]);
-const allProceduresPageSize = 10000000;
+const allProceduresPageSize = MAX_PAGE_SIZE;
 const loadingCategoryGrouping = ref(false);
 const currentGroupRelations = ref<HospitalProcedureGroupingListing[]>([]);
 
@@ -361,7 +362,7 @@ const onOpenInsertByCategoryDialog = () => {
 };
 
 onMounted(async () => {
-  await hospitalProcedureCategoryStore.fetchHospitalProcedureCategoriesForDropdown(0, 10000000);
+  await hospitalProcedureCategoryStore.fetchHospitalProcedureCategoriesForDropdown(0, MAX_PAGE_SIZE);
   await fetchHospitalProcedureTypes({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: "" });
   await fetchGroup();
   await fetchRelations();

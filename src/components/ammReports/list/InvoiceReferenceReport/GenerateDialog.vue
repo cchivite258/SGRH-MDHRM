@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -116,8 +117,8 @@ const exportOptions = [
 ];
 
 onMounted(async () => {
-  await institutionStore.fetchInstitutionsforListing(0, 10000000);
-  await serviceProviderStore.fetchServiceProvidersForDropdown(0, 10000000);
+  await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
+  await serviceProviderStore.fetchServiceProvidersForDropdown(0, MAX_PAGE_SIZE);
 });
 </script>
 
