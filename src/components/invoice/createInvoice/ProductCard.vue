@@ -4,6 +4,7 @@
 // =============================================
 // Vue e Vue Utilities
 import { ref, computed, onMounted, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 
@@ -301,8 +302,8 @@ const loadProcedures = async () => {
     console.log("Active Health Plan ID:", activeHealthPlanId.value);
 
     await Promise.all([
-      taxRateStore.fetchTaxRatesForDropdown(0, 1000000000),
-      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, 1000000000)
+      taxRateStore.fetchTaxRatesForDropdown(0, MAX_PAGE_SIZE),
+      hospitalProcedureStore.fetchHospitalProceduresOfPlan(activeHealthPlanId.value, 0, MAX_PAGE_SIZE)
     ]);
   } catch (error) {
     handleError('t-error-loading-procedures', error);

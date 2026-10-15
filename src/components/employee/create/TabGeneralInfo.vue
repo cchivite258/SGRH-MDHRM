@@ -10,6 +10,7 @@
  */
 
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
@@ -259,7 +260,7 @@ const provinces = computed(() => {
  */
 onMounted(async () => {
   try {
-    await countryStore.fetchCountries();
+    await countryStore.fetchCountries(0, MAX_PAGE_SIZE);
 
     // Carrega províncias se já houver país selecionado
     if (employeeData.value.country) {

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { dashboardService } from "@/app/http/httpServiceProvider";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
@@ -683,7 +684,7 @@ const loadCoveragePeriodsForContract = async (contractId: string | number | null
   dashboardErrorKey.value = null;
 
   try {
-    await coveragePeriodStore.fetchCoveragePeriodsForDropdown(String(contractId), 0, 10000000);
+    await coveragePeriodStore.fetchCoveragePeriodsForDropdown(String(contractId), 0, MAX_PAGE_SIZE);
     const firstPeriod = coveragePeriodOptions.value[0];
     selectedCoveragePeriodId.value = firstPeriod?.value ?? null;
 
@@ -814,7 +815,7 @@ onMounted(async () => {
   dashboardErrorKey.value = null;
 
   try {
-    await institutionStore.fetchInstitutionsforListing(0, 10000000);
+    await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
     selectedContractId.value = contractOptions.value[0]?.value ?? null;
 
     if (!selectedContractId.value) {

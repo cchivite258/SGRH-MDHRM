@@ -10,6 +10,7 @@
  */
 
 import { ref, watch, computed, onMounted, onBeforeUnmount, PropType } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import { useI18n } from "vue-i18n";
@@ -484,7 +485,7 @@ const onConsultHealthPlan = async () => {
     await hospitalProcedureStore.fetchHospitalProceduresOfPlanScoped(
       plan.id,
       0,
-      1000000000,
+      MAX_PAGE_SIZE,
       "categoryName",
       "asc"
     );
@@ -509,7 +510,7 @@ const onExportHealthPlanPdf = async () => {
     const fullPlanProcedures = await hospitalProcedureStore.fetchHospitalProceduresOfPlanScopedFull(
       activeHealthPlan.value.id,
       0,
-      1000000000,
+      MAX_PAGE_SIZE,
       "categoryName",
       "asc"
     );

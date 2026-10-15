@@ -1,5 +1,6 @@
 // services/positionService.ts
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { PositionListingType, PositionInsertType, PositionListingForListType, DepartmentListingForListType } from "@/components/institution/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -19,7 +20,7 @@ export default class PositionService extends HttpService {
   async getPositionsByDepartment(
     id: string,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,
@@ -60,7 +61,7 @@ export default class PositionService extends HttpService {
   async getPositionByDepartmentList(
     id: string | null,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

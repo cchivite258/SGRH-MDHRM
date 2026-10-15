@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import type { PermissionListingType, PermissionListMeta } from "@/components/users/permissions/types";
 
@@ -14,7 +15,7 @@ const PERMISSIONS_ENDPOINT = "/administration/iam/permissions";
 export default class PermissionService extends HttpService {
   async getPermissions(
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = "name",
     direction: string = "asc",
     queryValue?: string,
@@ -37,7 +38,7 @@ export default class PermissionService extends HttpService {
   async getPermissionsByModule(
     moduleId: number,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = "name",
     direction: string = "asc",
     queryValue?: string,

@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { healthPlanEmployeeService } from "@/app/http/httpServiceProvider";
 import type { HealthPlanListingType, ExpensePerProcedureType } from '@/components/employee/types';
 
@@ -86,7 +87,7 @@ export const useHospitalProcedureBalanceStore = defineStore('hospital_procedure_
         const { content } = await healthPlanEmployeeService.getHealthPlansByEmployee(
           employeeId,
           0,
-          1000, // Valor razoável em vez de 100000
+          MAX_PAGE_SIZE,
           'createdAt',
           'asc',
           '',

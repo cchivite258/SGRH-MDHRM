@@ -1,5 +1,6 @@
 // stores/serviceProviderInstitutionStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { serviceProviderInstitutionService } from "@/app/http/httpServiceProvider";
 import type { ServiceProviderListingType } from '@/components/institution/types';
 
@@ -10,7 +11,7 @@ export const useServiceProviderInstitutionStore = defineStore('service_providers
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10000000, 
+      itemsPerPage: MAX_PAGE_SIZE, 
       totalPages: 0
     },
     loading: false,

@@ -109,6 +109,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { MAX_PAGE_SIZE } from '@/app/const';
 import { useRoute, useRouter } from 'vue-router';
 import { useEmployeeStore } from '@/store/employee/employeeStore';
 import { useCountryStore, useProvinceStore } from '@/store/baseTables/countryStore';
@@ -645,8 +646,8 @@ watch(
 
 onMounted(async () => {
     await Promise.all([
-        countryStore.fetchCountries(0, 10000000),
-        institutionStore.fetchInstitutionsforListing(0, 10000000)
+        countryStore.fetchCountries(0, MAX_PAGE_SIZE),
+        institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE)
     ]);
 
     await loadProvinceOptions();

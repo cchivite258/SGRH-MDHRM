@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { employeeService } from "@/app/http/httpServiceProvider";
 import type { EmployeeListingType, EmployeeInsertType } from '@/components/employee/types';
 import EmployeeService from '@/app/http/services/employee/employeeService';
@@ -217,11 +218,8 @@ export const useEmployeeStore = defineStore('employees', {
       this.loading = true;
       this.error = null;
 
-      const safeSize = this.employeesForDropdownPagination.itemsPerPage > 0
-        ? this.employeesForDropdownPagination.itemsPerPage
-        : 10;
       const actualPage = page ?? this.employeesForDropdownPagination.currentPage;
-      const actualSize = size ?? safeSize;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       try {
         const { content, meta } = await employeeService.getEmployeesForDropdown(

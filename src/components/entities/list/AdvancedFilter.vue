@@ -95,6 +95,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { MAX_PAGE_SIZE } from '@/app/const';
 import { useRoute, useRouter } from 'vue-router';
 import { useCompanyDetailsStore } from '@/store/institution/companyDetailsStore';
 import { useInstitutionTypeStore } from '@/store/baseTables/institutionTypeStore';
@@ -447,7 +448,7 @@ watch(
 
 onMounted(async () => {
     if (!institutionTypeStore.institutiontypes.length) {
-        await institutionTypeStore.fetchInstitutionTypes();
+        await institutionTypeStore.fetchInstitutionTypes(0, MAX_PAGE_SIZE);
     }
 });
 

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 import { useRouter } from "vue-router";
@@ -66,7 +67,7 @@ const sortOrderOptions = computed(() => [
 watch(contractId, async (value) => {
   coveragePeriodId.value = "";
   if (!value) return;
-  await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, 10000000);
+  await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, MAX_PAGE_SIZE);
 });
 
 const onSubmit = async () => {
@@ -119,7 +120,7 @@ const onSubmit = async () => {
 };
 
 onMounted(async () => {
-  await institutionStore.fetchInstitutionsforListing(0, 10000000);
+  await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
 });
 </script>
 

@@ -3,6 +3,7 @@ import InvoiceSVG from "@/assets/images/invoice.vue";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
 import ProductCard from "@/components/invoice/view/ProductCard.vue";
 import { ref, computed, onMounted, watch, reactive } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { InvoiceInsertType, InvoiceItemInsertType } from "@/components/invoice/types";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
@@ -609,7 +610,7 @@ const onConsultHealthPlan = async () => {
       invoiceData.value.employee,
       {
         page: 0,
-        size: 1000000000,
+        size: MAX_PAGE_SIZE,
         sortColumn: "createdAt",
         direction: "asc",
         query_value: "",
@@ -725,7 +726,7 @@ watch(() => invoiceData.value, (newValue) => {
 watch(() => invoiceData.value.company, async (newInstitutionId) => {
   if (newInstitutionId) {
     try {
-      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, 10000000);
+      await employeeStore.fetchEmployeesForDropdown(newInstitutionId, 0, MAX_PAGE_SIZE);
 
       if (invoiceData.value.employee) {
         const currentEmployee = employeeStore.employeesForDropdown.find(
@@ -751,7 +752,7 @@ watch(() => invoiceData.value.employee, async (newEmployeeId) => {
 
   if (newEmployeeId) {
     try {
-      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, 10000000);
+      await dependentStore.fetchDependentsEmployeeForDropdown(newEmployeeId, 0, MAX_PAGE_SIZE);
 
       if (invoiceData.value.dependent) {
         const currentDependent = dependentStore.dependentsForDropdown.find(
@@ -799,9 +800,9 @@ const onSubmitDownloadInvoice = async (invoiceId: string, name: string, extensio
 onMounted(async () => {
   try {
     await Promise.all([
-      institutionStore.fetchInstitutionsforListing(0, 1000000000),
-      currencyStore.fetchCurrenciesForDropdown(0, 1000000000),
-      serviceProviderStore.fetchServiceProvidersForDropdown(0, 1000000000)
+      institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE),
+      currencyStore.fetchCurrenciesForDropdown(0, MAX_PAGE_SIZE),
+      serviceProviderStore.fetchServiceProvidersForDropdown(0, MAX_PAGE_SIZE)
     ]);
   } catch (error) {
     handleLoadError("institutions", error);

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
@@ -36,7 +37,7 @@ const currentRelations = ref<HospitalProcedureCategoryTypesListing[]>([]);
 const allHospitalProcedureTypes = ref<HospitalProcedureTypeListing[]>([]);
 const errorMsg = ref("");
 const searchProps = "code,name,description";
-const allProceduresPageSize = 10000000;
+const allProceduresPageSize = MAX_PAGE_SIZE;
 
 const form = ref({
   id: "",

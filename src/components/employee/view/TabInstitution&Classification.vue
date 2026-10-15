@@ -10,6 +10,7 @@
  */
 
 import { ref, computed, onMounted, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
 import { useLayoutStore } from "@/store/app";
@@ -106,7 +107,7 @@ const requiredRules = {
  * Opções para selects (instituições, departamentos e cargos)
  */
 const institutions = computed(() => {
-  return institutionStore.institutions.map((institution: InstitutionListingType) => ({
+  return institutionStore.institutions_for_dropdown.map((institution: InstitutionListingType) => ({
     value: institution.id,
     label: institution.name
   }));
@@ -132,7 +133,7 @@ const positions = computed(() => {
  */
 onMounted(async () => {
   try {
-    await institutionStore.fetchInstitutions();
+    await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
   } catch (error) {
     handleError("Falha ao carregar instituições", error);
   }

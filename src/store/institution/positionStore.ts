@@ -1,5 +1,6 @@
 // stores/positionStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { positionService } from "@/app/http/httpServiceProvider";
 import type { PositionListingType, PositionListingForListType } from '@/components/institution/types';
 
@@ -10,7 +11,7 @@ export const usePositionStore = defineStore('positions', {
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 10000000, 
+      itemsPerPage: MAX_PAGE_SIZE, 
       totalPages: 0
     },
     loading: false,
@@ -31,7 +32,7 @@ export const usePositionStore = defineStore('positions', {
       this.error = null;
     
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
     
       try {
         const { content, meta } = await positionService.getPositionsByDepartment(

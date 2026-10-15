@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { institutionService } from "@/app/http/httpServiceProvider";
 import type { InstitutionListingType, InstitutionInsertType } from '@/components/institution/types';
 
@@ -104,7 +105,7 @@ export const useInstitutionStore = defineStore('institutions', {
       this.error = null;
 
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       try {
         const { content, meta } = await institutionService.getInstitutionsForListing( 

@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { ServiceProviderListingType, ServiceProviderInsertType, ServiceProviderResponseType } from "@/components/serviceProvider/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -111,7 +112,7 @@ export default class ServiceProviderService extends HttpService {
   // Obter prestadores de serviços para o dropdown
   async getServiceProvidersForDropdown(
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

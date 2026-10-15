@@ -91,6 +91,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { MAX_PAGE_SIZE } from '@/app/const';
 import { useRoute, useRouter } from 'vue-router';
 import { useServiceProviderStore } from '@/store/serviceProvider/serviceProviderStore';
 import { useProviderTypeStore } from '@/store/baseTables/providerTypeStore';
@@ -454,7 +455,7 @@ watch(
 
 onMounted(async () => {
     if (!providerTypeStore.provider_types.length) {
-        await providerTypeStore.fetchProviderTypes(0, 10000000);
+        await providerTypeStore.fetchProviderTypes(0, MAX_PAGE_SIZE);
     }
 });
 

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, onMounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { CompanyCostPerEmployeeReportType } from "@/components/ammReports/types";
 import { CoveragePeriodListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
@@ -111,7 +112,7 @@ watch(contractId, async (value) => {
   await coveragePeriodStore.fetchCoveragePeriodsForDropdown(
     value,
     0,
-    10000000
+    MAX_PAGE_SIZE
   );
 });
 
@@ -175,7 +176,7 @@ const onSubmit = async () => {
 -------------------------- */
 
 onMounted(async () => {
-  await institutionStore.fetchInstitutionsforListing(0, 10000000);
+  await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
 });
 </script>
 

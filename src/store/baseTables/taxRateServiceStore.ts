@@ -1,5 +1,6 @@
 // stores/userStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { taxRateTypeService } from "@/app/http/httpServiceProvider";
 import type { TaxRateTypeUpdate, TaxRateTypeListing, TaxRateTypeInsert } from "@/components/baseTables/TaxRate/types";
 
@@ -76,7 +77,7 @@ export const useTaxRateStore = defineStore('tax_rates', {
       this.error = null;
 
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       try {
         const { content, meta } = await taxRateTypeService.getTaxRatesForDropdown(

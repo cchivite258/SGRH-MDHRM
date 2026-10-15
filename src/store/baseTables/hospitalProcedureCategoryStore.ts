@@ -1,5 +1,6 @@
 ﻿// stores/userStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { hospitalProcedureCategoryService } from "@/app/http/httpServiceProvider";
 import type { HospitalProcedureCategoryInsert, HospitalProcedureCategoryListing } from "@/components/baseTables/hospitalProcedureCategory/types";
 
@@ -76,7 +77,7 @@ export const useHospitalProcedureCategoryStore = defineStore('hospital_procedure
       this.error = null;
 
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       try {
         const { content, meta } = await hospitalProcedureCategoryService.getHospitalProcedureCategoriesForList(

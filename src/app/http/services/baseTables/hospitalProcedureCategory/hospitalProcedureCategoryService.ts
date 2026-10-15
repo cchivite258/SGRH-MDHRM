@@ -1,4 +1,5 @@
 ﻿import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   HospitalProcedureCategoryInsert,
   HospitalProcedureCategoryListing,
@@ -70,7 +71,7 @@ export default class HospitalProcedureCategoryService extends HttpService {
 
   async getHospitalProcedureCategoriesForList(
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'name',
     direction: string = 'asc',
     query_value?: string,

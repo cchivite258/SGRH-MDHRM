@@ -1,5 +1,6 @@
 // stores/departmentStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { healthPlanService } from "@/app/http/httpServiceProvider";
 import type { HealthPlanListingType } from '@/components/institution/types';
 
@@ -76,7 +77,7 @@ export const useHealthPlanStore = defineStore('health_plans', {
       this.error = null;
     
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
     
       try {
         const { content, meta } = await healthPlanService.getHealthPlanByInstitution(
