@@ -10,6 +10,7 @@
  */
 
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from 'vue-toastification';
@@ -193,8 +194,8 @@ watch(() => serviceProviderData.value.website, () => emit('clear-server-error', 
  */
 onMounted(async () => {
   try {
-    await providerTypeStore.fetchProviderTypes();
-    await countryStore.fetchCountries();
+    await providerTypeStore.fetchProviderTypes(0, MAX_PAGE_SIZE);
+    await countryStore.fetchCountries(0, MAX_PAGE_SIZE);
 
     // Carrega províncias se já houver país selecionado
     if (serviceProviderData.value.countryId) {

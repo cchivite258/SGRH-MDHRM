@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -200,7 +201,7 @@ const loadData = async () => {
   try {
     const [roleResponse, modulesResponse, rolePermissionResponse] = await Promise.all([
       roleService.findRoleById(roleId.value),
-      moduleService.getModules(0, 10000000, "name", "asc"),
+      moduleService.getModules(0, MAX_PAGE_SIZE, "name", "asc"),
       rolePermissionService.getRolePermissionsByRole(roleId.value),
     ]);
 

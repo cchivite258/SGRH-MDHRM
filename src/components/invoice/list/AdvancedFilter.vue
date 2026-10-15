@@ -101,6 +101,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { MAX_PAGE_SIZE } from '@/app/const';
 import { useRoute, useRouter } from 'vue-router';
 import { useInvoiceStore } from '@/store/invoice/invoiceStore';
 import { useInstitutionStore } from '@/store/institution/institutionStore';
@@ -435,7 +436,7 @@ const loadCoveragePeriodOptions = async () => {
         ? findCompanyIdByName(companyName)
         : undefined;
 
-    await coveragePeriodStore.fetchCoveragePeriodsForDropdown(companyId, 0, 10000000);
+    await coveragePeriodStore.fetchCoveragePeriodsForDropdown(companyId, 0, MAX_PAGE_SIZE);
 };
 
 const syncStateToRoute = async (filtersForStore: StoreAdvancedFilter[]) => {
@@ -557,9 +558,9 @@ watch(
 
 onMounted(async () => {
     await Promise.all([
-        institutionStore.fetchInstitutionsforListing(0, 10000000),
-        serviceProviderStore.fetchServiceProvidersForDropdown(0, 10000000),
-        currencyStore.fetchCurrenciesForDropdown(0, 10000000)
+        institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE),
+        serviceProviderStore.fetchServiceProvidersForDropdown(0, MAX_PAGE_SIZE),
+        currencyStore.fetchCurrenciesForDropdown(0, MAX_PAGE_SIZE)
     ]);
 
     await loadCoveragePeriodOptions();

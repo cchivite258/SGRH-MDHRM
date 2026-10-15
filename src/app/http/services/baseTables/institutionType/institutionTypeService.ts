@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { InstitutionTypeListingType } from "@/components/baseTables/institutionType/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -6,7 +7,7 @@ export default class InstitutionTypeService extends HttpService {
 
   async getInstitutionTypes(
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

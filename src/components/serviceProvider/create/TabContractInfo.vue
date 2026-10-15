@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
@@ -116,7 +117,7 @@ const userOptions = computed(() =>
 
 onMounted(async () => {
   userStore.clearFilters();
-  await userStore.fetchUsers(0, 10000000);
+  await userStore.fetchUsers(0, MAX_PAGE_SIZE);
 });
 
 watch(

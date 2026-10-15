@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   HospitalProcedureGroupingByCategoryInsert,
   HospitalProcedureGroupingInsert,
@@ -38,7 +39,7 @@ export default class HospitalProcedureGroupingService extends HttpService {
     query_props?: string,
     includes?: string,
     page: number = 0,
-    size: number = 10000000
+    size: number = MAX_PAGE_SIZE
   ): Promise<{ content: HospitalProcedureGroupingListing[]; meta: any }> {
     try {
       const queryParams: string[] = [

@@ -1,5 +1,6 @@
 // services/departmentService.ts
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   DependentListingType,
   DependentInsertType,
@@ -84,7 +85,7 @@ export default class DependentEmployeeService extends HttpService {
   async getDependentbyEmployeeForDropdown(
     id: string | null,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

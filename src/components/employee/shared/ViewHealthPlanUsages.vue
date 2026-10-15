@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
@@ -271,7 +272,7 @@ const fetchMainMemberProcedureLimits = async ({ page, itemsPerPage, sortBy, sear
     const { content } = await healthPlanEmployeeService.getHospitalProcedureBalancebyEmployee(
       healthPlanId.value,
       0,
-      1000000000,
+      MAX_PAGE_SIZE,
       sortBy[0]?.key || "createdAt",
       sortBy[0]?.order || "asc",
       memberFilterQuery.value.queryValue,
@@ -310,7 +311,7 @@ const onExportMainMemberPlanPdf = async () => {
       const { content } = await healthPlanEmployeeService.getHospitalProcedureBalancebyEmployee(
         healthPlanId.value,
         0,
-        1000000000,
+        MAX_PAGE_SIZE,
         "createdAt",
         "asc",
         memberFilterQuery.value.queryValue,

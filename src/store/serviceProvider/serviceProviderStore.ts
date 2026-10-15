@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { serviceProviderService } from "@/app/http/httpServiceProvider";
 import type { ServiceProviderListingType, ServiceProviderInsertType, ServiceProviderListingForListType } from '@/components/serviceProvider/types';
 
@@ -83,7 +84,7 @@ export const useServiceProviderStore = defineStore('serviceProviders', {
       this.error = null;
 
       const actualPage = page ?? 0;
-      const actualSize = size ?? 10000000;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       console.log('🔍 Parâmetros da requisição de clínicas:', {
         page: actualPage,

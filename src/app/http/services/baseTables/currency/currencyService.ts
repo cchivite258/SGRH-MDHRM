@@ -1,4 +1,5 @@
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   CurrencyInsertType,
   CurrencyListingType,
@@ -58,7 +59,7 @@ export default class CurrencyService extends HttpService {
 
   async getCurrenciesForDropdown(
     page: number = 0,
-    size: number = 1000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'name',
     direction: string = 'asc',
     query_value?: string,

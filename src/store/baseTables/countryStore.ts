@@ -1,5 +1,6 @@
 // stores/userStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { countryService } from "@/app/http/httpServiceProvider";
 import type { CountryListingType, CountryInsertType } from '@/components/baseTables/country/types';
 import type { ProvinceListingType } from "@/components/baseTables/country/types";
@@ -149,7 +150,7 @@ export const useProvinceStore = defineStore('provinces', {
       this.loading = true;
       this.error = null;
       try {
-        const data = await countryService.getProvincesByCountryID(countryId);
+        const data = await countryService.getProvincesByCountryID(countryId, 0, MAX_PAGE_SIZE);
         //console.log('response store provinces by country data--------------', data);
         // Garante que a resposta seja tratada como array
         this.provincesbyCountry = data?.content || [];

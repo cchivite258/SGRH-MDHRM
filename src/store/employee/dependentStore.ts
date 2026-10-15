@@ -1,5 +1,6 @@
 // stores/departmentStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
 import type { DependentListingType } from '@/components/employee/types';
 
@@ -75,8 +76,8 @@ export const useDependentEmployeeStore = defineStore('dependents', {
       this.error = null;
     
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
-    
+      const actualSize = size ?? MAX_PAGE_SIZE;
+
       try {
         const { content, meta } = await dependentEmployeeService.getDependentbyEmployeeForDropdown(
           id,

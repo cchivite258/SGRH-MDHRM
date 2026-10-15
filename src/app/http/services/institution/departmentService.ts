@@ -1,5 +1,6 @@
 // services/departmentService.ts
 import HttpService from "@/app/http/httpService";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import type { DepartmentListingType, DepartmentListingForListType, DepartmentInsertType } from "@/components/institution/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
@@ -44,7 +45,7 @@ export default class DepartmentService extends HttpService {
   async getDepartmentsByInstitution(
     id: string | number|  null,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,
@@ -84,7 +85,7 @@ export default class DepartmentService extends HttpService {
   async getDepartmentsByInstitutionList(
     id: string | null,
     page: number = 0,
-    size: number = 10000000,
+    size: number = MAX_PAGE_SIZE,
     sortColumn: string = 'createdAt',
     direction: string = 'asc',
     query_value?: string,

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, onMounted, reactive, ref } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
@@ -185,7 +186,7 @@ const goBackToList = () => {
 };
 
 onMounted(async () => {
-  await institutionTypeStore.fetchInstitutionTypes();
+  await institutionTypeStore.fetchInstitutionTypes(0, MAX_PAGE_SIZE);
 
   if (entityId.value) {
     await loadEntity(entityId.value);

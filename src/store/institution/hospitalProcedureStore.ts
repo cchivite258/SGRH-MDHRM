@@ -1,5 +1,6 @@
 // stores/departmentStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { hospitalProcedureService } from "@/app/http/httpServiceProvider";
 import type { HospitalProcedureListingType } from '@/components/institution/types';
 
@@ -15,7 +16,7 @@ export const useHospitalProcedureStore = defineStore('hospital_procedure', {
     pagination: { 
       totalElements: 0,
       currentPage: 0,
-      itemsPerPage: 9999999, 
+      itemsPerPage: MAX_PAGE_SIZE, 
       totalPages: 0
     },
     loading: false,

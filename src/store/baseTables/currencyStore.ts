@@ -1,5 +1,6 @@
 // stores/userStore.ts
 import { defineStore } from 'pinia';
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { currencyService } from "@/app/http/httpServiceProvider";
 import type { CurrencyInsertType, CurrencyListingType, CurrencyUpdateType } from "@/components/baseTables/currency/types";
 import { cu } from '@/assets/images/flags/utils';
@@ -78,7 +79,7 @@ export const useCurrencyStore = defineStore('currencies', {
       this.error = null;
 
       const actualPage = page ?? this.pagination.currentPage;
-      const actualSize = size ?? this.pagination.itemsPerPage;
+      const actualSize = size ?? MAX_PAGE_SIZE;
 
       try {
         const { content, meta } = await currencyService.getCurrenciesForDropdown(

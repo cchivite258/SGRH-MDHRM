@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { PropType, computed, ref, watch, onMounted, onUnmounted } from "vue";
+import { MAX_PAGE_SIZE } from "@/app/const";
 import { CompanyHospitalProceduresBalanceType } from "@/components/ammReports/types";
 import { CoveragePeriodListingType } from "@/components/institution/types";
 import { useI18n } from "vue-i18n";
@@ -125,7 +126,7 @@ watch(contractId, async (value) => {
   issueDateFrom.value = new Date();
   issueDateTo.value = new Date();
 
-  await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, 10000000);
+  await coveragePeriodStore.fetchCoveragePeriodsForDropdown(value, 0, MAX_PAGE_SIZE);
 });
 
 /* -------------------------
@@ -267,7 +268,7 @@ const exportOptions = [
 -------------------------- */
 
 onMounted(async () => {
-  await institutionStore.fetchInstitutionsforListing(0, 10000000);
+  await institutionStore.fetchInstitutionsforListing(0, MAX_PAGE_SIZE);
 });
 
 onUnmounted(() => {
