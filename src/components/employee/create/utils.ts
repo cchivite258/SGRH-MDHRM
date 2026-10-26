@@ -162,7 +162,7 @@ export const contractDurationTypeOptions: MenuSelectItemType[] = [
     value: "OPEN_ENDED"
   },
   {
-    label: "Não especificado",
+    label: "A prazo incerto",
     value: "UNSPECIFIED_TERM"
   },
 ];
