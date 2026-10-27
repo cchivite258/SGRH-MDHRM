@@ -25,7 +25,7 @@ import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
 
 // Types
-import { InstitutionListingType } from "@/components/institution/types";
+import { InstitutionReferenceType } from "@/components/institution/types";
 import { EmployeeInsertType } from "@/components/employee/types";
 import { formateDate } from "@/app/common/dateFormate";
 
@@ -107,7 +107,7 @@ const requiredRules = {
  * Opções para selects (instituições, departamentos e cargos)
  */
 const institutions = computed(() => {
-  return institutionStore.institutions_for_dropdown.map((institution: InstitutionListingType) => ({
+  return institutionStore.institutions_for_dropdown.map((institution: InstitutionReferenceType) => ({
     value: institution.id,
     label: institution.name
   }));

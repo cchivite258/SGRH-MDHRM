@@ -85,6 +85,7 @@ export const CLAIMS = {
   },
   CONTRACTS: {
     READ: "read.contracts",
+    READ_REFERENCE: "read.contracts.reference",
     CREATE: "create.contracts",
     UPDATE: "update.contracts",
     DELETE: "delete.contracts",
@@ -127,6 +128,7 @@ export const CLAIMS = {
   },
   EMPLOYEE: {
     READ: "read.employees",
+    READ_REFERENCE: "read.employees.reference",
     CREATE: "create.employees",
     UPDATE: "update.employees",
     DELETE: "delete.employees",
@@ -136,6 +138,7 @@ export const CLAIMS = {
   },
   EMPLOYEE_DEPENDENTS: {
     READ: "read.employee.dependents",
+    READ_REFERENCE: "read.employee.dependents.reference",
     CREATE: "create.employee.dependents",
     UPDATE: "update.employee.dependents",
     DELETE: "delete.employee.dependents",
@@ -309,12 +312,14 @@ export const ALL_CLAIMS = [
   "delete.scheduled.jobs",
   "execute.scheduled.jobs",
   "read.employees",
+  "read.employees.reference",
   "create.employees",
   "update.employees",
   "delete.employees",
   "terminate.employees",
   "rehire.employees",
   "read.employee.dependents",
+  "read.employee.dependents.reference",
   "create.employee.dependents",
   "update.employee.dependents",
   "delete.employee.dependents",
@@ -425,6 +430,7 @@ export const ALL_CLAIMS = [
   "create.hospital.procedure.grouping",
   "delete.hospital.procedure.grouping",
   "read.contracts",
+  "read.contracts.reference",
   "create.contracts",
   "update.contracts",
   "delete.contracts",
@@ -524,6 +530,23 @@ export const EMPLOYEE_DEPENDENTS_READ_CLAIMS = [
   CLAIMS.EMPLOYEE_DEPENDENTS.CREATE,
   CLAIMS.EMPLOYEE_DEPENDENTS.UPDATE,
   CLAIMS.EMPLOYEE_DEPENDENTS.DELETE,
+] as const;
+
+// Dropdowns usam os endpoints /reference, que devolvem apenas dados minimos.
+// A claim "reference" nao deve entrar em READ_IMPLYING_ACTIONS: nao abre menus nem fichas.
+export const EMPLOYEE_REFERENCE_CLAIMS = [
+  CLAIMS.EMPLOYEE.READ_REFERENCE,
+  CLAIMS.EMPLOYEE.READ,
+] as const;
+
+export const EMPLOYEE_DEPENDENTS_REFERENCE_CLAIMS = [
+  CLAIMS.EMPLOYEE_DEPENDENTS.READ_REFERENCE,
+  CLAIMS.EMPLOYEE_DEPENDENTS.READ,
+] as const;
+
+export const CONTRACT_REFERENCE_CLAIMS = [
+  CLAIMS.CONTRACTS.READ_REFERENCE,
+  CLAIMS.CONTRACTS.READ,
 ] as const;
 
 export const EMPLOYEE_HEALTH_PLAN_READ_CLAIMS = [
@@ -697,6 +720,7 @@ export const PERMISSIONS = {
     ACCESS: CONTRACT_READ_CLAIMS,
     LIST: CONTRACT_READ_CLAIMS,
     VIEW: CLAIMS.CONTRACTS.READ,
+    REFERENCE: CONTRACT_REFERENCE_CLAIMS,
     CREATE: CLAIMS.CONTRACTS.CREATE,
     UPDATE: CLAIMS.CONTRACTS.UPDATE,
     DELETE: CLAIMS.CONTRACTS.DELETE,
@@ -838,6 +862,7 @@ export const PERMISSIONS = {
     ACCESS: EMPLOYEE_READ_CLAIMS,
     LIST: EMPLOYEE_READ_CLAIMS,
     VIEW: EMPLOYEE_READ_CLAIMS,
+    REFERENCE: EMPLOYEE_REFERENCE_CLAIMS,
     CREATE: CLAIMS.EMPLOYEE.CREATE,
     UPDATE: CLAIMS.EMPLOYEE.UPDATE,
     DELETE: CLAIMS.EMPLOYEE.DELETE,
@@ -847,6 +872,7 @@ export const PERMISSIONS = {
     SALARY_REVIEW_VIEW: EMPLOYEE_SALARY_REVIEW_READ_CLAIMS,
     SALARY_REVIEW_UPDATE: CLAIMS.EMPLOYEE.UPDATE_BASE_SALARY,
     DEPENDENTS_VIEW: EMPLOYEE_DEPENDENTS_READ_CLAIMS,
+    DEPENDENTS_REFERENCE: EMPLOYEE_DEPENDENTS_REFERENCE_CLAIMS,
     DEPENDENTS_MANAGE: CLAIMS.EMPLOYEE_DEPENDENTS.UPDATE,
     DEPENDENTS_CREATE: CLAIMS.EMPLOYEE_DEPENDENTS.CREATE,
     DEPENDENTS_DELETE: CLAIMS.EMPLOYEE_DEPENDENTS.DELETE,

@@ -1,6 +1,6 @@
 import HttpService from "@/app/http/httpService";
 import { MAX_PAGE_SIZE } from "@/app/const";
-import type { EmployeeListingType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType, EmployeeRehireType, EmployeeRehireTrackType } from "@/components/employee/types";
+import type { EmployeeListingType, EmployeeReferenceType, EmployeeInsertType, EmployeeResponseType, EmployeeCountResponse, GenderCountResponse, GenderCountItem, EmployeeBaseSalaryUpdateType, EmployeeTerminationType, EmployeeRehireType, EmployeeRehireTrackType } from "@/components/employee/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -18,6 +18,7 @@ interface ServiceResponse<T> {
 
 const EMPLOYEES_ENDPOINT = '/human-resource/employees';
 const EMPLOYEES_BY_CONTRACT_ENDPOINT = `${EMPLOYEES_ENDPOINT}/in-contract`;
+const EMPLOYEES_BY_CONTRACT_REFERENCE_ENDPOINT = `${EMPLOYEES_BY_CONTRACT_ENDPOINT}/reference`;
 const EMPLOYEES_REHIRES_ENDPOINT = '/human-resource/employees-rehires';
 
 const getContent = <T>(response: ApiResponse<T[]>): T[] => response.content ?? response.data ?? [];
@@ -107,9 +108,8 @@ export default class EmployeeService extends HttpService {
     direction: string = 'asc',
     query_props?: string,
     query_value?: string
-  ): Promise<{ content: EmployeeListingType[], meta: any }> {
+  ): Promise<{ content: EmployeeReferenceType[], meta: any }> {
     try {
-      // Construção manual da query string para controle total
       const queryParams = [
         `id=${id}`,
         `page=${page}`,
@@ -118,30 +118,17 @@ export default class EmployeeService extends HttpService {
         `direction=${direction}`,
       ];
 
-
-
       if (query_value && query_props) {
         queryParams.push(`query_props=${encodeURIComponent(query_props)}`);
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'position,department,contract,province,country';
-      queryParams.push(`includes=${includesToUse}`);
+      const url = `${EMPLOYEES_BY_CONTRACT_REFERENCE_ENDPOINT}?${queryParams.join('&')}`;
 
-      const queryString = queryParams.join('&');
-
-
-      const url = `${EMPLOYEES_BY_CONTRACT_ENDPOINT}?${queryString}`;
-
-      console.log('URL da requisição:', url); // Para debug
-
-      const response = await this.get<ApiResponse<EmployeeListingType[]>>(url);
-
-
-      console.log('Resposta da requisição:', response); // Para debug
+      const response = await this.get<ApiResponse<EmployeeReferenceType[]>>(url);
 
       return {
-        content: getContent(response).map((item: any) => normalizeEmployee(item)) as EmployeeListingType[],
+        content: getContent(response).map((item: any) => normalizeEmployee(item)) as EmployeeReferenceType[],
         meta: getMeta(response) || []
       };
 

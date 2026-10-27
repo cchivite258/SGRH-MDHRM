@@ -123,7 +123,7 @@ import QuerySearch from "@/app/common/components/filters/QuerySearch.vue"
 import { format } from 'date-fns';
 import type { CountryListingType, ProvinceListingType } from '@/components/baseTables/country/types';
 import type {
-    InstitutionListingType,
+    InstitutionReferenceType,
     DepartmentListingType,
     PositionListingForListType
 } from '@/components/institution/types';
@@ -282,7 +282,7 @@ const provinceOptions = computed<SelectOption[]>(() =>
 );
 
 const companyOptions = computed<SelectOption[]>(() =>
-    (institutionStore.enabledInstitutions as InstitutionListingType[]).map((company) => ({
+    (institutionStore.enabledInstitutions as InstitutionReferenceType[]).map((company) => ({
         text: company.name,
         value: company.name
     }))
@@ -328,7 +328,7 @@ const findCountryIdByName = (name: string) =>
     countryStore.countries.find((country: CountryListingType) => country.name === name)?.id;
 
 const findCompanyIdByName = (name: string) =>
-    (institutionStore.enabledInstitutions as InstitutionListingType[])
+    (institutionStore.enabledInstitutions as InstitutionReferenceType[])
         .find((company) => company.name === name)?.id;
 
 const findDepartmentIdByName = (name: string) =>

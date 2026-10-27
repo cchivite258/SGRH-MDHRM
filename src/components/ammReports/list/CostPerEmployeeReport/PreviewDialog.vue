@@ -69,16 +69,7 @@ const selectedOrganization = computed(() => {
   const contract = selectedContract.value as any;
   if (!contract) return undefined;
 
-  return contract.organization ?? contract.companyDetails ?? {
-    id: contract.organizationId ?? contract.companyDetailsId,
-    name: contract.name,
-    description: contract.description,
-    address: contract.address,
-    phone: contract.phone,
-    email: contract.email,
-    website: contract.website,
-    incomeTaxNumber: contract.incomeTaxNumber
-  };
+  return contract.organization ?? contract.companyDetails ?? undefined;
 });
 
 // Show dialog from parent

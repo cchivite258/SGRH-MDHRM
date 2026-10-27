@@ -3,6 +3,7 @@ import HttpService from "@/app/http/httpService";
 import { MAX_PAGE_SIZE } from "@/app/const";
 import type {
   DependentListingType,
+  DependentReferenceType,
   DependentInsertType,
   DependentAttachmentType,
   DependentDocumentType
@@ -90,7 +91,7 @@ export default class DependentEmployeeService extends HttpService {
     direction: string = 'asc',
     query_value?: string,
     query_props?: string
-  ): Promise<{ content: DependentListingType[], meta: any }> {
+  ): Promise<{ content: DependentReferenceType[], meta: any }> {
     try {
       const queryParams = [
         `id=${id}`,
@@ -105,15 +106,9 @@ export default class DependentEmployeeService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'company';
-      queryParams.push(`includes=${includesToUse}`);
+      const url = `/human-resource/employees-dependents/of-employee/reference?${queryParams.join('&')}`;
 
-      const queryString = queryParams.join('&');
-      const url = `/human-resource/employees-dependents/of-employee?${queryString}`;
-
-
-      console.log('URL da requisição:', url);
-      const response = await this.get<ApiResponse<DependentListingType[]>>(url);
+      const response = await this.get<ApiResponse<DependentReferenceType[]>>(url);
 
       return {
         content: response.data || [],

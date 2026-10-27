@@ -77,6 +77,24 @@ export type EmployeeListingType = {
   alertFlag: string | undefined;
 };
 
+export type EmployeeReferenceType = {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  contract?: {
+    id: string | number;
+    code?: string | null;
+    name: string;
+  } | null;
+  company?: {
+    id: string | number;
+    code?: string | null;
+    name: string;
+  } | null;
+  enabled: boolean;
+};
+
 export type EmployeeResponseType = { 
   id: string;
   employeeNumber: string;
@@ -321,6 +339,21 @@ export type DependentListingType = {
   idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   dependentDocumentType?: DependentDocumentType | null;
+}
+
+export type DependentReferenceType = {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  relationship: string;
+  employee?: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+  } | null;
+  enabled: boolean;
 }
 
 export type DependentDocumentType =

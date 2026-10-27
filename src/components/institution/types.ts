@@ -42,6 +42,13 @@ export type InstitutionListingType = {
     enabled: boolean;
 };
 
+export type InstitutionReferenceType = {
+    id: string;
+    code?: string | null;
+    name: string;
+    enabled: boolean;
+};
+
 export type InstitutionResponseType = { 
     id: string  ;
     code?: string | null;
