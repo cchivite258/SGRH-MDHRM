@@ -185,6 +185,14 @@ export const CLAIMS = {
     UPDATE: "update.code.config",
     DELETE: "delete.code.config",
   },
+  PERIOD_CONFIG: {
+    READ: "read.period.config",
+    CREATE: "create.period.config",
+    UPDATE: "update.period.config",
+    DELETE: "delete.period.config",
+    ACTIVATE: "activate.period.config",
+    DEACTIVATE: "deactivate.period.config",
+  },
   SCHEDULED_JOBS: {
     READ: "read.scheduled.jobs",
     CREATE: "create.scheduled.jobs",
@@ -393,6 +401,12 @@ export const ALL_CLAIMS = [
   "create.code.config",
   "update.code.config",
   "delete.code.config",
+  "read.period.config",
+  "create.period.config",
+  "update.period.config",
+  "delete.period.config",
+  "activate.period.config",
+  "deactivate.period.config",
   "read.leave.reasons",
   "create.leave.reasons",
   "update.leave.reasons",
@@ -519,6 +533,8 @@ export const READ_IMPLYING_ACTIONS = [
   "reverse",
   "rehire",
   "notify",
+  "activate",
+  "deactivate",
 ] as const;
 
 export const EMPLOYEE_READ_CLAIMS = [
@@ -652,6 +668,9 @@ export const SETTINGS_READ_CLAIMS = [
   ...crudReadClaims(CLAIMS.CODE_CONFIG),
   ...crudReadClaims(CLAIMS.SCHEDULED_JOBS),
   ...crudReadClaims(CLAIMS.SCHEDULED_PARAMETERS),
+  ...crudReadClaims(CLAIMS.PERIOD_CONFIG),
+  CLAIMS.PERIOD_CONFIG.ACTIVATE,
+  CLAIMS.PERIOD_CONFIG.DEACTIVATE,
 ] as const;
 
 export const ACCESS_MANAGEMENT_READ_CLAIMS = [
@@ -783,6 +802,21 @@ export const PERMISSIONS = {
       PARAMETERS: crudPermissions(CLAIMS.SCHEDULED_PARAMETERS),
     },
     CODE_CONFIG: crudPermissions(CLAIMS.CODE_CONFIG),
+    PERIOD_CONFIG: {
+      ...crudPermissions(CLAIMS.PERIOD_CONFIG),
+      ACCESS: [
+        ...crudReadClaims(CLAIMS.PERIOD_CONFIG),
+        CLAIMS.PERIOD_CONFIG.ACTIVATE,
+        CLAIMS.PERIOD_CONFIG.DEACTIVATE,
+      ],
+      LIST: [
+        ...crudReadClaims(CLAIMS.PERIOD_CONFIG),
+        CLAIMS.PERIOD_CONFIG.ACTIVATE,
+        CLAIMS.PERIOD_CONFIG.DEACTIVATE,
+      ],
+      ACTIVATE: CLAIMS.PERIOD_CONFIG.ACTIVATE,
+      DEACTIVATE: CLAIMS.PERIOD_CONFIG.DEACTIVATE,
+    },
   },
   ACCESS_MANAGEMENT: {
     ACCESS: ACCESS_MANAGEMENT_READ_CLAIMS,

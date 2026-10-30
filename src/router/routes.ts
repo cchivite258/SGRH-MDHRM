@@ -488,6 +488,12 @@ const settingsRoutes = [
     component: () => import("@/views/settings/CodeConfigs.vue"),
     meta: { title: "t-contract-code-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.LIST },
   },
+  {
+    path: `${settingsPrefix}/period-configs`,
+    name: "PeriodConfigs",
+    component: () => import("@/views/settings/PeriodConfigs.vue"),
+    meta: { title: "t-period-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.PERIOD_CONFIG.LIST },
+  },
 ].map((data) => {
   return {
     ...data,
