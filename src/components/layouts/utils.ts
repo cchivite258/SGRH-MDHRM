@@ -167,6 +167,14 @@ export const menuItems: MenuItemType[] = [
     anyPermissions: PERMISSIONS.INVOICES.ACCESS
   },
   {
+    label: "payment-order-batches",
+    icon: "ph ph-stack",
+    id: "sidebarPaymentOrderBatches",
+    prefix: "/payment-order-periods",
+    link: "/payment-order-periods/list",
+    anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS
+  },
+  {
     label: "reports",
     icon: "ph ph-presentation-chart",
     id: "sidebarReports",

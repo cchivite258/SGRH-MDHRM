@@ -16,6 +16,7 @@ import Step4 from "@/components/institution/create/TabOrganizationalStructure.vu
 import Step5 from "@/components/institution/create/TabContacts.vue";
 import Step6 from "@/components/institution/create/TabServiceProvider.vue";
 import Step7 from "@/components/institution/create/TabEmployees.vue";
+import Step8 from "@/components/institution/create/integration/TabIntegrations.vue";
 
 import { InstitutionInsertType } from "../types";
 import { institutionService } from "@/app/http/httpServiceProvider";
@@ -202,7 +203,8 @@ const applyRouteTab = () => {
   if (!routeTab) return;
 
   const tabNumber = Number(routeTab);
-  if (isNaN(tabNumber) || tabNumber < 1 || tabNumber > 7) return;
+  const maxContractFormTab = Math.max(...CONTRACT_FORM_TABS.map((tab) => tab.value));
+  if (isNaN(tabNumber) || tabNumber < 1 || tabNumber > maxContractFormTab) return;
 
   onStepChange(tabNumber);
 };
@@ -275,7 +277,7 @@ onMounted(async () => {
     />
   </FormCard>
 
-  <FormCard v-if="step === 1 && isContractStepAllowed(1) && institutionId" class="institution-form-section institution-form-section--responsibles">
+  <FormCard v-if="step === 1 && isContractStepAllowed(1) && institutionId" class="institution-form-section">
     <ContractResponsibles :contract-id="institutionId" />
   </FormCard>
 
@@ -333,6 +335,15 @@ onMounted(async () => {
     />
   </FormCard>
 
+  <FormCard v-if="step === 8 && isContractStepAllowed(8)" class="institution-form-section">
+    <Step8
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+    />
+  </FormCard>
+
   <div v-if="step === 1" class="institution-form-footer-actions">
     <v-btn
       class="institution-form-footer-actions__save"
@@ -365,10 +376,6 @@ onMounted(async () => {
 
 .institution-form-section + .institution-form-section {
   margin-top: 24px;
-}
-
-.institution-form-section--responsibles :deep(.form-card__body) {
-  padding-top: 0 !important;
 }
 
 .institution-form-footer-actions {

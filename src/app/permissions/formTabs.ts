@@ -33,6 +33,7 @@ export const CONTRACT_FORM_TABS = [
   { value: 5, label: "t-contact", permissions: PERMISSIONS.CONTRACTS.CONTACTS_VIEW },
   { value: 6, label: "t-service-providers", permissions: PERMISSIONS.CONTRACTS.SERVICE_PROVIDERS_VIEW },
   { value: 7, label: "t-employees", permissions: PERMISSIONS.CONTRACTS.EMPLOYEES_VIEW },
+  { value: 8, label: "t-integrations", permissions: PERMISSIONS.CONTRACTS.INTEGRATIONS_VIEW },
 ] as const satisfies readonly PermissionedFormTab[];
 
 export const SERVICE_PROVIDER_FORM_TABS = [

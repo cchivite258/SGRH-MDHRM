@@ -12,6 +12,7 @@ import Step4 from "@/components/institution/create/TabOrganizationalStructure.vu
 import Step5 from "@/components/institution/create/TabContacts.vue";
 import Step6 from "@/components/institution/create/TabServiceProvider.vue";
 import Step7 from "@/components/institution/create/TabEmployees.vue";
+import Step8 from "@/components/institution/create/integration/TabIntegrations.vue";
 import { institutionService } from "@/app/http/httpServiceProvider";
 import type { InstitutionInsertType } from "@/components/institution/types";
 import { CONTRACT_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
@@ -243,6 +244,7 @@ onMounted(async () => {
       <Step5 v-if="step === 5 && isContractStepAllowed(5)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step6 v-if="step === 6 && isContractStepAllowed(6)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step7 v-if="step === 7 && isContractStepAllowed(7)" :institution-id="institutionId || undefined" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step8 v-if="step === 8 && isContractStepAllowed(8)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
 
       <div class="institution-view-footer-actions">
         <v-btn

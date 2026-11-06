@@ -13,6 +13,7 @@ const learningPrefix = "/learning";
 const studentPrefix = "/student";
 const instructorPrefix = "/instructors";
 const invoicePrefix = "/invoices";
+const paymentOrderPeriodPrefix = "/payment-order-periods";
 const realEstatePrefix = "/real-estate";
 const agentPrefix = "/real-estate-agent";
 const agenciesPrefix = "/real-estate-agencies";
@@ -760,6 +761,31 @@ const invoicesRoutes = [
     meta: { ...data.meta, layout: DefaultLayout },
   };
 });
+const paymentOrderPeriodRoutes = [
+  {
+    path: `${paymentOrderPeriodPrefix}/list`,
+    name: "PaymentOrderPeriodList",
+    component: () => import("@/views/paymentOrderPeriods/List.vue"),
+    meta: { title: "t-payment-order-batches", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.LIST },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/view/:id`,
+    name: "PaymentOrderPeriodView",
+    component: () => import("@/views/paymentOrderPeriods/View.vue"),
+    meta: { title: "t-view-payment-order-batch", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/settle/:id`,
+    name: "PaymentOrderPeriodSettle",
+    component: () => import("@/views/paymentOrderPeriods/Settle.vue"),
+    meta: { title: "t-settle-payment-order-batch", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE },
+  },
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
 const ticketsRoutes = [
   {
     path: `/tickets/list`,
@@ -1496,6 +1522,7 @@ export const routes = [
   },
   ...learningRoutes,
   ...invoicesRoutes,
+  ...paymentOrderPeriodRoutes,
   ...ticketsRoutes,
   ...realEstateRoutes,
   ...authRoutes,
