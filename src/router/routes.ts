@@ -494,6 +494,12 @@ const settingsRoutes = [
     component: () => import("@/views/settings/PeriodConfigs.vue"),
     meta: { title: "t-period-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.PERIOD_CONFIG.LIST },
   },
+  {
+    path: `${settingsPrefix}/integrations`,
+    name: "IntegrationDefinitions",
+    component: () => import("@/views/settings/Integrations.vue"),
+    meta: { title: "t-integrations", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.LIST },
+  },
 ].map((data) => {
   return {
     ...data,

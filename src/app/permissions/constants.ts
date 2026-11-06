@@ -193,6 +193,12 @@ export const CLAIMS = {
     ACTIVATE: "activate.period.config",
     DEACTIVATE: "deactivate.period.config",
   },
+  INTEGRATION_DEFINITION: {
+    READ: "read.integration.definition",
+    CREATE: "create.integration.definition",
+    UPDATE: "update.integration.definition",
+    DELETE: "delete.integration.definition",
+  },
   SCHEDULED_JOBS: {
     READ: "read.scheduled.jobs",
     CREATE: "create.scheduled.jobs",
@@ -407,6 +413,10 @@ export const ALL_CLAIMS = [
   "delete.period.config",
   "activate.period.config",
   "deactivate.period.config",
+  "read.integration.definition",
+  "create.integration.definition",
+  "update.integration.definition",
+  "delete.integration.definition",
   "read.leave.reasons",
   "create.leave.reasons",
   "update.leave.reasons",
@@ -671,6 +681,7 @@ export const SETTINGS_READ_CLAIMS = [
   ...crudReadClaims(CLAIMS.PERIOD_CONFIG),
   CLAIMS.PERIOD_CONFIG.ACTIVATE,
   CLAIMS.PERIOD_CONFIG.DEACTIVATE,
+  ...crudReadClaims(CLAIMS.INTEGRATION_DEFINITION),
 ] as const;
 
 export const ACCESS_MANAGEMENT_READ_CLAIMS = [
@@ -816,6 +827,11 @@ export const PERMISSIONS = {
       ],
       ACTIVATE: CLAIMS.PERIOD_CONFIG.ACTIVATE,
       DEACTIVATE: CLAIMS.PERIOD_CONFIG.DEACTIVATE,
+    },
+    INTEGRATION_DEFINITION: {
+      ...crudPermissions(CLAIMS.INTEGRATION_DEFINITION),
+      ACTIVATE: CLAIMS.INTEGRATION_DEFINITION.UPDATE,
+      DEACTIVATE: CLAIMS.INTEGRATION_DEFINITION.UPDATE,
     },
   },
   ACCESS_MANAGEMENT: {
