@@ -132,7 +132,6 @@ export const hospitalProcedureLimitTypeOptions: MenuSelectItemType[] = [
 
 export const salaryComponentOptions: MenuSelectItemType[] = [
   {
-    value: undefined,
     label: "Selecione a Componente Salarial"
   },
   {

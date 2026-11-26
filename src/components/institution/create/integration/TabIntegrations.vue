@@ -8,6 +8,7 @@ import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import TableAction from "@/app/common/components/TableAction.vue";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import type { MenuSelectItemType } from "@/app/common/components/filters/types";
 import { ERP_CODE_MAX_LENGTH, paymentOrderCodeRules } from "@/app/common/paymentOrderData";
 import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 import { contractIntegrationService } from "@/app/http/httpServiceProvider";
@@ -108,7 +109,7 @@ interface FetchParams {
 }
 
 const optionLabel = (
-  options: { label: string; value: string | number }[],
+  options: MenuSelectItemType[],
   value?: string | null
 ) => {
   if (!value) return "-";

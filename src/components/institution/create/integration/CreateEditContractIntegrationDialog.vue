@@ -3,6 +3,7 @@ import { PropType, computed, nextTick, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
+import type { MenuSelectItemType } from "@/app/common/components/filters/types";
 import { getApiValidationErrors } from "@/app/common/apiErrors";
 import { integrationDefinitionService } from "@/app/http/httpServiceProvider";
 import { integrationUsageOptions } from "@/components/settings/integration/listView/utils";
@@ -67,7 +68,7 @@ const dialogValue = computed({
   },
 });
 
-const translateOptions = (options: { label: string; value: string | number }[]) =>
+const translateOptions = (options: MenuSelectItemType[]) =>
   options.map((option) => ({
     ...option,
     label: t(option.label),

@@ -19,9 +19,11 @@ export const paymentOrderCodeRules = (
   maxLength: number,
   invalidMessage: string,
   maximumMessage: string
-) => [
-  (value: string | null | undefined) => {
-    const normalized = normalizePaymentOrderCode(value);
+): Array<(value: unknown) => string | boolean> => [
+  (value: unknown) => {
+    const normalized = normalizePaymentOrderCode(
+      value === null || value === undefined ? "" : String(value)
+    );
     if (!normalized) return true;
     if (normalized.length > maxLength) return maximumMessage;
     return PAYMENT_ORDER_CODE_PATTERN.test(normalized) || invalidMessage;

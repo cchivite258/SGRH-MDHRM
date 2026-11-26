@@ -377,8 +377,9 @@ const saveSettlement = async () => {
       return item;
     });
 
+    type BulkUpdateItem = { id: string; amountSettled: number; notes?: string };
     const orderService = orderServiceFor(props.section) as {
-      bulkUpdateByPeriod?: (periodId: PaymentOrderPeriodId, items: typeof items) => Promise<PaymentOrderLine[]>;
+      bulkUpdateByPeriod?: (periodId: PaymentOrderPeriodId, items: BulkUpdateItem[]) => Promise<PaymentOrderLine[]>;
     };
     if (!orderService.bulkUpdateByPeriod) {
       toast.error(t("t-payment-order-orders-readonly"));

@@ -33,8 +33,8 @@ const infoItems = computed(() => [
   { label: "t-payment-order-generated-at", value: formatDateTime(props.period.generatedAt), icon: "ph-rows", hidden: !props.period.generatedAt },
   { label: "t-payment-order-processed-at", value: formatDateTime(props.period.processedAt), icon: "ph-gear-six", hidden: !props.period.processedAt },
   { label: "t-payment-order-posted-at", value: formatDateTime(props.period.postedAt), icon: "ph-check-circle", hidden: !props.period.postedAt },
-  { label: "t-payment-order-external-batch-number", value: props.period.externalBatchNumber, icon: "ph-hash", hidden: !props.period.externalBatchNumber },
-  { label: "t-payment-order-external-payables-batch-number", value: props.period.externalPayablesBatchNumber, icon: "ph-hash", hidden: !props.period.externalPayablesBatchNumber },
+  { label: "t-payment-order-external-batch-number", value: props.period.externalBatchNumber || "-", icon: "ph-hash", hidden: !props.period.externalBatchNumber },
+  { label: "t-payment-order-external-payables-batch-number", value: props.period.externalPayablesBatchNumber || "-", icon: "ph-hash", hidden: !props.period.externalPayablesBatchNumber },
   { label: "t-payment-order-sent-at", value: formatDateTime(props.period.sentAt), icon: "ph-paper-plane-tilt", hidden: !props.period.sentAt },
 ].filter(item => !item.hidden));
 </script>
