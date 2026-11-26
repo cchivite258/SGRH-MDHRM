@@ -1963,7 +1963,7 @@
   "t-payment-order-batch-unprocessed": "Processamento do lote revertido com sucesso",
   "t-please-select-unprocess-reason": "Seleccione o motivo da reversão",
   "t-reason-type-refund-deduction-unprocess": "Reversão do processamento de reembolsos e descontos",
-  "t-reason-type-refund-deduction-reopen": "Rejeição de lote de reembolsos e descontos",
+  "t-reason-type-refund-deduction-reopen": "Rejeição da submissão de reembolsos e descontos",
   "t-payment-order-history": "Histórico",
   "t-payment-order-history-empty": "Ainda não há acções registadas para este lote.",
   "t-payment-order-history-load-error": "Não foi possível carregar o histórico do lote.",

@@ -1449,7 +1449,7 @@
   "t-payment-order-batch-unprocessed": "Batch processing reverted successfully",
   "t-please-select-unprocess-reason": "Select the reason for reverting the processing",
   "t-reason-type-refund-deduction-unprocess": "Revert refunds and deductions processing",
-  "t-reason-type-refund-deduction-reopen": "Reject refunds and deductions batch",
+  "t-reason-type-refund-deduction-reopen": "Reject refunds and deductions submission",
   "t-payment-order-history": "History",
   "t-payment-order-history-empty": "No actions have been recorded for this batch yet.",
   "t-payment-order-history-load-error": "Could not load the batch history.",
