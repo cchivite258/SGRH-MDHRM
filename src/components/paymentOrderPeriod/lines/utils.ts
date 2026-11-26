@@ -124,7 +124,7 @@ export const settlementPercent = (totals: Pick<PaymentOrderTotals, "grossAmountT
   return Math.min(100, Math.max(0, Math.round((totals.grossAmountSettled / totals.grossAmountToPay) * 100)));
 };
 
-export const formatDateTime = (value?: string | null) => {
+export const formatDateTime = (value?: string | null): string => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;

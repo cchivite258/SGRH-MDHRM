@@ -21,7 +21,7 @@ const props = defineProps({
     default: false,
   },
   modelValue: {
-    type: [String, Array, Number, Boolean, Date] as PropType<string | number | any[] | boolean | Date>,
+    type: [String, Array, Number, Boolean, Date] as PropType<string | number | any[] | boolean | Date | null>,
     default: "",
   },
   rules: {
