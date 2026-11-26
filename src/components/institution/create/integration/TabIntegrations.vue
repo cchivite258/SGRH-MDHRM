@@ -8,6 +8,8 @@ import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import TableAction from "@/app/common/components/TableAction.vue";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { ERP_CODE_MAX_LENGTH, paymentOrderCodeRules } from "@/app/common/paymentOrderData";
+import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 import { contractIntegrationService } from "@/app/http/httpServiceProvider";
 import { PERMISSIONS } from "@/app/permissions/constants";
 import { usePermissions } from "@/composables/usePermissions";
@@ -47,7 +49,31 @@ const props = defineProps({
     type: Number as PropType<number | null>,
     default: null,
   },
+  erpCode: {
+    type: String,
+    default: "",
+  },
+  canEditPaymentOrder: {
+    type: Boolean,
+    default: false,
+  },
+  paymentOrderErrors: {
+    type: Array as PropType<string[]>,
+    default: () => [],
+  },
+  paymentOrderLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const emit = defineEmits(["onStepChange", "update:erpCode", "save-payment-order"]);
+
+const erpCodeRules = computed(() => paymentOrderCodeRules(
+  ERP_CODE_MAX_LENGTH,
+  t("t-erp-code-invalid"),
+  t("t-erp-code-maximum")
+));
 
 const contractId = ref(props.institutionId);
 const dialog = ref(false);
@@ -273,19 +299,46 @@ const onConfirmDelete = async () => {
 </script>
 
 <template>
-  <Card :title="$t('t-contract-integration-list')" title-class="py-5">
-    <template v-if="!props.isViewMode && canCreate" #title-action>
-      <v-btn color="secondary" class="mx-1" @click="onCreateEditClick(null)">
-        <i class="ph-plus-circle me-1" /> {{ $t("t-add-contract-integration") }}
+  <Card :title="$t('t-contract-integration-list')" title-class="py-0">
+    <template #title-action>
+      <v-btn
+        v-if="!props.isViewMode && canEditPaymentOrder && institutionId"
+        color="secondary"
+        variant="elevated"
+        type="submit"
+        form="contract-payment-order-form"
+        :loading="paymentOrderLoading"
+        :disabled="paymentOrderLoading"
+      >
+        <i class="ph-floppy-disk me-2" /> {{ $t("t-save") }}
       </v-btn>
     </template>
   </Card>
 
-  <v-row class="mt-5">
-    <v-col cols="12">
-      <v-card-text>
-        <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-contract-integration')" />
-      </v-card-text>
+  <IntegrationDataCard
+    class="mt-1"
+    form-id="contract-payment-order-form"
+    :show-title="false"
+    :show-save="false"
+    :model-value="erpCode"
+    :label="t('t-erp-code')"
+    :placeholder="t('t-enter-erp-code')"
+    :rules="erpCodeRules"
+    :readonly="isViewMode"
+    :disabled="!canEditPaymentOrder"
+    :error-messages="paymentOrderErrors"
+    :loading="paymentOrderLoading"
+    @update:model-value="emit('update:erpCode', $event)"
+    @save="emit('save-payment-order')"
+  />
+
+  <div class="contract-integration-list">
+    <div v-if="!props.isViewMode && canCreate" class="d-flex justify-end mb-2">
+      <v-btn color="secondary" @click="onCreateEditClick(null)">
+        <i class="ph-plus-circle me-1" /> {{ $t("t-add-contract-integration") }}
+      </v-btn>
+    </div>
+    <QuerySearch v-model="searchQuery" :placeholder="$t('t-search-for-contract-integration')" />
 
       <DataTableServer
         :headers="contractIntegrationHeader.map(item => ({ ...item, title: item.title ? $t(`t-${item.title}`) : '' }))"
@@ -347,8 +400,7 @@ const onConfirmDelete = async () => {
           </tr>
         </template>
       </DataTableServer>
-    </v-col>
-  </v-row>
+  </div>
 
   <CreateEditContractIntegrationDialog
     v-if="dialog && formData"
@@ -378,3 +430,14 @@ const onConfirmDelete = async () => {
     </v-btn>
   </v-card-actions>
 </template>
+
+<style scoped>
+.contract-integration-list {
+  margin-top: 4px;
+}
+
+.contract-integration-list :deep(.filter-search) {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+</style>

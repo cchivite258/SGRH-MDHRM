@@ -58,3 +58,12 @@ export type IntegrationDefinitionOption = {
   sortBy: { key: string; order: "asc" | "desc" }[];
   search: string;
 };
+
+export type IntegrationConnectionTestResult = {
+  integrationDefinitionId?: IntegrationDefinitionId;
+  connected: boolean;
+  code?: string | null;
+  message?: string | null;
+  durationMs?: number | null;
+  testedAt?: string | null;
+};

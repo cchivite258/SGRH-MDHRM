@@ -6,11 +6,8 @@ import {
   employeeName,
   employeeNumber,
   formatAmount,
-  isLineSettled,
-  lineBalance,
   lineTypeLabelKey,
   lineTypeStatusValue,
-  settledAmount,
 } from "@/components/paymentOrderPeriod/lines/utils";
 import type { PaymentOrderLine } from "@/components/paymentOrderPeriod/types";
 
@@ -37,11 +34,9 @@ const dialogValue = computed({
 });
 
 const amounts = computed(() => [
-  { label: "t-payment-order-total-refund", value: prop.data.totalRefund },
-  { label: "t-payment-order-total-deduction", value: prop.data.totalDeduction },
-  { label: "t-payment-order-previous-balance", value: prop.data.previousBalance },
+  ...(prop.data.type !== "DEDUCTION" ? [{ label: "t-payment-order-total-refund", value: prop.data.totalRefund }] : []),
+  ...(prop.data.type !== "REFUND" ? [{ label: "t-payment-order-total-deduction", value: prop.data.totalDeduction }] : []),
   { label: "t-payment-order-amount-to-pay", value: prop.data.amountToPay, strong: true },
-  { label: "t-payment-order-amount-settled", value: settledAmount(prop.data), color: "text-success" },
 ]);
 </script>
 
@@ -86,14 +81,7 @@ const amounts = computed(() => [
 
           <v-col v-for="amount in amounts" :key="amount.label" cols="12" md="6">
             <div class="font-weight-bold text-caption mb-1">{{ $t(amount.label) }}</div>
-            <div :class="[amount.color, { 'font-weight-bold': amount.strong }]">{{ formatAmount(amount.value) }}</div>
-          </v-col>
-
-          <v-col cols="12" md="6">
-            <div class="font-weight-bold text-caption mb-1">{{ $t("t-payment-order-balance") }}</div>
-            <div class="font-weight-bold" :class="isLineSettled(data) ? 'text-success' : 'text-warning'">
-              {{ formatAmount(lineBalance(data)) }}
-            </div>
+            <div :class="{ 'font-weight-bold': amount.strong }">{{ formatAmount(amount.value) }}</div>
           </v-col>
         </v-row>
       </v-card-text>

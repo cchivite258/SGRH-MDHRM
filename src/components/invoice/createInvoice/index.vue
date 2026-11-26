@@ -18,6 +18,7 @@ import InvoiceForm from "@/components/invoice/createInvoice/InvoiceForm.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { normalizeObjectStringFieldsInPlace, normalizeStringValue } from "@/app/common/normalizers";
+import { readProcedureCategory, readProcedureLabel } from "@/components/invoice/procedureLabel";
 import { PERMISSIONS } from "@/app/permissions/constants";
 import { usePermissions } from "@/composables/usePermissions";
 
@@ -280,10 +281,8 @@ const loadInvoiceData = async (id: string) => {
         ...item,
         taxRate: item.taxRate?.id || '',
         companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure?.id || '',
-        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.code
-          ? `${item.companyAllowedHospitalProcedure.hospitalProcedureType.code} - ${item.companyAllowedHospitalProcedure.hospitalProcedureType.name}`
-          : item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
-        companyAllowedHospitalProcedureCategoryName: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.categoryName || '',
+        companyAllowedHospitalProcedureLabel: readProcedureLabel(item.companyAllowedHospitalProcedure),
+        companyAllowedHospitalProcedureCategoryName: readProcedureCategory(item.companyAllowedHospitalProcedure),
         invoice: item.invoice?.id || ''
       }));
     }

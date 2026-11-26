@@ -50,6 +50,8 @@ import PeriodConfigService from "@/app/http/services/settings/periodConfigServic
 import IntegrationDefinitionService from "@/app/http/services/settings/integrationDefinitionService";
 import PaymentOrderPeriodService from "@/app/http/services/amm/paymentOrderPeriodService";
 import PaymentOrderService from "@/app/http/services/amm/paymentOrderService";
+import RefundDeductionPeriodService from "@/app/http/services/amm/refundDeductionPeriodService";
+import RefundDeductionOrderService from "@/app/http/services/amm/refundDeductionOrderService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -137,6 +139,8 @@ const periodConfigService = new PeriodConfigService();
 const integrationDefinitionService = new IntegrationDefinitionService();
 const paymentOrderPeriodService = new PaymentOrderPeriodService();
 const paymentOrderService = new PaymentOrderService();
+const refundDeductionPeriodService = new RefundDeductionPeriodService();
+const refundDeductionOrderService = new RefundDeductionOrderService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -191,6 +195,8 @@ export {
     integrationDefinitionService,
     paymentOrderPeriodService,
     paymentOrderService,
+    refundDeductionPeriodService,
+    refundDeductionOrderService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,

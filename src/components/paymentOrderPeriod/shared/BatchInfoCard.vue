@@ -6,6 +6,7 @@ import {
   formatIsoDate,
   formatMonthYear,
   statusChipValue,
+  statusChipVariant,
   statusLabelKey,
 } from "@/components/paymentOrderPeriod/listView/utils";
 import {
@@ -18,6 +19,7 @@ import type { PaymentOrderLine, PaymentOrderPeriodListing } from "@/components/p
 const props = defineProps<{
   period: PaymentOrderPeriodListing;
   lines?: PaymentOrderLine[];
+  showSettlementProgress?: boolean;
 }>();
 
 const percent = computed(() => settlementPercent(computeTotals(props.lines ?? [])));
@@ -29,8 +31,11 @@ const infoItems = computed(() => [
   { label: "t-start-date", value: formatIsoDate(props.period.startDate), icon: "ph-calendar-check" },
   { label: "t-end-date", value: formatIsoDate(props.period.endDate), icon: "ph-calendar-x" },
   { label: "t-payment-order-generated-at", value: formatDateTime(props.period.generatedAt), icon: "ph-rows", hidden: !props.period.generatedAt },
-  { label: "t-payment-order-closed-at", value: formatDateTime(props.period.closedAt), icon: "ph-lock", hidden: !props.period.closedAt },
+  { label: "t-payment-order-processed-at", value: formatDateTime(props.period.processedAt), icon: "ph-gear-six", hidden: !props.period.processedAt },
   { label: "t-payment-order-posted-at", value: formatDateTime(props.period.postedAt), icon: "ph-check-circle", hidden: !props.period.postedAt },
+  { label: "t-payment-order-external-batch-number", value: props.period.externalBatchNumber, icon: "ph-hash", hidden: !props.period.externalBatchNumber },
+  { label: "t-payment-order-external-payables-batch-number", value: props.period.externalPayablesBatchNumber, icon: "ph-hash", hidden: !props.period.externalPayablesBatchNumber },
+  { label: "t-payment-order-sent-at", value: formatDateTime(props.period.sentAt), icon: "ph-paper-plane-tilt", hidden: !props.period.sentAt },
 ].filter(item => !item.hidden));
 </script>
 
@@ -47,7 +52,11 @@ const infoItems = computed(() => [
           </div>
           <div class="d-flex align-center ga-2 min-w-0">
             <span class="text-subtitle-1 font-weight-bold text-truncate">{{ contractLabel(period) }}</span>
-            <Status :status="statusChipValue(period.status)" :label="$t(statusLabelKey(period.status))" />
+            <Status
+              :status="statusChipValue(period.status)"
+              :variant="statusChipVariant(period.status)"
+              :label="$t(statusLabelKey(period.status))"
+            />
           </div>
           <div class="text-caption text-medium-emphasis">
             {{ formatMonthYear(period.month, period.year) }}
@@ -84,7 +93,17 @@ const infoItems = computed(() => [
         </v-col>
       </v-row>
 
-      <div v-if="lines?.length" class="mt-2">
+      <v-alert
+        v-if="period.integrationError"
+        type="error"
+        variant="tonal"
+        density="compact"
+        class="mt-3"
+      >
+        {{ period.integrationError }}
+      </v-alert>
+
+      <div v-if="showSettlementProgress && lines?.length" class="mt-3">
         <div class="d-flex justify-space-between align-center mb-1">
           <span class="batch-info-card__label font-weight-bold text-medium-emphasis">
             {{ $t("t-payment-order-settlement-progress") }}

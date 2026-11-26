@@ -16,6 +16,7 @@ export const EMPLOYEE_FORM_TABS = [
   { value: 3, label: "t-salary-review", permissions: PERMISSIONS.EMPLOYEE.SALARY_REVIEW_VIEW },
   { value: 4, label: "t-dependents", permissions: PERMISSIONS.EMPLOYEE.DEPENDENTS_VIEW },
   { value: 5, label: "t-health-plan", permissions: PERMISSIONS.EMPLOYEE.HEALTH_PLAN_VIEW },
+  { value: 6, label: "t-integration", permissions: PERMISSIONS.EMPLOYEE.FORM_INSTITUTION_VIEW },
 ] as const satisfies readonly PermissionedFormTab[];
 
 export const CONTRACT_FORM_TABS = [
@@ -40,6 +41,7 @@ export const SERVICE_PROVIDER_FORM_TABS = [
   { value: 1, label: "t-general-information", permissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS },
   { value: 2, label: "t-contract", permissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS },
   { value: 3, label: "t-contacts-service-provider", permissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS },
+  { value: 4, label: "t-integration", permissions: PERMISSIONS.SERVICE_PROVIDERS.ACCESS },
 ] as const satisfies readonly PermissionedFormTab[];
 
 export const getAllowedFormTabs = (

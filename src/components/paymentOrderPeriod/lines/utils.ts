@@ -22,10 +22,13 @@ export const employeeName = (line: PaymentOrderLine) => {
     .map(part => part?.trim())
     .filter(Boolean)
     .join(" ");
-  return name || "-";
+  return name || line.employeeName?.trim() || "-";
 };
 
-export const employeeNumber = (line: PaymentOrderLine) => line.employee?.employeeNumber || "-";
+export const employeeNumber = (line: PaymentOrderLine) =>
+  line.employee?.employeeNumber || line.employeeNumber || "-";
+
+export const employeeErpCode = (line: PaymentOrderLine) => line.employee?.erpCode?.trim() || "-";
 
 export const lineTypeColor = (type?: PaymentOrderLineType | null) => {
   if (type === "REFUND") return "success";
@@ -76,7 +79,7 @@ export const isLineSettled = (line: BalanceSource) =>
 export const matchesLineSearch = (line: PaymentOrderLine, search: string) => {
   const term = search.trim().toLowerCase();
   if (!term) return true;
-  return [employeeName(line), employeeNumber(line), line.notes || ""]
+  return [employeeName(line), employeeNumber(line), employeeErpCode(line), line.notes || ""]
     .some(value => value.toLowerCase().includes(term));
 };
 
@@ -91,6 +94,7 @@ export const computeTotals = (lines: PaymentOrderLine[]): PaymentOrderTotals =>
       totals.previousBalance += toAmount(line.previousBalance);
       totals.amountToPay += toAmount(line.amountToPay);
       totals.amountSettled += settledAmount(line);
+      totals.calculatedAmountSettled += roundAmount(Math.abs(toAmount(line.calculatedAmountSettled)));
       totals.balance += lineBalance(line);
       totals.grossAmountToPay += Math.abs(toAmount(line.amountToPay));
       totals.grossAmountSettled += settledAmount(line);
@@ -106,6 +110,7 @@ export const computeTotals = (lines: PaymentOrderLine[]): PaymentOrderTotals =>
       previousBalance: 0,
       amountToPay: 0,
       amountSettled: 0,
+      calculatedAmountSettled: 0,
       balance: 0,
       grossAmountToPay: 0,
       grossAmountSettled: 0,

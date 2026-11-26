@@ -10,46 +10,70 @@ import BatchInfoCard from "@/components/paymentOrderPeriod/shared/BatchInfoCard.
 import TypeSummaryCards from "@/components/paymentOrderPeriod/shared/TypeSummaryCards.vue";
 import GenerateLinesAction from "@/components/paymentOrderPeriod/shared/GenerateLinesAction.vue";
 import Status from "@/app/common/components/Status.vue";
-import TableActionView from "@/app/common/components/TableActionView.vue";
+import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 import ReportPreviewFooter from "@/components/ammReports/list/ReportPreviewFooter.vue";
 import ViewPaymentOrderLineModal from "@/components/paymentOrderPeriod/view/ViewPaymentOrderLineModal.vue";
+import PaymentOrderLineInvoicesModal from "@/components/paymentOrderPeriod/view/PaymentOrderLineInvoicesModal.vue";
 import LinesPagination from "@/components/paymentOrderPeriod/shared/LinesPagination.vue";
+import BatchEntriesTable from "@/components/paymentOrderPeriod/view/BatchEntriesTable.vue";
+import BatchHistoryTable from "@/components/paymentOrderPeriod/view/BatchHistoryTable.vue";
+import BatchIntegrationAttemptsTable from "@/components/paymentOrderPeriod/view/BatchIntegrationAttemptsTable.vue";
+import BatchPeriodInvoicesTable from "@/components/paymentOrderPeriod/view/BatchPeriodInvoicesTable.vue";
+import BatchConfirmationDialog from "@/components/paymentOrderPeriod/shared/BatchConfirmationDialog.vue";
+import UnprocessBatchDialog from "@/components/paymentOrderPeriod/shared/UnprocessBatchDialog.vue";
+import RejectBatchDialog from "@/components/paymentOrderPeriod/shared/RejectBatchDialog.vue";
 import { usePaymentOrderBatch } from "@/components/paymentOrderPeriod/shared/usePaymentOrderBatch";
-import { settleableStatuses } from "@/components/paymentOrderPeriod/listView/utils";
+import {
+  allowedWorkflowActions,
+  confirmationActionFor,
+  runWorkflowAction,
+  workflowButtons,
+  workflowPermissionsFor,
+  workflowSuccessKey,
+  type RefundDeductionWorkflowPayload,
+} from "@/components/paymentOrderPeriod/shared/workflow";
+import { getApiErrorMessages } from "@/app/common/apiErrors";
+import ApiRecordErrorsDialog from "@/app/common/components/ApiRecordErrorsDialog.vue";
+import { useApiRecordErrors } from "@/composables/useApiRecordErrors";
 import {
   computeTotals,
   employeeName,
   employeeNumber,
+  employeeErpCode,
   formatAmount,
-  isLineSettled,
-  lineBalance,
   lineTypeLabelKey,
   lineTypeStatusValue,
-  settledAmount,
   matchesLineSearch,
-  type PaymentOrderLineFilter,
+  settledAmount,
 } from "@/components/paymentOrderPeriod/lines/utils";
 import { PaymentOrderBatchExporter } from "@/components/paymentOrderPeriod/view/exportUtils";
 import type {
   PaymentOrderLine,
   PaymentOrderLineType,
   PaymentOrderPeriodId,
+  PaymentOrderWorkflowAction,
 } from "@/components/paymentOrderPeriod/types";
 
-const props = defineProps<{
+import type { ProcessSection } from "@/components/paymentOrderPeriod/listView/utils";
+
+const props = withDefaults(defineProps<{
   periodId: PaymentOrderPeriodId;
   backRoute: string;
-}>();
+  section?: ProcessSection;
+}>(), {
+  section: "erp-integration",
+});
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
 const authStore = useAuthStore();
-const { can } = usePermissions();
-const { period, lines, loading, loadError, load } = usePaymentOrderBatch(props.periodId);
+const { can, canAny } = usePermissions();
+const { recordErrorsDialog, recordErrors, recordErrorsMessage, showRecordErrors } = useApiRecordErrors();
+const { period, lines, loading, loadError, load } = usePaymentOrderBatch(props.periodId, props.section);
+const isRefundsSection = computed(() => props.section === "refunds-and-deductions");
 
 const search = ref("");
-const statusFilter = ref<Exclude<PaymentOrderLineFilter, "changed">>("all");
 const typeFilter = ref<PaymentOrderLineType | "ALL">("ALL");
 const exporting = ref(false);
 const exportMenu = ref(false);
@@ -65,32 +89,41 @@ const userName = computed(() => {
   return `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.name || "";
 });
 
-const settledLines = computed(() => lines.value.filter(isLineSettled).length);
+type StatusAction = Exclude<PaymentOrderWorkflowAction, "generate">;
 
-const canSettle = computed(() =>
-  !!period.value
-  && settleableStatuses.includes(period.value.status)
-  && can(PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE)
-);
+const workflowDialog = ref(false);
+const unprocessDialog = ref(false);
+const reopenDialog = ref(false);
+const pendingWorkflowAction = ref<StatusAction | null>(null);
+const runningWorkflow = ref(false);
 
-const statusFilters = computed(() => [
-  { value: "all" as const, label: t("t-payment-order-filter-all"), count: lines.value.length },
-  { value: "pending" as const, label: t("t-payment-order-filter-pending"), count: lines.value.length - settledLines.value },
-  { value: "settled" as const, label: t("t-payment-order-filter-settled"), count: settledLines.value },
-]);
+const statusActions = computed(() => {
+  const permissions = workflowPermissionsFor(props.section);
+  // Em consulta: processar lote fica só no formulário de processar.
+  // Rejeitar lote (SUBMITTED + REOPEN) e reverter processamento (PROCESSED + UNPROCESS) ficam aqui.
+  return allowedWorkflowActions(period.value?.status, props.section)
+    .filter((action): action is StatusAction => {
+      if (action === "generate" || action === "process") return false;
+      if (action === "reopen") {
+        return period.value?.status === "SUBMITTED" && canAny(permissions.reopen);
+      }
+      return canAny(permissions[action]);
+    })
+    .map(action => ({ action, ...workflowButtons[action] }));
+});
+
+const pendingWorkflowDialog = computed(() => confirmationActionFor(pendingWorkflowAction.value ?? "submit"));
 
 const filteredLines = computed(() =>
   lines.value.filter(line => {
     if (typeFilter.value !== "ALL" && line.type !== typeFilter.value) return false;
-    if (!matchesLineSearch(line, search.value)) return false;
-    if (statusFilter.value === "pending") return !isLineSettled(line);
-    if (statusFilter.value === "settled") return isLineSettled(line);
-    return true;
+    return matchesLineSearch(line, search.value);
   })
 );
 
 const filteredTotals = computed(() => computeTotals(filteredLines.value));
 const isFiltered = computed(() => filteredLines.value.length !== lines.value.length);
+const linesTableColspan = computed(() => (isRefundsSection.value ? 8 : 7));
 
 const page = ref(1);
 const itemsPerPage = ref(10);
@@ -99,7 +132,7 @@ const paginatedRows = computed(() =>
   filteredLines.value.slice((page.value - 1) * itemsPerPage.value, page.value * itemsPerPage.value)
 );
 
-watch([search, statusFilter, typeFilter], () => {
+watch([search, typeFilter], () => {
   page.value = 1;
 });
 
@@ -108,11 +141,23 @@ watch(totalPages, (total) => {
 });
 
 const viewDialog = ref(false);
+const invoicesDialog = ref(false);
 const selectedLine = ref<PaymentOrderLine | null>(null);
 
-const onViewLine = (line: PaymentOrderLine) => {
+const lineActionOptions = computed(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-payment-order-view-invoices"), value: "invoices", icon: "ph-receipt" },
+]);
+
+const lineActionPermissionByValue = {
+  view: PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
+  invoices: PERMISSIONS.INVOICES.VIEW,
+};
+
+const onLineAction = (line: PaymentOrderLine, action: string) => {
   selectedLine.value = line;
-  viewDialog.value = true;
+  if (action === "view") viewDialog.value = true;
+  if (action === "invoices") invoicesDialog.value = true;
 };
 
 const handleExport = async (type: "pdf" | "excel") => {
@@ -133,8 +178,66 @@ const handleExport = async (type: "pdf" | "excel") => {
   }
 };
 
+const activeTab = ref<"lines" | "entries" | "invoices" | "attempts" | "history">("lines");
+const entriesTable = ref<InstanceType<typeof BatchEntriesTable> | null>(null);
+const invoicesTable = ref<InstanceType<typeof BatchPeriodInvoicesTable> | null>(null);
+const attemptsTable = ref<InstanceType<typeof BatchIntegrationAttemptsTable> | null>(null);
+const historyTable = ref<InstanceType<typeof BatchHistoryTable> | null>(null);
+
+const onBatchChanged = async () => {
+  await load();
+  entriesTable.value?.load();
+  invoicesTable.value?.load();
+  attemptsTable.value?.load();
+  historyTable.value?.load();
+};
+
+const askWorkflowAction = (action: StatusAction) => {
+  if (action === "reopen" && (period.value?.status !== "SUBMITTED" || !canAny(workflowPermissionsFor(props.section).reopen))) {
+    return;
+  }
+  pendingWorkflowAction.value = action;
+  if (action === "unprocess") {
+    unprocessDialog.value = true;
+    return;
+  }
+  if (action === "reopen") {
+    reopenDialog.value = true;
+    return;
+  }
+  workflowDialog.value = true;
+};
+
+const runPendingWorkflowAction = async (payload?: RefundDeductionWorkflowPayload) => {
+  const action = pendingWorkflowAction.value;
+  if (!action) return;
+  if (action === "reopen" && (period.value?.status !== "SUBMITTED" || !canAny(workflowPermissionsFor(props.section).reopen))) {
+    return;
+  }
+
+  runningWorkflow.value = true;
+  try {
+    const response = await runWorkflowAction(props.periodId, action, props.section, payload);
+    if (response.status === "error") throw response.error;
+    toast.success(t(workflowSuccessKey(action, props.section)));
+    workflowDialog.value = false;
+    unprocessDialog.value = false;
+    reopenDialog.value = false;
+    await onBatchChanged();
+  } catch (error) {
+    if (showRecordErrors(error)) {
+      workflowDialog.value = false;
+      unprocessDialog.value = false;
+      reopenDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
+  } finally {
+    runningWorkflow.value = false;
+  }
+};
+
 const goBack = () => router.push(props.backRoute);
-const goToSettle = () => router.push({ name: "PaymentOrderPeriodSettle", params: { id: props.periodId } });
 
 onMounted(load);
 </script>
@@ -161,11 +264,20 @@ onMounted(load);
     </v-card>
 
     <template v-else>
-      <BatchInfoCard :period="period" :lines="lines">
+      <BatchInfoCard :period="period">
         <template #actions>
-          <GenerateLinesAction :period="period" :has-lines="lines.length > 0" @generated="load" />
-          <v-btn v-if="canSettle" color="primary" variant="tonal" size="small" @click="goToSettle">
-            <i class="ph-coins me-1" /> {{ $t("t-settle-payment-order-batch") }}
+          <GenerateLinesAction :period="period" :has-lines="lines.length > 0" :section="section" @generated="onBatchChanged" />
+          <v-btn
+            v-for="item in statusActions"
+            :key="item.action"
+            :color="item.color"
+            variant="elevated"
+            size="small"
+            :loading="runningWorkflow && pendingWorkflowAction === item.action"
+            :disabled="runningWorkflow"
+            @click="askWorkflowAction(item.action)"
+          >
+            <i :class="[item.icon, 'me-1']" /> {{ $t(item.label) }}
           </v-btn>
           <v-btn-group variant="outlined" density="comfortable">
             <v-btn
@@ -208,133 +320,185 @@ onMounted(load);
         </template>
       </BatchInfoCard>
 
-      <TypeSummaryCards v-if="lines.length" :lines="lines" class="mt-1" />
+      <TypeSummaryCards
+        v-if="lines.length"
+        :lines="lines"
+        :mode="isRefundsSection ? 'settlement' : 'summary'"
+        class="mt-1"
+      />
 
       <v-card class="view-card mt-4" elevation="0">
-        <div class="view-card__header">
-          <div class="d-flex align-center ga-2">
-            <i class="ph-table view-card__header-icon" />
-            <span class="text-body-1 font-weight-bold">{{ $t("t-payment-order-batch-lines") }}</span>
-            <v-chip size="small" variant="tonal" color="primary">
+        <v-tabs v-model="activeTab" color="primary" density="comfortable" class="view-tabs">
+          <v-tab value="lines" class="text-none">
+            <i class="ph-table me-2" /> {{ $t("t-payment-order-batch-lines") }}
+            <v-chip size="x-small" variant="tonal" color="primary" class="ms-2">
               {{ isFiltered ? `${filteredLines.length} / ${lines.length}` : lines.length }}
             </v-chip>
-          </div>
-          <v-text-field
-            v-model="search"
-            :placeholder="$t('t-search-payment-order-line')"
-            prepend-inner-icon="ph-magnifying-glass"
-            density="compact"
-            variant="outlined"
-            hide-details
-            clearable
-            class="view-card__search"
-          />
-        </div>
-
+          </v-tab>
+          <v-tab v-if="!isRefundsSection" value="entries" class="text-none">
+            <i class="ph-book-open me-2" /> {{ $t("t-payment-order-entries") }}
+          </v-tab>
+          <v-tab v-if="!isRefundsSection" value="invoices" class="text-none">
+            <i class="ph-receipt me-2" /> {{ $t("t-payment-order-period-invoices") }}
+          </v-tab>
+          <v-tab v-if="!isRefundsSection" value="attempts" class="text-none">
+            <i class="ph-plugs-connected me-2" /> {{ $t("t-payment-order-integration-attempts") }}
+          </v-tab>
+          <v-tab value="history" class="text-none">
+            <i class="ph-clock-counter-clockwise me-2" /> {{ $t("t-payment-order-history") }}
+          </v-tab>
+        </v-tabs>
         <v-divider />
 
-        <div v-if="lines.length" class="view-card__toolbar">
-          <v-chip-group v-model="statusFilter" mandatory selected-class="text-primary" class="flex-wrap">
-            <v-chip v-for="filter in statusFilters" :key="filter.value" :value="filter.value" size="small" variant="outlined" filter>
-              {{ filter.label }}
-              <span class="view-card__filter-count">{{ filter.count }}</span>
-            </v-chip>
-          </v-chip-group>
+        <v-window v-model="activeTab">
+          <v-window-item value="lines">
+            <div class="view-card__header justify-end">
+              <v-text-field
+                v-model="search"
+                :placeholder="$t('t-search-payment-order-line')"
+                prepend-inner-icon="ph-magnifying-glass"
+                density="compact"
+                variant="outlined"
+                hide-details
+                clearable
+                class="view-card__search"
+              />
+            </div>
 
-          <v-btn-toggle v-model="typeFilter" mandatory density="compact" variant="outlined" divided color="primary">
-            <v-btn value="ALL" size="small">{{ $t("t-payment-order-filter-all") }}</v-btn>
-            <v-btn value="REFUND" size="small">{{ $t("t-payment-order-refunds") }}</v-btn>
-            <v-btn value="DEDUCTION" size="small">{{ $t("t-payment-order-deductions") }}</v-btn>
-          </v-btn-toggle>
-        </div>
+            <v-divider />
 
-        <div v-if="!lines.length" class="text-center py-12">
-          <v-avatar size="72" color="secondary" variant="tonal">
-            <i class="ph-rows" style="font-size: 30px" />
-          </v-avatar>
-          <div class="mt-3 font-weight-bold">{{ $t("t-payment-order-no-lines") }}</div>
-          <div class="mt-1 text-medium-emphasis">{{ $t("t-payment-order-no-lines-hint") }}</div>
-          <div class="mt-4">
-            <GenerateLinesAction :period="period" :has-lines="false" size="default" variant="elevated" @generated="load" />
-          </div>
-        </div>
+            <div v-if="lines.length" class="view-card__toolbar">
+              <v-btn-toggle v-model="typeFilter" mandatory density="compact" variant="outlined" divided color="primary">
+                <v-btn value="ALL" size="small">{{ $t("t-payment-order-filter-all") }}</v-btn>
+                <v-btn value="REFUND" size="small">{{ $t("t-payment-order-refunds") }}</v-btn>
+                <v-btn value="DEDUCTION" size="small">{{ $t("t-payment-order-deductions") }}</v-btn>
+              </v-btn-toggle>
+            </div>
 
-        <template v-else>
-          <div class="view-table-wrapper">
-            <v-table density="comfortable" hover class="view-table">
-              <thead>
-                <tr>
-                  <th>{{ $t("t-employee") }}</th>
-                  <th>{{ $t("t-type") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-total-refund") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-total-deduction") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-previous-balance") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-amount-to-pay") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-amount-settled") }}</th>
-                  <th class="text-right">{{ $t("t-payment-order-balance") }}</th>
-                  <th class="text-center">{{ $t("t-action") }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="!filteredLines.length">
-                  <td colspan="9" class="text-center py-8 text-medium-emphasis">
-                    <i class="ph-funnel-simple me-1" /> {{ $t("t-payment-order-no-results") }}
-                  </td>
-                </tr>
-                <tr v-for="line in paginatedRows" :key="line.id">
-                  <td class="view-table__employee">
-                    <div class="font-weight-medium" :title="employeeName(line)">{{ employeeName(line) }}</div>
-                    <div class="view-table__sub text-medium-emphasis">{{ employeeNumber(line) }}</div>
-                  </td>
-                  <td>
-                    <Status v-if="line.type" :status="lineTypeStatusValue(line.type)" :label="$t(lineTypeLabelKey(line.type))" />
-                    <span v-else>-</span>
-                  </td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(line.totalRefund) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(line.totalDeduction) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(line.previousBalance) }}</td>
-                  <td class="text-right text-no-wrap font-weight-bold">{{ formatAmount(line.amountToPay) }}</td>
-                  <td class="text-right text-no-wrap text-success">{{ formatAmount(settledAmount(line)) }}</td>
-                  <td
-                    class="text-right text-no-wrap font-weight-bold"
-                    :class="isLineSettled(line) ? 'text-success' : 'text-warning'"
-                  >
-                    {{ formatAmount(lineBalance(line)) }}
-                  </td>
-                  <td class="view-table__actions">
-                    <TableActionView @onView="onViewLine(line)" />
-                  </td>
-                </tr>
-              </tbody>
-              <tfoot v-if="filteredLines.length">
-                <tr class="view-table__totals">
-                  <td colspan="2">
-                    {{ $t("t-totals") }}
-                    <span class="text-caption text-medium-emphasis">({{ filteredTotals.lines }})</span>
-                  </td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.totalRefund) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.totalDeduction) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.previousBalance) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.amountToPay) }}</td>
-                  <td class="text-right text-no-wrap text-success">{{ formatAmount(filteredTotals.amountSettled) }}</td>
-                  <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.balance) }}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            </v-table>
-          </div>
+            <div v-if="!lines.length" class="text-center py-12">
+              <v-avatar size="72" color="secondary" variant="tonal">
+                <i class="ph-rows" style="font-size: 30px" />
+              </v-avatar>
+              <div class="mt-3 font-weight-bold">{{ $t("t-payment-order-no-lines") }}</div>
+              <div class="mt-1 text-medium-emphasis">{{ $t("t-payment-order-no-lines-hint") }}</div>
+              <div class="mt-4">
+                <GenerateLinesAction :period="period" :has-lines="false" :section="section" size="default" variant="elevated" @generated="onBatchChanged" />
+              </div>
+            </div>
 
-          <LinesPagination
-            v-model:page="page"
-            v-model:items-per-page="itemsPerPage"
-            :total-items="filteredLines.length"
-          />
-        </template>
+            <template v-else>
+              <div class="view-table-wrapper">
+                <v-table density="comfortable" hover class="view-table">
+                  <thead>
+                    <tr>
+                      <th>{{ $t("t-employee") }}</th>
+                      <th>{{ $t("t-payment-order-integration-account") }}</th>
+                      <th>{{ $t("t-type") }}</th>
+                      <th class="text-right">{{ $t("t-payment-order-total-refund") }}</th>
+                      <th class="text-right">{{ $t("t-payment-order-total-deduction") }}</th>
+                      <th class="text-right">{{ $t("t-payment-order-amount-to-pay") }}</th>
+                      <th v-if="isRefundsSection" class="text-right">{{ $t("t-payment-order-amount-settled") }}</th>
+                      <th class="text-center">{{ $t("t-action") }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!filteredLines.length">
+                      <td :colspan="linesTableColspan" class="text-center py-8 text-medium-emphasis">
+                        <i class="ph-funnel-simple me-1" /> {{ $t("t-payment-order-no-results") }}
+                      </td>
+                    </tr>
+                    <tr v-for="line in paginatedRows" :key="line.id">
+                      <td class="view-table__employee">
+                        <div class="font-weight-medium" :title="employeeName(line)">{{ employeeName(line) }}</div>
+                        <div class="view-table__sub text-medium-emphasis">{{ employeeNumber(line) }}</div>
+                      </td>
+                      <td class="text-no-wrap">{{ employeeErpCode(line) }}</td>
+                      <td>
+                        <Status v-if="line.type" :status="lineTypeStatusValue(line.type)" :label="$t(lineTypeLabelKey(line.type))" />
+                        <span v-else>-</span>
+                      </td>
+                      <td class="text-right text-no-wrap">{{ formatAmount(line.totalRefund) }}</td>
+                      <td class="text-right text-no-wrap">{{ formatAmount(line.totalDeduction) }}</td>
+                      <td class="text-right text-no-wrap font-weight-bold">{{ formatAmount(line.amountToPay) }}</td>
+                      <td v-if="isRefundsSection" class="text-right text-no-wrap">{{ formatAmount(settledAmount(line)) }}</td>
+                      <td class="view-table__actions">
+                        <TableActionMenu
+                          :menu-items="lineActionOptions"
+                          :permission-by-value="lineActionPermissionByValue"
+                          @onSelect="onLineAction(line, $event)"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot v-if="filteredLines.length">
+                    <tr class="view-table__totals">
+                      <td colspan="3">
+                        {{ $t("t-totals") }}
+                        <span class="text-caption text-medium-emphasis">({{ filteredTotals.lines }})</span>
+                      </td>
+                      <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.totalRefund) }}</td>
+                      <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.totalDeduction) }}</td>
+                      <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.amountToPay) }}</td>
+                      <td v-if="isRefundsSection" class="text-right text-no-wrap">{{ formatAmount(filteredTotals.amountSettled) }}</td>
+                      <td />
+                    </tr>
+                  </tfoot>
+                </v-table>
+              </div>
+
+              <LinesPagination
+                v-model:page="page"
+                v-model:items-per-page="itemsPerPage"
+                :total-items="filteredLines.length"
+              />
+            </template>
+          </v-window-item>
+
+          <v-window-item v-if="!isRefundsSection" value="entries">
+            <BatchEntriesTable ref="entriesTable" :period-id="periodId" />
+          </v-window-item>
+
+          <v-window-item v-if="!isRefundsSection" value="invoices">
+            <BatchPeriodInvoicesTable ref="invoicesTable" :period-id="periodId" />
+          </v-window-item>
+
+          <v-window-item v-if="!isRefundsSection" value="attempts">
+            <BatchIntegrationAttemptsTable ref="attemptsTable" :period-id="periodId" />
+          </v-window-item>
+
+          <v-window-item value="history">
+            <BatchHistoryTable ref="historyTable" :period-id="periodId" :section="section" />
+          </v-window-item>
+        </v-window>
       </v-card>
 
       <ViewPaymentOrderLineModal v-if="selectedLine" v-model="viewDialog" :data="selectedLine" />
+      <PaymentOrderLineInvoicesModal v-if="selectedLine" v-model="invoicesDialog" :data="selectedLine" />
 
       <ReportPreviewFooter system-footer-key="t-spr-system-footer" :generated-by="userName" />
+
+      <BatchConfirmationDialog
+        v-if="pendingWorkflowAction && pendingWorkflowAction !== 'unprocess' && pendingWorkflowAction !== 'reopen'"
+        v-model="workflowDialog"
+        :action="pendingWorkflowDialog"
+        :loading="runningWorkflow"
+        @onConfirm="runPendingWorkflowAction()"
+      />
+      <UnprocessBatchDialog
+        v-model="unprocessDialog"
+        :loading="runningWorkflow"
+        @onConfirm="runPendingWorkflowAction"
+      />
+      <RejectBatchDialog
+        v-model="reopenDialog"
+        :loading="runningWorkflow"
+        @onConfirm="runPendingWorkflowAction"
+      />
+      <ApiRecordErrorsDialog
+        v-model="recordErrorsDialog"
+        :records="recordErrors"
+        :message="recordErrorsMessage"
+      />
 
       <div class="d-flex justify-start mt-3">
         <v-btn color="secondary" variant="outlined" @click="goBack">
@@ -361,9 +525,8 @@ onMounted(load);
   padding: 16px 20px;
 }
 
-.view-card__header-icon {
-  color: #475569;
-  font-size: 20px;
+.view-tabs {
+  padding: 0 8px;
 }
 
 .view-card__search {

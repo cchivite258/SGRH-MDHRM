@@ -1,7 +1,7 @@
 import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
 import { DataTableHeaderType } from "@/app/common/types/table.types";
 import type { MenuSelectItemType } from "@/app/common/components/filters/types";
-import type { PeriodMonthReference } from "@/components/settings/periodConfig/types";
+import type { PeriodConfigType, PeriodMonthReference } from "@/components/settings/periodConfig/types";
 
 export const breadcrumb: BreadcrumbType[] = [
   {
@@ -22,12 +22,34 @@ export const listViewHeader: DataTableHeaderType[] = [
   { title: "action", sortable: false, align: "center" },
 ];
 
+const periodConfigTypeByCode: Record<string, PeriodConfigType> = {
+  "0": "REFUNDS_AND_DEDUCTIONS",
+  "1": "PAYROLL_INTEGRATION",
+  "2": "AP_GL_INTEGRATION",
+  REFUNDS_AND_DEDUCTIONS: "REFUNDS_AND_DEDUCTIONS",
+  PAYROLL_INTEGRATION: "PAYROLL_INTEGRATION",
+  AP_GL_INTEGRATION: "AP_GL_INTEGRATION",
+};
+
 export const periodConfigTypeOptions: MenuSelectItemType[] = [
   {
-    label: "t-period-config-type-payment-order",
-    value: "PAYMENT_ORDER",
+    label: "t-period-config-type-refunds-and-deductions",
+    value: "REFUNDS_AND_DEDUCTIONS",
+  },
+  {
+    label: "t-period-config-type-payroll-integration",
+    value: "PAYROLL_INTEGRATION",
+  },
+  {
+    label: "t-period-config-type-ap-gl-integration",
+    value: "AP_GL_INTEGRATION",
   },
 ];
+
+export const resolvePeriodConfigType = (type: unknown): PeriodConfigType | null => {
+  const key = String(type ?? "").trim();
+  return periodConfigTypeByCode[key] ?? null;
+};
 
 export const periodMonthReferenceOptions: MenuSelectItemType[] = [
   {

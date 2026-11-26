@@ -12,6 +12,7 @@ import type {
 import {
   periodConfigTypeOptions,
   periodMonthReferenceOptions,
+  resolvePeriodConfigType,
 } from "@/components/settings/periodConfig/listView/utils";
 
 const localLoading = ref(false);
@@ -47,7 +48,9 @@ const dialogValue = computed({
 });
 
 const id = ref(prop.data.id || "");
-const type = ref<PeriodConfigType>(prop.data.type || "PAYMENT_ORDER");
+const type = ref<PeriodConfigType>(
+  resolvePeriodConfigType(prop.data.type) ?? "REFUNDS_AND_DEDUCTIONS"
+);
 const description = ref(prop.data.description || "");
 const startDayOfMonth = ref<number | null>(prop.data.startDayOfMonth ?? 1);
 const startMonthReference = ref<PeriodMonthReference>(prop.data.startMonthReference || "CURRENT");

@@ -1,12 +1,16 @@
 import { ref } from "vue";
-import { paymentOrderPeriodService, paymentOrderService } from "@/app/http/httpServiceProvider";
+import type { ProcessSection } from "@/components/paymentOrderPeriod/listView/utils";
+import { orderServiceFor, periodServiceFor } from "@/components/paymentOrderPeriod/shared/sectionApi";
 import type {
   PaymentOrderLine,
   PaymentOrderPeriodId,
   PaymentOrderPeriodListing,
 } from "@/components/paymentOrderPeriod/types";
 
-export const usePaymentOrderBatch = (periodId: PaymentOrderPeriodId) => {
+export const usePaymentOrderBatch = (
+  periodId: PaymentOrderPeriodId,
+  section: ProcessSection = "erp-integration"
+) => {
   const period = ref<PaymentOrderPeriodListing | null>(null);
   const lines = ref<PaymentOrderLine[]>([]);
   const loading = ref(false);
@@ -17,9 +21,11 @@ export const usePaymentOrderBatch = (periodId: PaymentOrderPeriodId) => {
     loadError.value = null;
 
     try {
+      const periodService = periodServiceFor(section);
+      const orderService = orderServiceFor(section);
       const [periodResponse, periodLines] = await Promise.all([
-        paymentOrderPeriodService.getPaymentOrderPeriodById(periodId),
-        paymentOrderService.getAllByPeriod(periodId),
+        periodService.getPaymentOrderPeriodById(periodId),
+        orderService.getAllByPeriod(periodId),
       ]);
 
       period.value = periodResponse.data;

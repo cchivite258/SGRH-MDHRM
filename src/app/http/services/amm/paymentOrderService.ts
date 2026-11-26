@@ -2,9 +2,7 @@ import HttpService from "@/app/http/httpService";
 import type {
   PaymentOrderLine,
   PaymentOrderPeriodId,
-  PaymentOrderSettleItem,
 } from "@/components/paymentOrderPeriod/types";
-import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
   data?: T;
@@ -13,14 +11,8 @@ interface ApiResponse<T> {
   metadata?: any;
 }
 
-interface ServiceResponse<T> {
-  status: "success" | "error";
-  data?: T;
-  error?: ApiErrorResponse;
-}
-
 const PAYMENT_ORDER_ENDPOINT = "/amm/payment-orders";
-const BY_PERIOD_INCLUDES = "employee";
+const BY_PERIOD_INCLUDES = "employee,invoice";
 const BY_PERIOD_PAGE_SIZE = 5000;
 
 const getContent = <T>(response: ApiResponse<T[]> | T[]): T[] => {
@@ -28,35 +20,8 @@ const getContent = <T>(response: ApiResponse<T[]> | T[]): T[] => {
   return response.content ?? response.data ?? [];
 };
 
-const toServiceError = (error: any, instance: string): ServiceResponse<never> => {
-  if (error?.response) {
-    return {
-      status: "error",
-      error: error.response.data as ApiErrorResponse,
-    };
-  }
-
-  return {
-    status: "error",
-    error: {
-      status: "error",
-      message: "Network error",
-      error: {
-        type: "ConnectionError",
-        title: "Network Error",
-        status: 503,
-        detail: "Could not connect to server",
-        instance,
-      },
-      meta: {
-        timestamp: new Date().toISOString(),
-      },
-    },
-  };
-};
-
 export default class PaymentOrderService extends HttpService {
-  // A paginação das linhas do lote é feita no front, por isso pede todas as linhas num único pedido.
+  // A paginação das linhas do período é feita no front, por isso pede todas as linhas num único pedido.
   async getAllByPeriod(periodId: PaymentOrderPeriodId): Promise<PaymentOrderLine[]> {
     try {
       const params = new URLSearchParams({
@@ -73,26 +38,8 @@ export default class PaymentOrderService extends HttpService {
 
       return getContent<PaymentOrderLine>(response);
     } catch (error) {
-      console.error("Erro ao buscar linhas do lote:", error);
+      console.error("Erro ao buscar linhas do período:", error);
       throw this.handleError(error);
-    }
-  }
-
-  async bulkSettle(
-    periodId: PaymentOrderPeriodId,
-    items: PaymentOrderSettleItem[]
-  ): Promise<ServiceResponse<PaymentOrderLine[]>> {
-    const endpoint = `${PAYMENT_ORDER_ENDPOINT}/by-period/${periodId}/bulk-settle`;
-
-    try {
-      const response = await this.put<ApiResponse<PaymentOrderLine[]> | PaymentOrderLine[]>(endpoint, { items });
-
-      return {
-        status: "success",
-        data: getContent<PaymentOrderLine>(response),
-      };
-    } catch (error: any) {
-      return toServiceError(error, endpoint);
     }
   }
 

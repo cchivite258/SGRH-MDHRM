@@ -1,6 +1,9 @@
 export type PeriodConfigId = string | number;
 
-export type PeriodConfigType = "PAYMENT_ORDER";
+export type PeriodConfigType =
+  | "REFUNDS_AND_DEDUCTIONS"
+  | "PAYROLL_INTEGRATION"
+  | "AP_GL_INTEGRATION";
 
 export type PeriodMonthReference = "PREVIOUS" | "CURRENT";
 

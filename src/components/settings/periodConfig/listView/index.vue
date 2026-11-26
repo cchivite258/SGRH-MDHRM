@@ -16,6 +16,7 @@ import {
   formatPeriodBound,
   listViewHeader,
   periodConfigTypeOptions,
+  resolvePeriodConfigType,
 } from "@/components/settings/periodConfig/listView/utils";
 import type {
   PeriodConfigForm,
@@ -158,7 +159,7 @@ const onCreateEditClick = (data: PeriodConfigListing | null) => {
 
   periodConfigData.value = data ?? {
     id: "-1",
-    type: "PAYMENT_ORDER",
+    type: "REFUNDS_AND_DEDUCTIONS",
     description: "",
     startDayOfMonth: 1,
     startMonthReference: "CURRENT",
@@ -263,9 +264,10 @@ const onActionSelect = (option: string, item: PeriodConfigListing) => {
   if (option === "delete") onDelete(item);
 };
 
-const getTypeLabel = (type: string) => {
-  const option = periodConfigTypeOptions.find(option => option.value === type);
-  return option ? t(option.label) : type;
+const getTypeLabel = (type: string | number) => {
+  const resolved = resolvePeriodConfigType(type);
+  const option = periodConfigTypeOptions.find(option => option.value === resolved);
+  return option ? t(option.label) : String(type ?? "");
 };
 </script>
 

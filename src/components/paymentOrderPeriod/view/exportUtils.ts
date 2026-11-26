@@ -7,18 +7,16 @@ import {
   contractLabel,
   formatIsoDate,
   formatMonthYear,
+  statusChipVariant,
   statusLabelKey,
 } from "@/components/paymentOrderPeriod/listView/utils";
 import {
   computeTotals,
   employeeName,
   employeeNumber,
+  employeeErpCode,
   formatDateTime,
-  isLineSettled,
-  lineBalance,
   lineTypeLabelKey,
-  settledAmount,
-  settlementPercent,
   toAmount,
 } from "@/components/paymentOrderPeriod/lines/utils";
 import type {
@@ -26,7 +24,6 @@ import type {
   PaymentOrderLineType,
   PaymentOrderPeriodListing,
   PaymentOrderPeriodStatus,
-  PaymentOrderTotals,
 } from "@/components/paymentOrderPeriod/types";
 
 export interface PaymentOrderBatchExportOptions {
@@ -55,7 +52,13 @@ export class PaymentOrderBatchExporter {
   private static readonly EXCEL_STATUS_COLORS: Record<PaymentOrderPeriodStatus, { text: string; fill: string }> = {
     OPEN: { text: "299CDB", fill: "E5F3FB" },
     GENERATED: { text: "3577F1", fill: "E7EFFD" },
-    CLOSED: { text: "C77C0E", fill: "FEF4E4" },
+    SUBMITTED: { text: "C77C0E", fill: "FEF4E4" },
+    QUEUED: { text: "C77C0E", fill: "FEF4E4" },
+    SENDING: { text: "0AB39C", fill: "E7F7F5" },
+    RETRY_SCHEDULED: { text: "C77C0E", fill: "FEF4E4" },
+    NEEDS_INTERVENTION: { text: "F06548", fill: "FDEDE9" },
+    INTEGRATED: { text: "0AB39C", fill: "E7F7F5" },
+    PROCESSED: { text: "FFFFFF", fill: "3577F1" },
     POSTED: { text: "0AB39C", fill: "E7F7F5" },
   };
 
@@ -74,7 +77,13 @@ export class PaymentOrderBatchExporter {
   private static readonly PDF_STATUS_COLORS: Record<PaymentOrderPeriodStatus, Rgb> = {
     OPEN: PaymentOrderBatchExporter.PDF_COLORS.info,
     GENERATED: PaymentOrderBatchExporter.PDF_COLORS.primary,
-    CLOSED: PaymentOrderBatchExporter.PDF_COLORS.warning,
+    SUBMITTED: PaymentOrderBatchExporter.PDF_COLORS.warning,
+    QUEUED: PaymentOrderBatchExporter.PDF_COLORS.warning,
+    SENDING: PaymentOrderBatchExporter.PDF_COLORS.success,
+    RETRY_SCHEDULED: PaymentOrderBatchExporter.PDF_COLORS.warning,
+    NEEDS_INTERVENTION: PaymentOrderBatchExporter.PDF_COLORS.danger,
+    INTEGRATED: PaymentOrderBatchExporter.PDF_COLORS.success,
+    PROCESSED: PaymentOrderBatchExporter.PDF_COLORS.primary,
     POSTED: PaymentOrderBatchExporter.PDF_COLORS.success,
   };
 
@@ -144,7 +153,7 @@ export class PaymentOrderBatchExporter {
     this.addPDFHeader(pdf, period, margin, pageWidth);
 
     const infoCardY = margin + 22;
-    const infoCardHeight = this.drawPDFInfoCard(pdf, period, totals, margin, infoCardY, contentWidth);
+    const infoCardHeight = this.drawPDFInfoCard(pdf, period, margin, infoCardY, contentWidth);
 
     const typeCardsY = infoCardY + infoCardHeight + 4;
     const typeCardsHeight = this.drawPDFTypeCards(pdf, lines, margin, typeCardsY, contentWidth);
@@ -155,37 +164,31 @@ export class PaymentOrderBatchExporter {
       head: [[
         this.tr("t-employee-number"),
         this.tr("t-employee"),
+        this.tr("t-payment-order-integration-account"),
         this.tr("t-type"),
         this.tr("t-payment-order-total-refund"),
         this.tr("t-payment-order-total-deduction"),
-        this.tr("t-payment-order-previous-balance"),
         this.tr("t-payment-order-amount-to-pay"),
-        this.tr("t-payment-order-amount-settled"),
-        this.tr("t-payment-order-balance"),
         this.tr("t-notes"),
       ]],
       body: lines.map(line => [
         employeeNumber(line),
         employeeName(line),
+        employeeErpCode(line),
         this.lineType(line),
         this.money(line.totalRefund),
         this.money(line.totalDeduction),
-        this.money(line.previousBalance),
         this.money(line.amountToPay),
-        this.money(settledAmount(line)),
-        this.money(lineBalance(line)),
         line.notes || "-",
       ]),
       foot: [[
         this.tr("t-totals").toUpperCase(),
         "",
+        "",
         String(totals.lines),
         this.money(totals.totalRefund),
         this.money(totals.totalDeduction),
-        this.money(totals.previousBalance),
         this.money(totals.amountToPay),
-        this.money(totals.amountSettled),
-        this.money(totals.balance),
         "",
       ]],
       theme: "grid",
@@ -194,24 +197,18 @@ export class PaymentOrderBatchExporter {
       footStyles: { fillColor: [248, 249, 250], textColor: [0, 0, 0], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [250, 252, 255] },
       columnStyles: {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 46 },
-        2: { cellWidth: 20 },
-        3: { halign: "right" },
+        0: { cellWidth: 20 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 18 },
         4: { halign: "right" },
         5: { halign: "right" },
         6: { halign: "right" },
-        7: { halign: "right" },
-        8: { halign: "right" },
-        9: { cellWidth: 38 },
+        7: { cellWidth: 36 },
       },
       didParseCell: (data: any) => {
-        if (data.section === "body" && data.column.index === 8) {
-          const line = lines[data.row.index];
-          data.cell.styles.textColor = line && isLineSettled(line) ? [46, 125, 50] : [239, 108, 0];
-        }
-        if (data.section === "foot" && data.column.index === 7) {
-          data.cell.styles.textColor = [46, 125, 50];
+        if ([4, 5, 6].includes(data.column.index)) {
+          data.cell.styles.halign = "right";
         }
       },
     });
@@ -228,8 +225,9 @@ export class PaymentOrderBatchExporter {
       { label: "t-start-date", value: formatIsoDate(period.startDate) },
       { label: "t-end-date", value: formatIsoDate(period.endDate) },
       { label: "t-payment-order-generated-at", value: period.generatedAt ? formatDateTime(period.generatedAt) : "" },
-      { label: "t-payment-order-closed-at", value: period.closedAt ? formatDateTime(period.closedAt) : "" },
+      { label: "t-payment-order-processed-at", value: period.processedAt ? formatDateTime(period.processedAt) : "" },
       { label: "t-payment-order-posted-at", value: period.postedAt ? formatDateTime(period.postedAt) : "" },
+      { label: "t-payment-order-external-batch-number", value: period.externalBatchNumber || "" },
     ]
       .filter(item => item.value)
       .map(item => ({ label: this.tr(item.label), value: item.value }));
@@ -241,10 +239,8 @@ export class PaymentOrderBatchExporter {
       return {
         type,
         title: this.tr(type === "REFUND" ? "t-payment-order-refunds" : "t-payment-order-deductions"),
-        subtitle: this.tr("t-payment-order-settled-lines", { settled: totals.settledLines, total: totals.lines }),
-        percent: settlementPercent(totals),
+        subtitle: `${totals.lines} ${this.tr("t-payment-order-lines")}`,
         totals,
-        hasBalance: Math.round(totals.balance * 100) !== 0,
       };
     });
   }
@@ -257,26 +253,14 @@ export class PaymentOrderBatchExporter {
     return output;
   }
 
-  private static drawProgressBar(pdf: jsPDF, x: number, y: number, width: number, percent: number, color: Rgb): void {
-    const height = 1.8;
-    pdf.setFillColor(...this.PDF_COLORS.track);
-    pdf.roundedRect(x, y, width, height, 0.9, 0.9, "F");
-    const filled = (width * Math.min(100, Math.max(0, percent))) / 100;
-    if (filled > 0) {
-      pdf.setFillColor(...color);
-      pdf.roundedRect(x, y, Math.max(filled, height), height, 0.9, 0.9, "F");
-    }
-  }
-
   private static drawPDFInfoCard(
     pdf: jsPDF,
     period: PaymentOrderPeriodListing,
-    totals: PaymentOrderTotals,
     x: number,
     y: number,
     width: number
   ): number {
-    const height = 29;
+    const height = 22;
     const padding = 5;
     const colors = this.PDF_COLORS;
 
@@ -296,9 +280,10 @@ export class PaymentOrderBatchExporter {
     pdf.setFontSize(6.5);
     const pillWidth = pdf.getTextWidth(statusText) + 5;
     const pillX = x + padding + pdf.getTextWidth(eyebrow) + 4;
-    pdf.setFillColor(...this.tint(statusColor));
+    const filledPill = statusChipVariant(period.status) === "elevated";
+    pdf.setFillColor(...(filledPill ? statusColor : this.tint(statusColor)));
     pdf.roundedRect(pillX, y + 2.9, pillWidth, 4, 1, 1, "F");
-    pdf.setTextColor(...statusColor);
+    pdf.setTextColor(...(filledPill ? ([255, 255, 255] as Rgb) : statusColor));
     pdf.text(statusText, pillX + 2.5, y + 5.75);
 
     const items = this.infoItems(period);
@@ -315,22 +300,11 @@ export class PaymentOrderBatchExporter {
       pdf.text(this.fitText(pdf, item.value, itemWidth - 3), itemX, y + 17);
     });
 
-    const percent = settlementPercent(totals);
-    const progressColor = percent >= 100 ? colors.success : percent > 0 ? colors.primary : colors.muted;
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(6.5);
-    pdf.setTextColor(...colors.muted);
-    pdf.text(this.tr("t-payment-order-settlement-progress"), x + padding, y + 22.5);
-    pdf.setTextColor(...colors.text);
-    const percentText = `${percent}%`;
-    pdf.text(percentText, x + width - padding - pdf.getTextWidth(percentText), y + 22.5);
-    this.drawProgressBar(pdf, x + padding, y + 24, width - padding * 2, percent, progressColor);
-
     return height;
   }
 
   private static drawPDFTypeCards(pdf: jsPDF, lines: PaymentOrderLine[], x: number, y: number, width: number): number {
-    const height = 31;
+    const height = 16;
     const gap = 4;
     const padding = 5;
     const cardWidth = (width - gap) / 2;
@@ -339,6 +313,8 @@ export class PaymentOrderBatchExporter {
     this.typeSummaries(lines).forEach((summary, index) => {
       const cardX = x + (cardWidth + gap) * index;
       const accent = summary.type === "REFUND" ? colors.success : colors.danger;
+      const typeAmount = summary.type === "REFUND" ? summary.totals.totalRefund : summary.totals.totalDeduction;
+      const amountText = this.money(typeAmount);
 
       pdf.setDrawColor(...colors.border);
       pdf.setLineWidth(0.2);
@@ -346,7 +322,7 @@ export class PaymentOrderBatchExporter {
       pdf.roundedRect(cardX, y, cardWidth, height, 2.5, 2.5, "FD");
 
       const iconX = cardX + padding;
-      const iconY = y + 3.5;
+      const iconY = y + 4;
       const iconSize = 8;
       pdf.setFillColor(...this.tint(accent));
       pdf.roundedRect(iconX, iconY, iconSize, iconSize, 1.5, 1.5, "F");
@@ -355,36 +331,16 @@ export class PaymentOrderBatchExporter {
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(9);
       pdf.setTextColor(...colors.text);
-      pdf.text(summary.title, iconX + iconSize + 3, y + 7);
+      pdf.text(summary.title, iconX + iconSize + 3, y + 7.2);
       pdf.setFont("helvetica", "normal");
       pdf.setFontSize(7);
       pdf.setTextColor(...colors.muted);
-      pdf.text(summary.subtitle, iconX + iconSize + 3, y + 10.8);
+      pdf.text(summary.subtitle, iconX + iconSize + 3, y + 11.2);
 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(13);
+      pdf.setFontSize(11);
       pdf.setTextColor(...colors.text);
-      const percentText = `${summary.percent}%`;
-      pdf.text(percentText, cardX + cardWidth - padding - pdf.getTextWidth(percentText), y + 9.5);
-
-      this.drawProgressBar(pdf, cardX + padding, y + 14, cardWidth - padding * 2, summary.percent, accent);
-
-      const values: { label: string; value: string; color: Rgb }[] = [
-        { label: this.tr("t-payment-order-amount-to-pay"), value: this.money(summary.totals.amountToPay), color: colors.text },
-        { label: this.tr("t-payment-order-amount-settled"), value: this.money(summary.totals.amountSettled), color: colors.success },
-        { label: this.tr("t-payment-order-balance"), value: this.money(summary.totals.balance), color: summary.hasBalance ? colors.warning : colors.text },
-      ];
-      const valueWidth = (cardWidth - padding * 2) / values.length;
-      values.forEach((item, valueIndex) => {
-        const valueX = cardX + padding + valueWidth * valueIndex;
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(6.5);
-        pdf.setTextColor(...colors.muted);
-        pdf.text(this.fitText(pdf, item.label.toUpperCase(), valueWidth - 2), valueX, y + 21);
-        pdf.setFontSize(9.5);
-        pdf.setTextColor(...item.color);
-        pdf.text(this.fitText(pdf, item.value, valueWidth - 2), valueX, y + 26.5);
-      });
+      pdf.text(amountText, cardX + cardWidth - padding - pdf.getTextWidth(amountText), y + 10);
     });
 
     return height;
@@ -498,42 +454,25 @@ export class PaymentOrderBatchExporter {
       data[infoLabelRow][index] = item.label;
       data[infoValueRow][index] = item.value;
     });
-    const percent = settlementPercent(totals);
-    const infoProgressRow = addRow();
-    data[infoProgressRow][0] = this.tr("t-payment-order-settlement-progress");
-    data[infoProgressRow][8] = percent / 100;
-    merge(infoProgressRow, 0, 7);
-    merge(infoProgressRow, 8, 9);
     addRow();
 
     const typeBlocks = [
-      { startCol: 0, endCol: 3, valueCols: [[0, 0], [1, 1], [2, 3]] },
-      { startCol: 5, endCol: 9, valueCols: [[5, 5], [6, 7], [8, 9]] },
+      { startCol: 0, endCol: 3 },
+      { startCol: 5, endCol: 9 },
     ];
     const summaries = this.typeSummaries(lines);
     const typeTitleRow = addRow();
     const typeSubtitleRow = addRow();
-    const typeLabelRow = addRow();
     const typeValueRow = addRow();
     summaries.forEach((summary, index) => {
       const block = typeBlocks[index];
+      const typeAmount = summary.type === "REFUND" ? summary.totals.totalRefund : summary.totals.totalDeduction;
       data[typeTitleRow][block.startCol] = summary.title;
-      data[typeTitleRow][block.endCol] = summary.percent / 100;
-      merge(typeTitleRow, block.startCol, block.endCol - 1);
+      merge(typeTitleRow, block.startCol, block.endCol);
       data[typeSubtitleRow][block.startCol] = summary.subtitle;
       merge(typeSubtitleRow, block.startCol, block.endCol);
-      const values = [
-        [this.tr("t-payment-order-amount-to-pay"), summary.totals.amountToPay],
-        [this.tr("t-payment-order-amount-settled"), summary.totals.amountSettled],
-        [this.tr("t-payment-order-balance"), summary.totals.balance],
-      ] as const;
-      values.forEach(([label, value], valueIndex) => {
-        const [startCol, endCol] = block.valueCols[valueIndex];
-        data[typeLabelRow][startCol] = label.toUpperCase();
-        data[typeValueRow][startCol] = value;
-        merge(typeLabelRow, startCol, endCol);
-        merge(typeValueRow, startCol, endCol);
-      });
+      data[typeValueRow][block.startCol] = typeAmount;
+      merge(typeValueRow, block.startCol, block.endCol);
     });
     addRow();
 
@@ -545,13 +484,11 @@ export class PaymentOrderBatchExporter {
       [
         this.tr("t-employee-number"),
         this.tr("t-employee"),
+        this.tr("t-payment-order-integration-account"),
         this.tr("t-type"),
         `${this.tr("t-payment-order-total-refund")} (MT)`,
         `${this.tr("t-payment-order-total-deduction")} (MT)`,
-        `${this.tr("t-payment-order-previous-balance")} (MT)`,
         `${this.tr("t-payment-order-amount-to-pay")} (MT)`,
-        `${this.tr("t-payment-order-amount-settled")} (MT)`,
-        `${this.tr("t-payment-order-balance")} (MT)`,
         this.tr("t-notes"),
       ]
     );
@@ -559,25 +496,21 @@ export class PaymentOrderBatchExporter {
     lines.forEach(line => addRow([
       employeeNumber(line),
       employeeName(line),
+      employeeErpCode(line),
       this.lineType(line),
       toAmount(line.totalRefund),
       toAmount(line.totalDeduction),
-      toAmount(line.previousBalance),
       toAmount(line.amountToPay),
-      settledAmount(line),
-      lineBalance(line),
       line.notes || "",
     ]));
     const totalsRowIndex = addRow([
       this.tr("t-totals").toUpperCase(),
       "",
+      "",
       totals.lines,
       totals.totalRefund,
       totals.totalDeduction,
-      totals.previousBalance,
       totals.amountToPay,
-      totals.amountSettled,
-      totals.balance,
       "",
     ]);
     addRow();
@@ -630,7 +563,7 @@ export class PaymentOrderBatchExporter {
     setStyle(subtitleRowIndex, 0, font({ sz: 10, italic: true, color: { rgb: "555555" } }));
 
     const statusColor = this.EXCEL_STATUS_COLORS[period.status] ?? this.EXCEL_COLORS.primary;
-    styleCard(infoHeaderRow, infoProgressRow, 0, columns - 1);
+    styleCard(infoHeaderRow, infoValueRow, 0, columns - 1);
     setStyle(infoHeaderRow, 0, font({ sz: 9, bold: true, color: { rgb: this.EXCEL_COLORS.muted } }));
     setStyle(infoHeaderRow, 8, {
       ...font({ sz: 9, bold: true, color: { rgb: statusColor.text } }),
@@ -642,13 +575,6 @@ export class PaymentOrderBatchExporter {
       setStyle(infoLabelRow, index, font({ sz: 9, color: { rgb: this.EXCEL_COLORS.muted } }));
       setStyle(infoValueRow, index, font({ sz: 10, bold: true, color: { rgb: this.EXCEL_COLORS.text } }));
     });
-    const progressColor = percent >= 100 ? this.EXCEL_COLORS.success : percent > 0 ? this.EXCEL_COLORS.primary : this.EXCEL_COLORS.muted;
-    setStyle(infoProgressRow, 0, font({ sz: 9, bold: true, color: { rgb: this.EXCEL_COLORS.muted } }));
-    setStyle(infoProgressRow, 8, {
-      ...font({ sz: 11, bold: true, color: { rgb: progressColor } }),
-      alignment: { horizontal: "right", vertical: "center" },
-    }, "0%");
-
     summaries.forEach((summary, index) => {
       const block = typeBlocks[index];
       const accent = summary.type === "REFUND" ? this.EXCEL_COLORS.success : this.EXCEL_COLORS.danger;
@@ -659,20 +585,11 @@ export class PaymentOrderBatchExporter {
         setStyle(typeTitleRow, col, { fill: { fgColor: { rgb: accentFill } } });
       }
       setStyle(typeTitleRow, block.startCol, font({ sz: 11, bold: true, color: { rgb: accent } }));
-      setStyle(typeTitleRow, block.endCol, {
-        ...font({ sz: 13, bold: true, color: { rgb: this.EXCEL_COLORS.text } }),
-        alignment: { horizontal: "right", vertical: "center" },
-      }, "0%");
       setStyle(typeSubtitleRow, block.startCol, font({ sz: 9, color: { rgb: this.EXCEL_COLORS.muted } }));
-
-      const valueColors = [this.EXCEL_COLORS.text, this.EXCEL_COLORS.success, summary.hasBalance ? this.EXCEL_COLORS.warning : this.EXCEL_COLORS.text];
-      block.valueCols.forEach(([startCol], valueIndex) => {
-        setStyle(typeLabelRow, startCol, font({ sz: 8, bold: true, color: { rgb: this.EXCEL_COLORS.muted } }));
-        setStyle(typeValueRow, startCol, {
-          ...font({ sz: 11, bold: true, color: { rgb: valueColors[valueIndex] } }),
-          alignment: { horizontal: "left", vertical: "center" },
-        }, moneyFormat);
-      });
+      setStyle(typeValueRow, block.startCol, {
+        ...font({ sz: 13, bold: true, color: { rgb: this.EXCEL_COLORS.text } }),
+        alignment: { horizontal: "left", vertical: "center" },
+      }, moneyFormat);
     });
 
     setStyle(sectionRowIndex, 0, { ...font({ sz: 11, bold: true, color: { rgb: "333333" } }), fill: { fgColor: { rgb: "E8E8E8" } } });
@@ -686,7 +603,7 @@ export class PaymentOrderBatchExporter {
       });
     }
 
-    const amountCols = [3, 4, 5, 6, 7, 8];
+    const amountCols = [4, 5, 6];
     for (let row = firstLineRow; row <= totalsRowIndex; row++) {
       const isTotals = row === totalsRowIndex;
       const fill = isTotals ? this.LIGHT_GRAY : (row - firstLineRow) % 2 === 1 ? "FAFCFF" : "FFFFFF";
@@ -701,10 +618,6 @@ export class PaymentOrderBatchExporter {
         }, isAmount ? "#,##0.00" : undefined);
       }
 
-      const line = lines[row - firstLineRow];
-      if (!isTotals && line) {
-        setStyle(row, 8, font({ bold: true, color: { rgb: isLineSettled(line) ? "2E7D32" : "EF6C00" } }));
-      }
     }
 
     [0, 2].forEach(col => setStyle(generatedRowIndex, col, font({ bold: true, color: { rgb: "333333" } })));

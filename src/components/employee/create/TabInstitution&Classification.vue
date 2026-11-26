@@ -134,6 +134,13 @@ const requiredRules = {
     (v: number) => !!v || t('t-please-enter-salary'),
     (v: number) => v > 0 || t('t-please-enter-a-valid-salary'),
   ],
+  optionalSalary: [
+    (v: number | string | null | undefined) => {
+      if (v === null || v === undefined || v === "") return true;
+      const amount = Number(v);
+      return (Number.isFinite(amount) && amount >= 0) || t('t-please-enter-a-valid-salary');
+    },
+  ],
   contractDurationType: [
     (v: string) => !!v || t('t-please-select-contract-duration-type'),
   ],
@@ -255,6 +262,8 @@ watch(() => employeeData.value.department, (newDepartmentId, oldDepartmentId) =>
 
 watch(() => employeeData.value.position, () => emit('clear-server-error', 'position'));
 watch(() => employeeData.value.baseSalary, () => emit('clear-server-error', 'baseSalary'));
+watch(() => employeeData.value.grossSalary, () => emit('clear-server-error', 'grossSalary'));
+watch(() => employeeData.value.netSalary, () => emit('clear-server-error', 'netSalary'));
 watch(() => employeeData.value.contractDurationType, () => emit('clear-server-error', 'contractDurationType'));
 watch(() => employeeData.value.hireDate, () => emit('clear-server-error', 'hireDate'));
 watch(() => employeeData.value.terminationDate, () => emit('clear-server-error', 'terminationDate'));
@@ -418,9 +427,8 @@ defineExpose({
       </transition>
 
       <v-card-text class="pt-0 mt-6">
-        <!-- Instituição e Departamento -->
         <v-row>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-institution') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -428,7 +436,7 @@ defineExpose({
               :placeholder="t('t-select-institution')" clearable :rules="applyServerErrorsToRules('company', requiredRules.institution)"
               :error-messages="getServerErrors('company')" :disabled="readonly" />
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-department') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -437,11 +445,7 @@ defineExpose({
               :rules="applyServerErrorsToRules('department', requiredRules.department)" @scroll-end="loadMoreDepartments"
               clearable :error-messages="getServerErrors('department')" />
           </v-col>
-        </v-row>
-
-        <!-- Cargo e Salário -->
-        <v-row class="mt-n6">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-position') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -450,7 +454,10 @@ defineExpose({
               :disabled="readonly || !employeeData.department" @scroll-end="loadMorePositions" clearable
               :error-messages="getServerErrors('position')" />
           </v-col>
-          <v-col cols="12" lg="6">
+        </v-row>
+
+        <v-row class="mt-n6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-base-salary') }} <i class="ph-asterisk ph-xs text-danger" />
             </div>
@@ -458,6 +465,24 @@ defineExpose({
               :placeholder="t('t-enter-the-employee-base-salary')"
               :rules="applyServerErrorsToRules('baseSalary', requiredRules.baseSalary)" class="mb-2"
               :disabled="readonly || !!isEditMode" />
+          </v-col>
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-gross-salary') }}
+            </div>
+            <TextField v-model="employeeData.grossSalary" type="number"
+              :placeholder="t('t-enter-the-employee-gross-salary')"
+              :rules="applyServerErrorsToRules('grossSalary', requiredRules.optionalSalary)" class="mb-2"
+              :disabled="readonly" :error-messages="getServerErrors('grossSalary')" />
+          </v-col>
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-net-salary') }}
+            </div>
+            <TextField v-model="employeeData.netSalary" type="number"
+              :placeholder="t('t-enter-the-employee-net-salary')"
+              :rules="applyServerErrorsToRules('netSalary', requiredRules.optionalSalary)" class="mb-2"
+              :disabled="readonly" :error-messages="getServerErrors('netSalary')" />
           </v-col>
         </v-row>
 

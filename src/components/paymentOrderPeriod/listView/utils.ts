@@ -6,28 +6,54 @@ import type {
   PaymentOrderPeriodStatus,
 } from "@/components/paymentOrderPeriod/types";
 
-export const breadcrumb: BreadcrumbType[] = [
+export type ProcessSection = "refunds-and-deductions" | "erp-integration";
+
+export const PROCESS_SECTION_ROUTES: Record<ProcessSection, string> = {
+  "refunds-and-deductions": "/payment-order-periods/list",
+  "erp-integration": "/payment-order-periods/erp-integration",
+};
+
+export const PAYMENT_ORDER_PERIOD_LIST_ROUTE = PROCESS_SECTION_ROUTES["refunds-and-deductions"];
+
+export const resolveProcessSection = (value: unknown): ProcessSection =>
+  value === "refunds-and-deductions" || value === "erp-integration" ? value : "erp-integration";
+
+export const processSectionRoute = (section: ProcessSection = "erp-integration") => PROCESS_SECTION_ROUTES[section];
+
+export const sectionTitleKey = (section: ProcessSection) =>
+  section === "erp-integration" ? "erp-integration" : "refunds-and-deductions";
+
+export const sectionSubtitleKey = (section: ProcessSection) =>
+  section === "erp-integration" ? "t-erp-integration-subtitle" : "t-payment-order-batches-subtitle";
+
+export const listBreadcrumb = (section: ProcessSection): BreadcrumbType[] => [
   {
     title: "healthcare-management",
     disabled: false,
   },
   {
-    title: "payment-order-batches",
+    title: "process",
+    disabled: true,
+  },
+  {
+    title: sectionTitleKey(section),
     disabled: true,
   },
 ];
 
-export const PAYMENT_ORDER_PERIOD_LIST_ROUTE = "/payment-order-periods/list";
-
-const detailBreadcrumb = (title: string): BreadcrumbType[] => [
+const detailBreadcrumb = (section: ProcessSection, title: string): BreadcrumbType[] => [
   {
     title: "healthcare-management",
     disabled: false,
   },
   {
-    title: "payment-order-batches",
+    title: "process",
+    disabled: true,
+  },
+  {
+    title: sectionTitleKey(section),
     disabled: false,
-    to: PAYMENT_ORDER_PERIOD_LIST_ROUTE,
+    to: processSectionRoute(section),
   },
   {
     title,
@@ -35,8 +61,8 @@ const detailBreadcrumb = (title: string): BreadcrumbType[] => [
   },
 ];
 
-export const viewBreadcrumb = detailBreadcrumb("view-payment-order-batch");
-export const settleBreadcrumb = detailBreadcrumb("settle-payment-order-batch");
+export const viewBreadcrumbFor = (section: ProcessSection) => detailBreadcrumb(section, "view-payment-order-batch");
+export const settleBreadcrumbFor = (section: ProcessSection) => detailBreadcrumb(section, "settle-payment-order-batch");
 
 export const listViewHeader: DataTableHeaderType[] = [
   { title: "contract", key: "contract.name", sortable: true },
@@ -50,24 +76,86 @@ export const listViewHeader: DataTableHeaderType[] = [
 export const paymentOrderPeriodStatuses: PaymentOrderPeriodStatus[] = [
   "OPEN",
   "GENERATED",
-  "CLOSED",
+  "SUBMITTED",
+  "QUEUED",
+  "SENDING",
+  "RETRY_SCHEDULED",
+  "NEEDS_INTERVENTION",
+  "INTEGRATED",
+  "PROCESSED",
   "POSTED",
 ];
 
-// Fluxo: Aberto -> Gerado -> Fechado -> Lançado. Reabrir só a partir de Fechado.
-export const actionsByStatus: Record<PaymentOrderPeriodStatus, string[]> = {
-  OPEN: ["view", "generate", "delete"],
-  GENERATED: ["view", "settle", "generate", "close", "delete"],
-  CLOSED: ["view", "settle", "reopen", "post"],
-  POSTED: ["view"],
+const viewOnly = ["view", "history"];
+
+/** Integração ERP: Aberto -> Gerado -> submeter -> Agendado. Reenviar só em Precisa de intervenção. */
+export const erpActionsByStatus: Record<PaymentOrderPeriodStatus, string[]> = {
+  OPEN: ["view", "history", "generate", "delete"],
+  GENERATED: ["view", "history", "generate", "submit", "delete"],
+  SUBMITTED: viewOnly,
+  QUEUED: viewOnly,
+  SENDING: viewOnly,
+  RETRY_SCHEDULED: viewOnly,
+  NEEDS_INTERVENTION: ["view", "history", "resend"],
+  INTEGRATED: viewOnly,
+  PROCESSED: viewOnly,
+  POSTED: viewOnly,
 };
 
-/** Statuses where the settlement screen can be opened (read-only when not editable). */
-export const settleableStatuses: PaymentOrderPeriodStatus[] = (Object.keys(actionsByStatus) as PaymentOrderPeriodStatus[])
-  .filter(status => actionsByStatus[status].includes("settle"));
+/** Reembolsos e descontos: regularização HR com submit/reopen/process/unprocess. */
+export const refundsActionsByStatus: Record<PaymentOrderPeriodStatus, string[]> = {
+  OPEN: ["view", "history", "generate", "delete"],
+  GENERATED: ["view", "history", "generate", "submit", "delete"],
+  SUBMITTED: ["view", "history", "settle", "reopen", "process"],
+  QUEUED: viewOnly,
+  SENDING: viewOnly,
+  RETRY_SCHEDULED: viewOnly,
+  NEEDS_INTERVENTION: viewOnly,
+  INTEGRATED: viewOnly,
+  PROCESSED: ["view", "history", "unprocess"],
+  POSTED: viewOnly,
+};
 
-/** Statuses where settled amounts and notes can still be edited. */
-export const editableSettlementStatuses: PaymentOrderPeriodStatus[] = ["GENERATED"];
+export const actionsByStatusFor = (section: ProcessSection): Record<PaymentOrderPeriodStatus, string[]> =>
+  section === "refunds-and-deductions" ? refundsActionsByStatus : erpActionsByStatus;
+
+/** @deprecated Prefer actionsByStatusFor(section). Mantido para a secção ERP. */
+export const actionsByStatus = erpActionsByStatus;
+
+/** Acções da listagem: consulta + gerar/refrescar/submeter/rejeitar/reverter. */
+const LIST_MENU_ACTIONS = new Set([
+  "view",
+  "history",
+  "generate",
+  "submit",
+  "settle",
+  "reopen",
+  "unprocess",
+  "delete",
+]);
+
+export const listActionsByStatusFor = (section: ProcessSection): Record<PaymentOrderPeriodStatus, string[]> => {
+  const byStatus = actionsByStatusFor(section);
+  return Object.fromEntries(
+    (Object.keys(byStatus) as PaymentOrderPeriodStatus[]).map(status => [
+      status,
+      (byStatus[status] ?? []).filter(action => LIST_MENU_ACTIONS.has(action)),
+    ])
+  ) as Record<PaymentOrderPeriodStatus, string[]>;
+};
+
+/** Processamento do lote (editar valor regularizado) só em Submetido. */
+export const editableSettlementStatuses: PaymentOrderPeriodStatus[] = ["SUBMITTED"];
+
+/** Só Submetido + permissão PROCESS; restantes estados ficam em consulta. */
+export const canEditSettlementForStatus = (
+  status: PaymentOrderPeriodStatus | null | undefined,
+  options: { canProcess: boolean }
+) => status === "SUBMITTED" && options.canProcess;
+
+export const settleableStatuses: PaymentOrderPeriodStatus[] = (
+  Object.keys(refundsActionsByStatus) as PaymentOrderPeriodStatus[]
+).filter(status => refundsActionsByStatus[status].includes("settle"));
 
 export const monthOptions = (): MenuSelectItemType[] =>
   Array.from({ length: 12 }, (_, index) => {
@@ -101,10 +189,19 @@ export const statusLabelKey = (status?: PaymentOrderPeriodStatus | null) =>
 const STATUS_CHIP_VALUE: Record<PaymentOrderPeriodStatus, string> = {
   OPEN: "open",
   GENERATED: "DRAFT",
-  CLOSED: "CLOSED",
+  SUBMITTED: "PENDING",
+  QUEUED: "PENDING",
+  SENDING: "RUNNING",
+  RETRY_SCHEDULED: "PENDING",
+  NEEDS_INTERVENTION: "high",
+  INTEGRATED: "POSTED",
+  PROCESSED: "DRAFT",
   POSTED: "POSTED",
 };
 
 /** Value understood by the shared `Status` component, which picks the chip colour from it. */
 export const statusChipValue = (status?: PaymentOrderPeriodStatus | null) =>
   (status && STATUS_CHIP_VALUE[status]) || "entity-neutral";
+
+export const statusChipVariant = (status?: PaymentOrderPeriodStatus | null): "tonal" | "elevated" =>
+  status === "PROCESSED" || status === "NEEDS_INTERVENTION" ? "elevated" : "tonal";

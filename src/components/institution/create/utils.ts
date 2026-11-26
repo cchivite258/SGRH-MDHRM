@@ -177,6 +177,7 @@ export const contractParticipantHeader: DataTableHeaderType[] = [
 export const departmentHeader: DataTableHeaderType[] = [
   { title: "name", key: "name", sortable: true },
   { title: "description", key: "description", sortable: true },
+  { title: "cost-center-account", key: "costCenterAccount", sortable: true },
   { title: "is-enabled", key: "enabled", sortable: true },
   { title: "action", sortable: false }
 ];

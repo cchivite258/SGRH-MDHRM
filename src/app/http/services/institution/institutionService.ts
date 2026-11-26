@@ -173,7 +173,6 @@ export default class InstitutionService extends HttpService {
     try {
       const payload = {
         name: institutionData.name,
-        erpCode: institutionData.erpCode || null,
         description: institutionData.description,
         organizationId: institutionData.companyDetailsId,
         enabled: institutionData.enabled
@@ -255,7 +254,6 @@ export default class InstitutionService extends HttpService {
   async updateInstitution(id: string, institutionData: InstitutionInsertType): Promise<InstitutionResponseType> {
     const payload = {
       name: institutionData.name,
-      erpCode: institutionData.erpCode || null,
       description: institutionData.description,
       organizationId: institutionData.companyDetailsId,
       enabled: institutionData.enabled
@@ -268,5 +266,34 @@ export default class InstitutionService extends HttpService {
       payload
     );
     return this.normalizeInstitution(response as any) as InstitutionResponseType;
+  }
+
+  async updatePaymentOrderData(id: string, erpCode: string): Promise<ServiceResponse<InstitutionResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<InstitutionResponseType> | InstitutionResponseType>(
+        `${CONTRACTS_ENDPOINT}/${id}/payment-order-data`,
+        { erpCode }
+      );
+      const payload = (response as ApiResponse<InstitutionResponseType>).data
+        ?? (response as ApiResponse<InstitutionResponseType>).content
+        ?? (response as InstitutionResponseType);
+
+      return {
+        status: "success",
+        data: this.normalizeInstitution(payload as any) as InstitutionResponseType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
+        error: this.createNetworkErrorResponse()
+      };
+    }
   }
 }

@@ -1,7 +1,11 @@
 import HttpService from "@/app/http/httpService";
 import type {
+  PaymentOrderEntry,
+  PaymentOrderIntegrationAttempt,
   PaymentOrderPeriodForm,
+  PaymentOrderPeriodHistory,
   PaymentOrderPeriodId,
+  PaymentOrderPeriodInvoice,
   PaymentOrderPeriodListing,
 } from "@/components/paymentOrderPeriod/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
@@ -132,7 +136,7 @@ export default class PaymentOrderPeriodService extends HttpService {
         meta: getMeta(response, content.length),
       };
     } catch (error) {
-      console.error("Erro ao buscar lotes de reembolsos e descontos:", error);
+      console.error("Erro ao buscar períodos de integração ERP:", error);
       throw this.handleError(error);
     }
   }
@@ -185,26 +189,66 @@ export default class PaymentOrderPeriodService extends HttpService {
     );
   }
 
-  async closePaymentOrderPeriod(id: PaymentOrderPeriodId): Promise<ServiceResponse<PaymentOrderPeriodListing>> {
-    return this.runAction(id, "close", () =>
-      this.put<ApiResponse<PaymentOrderPeriodListing> | PaymentOrderPeriodListing>(
-        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/close`
-      )
-    );
+  async submitPaymentOrderPeriod(id: PaymentOrderPeriodId): Promise<ServiceResponse<PaymentOrderPeriodListing>> {
+    return this.runStatusAction(id, "submit");
   }
 
-  async reopenPaymentOrderPeriod(id: PaymentOrderPeriodId): Promise<ServiceResponse<PaymentOrderPeriodListing>> {
-    return this.runAction(id, "reopen", () =>
-      this.put<ApiResponse<PaymentOrderPeriodListing> | PaymentOrderPeriodListing>(
-        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/reopen`
-      )
-    );
+  async resendPaymentOrderPeriod(id: PaymentOrderPeriodId): Promise<ServiceResponse<PaymentOrderPeriodListing>> {
+    return this.runStatusAction(id, "resend");
   }
 
-  async postPaymentOrderPeriod(id: PaymentOrderPeriodId): Promise<ServiceResponse<PaymentOrderPeriodListing>> {
-    return this.runAction(id, "post", () =>
+  async getPaymentOrderPeriodHistory(id: PaymentOrderPeriodId): Promise<PaymentOrderPeriodHistory[]> {
+    try {
+      const response = await this.get<ApiResponse<PaymentOrderPeriodHistory[]> | PaymentOrderPeriodHistory[]>(
+        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/history`
+      );
+      return getContent<PaymentOrderPeriodHistory>(response);
+    } catch (error) {
+      console.error("Erro ao buscar histórico do lote:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getPaymentOrderPeriodInvoices(id: PaymentOrderPeriodId): Promise<PaymentOrderPeriodInvoice[]> {
+    try {
+      const response = await this.get<ApiResponse<PaymentOrderPeriodInvoice[]> | PaymentOrderPeriodInvoice[]>(
+        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/invoices`
+      );
+      return getContent<PaymentOrderPeriodInvoice>(response);
+    } catch (error) {
+      console.error("Erro ao buscar facturas do período:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getPaymentOrderPeriodIntegrationAttempts(id: PaymentOrderPeriodId): Promise<PaymentOrderIntegrationAttempt[]> {
+    try {
+      const response = await this.get<ApiResponse<PaymentOrderIntegrationAttempt[]> | PaymentOrderIntegrationAttempt[]>(
+        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/integration-attempts`
+      );
+      return getContent<PaymentOrderIntegrationAttempt>(response);
+    } catch (error) {
+      console.error("Erro ao buscar tentativas de integração do período:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getPaymentOrderPeriodEntries(id: PaymentOrderPeriodId, grouped = false): Promise<PaymentOrderEntry[]> {
+    try {
+      const response = await this.get<ApiResponse<PaymentOrderEntry[]> | PaymentOrderEntry[]>(
+        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/entries?grouped=${grouped}`
+      );
+      return getContent<PaymentOrderEntry>(response);
+    } catch (error) {
+      console.error("Erro ao buscar lançamentos contabilísticos do lote:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  private runStatusAction(id: PaymentOrderPeriodId, action: "submit" | "resend") {
+    return this.runAction(id, action, () =>
       this.put<ApiResponse<PaymentOrderPeriodListing> | PaymentOrderPeriodListing>(
-        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/post`
+        `${PAYMENT_ORDER_PERIOD_ENDPOINT}/${id}/${action}`
       )
     );
   }

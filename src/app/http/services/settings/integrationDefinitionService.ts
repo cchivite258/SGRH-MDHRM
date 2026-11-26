@@ -1,6 +1,7 @@
 import HttpService from "@/app/http/httpService";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import type {
+  IntegrationConnectionTestResult,
   IntegrationDefinitionForm,
   IntegrationDefinitionId,
   IntegrationDefinitionListing,
@@ -240,6 +241,34 @@ export default class IntegrationDefinitionService extends HttpService {
       };
     } catch (error: any) {
       return toServiceError(error, `${INTEGRATION_DEFINITION_ENDPOINT}/${id}/activate`);
+    }
+  }
+
+  async testIntegrationConnection(
+    id: IntegrationDefinitionId
+  ): Promise<ServiceResponse<IntegrationConnectionTestResult>> {
+    const endpoint = `${INTEGRATION_DEFINITION_ENDPOINT}/${id}/test-connection`;
+
+    try {
+      const response = await this.post<ApiResponse<IntegrationConnectionTestResult> | IntegrationConnectionTestResult>(
+        endpoint,
+        {}
+      );
+
+      return {
+        status: "success",
+        data: resolveItem(response),
+      };
+    } catch (error: any) {
+      const body = error?.response?.data;
+      if (body && typeof body === "object" && typeof body.connected === "boolean") {
+        return {
+          status: "success",
+          data: resolveItem(body as ApiResponse<IntegrationConnectionTestResult> | IntegrationConnectionTestResult),
+        };
+      }
+
+      return toServiceError(error, endpoint);
     }
   }
 

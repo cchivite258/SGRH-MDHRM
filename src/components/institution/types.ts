@@ -212,6 +212,7 @@ export type DepartmentInsertType = {
     id?: string | null;
     name: string;
     description: string | null;
+    costCenterAccount?: string | null;
     company: string;
     enabled: boolean;
 }
@@ -220,6 +221,7 @@ export type DepartmentListingForListType = {
     id: string;
     name: string;
     description: string | null;
+    costCenterAccount?: string | null;
     company:  { id: string; [key: string]: any } ;
     createdAt: Date | null;
     updatedAt: Date | null;
@@ -234,6 +236,7 @@ export type DepartmentListingType = {
     id: string;
     name: string;
     description: string;
+    costCenterAccount?: string | null;
     company: any;
     institution: {
         id: string | number;

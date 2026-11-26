@@ -3,18 +3,36 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { onBeforeRouteLeave, useRouter, type RouteLocationRaw } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useToast } from "vue-toastification";
-import { paymentOrderPeriodService, paymentOrderService } from "@/app/http/httpServiceProvider";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
-import { PERMISSIONS } from "@/app/permissions/constants";
 import { usePermissions } from "@/composables/usePermissions";
+import { useApiRecordErrors } from "@/composables/useApiRecordErrors";
 import Status from "@/app/common/components/Status.vue";
+import ApiRecordErrorsDialog from "@/app/common/components/ApiRecordErrorsDialog.vue";
 import BatchInfoCard from "@/components/paymentOrderPeriod/shared/BatchInfoCard.vue";
 import TypeSummaryCards from "@/components/paymentOrderPeriod/shared/TypeSummaryCards.vue";
 import GenerateLinesAction from "@/components/paymentOrderPeriod/shared/GenerateLinesAction.vue";
 import BatchConfirmationDialog from "@/components/paymentOrderPeriod/shared/BatchConfirmationDialog.vue";
 import LinesPagination from "@/components/paymentOrderPeriod/shared/LinesPagination.vue";
 import { usePaymentOrderBatch } from "@/components/paymentOrderPeriod/shared/usePaymentOrderBatch";
-import { actionsByStatus, editableSettlementStatuses, statusLabelKey } from "@/components/paymentOrderPeriod/listView/utils";
+import {
+  canEditSettlementForStatus,
+  statusLabelKey,
+  type ProcessSection,
+} from "@/components/paymentOrderPeriod/listView/utils";
+import { orderServiceFor } from "@/components/paymentOrderPeriod/shared/sectionApi";
+import { contractIntegrationService } from "@/app/http/httpServiceProvider";
+import type { SettledAmountMode } from "@/components/institution/create/integration/types";
+import {
+  allowedWorkflowActions,
+  runWorkflowAction,
+  sectionPeriodPermissions,
+  workflowButtons,
+  workflowPermissionsFor,
+  workflowSuccessKey,
+  type RefundDeductionWorkflowPayload,
+} from "@/components/paymentOrderPeriod/shared/workflow";
+import UnprocessBatchDialog from "@/components/paymentOrderPeriod/shared/UnprocessBatchDialog.vue";
+import RejectBatchDialog from "@/components/paymentOrderPeriod/shared/RejectBatchDialog.vue";
 import {
   computeTotals,
   employeeName,
@@ -34,7 +52,7 @@ import type {
   PaymentOrderLine,
   PaymentOrderLineType,
   PaymentOrderPeriodId,
-  PaymentOrderSettleItem,
+  PaymentOrderWorkflowAction,
 } from "@/components/paymentOrderPeriod/types";
 
 type LineDraft = {
@@ -42,16 +60,20 @@ type LineDraft = {
   notes: string;
 };
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   periodId: PaymentOrderPeriodId;
   backRoute: string;
-}>();
+  section?: ProcessSection;
+}>(), {
+  section: "refunds-and-deductions",
+});
 
 const { t } = useI18n();
 const toast = useToast();
 const router = useRouter();
-const { can } = usePermissions();
-const { period, lines, loading, loadError, load } = usePaymentOrderBatch(props.periodId);
+const { can, canAny } = usePermissions();
+const { recordErrorsDialog, recordErrors, recordErrorsMessage, showRecordErrors } = useApiRecordErrors();
+const { period, lines, loading, loadError, load } = usePaymentOrderBatch(props.periodId, props.section);
 
 const drafts = reactive<Record<string, LineDraft>>({});
 const search = ref("");
@@ -64,57 +86,122 @@ const leaveDialog = ref(false);
 const pendingLeaveTarget = ref<RouteLocationRaw | null>(null);
 let allowLeave = false;
 
+const periodPermissions = computed(() => sectionPeriodPermissions(props.section));
+const settledAmountMode = ref<SettledAmountMode | null>(null);
+
 const canEdit = computed(() =>
-  !!period.value
-  && editableSettlementStatuses.includes(period.value.status)
-  && can(PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE)
+  canEditSettlementForStatus(period.value?.status, {
+    canProcess: can(periodPermissions.value.PROCESS),
+  })
 );
 
-const closeDialog = ref(false);
-const closing = ref(false);
+/** Automático: valor = calculatedAmountSettled, sem edição. Manual: edição permitida. */
+const isAutomaticSettledAmount = computed(() => settledAmountMode.value === "AUTOMATIC");
+const canEditAmounts = computed(() => canEdit.value && !isAutomaticSettledAmount.value);
 
-const canClose = computed(() =>
-  !!period.value
-  && actionsByStatus[period.value.status]?.includes("close")
-  && can(PERMISSIONS.PAYMENT_ORDER_PERIODS.CLOSE)
-);
+const readonlyNoticeKey = computed(() => {
+  if (!canEdit.value) {
+    return period.value?.status === "SUBMITTED"
+      ? "t-payment-order-process-no-permission"
+      : "t-payment-order-readonly-notice";
+  }
+  if (isAutomaticSettledAmount.value) return "t-payment-order-settled-amount-automatic-notice";
+  return "";
+});
 
-const closeBatch = async () => {
-  closing.value = true;
+const draftAmountSettledValue = (line: PaymentOrderLine) => {
+  if (isAutomaticSettledAmount.value) {
+    return String(roundAmount(Math.abs(toAmount(line.calculatedAmountSettled))));
+  }
+  return String(settledAmount(line));
+};
+
+const loadSettledAmountMode = async (contractId?: string | number | null) => {
+  if (contractId === null || contractId === undefined || contractId === "") {
+    settledAmountMode.value = "MANUAL";
+    return;
+  }
+
   try {
-    const response = await paymentOrderPeriodService.closePaymentOrderPeriod(props.periodId);
-    if (response.status === "error") throw response.error;
-    toast.success(t("t-payment-order-batch-closed"));
-    closeDialog.value = false;
-    await load();
-  } catch (error) {
-    getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
-  } finally {
-    closing.value = false;
+    const response = await contractIntegrationService.getByContract(contractId);
+    if (response.status === "error") {
+      settledAmountMode.value = "MANUAL";
+      return;
+    }
+
+    const integrations = response.data ?? [];
+    const match = integrations.find(item => item.usage === "PAYMENT_ORDERS") ?? integrations[0];
+    settledAmountMode.value = match?.settledAmountMode === "AUTOMATIC" ? "AUTOMATIC" : "MANUAL";
+  } catch {
+    settledAmountMode.value = "MANUAL";
   }
 };
 
-const postDialog = ref(false);
-const posting = ref(false);
+type StatusAction = Exclude<PaymentOrderWorkflowAction, "generate">;
 
-const canPost = computed(() =>
-  !!period.value
-  && actionsByStatus[period.value.status]?.includes("post")
-  && can(PERMISSIONS.PAYMENT_ORDER_PERIODS.POST)
-);
+const workflowDialog = ref(false);
+const pendingWorkflowAction = ref<StatusAction | null>(null);
+const runningWorkflow = ref(false);
 
-const postBatch = async () => {
-  posting.value = true;
+const statusActions = computed(() => {
+  const permissions = workflowPermissionsFor(props.section);
+  return allowedWorkflowActions(period.value?.status, props.section)
+    .filter((action): action is StatusAction => {
+      if (action === "generate") return false;
+      // Rejeitar lote: só Submetido + reopen.refund.deduction.periods
+      if (action === "reopen") {
+        return period.value?.status === "SUBMITTED" && canAny(permissions.reopen);
+      }
+      return canAny(permissions[action]);
+    })
+    .map(action => ({ action, ...workflowButtons[action] }));
+});
+
+const unprocessDialog = ref(false);
+const reopenDialog = ref(false);
+
+const askWorkflowAction = (action: StatusAction) => {
+  if (action === "reopen" && (period.value?.status !== "SUBMITTED" || !canAny(workflowPermissionsFor(props.section).reopen))) {
+    return;
+  }
+  pendingWorkflowAction.value = action;
+  if (action === "unprocess") {
+    unprocessDialog.value = true;
+    return;
+  }
+  if (action === "reopen") {
+    reopenDialog.value = true;
+    return;
+  }
+  workflowDialog.value = true;
+};
+
+const runPendingWorkflowAction = async (payload?: RefundDeductionWorkflowPayload) => {
+  const action = pendingWorkflowAction.value;
+  if (!action) return;
+  if (action === "reopen" && (period.value?.status !== "SUBMITTED" || !canAny(workflowPermissionsFor(props.section).reopen))) {
+    return;
+  }
+
+  runningWorkflow.value = true;
   try {
-    const response = await paymentOrderPeriodService.postPaymentOrderPeriod(props.periodId);
+    const response = await runWorkflowAction(props.periodId, action, props.section, payload);
     if (response.status === "error") throw response.error;
-    toast.success(t("t-payment-order-batch-posted"));
-    postDialog.value = false;
+    toast.success(t(workflowSuccessKey(action, props.section)));
+    workflowDialog.value = false;
+    unprocessDialog.value = false;
+    reopenDialog.value = false;
     await load();
   } catch (error) {
-    getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    if (showRecordErrors(error)) {
+      workflowDialog.value = false;
+      unprocessDialog.value = false;
+      reopenDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
   } finally {
-    posting.value = false;
+    runningWorkflow.value = false;
   }
 };
 
@@ -122,7 +209,7 @@ const resetDrafts = (source: PaymentOrderLine[]) => {
   Object.keys(drafts).forEach(id => delete drafts[id]);
   source.forEach(line => {
     drafts[line.id] = {
-      amountSettled: String(settledAmount(line)),
+      amountSettled: draftAmountSettledValue(line),
       notes: line.notes ?? "",
     };
   });
@@ -130,6 +217,14 @@ const resetDrafts = (source: PaymentOrderLine[]) => {
 };
 
 watch(lines, resetDrafts);
+watch(settledAmountMode, () => resetDrafts(lines.value));
+watch(
+  () => period.value?.contractId,
+  (contractId) => {
+    void loadSettledAmountMode(contractId);
+  },
+  { immediate: true }
+);
 
 const draftAmount = (line: PaymentOrderLine) => {
   const raw = drafts[line.id]?.amountSettled;
@@ -248,7 +343,7 @@ const clearAmounts = (ids: string[]) => {
 
 const revertLine = (line: PaymentOrderLine) => {
   drafts[line.id] = {
-    amountSettled: String(settledAmount(line)),
+    amountSettled: draftAmountSettledValue(line),
     notes: line.notes ?? "",
   };
 };
@@ -265,38 +360,41 @@ const onSaveClick = () => {
   confirmDialog.value = true;
 };
 
-const mergeUpdatedLines = (updated: PaymentOrderLine[]) => {
-  const updatedById = new Map(updated.map(line => [line.id, line]));
-  lines.value = lines.value.map(line => {
-    const fresh = updatedById.get(line.id);
-    return fresh ? { ...line, ...fresh, employee: fresh.employee ?? line.employee } : line;
-  });
-};
-
 const saveSettlement = async () => {
-  const items: PaymentOrderSettleItem[] = dirtyLines.value.map(line => ({
-    id: line.id,
-    amountSettled: draftAmount(line) ?? 0,
-    notes: drafts[line.id].notes.trim(),
-  }));
+  if (!dirtyLines.value.length || invalidLines.value.length) return;
 
   saving.value = true;
-
   try {
-    const response = await paymentOrderService.bulkSettle(props.periodId, items);
-    if (response.status === "error") throw response.error;
+    const items = dirtyLines.value.map(line => {
+      const amount = draftAmount(line) ?? 0;
+      const item: { id: string; amountSettled: number; notes?: string } = {
+        id: line.id,
+        amountSettled: amount,
+      };
+      const notes = drafts[line.id]?.notes?.trim();
+      if (notes) item.notes = notes;
+      else if ((line.notes ?? "").trim()) item.notes = "";
+      return item;
+    });
 
-    if (response.data?.length) {
-      mergeUpdatedLines(response.data);
-    } else {
-      await load();
+    const orderService = orderServiceFor(props.section) as {
+      bulkUpdateByPeriod?: (periodId: PaymentOrderPeriodId, items: typeof items) => Promise<PaymentOrderLine[]>;
+    };
+    if (!orderService.bulkUpdateByPeriod) {
+      toast.error(t("t-payment-order-orders-readonly"));
+      return;
     }
 
+    await orderService.bulkUpdateByPeriod(props.periodId, items);
     toast.success(t("t-payment-order-settle-saved", { count: items.length }));
     confirmDialog.value = false;
-    statusFilter.value = "all";
+    await load();
   } catch (error) {
-    getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    if (showRecordErrors(error)) {
+      confirmDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
   } finally {
     saving.value = false;
   }
@@ -355,35 +453,26 @@ onBeforeUnmount(() => {
     </v-card>
 
     <template v-else>
-      <BatchInfoCard :period="period" :lines="effectiveLines">
+      <BatchInfoCard :period="period" :lines="effectiveLines" show-settlement-progress>
         <template #actions>
           <GenerateLinesAction
             :period="period"
             :has-lines="lines.length > 0"
+            :section="section"
             :disabled="dirtyLines.length > 0"
             @generated="load"
           />
           <v-btn
-            v-if="canClose"
-            color="warning"
+            v-for="item in statusActions"
+            :key="item.action"
+            :color="item.color"
             variant="elevated"
             size="small"
-            :loading="closing"
-            :disabled="closing || dirtyLines.length > 0"
-            @click="closeDialog = true"
+            :loading="runningWorkflow && pendingWorkflowAction === item.action"
+            :disabled="runningWorkflow || dirtyLines.length > 0"
+            @click="askWorkflowAction(item.action)"
           >
-            <i class="ph-lock me-1" /> {{ $t("t-payment-order-close-batch") }}
-          </v-btn>
-          <v-btn
-            v-if="canPost"
-            color="info"
-            variant="elevated"
-            size="small"
-            :loading="posting"
-            :disabled="posting"
-            @click="postDialog = true"
-          >
-            <i class="ph-check-circle me-1" /> {{ $t("t-payment-order-post-batch") }}
+            <i :class="[item.icon, 'me-1']" /> {{ $t(item.label) }}
           </v-btn>
           <v-btn variant="outlined" color="secondary" size="small" @click="goBack">
             <i class="ph-arrow-left me-1" /> {{ $t("t-back") }}
@@ -391,16 +480,16 @@ onBeforeUnmount(() => {
         </template>
       </BatchInfoCard>
 
-      <TypeSummaryCards v-if="lines.length" :lines="effectiveLines" class="mt-1" />
+      <TypeSummaryCards v-if="lines.length" :lines="effectiveLines" mode="settlement" class="mt-1" />
 
       <v-alert
-        v-if="!canEdit && lines.length"
+        v-if="readonlyNoticeKey && lines.length"
         type="info"
         variant="tonal"
         density="compact"
         class="mt-4"
       >
-        {{ $t("t-payment-order-readonly-notice", { status: $t(statusLabelKey(period.status)) }) }}
+        {{ $t(readonlyNoticeKey, { status: $t(statusLabelKey(period.status)) }) }}
       </v-alert>
 
       <v-card class="settle-card mt-4" elevation="0">
@@ -447,7 +536,7 @@ onBeforeUnmount(() => {
         </div>
 
         <v-expand-transition>
-          <div v-if="canEdit && selectedIds.length" class="settle-card__bulk">
+          <div v-if="canEditAmounts && selectedIds.length" class="settle-card__bulk">
             <span class="text-body-2 font-weight-medium">
               <i class="ph-check-square me-1" />{{ selectedIds.length }}
             </span>
@@ -470,7 +559,7 @@ onBeforeUnmount(() => {
           <div class="mt-3 font-weight-bold">{{ $t("t-payment-order-no-lines") }}</div>
           <div class="mt-1 text-medium-emphasis">{{ $t("t-payment-order-no-lines-hint") }}</div>
           <div class="mt-4">
-            <GenerateLinesAction :period="period" :has-lines="false" size="default" variant="elevated" @generated="load" />
+            <GenerateLinesAction :period="period" :has-lines="false" :section="section" size="default" variant="elevated" @generated="load" />
           </div>
         </div>
 
@@ -479,7 +568,7 @@ onBeforeUnmount(() => {
             <v-table density="compact" class="settle-table">
               <thead>
                 <tr>
-                  <th v-if="canEdit" class="settle-table__select">
+                  <th v-if="canEditAmounts" class="settle-table__select">
                     <v-checkbox-btn
                       :model-value="allFilteredSelected"
                       :indeterminate="someFilteredSelected"
@@ -494,12 +583,12 @@ onBeforeUnmount(() => {
                   <th class="settle-table__amount">{{ $t("t-payment-order-amount-settled") }}</th>
                   <th class="text-right">{{ $t("t-payment-order-balance") }}</th>
                   <th class="settle-table__notes">{{ $t("t-notes") }}</th>
-                  <th v-if="canEdit" class="settle-table__row-actions" />
+                  <th v-if="canEditAmounts" class="settle-table__row-actions" />
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="!filteredLines.length">
-                  <td :colspan="canEdit ? 9 : 7" class="text-center py-8 text-medium-emphasis">
+                  <td :colspan="canEditAmounts ? 9 : 7" class="text-center py-8 text-medium-emphasis">
                     <i class="ph-funnel-simple me-1" /> {{ $t("t-payment-order-no-results") }}
                   </td>
                 </tr>
@@ -508,7 +597,7 @@ onBeforeUnmount(() => {
                   :key="line.id"
                   :class="{ 'settle-table__row--dirty': isDirty(line) }"
                 >
-                  <td v-if="canEdit" class="settle-table__select">
+                  <td v-if="canEditAmounts" class="settle-table__select">
                     <v-checkbox-btn v-model="selectedIds" :value="line.id" density="compact" />
                   </td>
                   <td class="settle-table__employee">
@@ -528,7 +617,7 @@ onBeforeUnmount(() => {
                   <td class="text-right text-no-wrap font-weight-bold">{{ formatAmount(line.amountToPay) }}</td>
                   <td class="settle-table__amount">
                     <v-text-field
-                      v-if="canEdit"
+                      v-if="canEditAmounts"
                       v-model="drafts[line.id].amountSettled"
                       type="number"
                       min="0"
@@ -542,7 +631,9 @@ onBeforeUnmount(() => {
                       :messages="amountWarning(line)"
                       :class="{ 'settle-table__input--warning': !!amountWarning(line) }"
                     />
-                    <span v-else class="text-no-wrap">{{ formatAmount(settledAmount(line)) }}</span>
+                    <span v-else class="text-no-wrap">
+                      {{ formatAmount(isAutomaticSettledAmount ? line.calculatedAmountSettled : settledAmount(line)) }}
+                    </span>
                   </td>
                   <td class="text-right text-no-wrap">
                     <div :class="isLineSettled(effectiveLine(line)) ? 'text-success' : 'text-warning'" class="font-weight-bold">
@@ -564,7 +655,7 @@ onBeforeUnmount(() => {
                     />
                     <span v-else>{{ line.notes || "-" }}</span>
                   </td>
-                  <td v-if="canEdit" class="settle-table__row-actions">
+                  <td v-if="canEditAmounts" class="settle-table__row-actions">
                     <v-tooltip :text="$t('t-payment-order-fill-full-amount')" location="top">
                       <template #activator="{ props: tooltipProps }">
                         <v-btn
@@ -591,7 +682,7 @@ onBeforeUnmount(() => {
               </tbody>
               <tfoot v-if="filteredLines.length">
                 <tr class="settle-table__totals">
-                  <td v-if="canEdit" />
+                  <td v-if="canEditAmounts" />
                   <td colspan="2" class="font-weight-bold">
                     {{ $t("t-totals") }}
                     <span class="text-caption text-medium-emphasis">({{ filteredTotals.lines }})</span>
@@ -600,7 +691,7 @@ onBeforeUnmount(() => {
                   <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.amountToPay) }}</td>
                   <td class="text-no-wrap text-success">{{ formatAmount(filteredTotals.amountSettled) }}</td>
                   <td class="text-right text-no-wrap">{{ formatAmount(filteredTotals.balance) }}</td>
-                  <td :colspan="canEdit ? 2 : 1" />
+                  <td :colspan="canEditAmounts ? 2 : 1" />
                 </tr>
               </tfoot>
             </v-table>
@@ -651,9 +742,31 @@ onBeforeUnmount(() => {
 
     <BatchConfirmationDialog v-model="leaveDialog" action="leave" @onConfirm="confirmLeave" />
 
-    <BatchConfirmationDialog v-model="closeDialog" action="close" :loading="closing" @onConfirm="closeBatch" />
+    <BatchConfirmationDialog
+      v-if="pendingWorkflowAction && pendingWorkflowAction !== 'unprocess' && pendingWorkflowAction !== 'reopen'"
+      v-model="workflowDialog"
+      :action="pendingWorkflowAction"
+      :loading="runningWorkflow"
+      @onConfirm="runPendingWorkflowAction()"
+    />
 
-    <BatchConfirmationDialog v-model="postDialog" action="post" :loading="posting" @onConfirm="postBatch" />
+    <UnprocessBatchDialog
+      v-model="unprocessDialog"
+      :loading="runningWorkflow"
+      @onConfirm="runPendingWorkflowAction"
+    />
+
+    <RejectBatchDialog
+      v-model="reopenDialog"
+      :loading="runningWorkflow"
+      @onConfirm="runPendingWorkflowAction"
+    />
+
+    <ApiRecordErrorsDialog
+      v-model="recordErrorsDialog"
+      :records="recordErrors"
+      :message="recordErrorsMessage"
+    />
   </div>
 </template>
 

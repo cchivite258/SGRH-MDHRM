@@ -74,6 +74,10 @@ export type EmployeeListingType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   alertFlag: string | undefined;
 };
 
@@ -153,6 +157,8 @@ export type EmployeeResponseType = {
   alertFlag: string | undefined;
   baseSalary?: number | null;
   grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
 
 };
@@ -190,6 +196,9 @@ export type EmployeeInsertType = {
   passportExpiryDate: string | undefined;
   passportIssuanceDate: string | undefined;
   baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   company?: string | number | undefined;
   department?: string | undefined;
   enabled?: boolean;
@@ -288,6 +297,9 @@ export type EmployeeUpdateType = {
   passportExpiryDate: string;
   passportIssuanceDate: string;
   baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   company?: string | null;
   department?: string | null;
   enabled?: boolean;

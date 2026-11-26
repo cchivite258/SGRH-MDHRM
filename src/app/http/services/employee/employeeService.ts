@@ -30,6 +30,18 @@ const normalizeEmployee = <T extends Record<string, any>>(item: T): T => ({
   companyId: item.companyId ?? item.contractId
 });
 
+const toNullableNumber = (value: number | string | null | undefined): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toEmployeeSalaryPayload = (employeeData: EmployeeInsertType) => ({
+  baseSalary: toNullableNumber(employeeData.baseSalary),
+  grossSalary: toNullableNumber(employeeData.grossSalary),
+  netSalary: toNullableNumber(employeeData.netSalary),
+});
+
 
 
 export default class EmployeeService extends HttpService {
@@ -192,8 +204,11 @@ export default class EmployeeService extends HttpService {
 
   async createEmployee(employeeData: EmployeeInsertType): Promise<ServiceResponse<EmployeeResponseType>> {
     try {
+      const employeePayload = { ...employeeData };
+      delete employeePayload.erpCode;
       const response = await this.post<ApiResponse<EmployeeResponseType>>(EMPLOYEES_ENDPOINT, {
-        ...employeeData,
+        ...employeePayload,
+        ...toEmployeeSalaryPayload(employeeData),
         contract: employeeData.company,
         company: undefined
       });
@@ -324,7 +339,7 @@ export default class EmployeeService extends HttpService {
         passportIssuer: employeeData.passportIssuer,
         passportExpiryDate: employeeData.passportExpiryDate,
         passportIssuanceDate: employeeData.passportIssuanceDate,
-        baseSalary: employeeData.baseSalary,
+        ...toEmployeeSalaryPayload(employeeData),
         contract: employeeData.company,
         department: employeeData.department,
         position: employeeData.position,
@@ -342,6 +357,32 @@ export default class EmployeeService extends HttpService {
     } catch (error) {
       console.error("❌ Erro ao actualizar colaborador:", error);
       throw error;
+    }
+  }
+
+  async updatePaymentOrderData(id: string, erpCode: string): Promise<ServiceResponse<EmployeeResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<EmployeeResponseType>>(
+        `${EMPLOYEES_ENDPOINT}/${id}/payment-order-data`,
+        { erpCode }
+      );
+
+      return {
+        status: "success",
+        data: normalizeEmployee((response.data ?? response.content ?? response) as any) as EmployeeResponseType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
+        error: this.createNetworkErrorResponse()
+      };
     }
   }
 

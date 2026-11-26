@@ -9,19 +9,39 @@ import ListingSearchCard from "@/app/common/components/listing/ListingSearchCard
 import RemoveItemConfirmationDialog from "@/app/common/components/RemoveItemConfirmationDialog.vue";
 import Status from "@/app/common/components/Status.vue";
 import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
-import { paymentOrderPeriodService } from "@/app/http/httpServiceProvider";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 import CreatePaymentOrderPeriodModal from "@/components/paymentOrderPeriod/CreatePaymentOrderPeriodModal.vue";
+import BatchHistoryDialog from "@/components/paymentOrderPeriod/shared/BatchHistoryDialog.vue";
 import BatchConfirmationDialog from "@/components/paymentOrderPeriod/shared/BatchConfirmationDialog.vue";
+import RejectBatchDialog from "@/components/paymentOrderPeriod/shared/RejectBatchDialog.vue";
+import UnprocessBatchDialog from "@/components/paymentOrderPeriod/shared/UnprocessBatchDialog.vue";
+import { useApiRecordErrors } from "@/composables/useApiRecordErrors";
+import ApiRecordErrorsDialog from "@/app/common/components/ApiRecordErrorsDialog.vue";
 import {
-  actionsByStatus,
   contractLabel,
   formatIsoDate,
   formatMonthYear,
+  listActionsByStatusFor,
   listViewHeader,
+  sectionSubtitleKey,
+  sectionTitleKey,
   statusChipValue,
+  statusChipVariant,
   statusLabelKey,
+  type ProcessSection,
 } from "@/components/paymentOrderPeriod/listView/utils";
+import { periodServiceFor } from "@/components/paymentOrderPeriod/shared/sectionApi";
+import {
+  confirmationActionFor,
+  runWorkflowAction,
+  sectionPeriodPermissions,
+  workflowPermissionsFor,
+  workflowSuccessKey,
+} from "@/components/paymentOrderPeriod/shared/workflow";
+import type {
+  RefundDeductionReopenPayload,
+  RefundDeductionUnprocessPayload,
+} from "@/app/http/services/amm/refundDeductionPeriodService";
 import type {
   BatchConfirmationAction,
   PaymentOrderPeriodForm,
@@ -29,13 +49,17 @@ import type {
   PaymentOrderPeriodListing,
   PaymentOrderPeriodOption,
   PaymentOrderPeriodStatus,
+  PaymentOrderWorkflowAction,
 } from "@/components/paymentOrderPeriod/types";
 import type { OptionType } from "@/app/common/types/option.type";
-import { PERMISSIONS } from "@/app/permissions/constants";
 import { usePermissions } from "@/composables/usePermissions";
 import type { PermissionRequirement } from "@/app/permissions/constants";
 
-type WorkflowAction = "generate" | "close" | "reopen" | "post";
+const props = withDefaults(defineProps<{
+  section?: ProcessSection;
+}>(), {
+  section: "refunds-and-deductions",
+});
 
 const { t } = useI18n();
 const toast = useToast();
@@ -44,14 +68,8 @@ const { can, canAny } = usePermissions();
 
 const dialog = ref(false);
 const deleteDialog = ref(false);
-const actionDialog = ref(false);
 const deleteId = ref<PaymentOrderPeriodId | null>(null);
-const pendingAction = ref<WorkflowAction | null>(null);
-const pendingActionId = ref<PaymentOrderPeriodId | null>(null);
-const pendingActionStatus = ref<PaymentOrderPeriodStatus | null>(null);
-const actionLoading = ref(false);
 const deleteLoading = ref(false);
-const rowLoadingId = ref<PaymentOrderPeriodId | null>(null);
 const searchQuery = ref("");
 const searchProps = "notes,status,contract.name";
 const itemsPerPage = ref(10);
@@ -63,43 +81,71 @@ const loadingList = ref(false);
 let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
-const canCreate = computed(() => can(PERMISSIONS.PAYMENT_ORDER_PERIODS.CREATE));
+const periodPermissions = computed(() => sectionPeriodPermissions(props.section));
+const canCreate = computed(() => can(periodPermissions.value.CREATE));
+const isErpSection = computed(() => props.section === "erp-integration");
+const pageTitle = computed(() => t(`t-${sectionTitleKey(props.section)}`));
+const pageSubtitle = computed(() => t(sectionSubtitleKey(props.section)));
+const tableHeaders = computed(() => {
+  const headers = [...listViewHeader];
+  if (!isErpSection.value) return headers;
 
-const actionOptions: OptionType[] = [
-  { title: "Consultar", value: "view", icon: "ph-eye" },
-  { title: "Regularizar", value: "settle", icon: "ph-coins" },
-  { title: "Gerar Lançamentos", value: "generate", icon: "ph-rows" },
-  { title: "Fechar", value: "close", icon: "ph-lock" },
-  { title: "Reabrir", value: "reopen", icon: "ph-lock-open" },
-  { title: "Lançar", value: "post", icon: "ph-check-circle" },
-  { title: "Eliminar", value: "delete", icon: "ph-trash" },
-];
+  headers.splice(headers.length - 1, 0, {
+    title: "payment-order-external-batch-number",
+    key: "externalBatchNumber",
+    sortable: false,
+  });
+  return headers;
+});
 
-const actionPermissionByValue: Record<string, PermissionRequirement> = {
-  view: PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
-  settle: PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE,
-  generate: PERMISSIONS.PAYMENT_ORDER_PERIODS.GENERATE,
-  close: PERMISSIONS.PAYMENT_ORDER_PERIODS.CLOSE,
-  reopen: PERMISSIONS.PAYMENT_ORDER_PERIODS.REOPEN,
-  post: PERMISSIONS.PAYMENT_ORDER_PERIODS.POST,
-  delete: PERMISSIONS.PAYMENT_ORDER_PERIODS.DELETE,
-};
+const actionOptions = computed<OptionType[]>(() => [
+  { title: t("t-view"), value: "view", icon: "ph-eye" },
+  { title: t("t-payment-order-history"), value: "history", icon: "ph-clock-counter-clockwise" },
+  { title: t("t-payment-order-generate-lines"), value: "generate", icon: "ph-rows" },
+  { title: t("t-payment-order-submit-batch"), value: "submit", icon: "ph-paper-plane-tilt" },
+  { title: t("t-settle-payment-order-batch"), value: "settle", icon: "ph-coins" },
+  { title: t("t-payment-order-reopen-batch"), value: "reopen", icon: "ph-x-circle" },
+  { title: t("t-payment-order-unprocess-batch"), value: "unprocess", icon: "ph-arrow-u-up-left" },
+  { title: t("t-delete"), value: "delete", icon: "ph-trash" },
+]);
+
+const settleAccessPermissions = computed<PermissionRequirement>(() => [
+  periodPermissions.value.SETTLE,
+  periodPermissions.value.PROCESS,
+  periodPermissions.value.VIEW,
+]);
+
+const actionPermissionByValue = computed<Record<string, PermissionRequirement>>(() => ({
+  view: periodPermissions.value.VIEW,
+  history: periodPermissions.value.VIEW,
+  generate: periodPermissions.value.GENERATE,
+  submit: periodPermissions.value.SUBMIT,
+  settle: settleAccessPermissions.value,
+  reopen: periodPermissions.value.REOPEN,
+  unprocess: workflowPermissionsFor(props.section).unprocess,
+  delete: periodPermissions.value.DELETE,
+}));
 
 const getActionOptions = (item: PaymentOrderPeriodListing) => {
-  const allowed = actionsByStatus[item.status] ?? ["view"];
+  const allowed = listActionsByStatusFor(props.section)[item.status] ?? ["view"];
 
-  return actionOptions
+  return actionOptions.value
     .filter(option => {
       if (!allowed.includes(option.value)) return false;
-      if (!canAny(actionPermissionByValue[option.value])) return false;
+      if (!canAny(actionPermissionByValue.value[option.value])) return false;
       if (option.value === "delete" && item.removable === false) return false;
       return true;
     })
-    .map(option =>
-      option.value === "generate" && item.status === "GENERATED"
-        ? { ...option, title: t("t-payment-order-refresh-batch"), icon: "ph-arrows-clockwise" }
-        : option
-    );
+    .map(option => {
+      if (option.value === "generate" && item.status === "GENERATED") {
+        return {
+          ...option,
+          title: t("t-payment-order-regenerate-lines"),
+          icon: "ph-arrows-clockwise",
+        };
+      }
+      return option;
+    });
 };
 
 const statusLabel = (status?: PaymentOrderPeriodStatus | null) => (status ? t(statusLabelKey(status)) : "-");
@@ -125,7 +171,7 @@ const fetchPeriods = async ({ page, itemsPerPage, sortBy, search }: PaymentOrder
   loadingList.value = true;
 
   try {
-    const { content, meta } = await paymentOrderPeriodService.getPaymentOrderPeriods(
+    const { content, meta } = await periodServiceFor(props.section).getPaymentOrderPeriods(
       page - 1,
       itemsPerPage,
       sortBy[0]?.key || "createdAt",
@@ -147,14 +193,6 @@ const fetchPeriods = async ({ page, itemsPerPage, sortBy, search }: PaymentOrder
   }
 };
 
-const reloadPeriods = () =>
-  fetchPeriods({
-    page: currentPage.value,
-    itemsPerPage: itemsPerPage.value,
-    sortBy: [],
-    search: searchQuery.value,
-  });
-
 watch(dialog, (open) => {
   if (!open) errorMsg.value = "";
 });
@@ -163,27 +201,25 @@ watch(deleteDialog, (open) => {
   if (!open) deleteId.value = null;
 });
 
-watch(actionDialog, (open) => {
-  if (!open) {
-    pendingAction.value = null;
-    pendingActionId.value = null;
-    pendingActionStatus.value = null;
-  }
-});
-
 const onCreateClick = () => {
   if (!canCreate.value) return;
   dialog.value = true;
 };
 
+const periodRoute = (name: string, item: PaymentOrderPeriodListing) => ({
+  name,
+  params: { id: item.id },
+  query: { section: props.section },
+});
+
 const onViewClick = (item: PaymentOrderPeriodListing) => {
-  if (!can(PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW)) return;
-  router.push({ name: "PaymentOrderPeriodView", params: { id: item.id } });
+  if (!can(periodPermissions.value.VIEW)) return;
+  router.push(periodRoute("PaymentOrderPeriodView", item));
 };
 
 const onSettleClick = (item: PaymentOrderPeriodListing) => {
-  if (!can(PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE)) return;
-  router.push({ name: "PaymentOrderPeriodSettle", params: { id: item.id } });
+  if (!canAny(settleAccessPermissions.value)) return;
+  router.push(periodRoute("PaymentOrderPeriodSettle", item));
 };
 
 const onSubmit = async (data: PaymentOrderPeriodForm, callbacks?: {
@@ -193,7 +229,7 @@ const onSubmit = async (data: PaymentOrderPeriodForm, callbacks?: {
   if (!canCreate.value) return;
 
   try {
-    const response = await paymentOrderPeriodService.createPaymentOrderPeriod(data);
+    const response = await periodServiceFor(props.section).createPaymentOrderPeriod(data);
     if (response.status === "error") throw response.error;
 
     toast.success(t("t-toast-message-created"));
@@ -208,7 +244,7 @@ const onSubmit = async (data: PaymentOrderPeriodForm, callbacks?: {
 };
 
 const onDelete = (item: PaymentOrderPeriodListing) => {
-  if (!can(PERMISSIONS.PAYMENT_ORDER_PERIODS.DELETE) || item.removable === false) return;
+  if (!can(periodPermissions.value.DELETE) || item.removable === false) return;
   deleteId.value = item.id;
   deleteDialog.value = true;
 };
@@ -219,7 +255,7 @@ const onConfirmDelete = async () => {
   deleteLoading.value = true;
 
   try {
-    await paymentOrderPeriodService.deletePaymentOrderPeriod(deleteId.value);
+    await periodServiceFor(props.section).deletePaymentOrderPeriod(deleteId.value);
     await fetchPeriods({ page: 1, itemsPerPage: itemsPerPage.value, sortBy: [], search: searchQuery.value });
     toast.success(t("t-toast-message-deleted"));
   } catch (error) {
@@ -231,76 +267,154 @@ const onConfirmDelete = async () => {
   }
 };
 
-const onAskAction = (action: WorkflowAction, item: PaymentOrderPeriodListing) => {
-  if (!canAny(actionPermissionByValue[action])) return;
-  pendingAction.value = action;
-  pendingActionId.value = item.id;
-  pendingActionStatus.value = item.status;
-  actionDialog.value = true;
+const historyDialog = ref(false);
+const historyPeriodId = ref<PaymentOrderPeriodId | null>(null);
+const reopenDialog = ref(false);
+const reopenPeriodId = ref<PaymentOrderPeriodId | null>(null);
+const reopenLoading = ref(false);
+const unprocessDialog = ref(false);
+const unprocessPeriodId = ref<PaymentOrderPeriodId | null>(null);
+const unprocessLoading = ref(false);
+const workflowDialog = ref(false);
+const workflowLoading = ref(false);
+const pendingWorkflowAction = ref<"generate" | "submit" | null>(null);
+const pendingWorkflowPeriod = ref<PaymentOrderPeriodListing | null>(null);
+const { recordErrorsDialog, recordErrors, recordErrorsMessage, showRecordErrors } = useApiRecordErrors();
+
+const refreshList = () =>
+  fetchPeriods({
+    page: currentPage.value,
+    itemsPerPage: itemsPerPage.value,
+    sortBy: [],
+    search: searchQuery.value,
+  });
+
+const pendingWorkflowDialogAction = computed<BatchConfirmationAction>(() => {
+  if (pendingWorkflowAction.value === "generate" && pendingWorkflowPeriod.value?.status === "GENERATED") {
+    return "regenerate";
+  }
+  return confirmationActionFor((pendingWorkflowAction.value ?? "submit") as PaymentOrderWorkflowAction);
+});
+
+const onHistoryClick = (item: PaymentOrderPeriodListing) => {
+  if (!can(periodPermissions.value.VIEW)) return;
+  historyPeriodId.value = item.id;
+  historyDialog.value = true;
 };
 
-const pendingActionDialog = computed<BatchConfirmationAction>(() =>
-  pendingAction.value === "generate" && pendingActionStatus.value === "GENERATED"
-    ? "regenerate"
-    : pendingAction.value ?? "generate"
-);
+const onReopenClick = (item: PaymentOrderPeriodListing) => {
+  if (item.status !== "SUBMITTED" || !can(periodPermissions.value.REOPEN)) return;
+  reopenPeriodId.value = item.id;
+  reopenDialog.value = true;
+};
 
-const runPendingAction = async () => {
-  if (!pendingAction.value || !pendingActionId.value) return;
+const onConfirmReopen = async (payload: RefundDeductionReopenPayload) => {
+  if (!reopenPeriodId.value) return;
 
-  const action = pendingAction.value;
-  const id = pendingActionId.value;
-  actionLoading.value = true;
-  rowLoadingId.value = id;
-
+  reopenLoading.value = true;
   try {
-    const response = action === "generate"
-      ? await paymentOrderPeriodService.generatePaymentOrderPeriod(id)
-      : action === "close"
-        ? await paymentOrderPeriodService.closePaymentOrderPeriod(id)
-        : action === "reopen"
-          ? await paymentOrderPeriodService.reopenPaymentOrderPeriod(id)
-          : await paymentOrderPeriodService.postPaymentOrderPeriod(id);
-
+    const response = await runWorkflowAction(reopenPeriodId.value, "reopen", props.section, payload);
     if (response.status === "error") throw response.error;
-
-    const successKey = {
-      generate: "t-payment-order-batch-generated",
-      close: "t-payment-order-batch-closed",
-      reopen: "t-payment-order-batch-reopened",
-      post: "t-payment-order-batch-posted",
-    }[action];
-
-    toast.success(t(successKey));
-    await reloadPeriods();
-    actionDialog.value = false;
+    toast.success(t(workflowSuccessKey("reopen", props.section)));
+    reopenDialog.value = false;
+    reopenPeriodId.value = null;
+    await refreshList();
   } catch (error) {
-    getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
-    handleApiError(error);
+    if (showRecordErrors(error)) {
+      reopenDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
   } finally {
-    actionLoading.value = false;
-    rowLoadingId.value = null;
+    reopenLoading.value = false;
+  }
+};
+
+const onUnprocessClick = (item: PaymentOrderPeriodListing) => {
+  if (item.status !== "PROCESSED" || !canAny(workflowPermissionsFor(props.section).unprocess)) return;
+  unprocessPeriodId.value = item.id;
+  unprocessDialog.value = true;
+};
+
+const onConfirmUnprocess = async (payload: RefundDeductionUnprocessPayload) => {
+  if (!unprocessPeriodId.value) return;
+
+  unprocessLoading.value = true;
+  try {
+    const response = await runWorkflowAction(unprocessPeriodId.value, "unprocess", props.section, payload);
+    if (response.status === "error") throw response.error;
+    toast.success(t(workflowSuccessKey("unprocess", props.section)));
+    unprocessDialog.value = false;
+    unprocessPeriodId.value = null;
+    await refreshList();
+  } catch (error) {
+    if (showRecordErrors(error)) {
+      unprocessDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
+  } finally {
+    unprocessLoading.value = false;
+  }
+};
+
+const askListWorkflowAction = (action: "generate" | "submit", item: PaymentOrderPeriodListing) => {
+  if (action === "generate" && !can(periodPermissions.value.GENERATE)) return;
+  if (action === "submit" && !can(periodPermissions.value.SUBMIT)) return;
+  if (action === "generate" && item.status !== "OPEN" && item.status !== "GENERATED") return;
+  if (action === "submit" && item.status !== "GENERATED") return;
+
+  pendingWorkflowAction.value = action;
+  pendingWorkflowPeriod.value = item;
+  workflowDialog.value = true;
+};
+
+const onConfirmListWorkflow = async () => {
+  const action = pendingWorkflowAction.value;
+  const item = pendingWorkflowPeriod.value;
+  if (!action || !item) return;
+
+  workflowLoading.value = true;
+  try {
+    const response = await runWorkflowAction(item.id, action, props.section);
+    if (response.status === "error") throw response.error;
+    toast.success(t(workflowSuccessKey(action, props.section)));
+    workflowDialog.value = false;
+    pendingWorkflowAction.value = null;
+    pendingWorkflowPeriod.value = null;
+    await refreshList();
+  } catch (error) {
+    if (showRecordErrors(error)) {
+      workflowDialog.value = false;
+    } else {
+      getApiErrorMessages(error, t("t-message-save-error")).forEach(message => toast.error(message));
+    }
+  } finally {
+    workflowLoading.value = false;
   }
 };
 
 const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
   if (option === "view") onViewClick(item);
+  if (option === "history") onHistoryClick(item);
+  if (option === "generate") askListWorkflowAction("generate", item);
+  if (option === "submit") askListWorkflowAction("submit", item);
   if (option === "settle") onSettleClick(item);
+  if (option === "reopen") onReopenClick(item);
+  if (option === "unprocess") onUnprocessClick(item);
   if (option === "delete") onDelete(item);
-  if (option === "generate" || option === "close" || option === "reopen" || option === "post") {
-    onAskAction(option, item);
-  }
 };
 </script>
 
 <template>
   <ListingPageShell
     class="payment-order-period-listing-page"
-    :title="$t('t-payment-order-batches')"
-    :subtitle="$t('t-payment-order-batches-subtitle')"
+    :class="{ 'payment-order-period-listing-page--erp': isErpSection }"
+    :title="pageTitle"
+    :subtitle="pageSubtitle"
     :action-label="$t('t-add-payment-order-batch')"
     :show-action="canCreate"
-    :action-permission="PERMISSIONS.PAYMENT_ORDER_PERIODS.CREATE"
+    :action-permission="periodPermissions.CREATE"
     :page="currentPage"
     :items-per-page="itemsPerPage"
     :total-items="totalItems"
@@ -322,7 +436,7 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
 
     <DataTableServer
       v-model:page="currentPage"
-      :headers="listViewHeader.map(item => ({ ...item, title: item.title ? $t(`t-${item.title}`) : '' }))"
+      :headers="tableHeaders.map(item => ({ ...item, title: item.title ? $t(`t-${item.title}`) : '' }))"
       :items="periods"
       :items-per-page="itemsPerPage"
       :total-items="totalItems"
@@ -345,18 +459,17 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
           <td data-label="Início">{{ formatIsoDate(item.startDate) }}</td>
           <td data-label="Fim">{{ formatIsoDate(item.endDate) }}</td>
           <td data-label="Estado">
-            <Status :status="statusChipValue(item.status)" :label="statusLabel(item.status)" />
+            <Status
+              :status="statusChipValue(item.status)"
+              :variant="statusChipVariant(item.status)"
+              :label="statusLabel(item.status)"
+            />
+          </td>
+          <td v-if="isErpSection" data-label="Lote externo">
+            {{ item.externalBatchNumber || "-" }}
           </td>
           <td data-label="Acção" class="payment-order-period-listing-table__actions-cell">
-            <v-progress-circular
-              v-if="rowLoadingId === item.id"
-              indeterminate
-              size="20"
-              width="2"
-              color="primary"
-            />
             <TableActionMenu
-              v-else
               :menu-items="getActionOptions(item)"
               :permission-by-value="actionPermissionByValue"
               @onSelect="onActionSelect($event, item)"
@@ -367,7 +480,7 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
 
       <template v-if="!periods.length" #body>
         <tr>
-          <td :colspan="listViewHeader.length" class="text-center py-10">
+          <td :colspan="tableHeaders.length" class="text-center py-10">
             <v-avatar size="72" color="secondary" variant="tonal">
               <i class="ph-magnifying-glass" style="font-size: 30px" />
             </v-avatar>
@@ -393,12 +506,36 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
     @onConfirm="onConfirmDelete"
   />
 
+  <BatchHistoryDialog
+    v-model="historyDialog"
+    :period-id="historyPeriodId"
+    :section="section"
+  />
+
+  <RejectBatchDialog
+    v-model="reopenDialog"
+    :loading="reopenLoading"
+    @onConfirm="onConfirmReopen"
+  />
+
+  <UnprocessBatchDialog
+    v-model="unprocessDialog"
+    :loading="unprocessLoading"
+    @onConfirm="onConfirmUnprocess"
+  />
+
   <BatchConfirmationDialog
-    v-if="pendingAction"
-    v-model="actionDialog"
-    :action="pendingActionDialog"
-    :loading="actionLoading"
-    @onConfirm="runPendingAction"
+    v-if="pendingWorkflowAction"
+    v-model="workflowDialog"
+    :action="pendingWorkflowDialogAction"
+    :loading="workflowLoading"
+    @onConfirm="onConfirmListWorkflow"
+  />
+
+  <ApiRecordErrorsDialog
+    v-model="recordErrorsDialog"
+    :records="recordErrors"
+    :message="recordErrorsMessage"
   />
 </template>
 
@@ -457,6 +594,16 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
 
 .payment-order-period-listing-page :deep(.v-table__wrapper > table > thead > tr > th:nth-child(6)),
 .payment-order-period-listing-page :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(6)) {
+  width: 72px;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(6)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(6)) {
+  width: 18%;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(7)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(7)) {
   width: 72px;
 }
 

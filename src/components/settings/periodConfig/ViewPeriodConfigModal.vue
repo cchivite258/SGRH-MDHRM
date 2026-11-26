@@ -6,6 +6,7 @@ import type { PeriodConfigListing } from "@/components/settings/periodConfig/typ
 import {
   formatPeriodBound,
   periodConfigTypeOptions,
+  resolvePeriodConfigType,
 } from "@/components/settings/periodConfig/listView/utils";
 
 const emit = defineEmits(["update:modelValue"]);
@@ -31,9 +32,10 @@ const dialogValue = computed({
   },
 });
 
-const getTypeLabel = (type: string) => {
-  const option = periodConfigTypeOptions.find(option => option.value === type);
-  return option ? t(option.label) : type;
+const getTypeLabel = (type: string | number) => {
+  const resolved = resolvePeriodConfigType(type);
+  const option = periodConfigTypeOptions.find(option => option.value === resolved);
+  return option ? t(option.label) : String(type ?? "");
 };
 
 const startLabel = computed(() =>

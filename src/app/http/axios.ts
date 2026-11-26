@@ -96,6 +96,25 @@ const isRefreshAuthError = (error: unknown) => {
   return refreshStatus === 401 || refreshStatus === 403;
 };
 
+const readAuthorizationHeader = (config?: InternalAxiosRequestConfig) => {
+  const headers = config?.headers;
+  if (!headers) {
+    return "";
+  }
+
+  const value = typeof headers.get === "function" ? headers.get("Authorization") : headers.Authorization;
+  return typeof value === "string" ? value : "";
+};
+
+// Um Bearer inválido recebe 403 sem Access-Control-Allow-Origin. O browser
+// esconde status e body, e o Axios fica apenas com ERR_NETWORK. Sem refresh
+// token local não dá para distinguir isto de uma falha de rede real.
+const isCorsHiddenAuthFailure = (error: AxiosError) =>
+  !error.response &&
+  error.code === AxiosError.ERR_NETWORK &&
+  !!getRefreshToken() &&
+  readAuthorizationHeader(error.config).startsWith("Bearer ");
+
 // Troca o refresh token guardado por um novo par de access/refresh tokens.
 const refreshAccessToken = async () => {
   const refreshToken = getRefreshToken();
@@ -185,8 +204,11 @@ axiosInstance.interceptors.response.use(
     }
 
     // A API usa 401/403 para indicar que o access token já não autoriza a
-    // operação. `_retry` garante apenas uma tentativa por request.
-    if ((status === 401 || status === 403) && !originalRequest._retry) {
+    // operação. O 403 de token inválido chega muitas vezes como ERR_NETWORK,
+    // porque a resposta não traz o header de CORS. `_retry` garante apenas uma
+    // tentativa por request.
+    const accessDenied = status === 401 || status === 403 || isCorsHiddenAuthFailure(error);
+    if (accessDenied && !originalRequest._retry) {
       originalRequest._retry = true;
       logAuthFlow("Starting refresh flow for unauthorized response", { status, requestUrl });
 

@@ -11,9 +11,11 @@ import TableActionMenu from "@/app/common/components/TableActionMenu.vue";
 import { integrationDefinitionService } from "@/app/http/httpServiceProvider";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 import CreateUpdateIntegrationModal from "@/components/settings/integration/CreateUpdateIntegrationModal.vue";
+import IntegrationConnectionTestDialog from "@/components/settings/integration/IntegrationConnectionTestDialog.vue";
 import ViewIntegrationModal from "@/components/settings/integration/ViewIntegrationModal.vue";
 import { listViewHeader } from "@/components/settings/integration/listView/utils";
 import type {
+  IntegrationConnectionTestResult,
   IntegrationDefinitionForm,
   IntegrationDefinitionId,
   IntegrationDefinitionListing,
@@ -31,6 +33,8 @@ const { can, canAny } = usePermissions();
 const dialog = ref(false);
 const viewDialog = ref(false);
 const deleteDialog = ref(false);
+const connectionTestDialog = ref(false);
+const connectionTestResult = ref<IntegrationConnectionTestResult | null>(null);
 const integrationData = ref<IntegrationDefinitionListing | IntegrationDefinitionForm | null>(null);
 const deleteId = ref<IntegrationDefinitionId | null>(null);
 const deleteLoading = ref(false);
@@ -62,25 +66,28 @@ const emptyForm = (): IntegrationDefinitionForm => ({
 const totalPages = computed(() => Math.max(1, Math.ceil(totalItems.value / itemsPerPage.value)));
 const canCreateIntegration = computed(() => can(PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.CREATE));
 const canUpdateIntegration = computed(() => can(PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.UPDATE));
+const canTestConnection = computed(() => can(PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.TEST_CONNECTION));
 
-const actionOptions: OptionType[] = [
+const actionOptions = computed<OptionType[]>(() => [
   { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
+  { title: t("t-test-integration-connection"), value: "test-connection", icon: "ph-plugs-connected" },
   { title: "Activar", value: "activate", icon: "ph-check-circle" },
   { title: "Desactivar", value: "deactivate", icon: "ph-x-circle" },
   { title: "Eliminar", value: "delete", icon: "ph-trash" },
-];
+]);
 
 const actionPermissionByValue: Record<string, PermissionRequirement> = {
   view: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.VIEW,
   edit: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.UPDATE,
+  "test-connection": PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.TEST_CONNECTION,
   activate: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.ACTIVATE,
   deactivate: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.DEACTIVATE,
   delete: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.DELETE,
 };
 
 const getActionOptions = (item: IntegrationDefinitionListing) =>
-  actionOptions.filter(option => {
+  actionOptions.value.filter(option => {
     if (!canAny(actionPermissionByValue[option.value])) return false;
     if (option.value === "delete" && item.removable === false) return false;
     if (option.value === "activate" && item.active) return false;
@@ -234,6 +241,28 @@ const onConfirmDelete = async () => {
   }
 };
 
+const onTestConnection = async (item: IntegrationDefinitionListing) => {
+  if (!canTestConnection.value || statusLoadingId.value) return;
+
+  statusLoadingId.value = item.id;
+
+  try {
+    const response = await integrationDefinitionService.testIntegrationConnection(item.id);
+
+    if (response.status === "error" || !response.data) {
+      throw response.error;
+    }
+
+    connectionTestResult.value = response.data;
+    connectionTestDialog.value = true;
+  } catch (error) {
+    getApiErrorMessages(error, t("t-integration-connection-test-error")).forEach(message => toast.error(message));
+    handleApiError(error);
+  } finally {
+    statusLoadingId.value = null;
+  }
+};
+
 const onToggleActive = async (item: IntegrationDefinitionListing, activate: boolean) => {
   const allowed = activate
     ? canAny(actionPermissionByValue.activate)
@@ -264,6 +293,7 @@ const onToggleActive = async (item: IntegrationDefinitionListing, activate: bool
 const onActionSelect = (option: string, item: IntegrationDefinitionListing) => {
   if (option === "view") onViewClick(item);
   if (option === "edit") onCreateEditClick(item);
+  if (option === "test-connection") onTestConnection(item);
   if (option === "activate") onToggleActive(item, true);
   if (option === "deactivate") onToggleActive(item, false);
   if (option === "delete") onDelete(item);
@@ -380,6 +410,14 @@ const display = (value?: string | null) => value?.trim() || "-";
     v-if="viewDialog && integrationData"
     v-model="viewDialog"
     :data="integrationData as IntegrationDefinitionListing"
+    :can-test="canTestConnection"
+    :testing="statusLoadingId === (integrationData as IntegrationDefinitionListing).id"
+    @on-test-connection="onTestConnection(integrationData as IntegrationDefinitionListing)"
+  />
+
+  <IntegrationConnectionTestDialog
+    v-model="connectionTestDialog"
+    :result="connectionTestResult"
   />
 
   <RemoveItemConfirmationDialog

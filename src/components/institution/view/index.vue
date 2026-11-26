@@ -193,10 +193,6 @@ onMounted(async () => {
               <div class="font-weight-bold mb-2">{{ $t("t-contract-code") }}</div>
               <div>{{ institutionData.code || "-" }}</div>
             </v-col>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold mb-2">{{ $t("t-erp-code") }}</div>
-              <div>{{ institutionData.erpCode || "-" }}</div>
-            </v-col>
           </v-row>
 
           <v-row>
@@ -244,7 +240,13 @@ onMounted(async () => {
       <Step5 v-if="step === 5 && isContractStepAllowed(5)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step6 v-if="step === 6 && isContractStepAllowed(6)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
       <Step7 v-if="step === 7 && isContractStepAllowed(7)" :institution-id="institutionId || undefined" :is-view-mode="true" @onStepChange="onStepChange" />
-      <Step8 v-if="step === 8 && isContractStepAllowed(8)" :institution-id="institutionId" :is-view-mode="true" @onStepChange="onStepChange" />
+      <Step8
+        v-if="step === 8 && isContractStepAllowed(8)"
+        :institution-id="institutionId"
+        :is-view-mode="true"
+        :erp-code="institutionData.erpCode || ''"
+        @onStepChange="onStepChange"
+      />
 
       <div class="institution-view-footer-actions">
         <v-btn

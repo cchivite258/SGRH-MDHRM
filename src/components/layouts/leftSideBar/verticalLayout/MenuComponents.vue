@@ -36,13 +36,26 @@ const searchQuery = computed({
   }
 });
 
+const matchesPrefix = (prefix?: string) =>
+  !!prefix && prefix !== "/" && (path.value === prefix || path.value.startsWith(`${prefix}/`));
+
 const isSubMenuCurrent = (subMenu: SubMenuItemType) => {
-  if (subMenu.link === path.value) return true;
+  if (subMenu.link && (path.value === subMenu.link || path.value.startsWith(`${subMenu.link}/`))) return true;
+  const section = route.query.section === "refunds" || route.query.section === "deductions"
+    ? "refunds-and-deductions"
+    : route.query.section;
+  if (
+    subMenu.id
+    && section === subMenu.id
+    && path.value.startsWith("/payment-order-periods/")
+  ) {
+    return true;
+  }
   return (subMenu.subMenu || []).some((nestedItem) => nestedItem.link === path.value);
 };
 
 const hasCurrentDescendant = (menuItem: MenuItemType) => {
-  return (menuItem.subMenu || []).some((subMenu) => isSubMenuCurrent(subMenu));
+  return (menuItem.subMenu || []).some((subMenu) => isSubMenuCurrent(subMenu)) || matchesPrefix(menuItem.prefix);
 };
 
 const onClick = (targetPath: string) => {

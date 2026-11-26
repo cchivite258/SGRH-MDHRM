@@ -53,6 +53,10 @@ const currentDefinition = ref<IntegrationDefinitionSummary | null>(null);
 
 const form = ref<{ validate: () => Promise<{ valid: boolean }> } | null>(null);
 const isCreate = computed(() => !id.value);
+const submitted = ref(false);
+const requiresCostDetails = computed(() =>
+  integrationModel.value === "CONSOLIDATED" || classificationType.value === "COST_CENTER"
+);
 
 const dialogValue = computed({
   get() {
@@ -96,12 +100,45 @@ const definitionOptions = computed(() => {
 const requiredText = (message: string) => (value: string | number | null) =>
   !!String(value ?? "").trim() || message;
 
-const optionalAccount = (value: string | null) => {
+const accountFormat = (value: string | null) => {
   const normalized = String(value ?? "").trim();
   if (!normalized) return true;
   if (normalized.length > 45) return t("t-contract-integration-account-maximum");
   return ACCOUNT_PATTERN.test(normalized) || t("t-contract-integration-account-invalid");
 };
+
+const accountRules = (emptyMessage: string) => computed(() => [
+  (value: string | null) => {
+    if (requiresCostDetails.value && !String(value ?? "").trim()) return emptyMessage;
+    return accountFormat(value);
+  },
+]);
+
+const projectCostAccountRules = accountRules(t("t-please-enter-contract-integration-project-cost-account"));
+const companyCostAccountRules = accountRules(t("t-please-enter-contract-integration-company-cost-account"));
+
+const deductionLimitRules = computed(() => [
+  (value: number | string | null) => {
+    const empty = value === null || value === undefined || `${value}`.trim() === "";
+    if (empty) {
+      return requiresCostDetails.value
+        ? t("t-please-enter-contract-integration-deduction-limit")
+        : true;
+    }
+    const parsed = Number(value);
+    return (Number.isFinite(parsed) && parsed >= 0 && parsed <= 33.33)
+      || t("t-contract-integration-deduction-limit-range");
+  },
+]);
+
+const deductionBaseRules = computed(() => [
+  (value: string | null) => {
+    if (requiresCostDetails.value && !String(value ?? "").trim()) {
+      return t("t-please-select-contract-integration-deduction-base");
+    }
+    return true;
+  },
+]);
 
 const requiredRules = {
   integrationDefinitionId: [requiredText(t("t-please-select-contract-integration-definition"))],
@@ -109,16 +146,6 @@ const requiredRules = {
   integrationModel: [requiredText(t("t-please-select-contract-integration-model"))],
   classificationType: [requiredText(t("t-please-select-contract-integration-classification"))],
   settledAmountMode: [requiredText(t("t-please-select-contract-integration-settled-amount-mode"))],
-  projectCostAccount: [optionalAccount],
-  companyCostAccount: [optionalAccount],
-  deductionLimitPercentage: [
-    (value: number | string | null) => {
-      if (value === null || value === undefined || value === "") return true;
-      const parsed = Number(value);
-      return (Number.isFinite(parsed) && parsed >= 0 && parsed <= 33.33)
-        || t("t-contract-integration-deduction-limit-range");
-    },
-  ],
 };
 
 const getServerErrors = (field: string) => serverErrors.value[field] || [];
@@ -146,6 +173,7 @@ const applyData = (data: ContractIntegrationForm | null) => {
   currentDefinition.value = data?.integrationDefinition || null;
   serverErrors.value = {};
   errorMsg.value = "";
+  submitted.value = false;
 };
 
 const loadDefinitions = async (selectedUsage: IntegrationUsageType | "") => {
@@ -181,6 +209,12 @@ watch(usage, (selectedUsage) => {
   loadDefinitions(selectedUsage);
 });
 
+watch(requiresCostDetails, async () => {
+  if (!submitted.value) return;
+  await nextTick();
+  await form.value?.validate();
+});
+
 watch(serverErrors, async (errors) => {
   if (Object.keys(errors).length > 0) {
     await nextTick();
@@ -191,6 +225,7 @@ watch(serverErrors, async (errors) => {
 const onSubmit = async () => {
   if (!form.value) return;
   serverErrors.value = {};
+  submitted.value = true;
 
   const { valid } = await form.value.validate();
   if (!valid) {
@@ -331,11 +366,12 @@ const onSubmit = async () => {
             <v-col cols="12" md="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-contract-integration-project-cost-account") }}
+                <i v-if="requiresCostDetails" class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField
                 v-model="projectCostAccount"
                 :placeholder="$t('t-enter-contract-integration-account')"
-                :rules="applyServerErrorsToRules('projectCostAccount', requiredRules.projectCostAccount)"
+                :rules="applyServerErrorsToRules('projectCostAccount', projectCostAccountRules)"
                 max-length="45"
               />
             </v-col>
@@ -343,11 +379,12 @@ const onSubmit = async () => {
             <v-col cols="12" md="6">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-contract-integration-company-cost-account") }}
+                <i v-if="requiresCostDetails" class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField
                 v-model="companyCostAccount"
                 :placeholder="$t('t-enter-contract-integration-account')"
-                :rules="applyServerErrorsToRules('companyCostAccount', requiredRules.companyCostAccount)"
+                :rules="applyServerErrorsToRules('companyCostAccount', companyCostAccountRules)"
                 max-length="45"
               />
             </v-col>
@@ -370,6 +407,7 @@ const onSubmit = async () => {
             <v-col cols="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-contract-integration-deduction-limit") }}
+                <i v-if="requiresCostDetails" class="ph-asterisk ph-xs text-danger" />
               </div>
               <TextField
                 v-model.number="deductionLimitPercentage"
@@ -378,17 +416,19 @@ const onSubmit = async () => {
                 max="33.33"
                 step="0.01"
                 :placeholder="$t('t-enter-contract-integration-deduction-limit')"
-                :rules="applyServerErrorsToRules('deductionLimitPercentage', requiredRules.deductionLimitPercentage)"
+                :rules="applyServerErrorsToRules('deductionLimitPercentage', deductionLimitRules)"
               />
             </v-col>
 
             <v-col cols="4">
               <div class="font-weight-bold text-caption mb-1">
                 {{ $t("t-contract-integration-deduction-base") }}
+                <i v-if="requiresCostDetails" class="ph-asterisk ph-xs text-danger" />
               </div>
               <MenuSelect
                 v-model="deductionBase"
                 :items="translateOptions(deductionBaseOptions)"
+                :rules="applyServerErrorsToRules('deductionBase', deductionBaseRules)"
                 :error-messages="getServerErrors('deductionBase')"
                 :placeholder="$t('t-select-contract-integration-deduction-base')"
               />

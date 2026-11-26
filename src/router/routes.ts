@@ -763,22 +763,54 @@ const invoicesRoutes = [
 });
 const paymentOrderPeriodRoutes = [
   {
+    path: `${paymentOrderPeriodPrefix}/refunds`,
+    redirect: `${paymentOrderPeriodPrefix}/list`,
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/deductions`,
+    redirect: `${paymentOrderPeriodPrefix}/list`,
+  },
+  {
     path: `${paymentOrderPeriodPrefix}/list`,
-    name: "PaymentOrderPeriodList",
+    name: "PaymentOrderPeriodRefunds",
+    component: () => import("@/views/paymentOrderPeriods/RefundsAndDeductions.vue"),
+    meta: { title: "t-refunds-and-deductions", authRequired: true, anyPermissions: PERMISSIONS.REFUND_DEDUCTION_PERIODS.LIST, section: "refunds-and-deductions" },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/erp-integration`,
+    name: "PaymentOrderPeriodErpIntegration",
     component: () => import("@/views/paymentOrderPeriods/List.vue"),
-    meta: { title: "t-payment-order-batches", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.LIST },
+    meta: { title: "t-erp-integration", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.LIST, section: "erp-integration" },
   },
   {
     path: `${paymentOrderPeriodPrefix}/view/:id`,
     name: "PaymentOrderPeriodView",
     component: () => import("@/views/paymentOrderPeriods/View.vue"),
-    meta: { title: "t-view-payment-order-batch", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW },
+    meta: {
+      title: "t-view-payment-order-batch",
+      authRequired: true,
+      anyPermissions: [
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.VIEW,
+      ],
+    },
   },
   {
     path: `${paymentOrderPeriodPrefix}/settle/:id`,
     name: "PaymentOrderPeriodSettle",
     component: () => import("@/views/paymentOrderPeriods/Settle.vue"),
-    meta: { title: "t-settle-payment-order-batch", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE },
+    meta: {
+      title: "t-settle-payment-order-batch",
+      authRequired: true,
+      anyPermissions: [
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE,
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.PROCESS,
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.SETTLE,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.PROCESS,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.VIEW,
+      ],
+    },
   },
 ].map((data) => {
   return {

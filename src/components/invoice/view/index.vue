@@ -7,6 +7,7 @@ import { useI18n } from 'vue-i18n';
 import { invoiceService, invoiceItemService } from "@/app/http/httpServiceProvider";
 import { useInvoiceStore } from "@/store/invoice/invoiceStore";
 import { InvoiceInsertType, InvoiceItemInsertType } from "../types";
+import { readProcedureCategory, readProcedureLabel } from "@/components/invoice/procedureLabel";
 
 /**
  * Composables - Instâncias de utilitários globais
@@ -164,10 +165,8 @@ const loadInvoiceData = async (id: string) => {
         ...item,
         taxRate: item.taxRate?.id || '',
         companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure?.id || '',
-        companyAllowedHospitalProcedureLabel: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.code
-          ? `${item.companyAllowedHospitalProcedure.hospitalProcedureType.code} - ${item.companyAllowedHospitalProcedure.hospitalProcedureType.name}`
-          : item.companyAllowedHospitalProcedure?.hospitalProcedureType?.name || '',
-        companyAllowedHospitalProcedureCategoryName: item.companyAllowedHospitalProcedure?.hospitalProcedureType?.categoryName || '',
+        companyAllowedHospitalProcedureLabel: readProcedureLabel(item.companyAllowedHospitalProcedure),
+        companyAllowedHospitalProcedureCategoryName: readProcedureCategory(item.companyAllowedHospitalProcedure),
         invoice: item.invoice?.id || ''
       }));
 

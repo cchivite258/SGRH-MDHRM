@@ -5,7 +5,7 @@ import Status from "@/app/common/components/Status.vue";
 import type { IntegrationDefinitionListing } from "@/components/settings/integration/types";
 import { integrationUsageOptions } from "@/components/settings/integration/listView/utils";
 
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "onTestConnection"]);
 const { t } = useI18n();
 
 const prop = defineProps({
@@ -16,6 +16,14 @@ const prop = defineProps({
   data: {
     type: Object as PropType<IntegrationDefinitionListing>,
     required: true,
+  },
+  canTest: {
+    type: Boolean,
+    default: false,
+  },
+  testing: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -122,7 +130,17 @@ const usageLabel = (usage: string) => {
       </v-card-text>
 
       <v-divider />
-      <v-card-actions class="d-flex justify-end">
+      <v-card-actions class="d-flex" :class="canTest ? 'justify-space-between' : 'justify-end'">
+        <v-btn
+          v-if="canTest"
+          color="primary"
+          variant="tonal"
+          :loading="testing"
+          :disabled="testing"
+          @click="emit('onTestConnection')"
+        >
+          <i class="ph-plugs-connected me-1" /> {{ $t("t-test-integration-connection") }}
+        </v-btn>
         <v-btn color="danger" class="me-1" @click="dialogValue = false">
           <i class="ph-x me-1" /> {{ $t("t-close") }}
         </v-btn>

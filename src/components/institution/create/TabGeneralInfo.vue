@@ -119,7 +119,6 @@ watch(
 );
 
 watch(() => institutionData.value.name, () => emit("clear-server-error", "name"));
-watch(() => institutionData.value.erpCode, () => emit("clear-server-error", "erpCode"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "companyDetailsId"));
 watch(() => institutionData.value.companyDetailsId, () => emit("clear-server-error", "organizationId"));
 watch(() => institutionData.value.description, () => emit("clear-server-error", "description"));
@@ -186,13 +185,6 @@ onMounted(async () => {
         </v-row>
 
         <v-row class="mt-n6">
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">{{ $t('t-erp-code') }}</div>
-            <TextField
-              v-model="institutionData.erpCode"
-              :error-messages="getServerErrors('erpCode')"
-            />
-          </v-col>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-entity') }} <i class="ph-asterisk ph-xs text-danger" />

@@ -167,12 +167,28 @@ export const menuItems: MenuItemType[] = [
     anyPermissions: PERMISSIONS.INVOICES.ACCESS
   },
   {
-    label: "payment-order-batches",
-    icon: "ph ph-stack",
-    id: "sidebarPaymentOrderBatches",
+    label: "process",
+    icon: "ph ph-arrows-clockwise",
+    id: "sidebarProcess",
     prefix: "/payment-order-periods",
-    link: "/payment-order-periods/list",
-    anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS
+    anyPermissions: [
+      ...PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS,
+      ...PERMISSIONS.REFUND_DEDUCTION_PERIODS.ACCESS,
+    ],
+    subMenu: [
+      {
+        label: "refunds-and-deductions",
+        id: "refunds-and-deductions",
+        link: "/payment-order-periods/list",
+        anyPermissions: PERMISSIONS.REFUND_DEDUCTION_PERIODS.ACCESS,
+      },
+      {
+        label: "erp-integration",
+        id: "erp-integration",
+        link: "/payment-order-periods/erp-integration",
+        anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS,
+      },
+    ],
   },
   {
     label: "reports",
