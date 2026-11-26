@@ -74,7 +74,29 @@ export type EmployeeListingType = {
   hireDate?: string | undefined;
   terminationDate?: string | undefined;
   rehireDate?: string | undefined;
+  baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   alertFlag: string | undefined;
+};
+
+export type EmployeeReferenceType = {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  contract?: {
+    id: string | number;
+    code?: string | null;
+    name: string;
+  } | null;
+  company?: {
+    id: string | number;
+    code?: string | null;
+    name: string;
+  } | null;
+  enabled: boolean;
 };
 
 export type EmployeeResponseType = { 
@@ -135,6 +157,8 @@ export type EmployeeResponseType = {
   alertFlag: string | undefined;
   baseSalary?: number | null;
   grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   employeeBaseSalaryTracks?: EmployeeBaseSalaryTrackType[];
 
 };
@@ -172,6 +196,9 @@ export type EmployeeInsertType = {
   passportExpiryDate: string | undefined;
   passportIssuanceDate: string | undefined;
   baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   company?: string | number | undefined;
   department?: string | undefined;
   enabled?: boolean;
@@ -270,6 +297,9 @@ export type EmployeeUpdateType = {
   passportExpiryDate: string;
   passportIssuanceDate: string;
   baseSalary?: number | null;
+  grossSalary?: number | null;
+  netSalary?: number | null;
+  erpCode?: string | null;
   company?: string | null;
   department?: string | null;
   enabled?: boolean;
@@ -321,6 +351,21 @@ export type DependentListingType = {
   idCardIssuanceDate: Date | string | undefined;
   enabled: boolean;
   dependentDocumentType?: DependentDocumentType | null;
+}
+
+export type DependentReferenceType = {
+  id: string;
+  firstName: string;
+  middleName?: string | null;
+  lastName: string;
+  relationship: string;
+  employee?: {
+    id: string;
+    firstName: string;
+    middleName?: string | null;
+    lastName: string;
+  } | null;
+  enabled: boolean;
 }
 
 export type DependentDocumentType =

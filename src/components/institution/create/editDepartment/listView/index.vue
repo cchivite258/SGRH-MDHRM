@@ -18,9 +18,16 @@ import DataTableServer from "@/app/common/components/DataTableServer.vue";
 import Status from "@/app/common/components/Status.vue";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { normalizePaymentOrderCode, paymentOrderCodeRules, shouldSavePaymentOrderCode, COST_CENTER_ACCOUNT_MAX_LENGTH } from "@/app/common/paymentOrderData";
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const toast = useToast();
+const { can } = usePermissions();
+const canEditPaymentOrderData = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.UPDATE_PAYMENT_ORDER_DATA));
+const departmentTab = ref("general");
+const persistedCostCenterAccount = ref("");
 const router = useRouter();
 const route = useRoute();
 const departmentStore = useDepartmentStore();
@@ -37,6 +44,7 @@ const form = ref<DepartmentInsertType>({
   id: departmentId.value || undefined,
   name: "",
   description: "",
+  costCenterAccount: "",
   company: "",
   enabled: true
 });
@@ -71,9 +79,11 @@ onMounted(async () => {
           id: dept.id,
           name: dept.name,
           description: dept.description || "",
+          costCenterAccount: dept.costCenterAccount || "",
           company: dept.company?.id,
           enabled: dept.enabled
         };
+        persistedCostCenterAccount.value = normalizePaymentOrderCode(dept.costCenterAccount);
       }
 
       // Carrega posições do departamento
@@ -250,11 +260,24 @@ const handleSubmit = async () => {
     return;
   }
 
+  const accountError = paymentOrderCodeRules(
+    COST_CENTER_ACCOUNT_MAX_LENGTH,
+    t("t-cost-center-account-invalid"),
+    t("t-cost-center-account-maximum")
+  )[0](form.value.costCenterAccount);
+  if (canEditPaymentOrderData.value && accountError !== true) {
+    departmentTab.value = "integration";
+    toast.error(String(accountError));
+    return;
+  }
+
   loading.value = true;
   try {
+    const isNewDepartment = !form.value.id;
+    let savedDepartmentId = form.value.id;
+
     if (form.value.id) {
       await departmentService.updateDepartment(form.value.id, form.value);
-      toast.success(t('t-toast-message-update'));
     } else {
       const response = await departmentService.createDepartment(form.value);
 
@@ -263,8 +286,31 @@ const handleSubmit = async () => {
         return;
       }
 
-      toast.success(t('t-toast-message-created'));
+      savedDepartmentId = response.data?.id;
+      if (savedDepartmentId) form.value.id = savedDepartmentId;
     }
+
+    if (
+      savedDepartmentId &&
+      canEditPaymentOrderData.value &&
+      shouldSavePaymentOrderCode(form.value.costCenterAccount, persistedCostCenterAccount.value, isNewDepartment)
+    ) {
+      const paymentResponse = await departmentService.updatePaymentOrderData(
+        String(savedDepartmentId),
+        normalizePaymentOrderCode(form.value.costCenterAccount)
+      );
+
+      if (paymentResponse.status === "error") {
+        getApiErrorMessages(paymentResponse.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+        return;
+      }
+
+      persistedCostCenterAccount.value = normalizePaymentOrderCode(
+        paymentResponse.data?.costCenterAccount ?? form.value.costCenterAccount
+      );
+    }
+
+    toast.success(isNewDepartment ? t('t-toast-message-created') : t('t-toast-message-update'));
 
     await departmentStore.fetchDepartmentsForList(form.value.company);
   } catch (error) {
@@ -280,30 +326,52 @@ const handleSubmit = async () => {
     <v-card-text>
       <v-card>
         <v-card-text>
-          <v-row>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField v-model="form.name" :placeholder="$t('t-enter-name')" />
-            </v-col>
-            <v-col cols="12" lg="6">
-              <div class="font-weight-bold text-caption mb-1">
-                {{ $t('t-description') }} <i class="ph-asterisk ph-xs text-danger" />
-              </div>
-              <TextField v-model="form.description" :placeholder="$t('t-enter-description')" />
-            </v-col>
-          </v-row>
-          <v-row class="mt-n6">
-            <v-col cols="12" lg="12" class="">
-              <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
-              <v-checkbox v-model="form.enabled" density="compact" color="primary" class="d-inline-flex">
-                <template #label>
-                  <span>{{ $t('t-is-enabled') }}</span>
-                </template>
-              </v-checkbox>
-            </v-col>
-          </v-row>
+          <v-tabs v-model="departmentTab" color="primary" density="comfortable">
+            <v-tab value="general">{{ $t('t-general-information') }}</v-tab>
+            <v-tab value="integration">{{ $t('t-integration') }}</v-tab>
+          </v-tabs>
+          <v-window v-model="departmentTab" class="department-window mt-4">
+            <v-window-item value="general">
+              <v-row class="mx-0">
+                <v-col cols="12" lg="6">
+                  <div class="font-weight-bold text-caption mb-1">
+                    {{ $t('t-name') }} <i class="ph-asterisk ph-xs text-danger" />
+                  </div>
+                  <TextField v-model="form.name" :placeholder="$t('t-enter-name')" />
+                </v-col>
+                <v-col cols="12" lg="6">
+                  <div class="font-weight-bold text-caption mb-1">
+                    {{ $t('t-description') }} <i class="ph-asterisk ph-xs text-danger" />
+                  </div>
+                  <TextField v-model="form.description" :placeholder="$t('t-enter-description')" />
+                </v-col>
+              </v-row>
+              <v-row class="mx-0 mt-n6">
+                <v-col cols="12">
+                  <div class="font-weight-bold">{{ $t('t-enabled') }}</div>
+                  <v-checkbox v-model="form.enabled" density="compact" color="primary" class="d-inline-flex">
+                    <template #label>
+                      <span>{{ $t('t-is-enabled') }}</span>
+                    </template>
+                  </v-checkbox>
+                </v-col>
+              </v-row>
+            </v-window-item>
+            <v-window-item value="integration">
+              <v-row class="mx-0">
+                <v-col cols="12">
+                  <div class="font-weight-bold text-caption mb-1">
+                    {{ $t('t-cost-center-account') }}
+                  </div>
+                  <TextField
+                    v-model="form.costCenterAccount"
+                    :placeholder="$t('t-enter-cost-center-account')"
+                    :disabled="!canEditPaymentOrderData"
+                  />
+                </v-col>
+              </v-row>
+            </v-window-item>
+          </v-window>
         </v-card-text>
       </v-card>
     </v-card-text>
@@ -391,3 +459,13 @@ const handleSubmit = async () => {
   <RemoveItemConfirmationDialog v-if="deleteId" v-model="deleteDialog" :loading="deleteLoading"
     @onConfirm="onConfirmDelete" />
 </template>
+
+<style scoped>
+.department-window {
+  overflow: visible;
+}
+
+.department-window :deep(.v-window__container) {
+  overflow: visible;
+}
+</style>

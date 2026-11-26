@@ -10,6 +10,7 @@ import Step1 from "@/components/serviceProvider/view/TabGeneralInfo.vue";
 import Step2 from "@/components/serviceProvider/view/TabContractInfo.vue";
 import Step3 from "@/components/serviceProvider/view/TabServiceProviderContact.vue";
 import ButtonNav from "@/components/serviceProvider/view/ButtonNav.vue";
+import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 import { serviceProviderService } from "@/app/http/httpServiceProvider";
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore";
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
@@ -232,6 +233,14 @@ onBeforeUnmount(() => {
       :show-actions="false"
       @on-step-change="onStepChange"
       @save="saveServiceProvider(true)"
+    />
+  </FormCard>
+
+  <FormCard v-show="step === 4 && isServiceProviderStepAllowed(4)" class="service-provider-form-section">
+    <IntegrationDataCard
+      :model-value="serviceProviderData.erpCode"
+      :label="t('t-erp-code')"
+      readonly
     />
   </FormCard>
 

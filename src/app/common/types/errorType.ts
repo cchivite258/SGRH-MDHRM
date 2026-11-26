@@ -1,6 +1,9 @@
+import type { ApiRecordError } from "@/app/common/apiErrors";
+
 export interface ApiErrorResponse {
     status: 'error';
     message: string;
+    code?: string;
     detail?: string;
     error: {
       type: string;
@@ -8,7 +11,7 @@ export interface ApiErrorResponse {
       status: number;
       detail?: string;
       instance: string;
-      errors?: Record<string, string[]>;
+      errors?: Record<string, string[]> | ApiRecordError[];
     };
     meta: {
       timestamp: string;

@@ -8,6 +8,8 @@ import { useAuthStore } from '@/store/authStore';
 import { ReportExporter } from '@/components/ammReports/list/HospitalProceduresReport/exportUtils'; 
 import { useI18n } from "vue-i18n";
 import { institutionService } from '@/app/http/httpServiceProvider';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { usePermissions } from "@/composables/usePermissions";
 import ReportPreviewFooter from "@/components/ammReports/list/ReportPreviewFooter.vue";
 import ReportPreviewPagination from "@/components/ammReports/list/ReportPreviewPagination.vue";
 import { useReportPreviewPagination } from "@/components/ammReports/list/reportPreviewPagination";
@@ -26,6 +28,7 @@ const props = defineProps<{
 
 const { t, locale } = useI18n();
 const authStore = useAuthStore();
+const { can } = usePermissions();
 const organizationData = ref<any>(
   props.report?.organization
   ?? props.report?.contract?.organization
@@ -143,6 +146,12 @@ const exportOptions = [
 
 onMounted(async () => {
   if (organizationData.value || !props.report?.contractId) {
+    return;
+  }
+
+  if (!can(PERMISSIONS.CONTRACTS.VIEW)) {
+    const report = props.report as any;
+    organizationData.value = { name: report?.contractName ?? report?.contract?.name };
     return;
   }
 

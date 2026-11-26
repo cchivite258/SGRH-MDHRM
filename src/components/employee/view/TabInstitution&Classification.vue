@@ -25,7 +25,7 @@ import { useDepartmentStore } from '@/store/institution/departmentStore';
 import { usePositionStore } from '@/store/institution/positionStore';
 
 // Types
-import { InstitutionListingType } from "@/components/institution/types";
+import { InstitutionReferenceType } from "@/components/institution/types";
 import { EmployeeInsertType } from "@/components/employee/types";
 import { formateDate } from "@/app/common/dateFormate";
 
@@ -107,7 +107,7 @@ const requiredRules = {
  * Opções para selects (instituições, departamentos e cargos)
  */
 const institutions = computed(() => {
-  return institutionStore.institutions_for_dropdown.map((institution: InstitutionListingType) => ({
+  return institutionStore.institutions_for_dropdown.map((institution: InstitutionReferenceType) => ({
     value: institution.id,
     label: institution.name
   }));
@@ -323,40 +323,49 @@ const canRehireContract = computed(() => {
       </transition>
 
       <v-card-text class="pt-0 mt-6">
-        <!-- Instituição e Departamento -->
         <v-row>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-institution') }}
             </div>
             <div>{{ companyName || '-' }}</div>
           </v-col>
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-department') }}
             </div>
             <div>{{ departmentName || '-' }}</div>
           </v-col>
-        </v-row>
-
-        <!-- Cargo e Salário -->
-        <v-row class="">
-          <v-col cols="12" lg="6">
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-position') }}
             </div>
             <div>{{ positionName || '-' }}</div>
           </v-col>
-          <v-col cols="12" lg="6">
+        </v-row>
+
+        <v-row>
+          <v-col cols="12" lg="4">
             <div class="font-weight-bold mb-2">
               {{ $t('t-base-salary') }}
             </div>
-            <div>{{ employeeData.baseSalary || '-' }}</div>
+            <div>{{ employeeData.baseSalary ?? '-' }}</div>
+          </v-col>
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-gross-salary') }}
+            </div>
+            <div>{{ employeeData.grossSalary ?? '-' }}</div>
+          </v-col>
+          <v-col cols="12" lg="4">
+            <div class="font-weight-bold mb-2">
+              {{ $t('t-net-salary') }}
+            </div>
+            <div>{{ employeeData.netSalary ?? '-' }}</div>
           </v-col>
         </v-row>
 
-
-        <v-row class="">
+        <v-row>
           <v-col cols="12" lg="6">
             <div class="font-weight-bold mb-2">
               {{ $t('t-hire-date') }}

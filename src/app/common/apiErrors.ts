@@ -1,9 +1,17 @@
 type ErrorMessagesMap = Record<string, string[] | string | null | undefined>;
 
+export interface ApiRecordError {
+  recordType: string;
+  recordId: string;
+  recordName?: string | null;
+  field?: string | null;
+  message: string;
+}
+
 interface ApiErrorShape {
   message?: string;
   detail?: string;
-  errors?: ErrorMessagesMap;
+  errors?: ErrorMessagesMap | unknown[];
   error?: ApiErrorShape;
 }
 
@@ -32,8 +40,38 @@ const resolveApiPayload = (input: unknown): ApiErrorShape | null => {
   return null;
 };
 
-const normalizeValidationErrors = (errors?: ErrorMessagesMap): Record<string, string[]> => {
+const isApiRecordError = (value: unknown): value is ApiRecordError => {
+  const item = asRecord(value);
+  return !!item
+    && typeof item.recordType === "string"
+    && item.recordId !== undefined
+    && item.recordId !== null
+    && typeof item.message === "string";
+};
+
+const resolveRawErrors = (payload: ApiErrorShape | null) =>
+  payload?.error?.errors
+  ?? payload?.errors
+  ?? payload?.error?.error?.errors;
+
+const normalizeRecordErrors = (errors: unknown[]): Record<string, string[]> =>
+  errors.reduce<Record<string, string[]>>((acc, item) => {
+    if (typeof item === "string" && item.trim().length > 0) {
+      (acc._ ??= []).push(item);
+      return acc;
+    }
+
+    if (isApiRecordError(item) && item.message.trim().length > 0) {
+      const key = item.field || item.recordType;
+      (acc[key] ??= []).push(item.message);
+    }
+
+    return acc;
+  }, {});
+
+const normalizeValidationErrors = (errors?: ErrorMessagesMap | unknown[]): Record<string, string[]> => {
   if (!errors || typeof errors !== "object") return {};
+  if (Array.isArray(errors)) return normalizeRecordErrors(errors);
 
   return Object.entries(errors).reduce<Record<string, string[]>>((acc, [field, item]) => {
     if (Array.isArray(item)) {
@@ -53,15 +91,30 @@ const normalizeValidationErrors = (errors?: ErrorMessagesMap): Record<string, st
 };
 
 const resolveValidationErrors = (payload: ApiErrorShape | null): Record<string, string[]> => {
-  return normalizeValidationErrors(
-    payload?.error?.errors
-    ?? payload?.errors
-    ?? payload?.error?.error?.errors
-  );
+  return normalizeValidationErrors(resolveRawErrors(payload));
 };
+
+const resolveRecordErrors = (payload: ApiErrorShape | null): ApiRecordError[] => {
+  const errors = resolveRawErrors(payload);
+  if (!Array.isArray(errors)) return [];
+
+  return errors
+    .filter(isApiRecordError)
+    .map(item => ({ ...item, recordId: String(item.recordId) }));
+};
+
+const resolveSummaryMessage = (payload: ApiErrorShape | null): string | undefined =>
+  [payload?.message, payload?.detail, payload?.error?.message, payload?.error?.detail]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0);
 
 export const getApiErrorMessages = (error: unknown, fallbackMessage?: string): string[] => {
   const payload = resolveApiPayload(error);
+
+  if (resolveRecordErrors(payload).length > 0) {
+    const summary = resolveSummaryMessage(payload);
+    if (summary) return [summary];
+  }
+
   const validationErrors = resolveValidationErrors(payload);
 
   const validationMessages = Object.values(validationErrors).flat();
@@ -69,20 +122,9 @@ export const getApiErrorMessages = (error: unknown, fallbackMessage?: string): s
     return [validationMessages[0]];
   }
 
-  if (payload?.message && payload.message.trim().length > 0) {
-    return [payload.message];
-  }
-
-  if (payload?.detail && payload.detail.trim().length > 0) {
-    return [payload.detail];
-  }
-
-  if (payload?.error?.message && payload.error.message.trim().length > 0) {
-    return [payload.error.message];
-  }
-
-  if (payload?.error?.detail && payload.error.detail.trim().length > 0) {
-    return [payload.error.detail];
+  const summary = resolveSummaryMessage(payload);
+  if (summary) {
+    return [summary];
   }
 
   if (typeof fallbackMessage === "string" && fallbackMessage.trim().length > 0) {
@@ -99,4 +141,8 @@ export const getFirstApiErrorMessage = (error: unknown, fallbackMessage?: string
 export const getApiValidationErrors = (error: unknown): Record<string, string[]> => {
   const payload = resolveApiPayload(error);
   return resolveValidationErrors(payload);
+};
+
+export const getApiRecordErrors = (error: unknown): ApiRecordError[] => {
+  return resolveRecordErrors(resolveApiPayload(error));
 };

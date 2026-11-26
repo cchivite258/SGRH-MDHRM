@@ -73,13 +73,6 @@ onMounted(async () => {
           </div>
           <div>{{ serviceProviderData.code || "-" }}</div>
         </v-col>
-
-        <v-col cols="12" lg="6">
-          <div class="font-weight-bold mb-2">
-            {{ $t("t-erp-code") }}
-          </div>
-          <div>{{ serviceProviderData.erpCode || "-" }}</div>
-        </v-col>
       </v-row>
 
       <v-row>

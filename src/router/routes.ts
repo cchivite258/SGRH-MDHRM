@@ -13,6 +13,7 @@ const learningPrefix = "/learning";
 const studentPrefix = "/student";
 const instructorPrefix = "/instructors";
 const invoicePrefix = "/invoices";
+const paymentOrderPeriodPrefix = "/payment-order-periods";
 const realEstatePrefix = "/real-estate";
 const agentPrefix = "/real-estate-agent";
 const agenciesPrefix = "/real-estate-agencies";
@@ -488,6 +489,18 @@ const settingsRoutes = [
     component: () => import("@/views/settings/CodeConfigs.vue"),
     meta: { title: "t-contract-code-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.LIST },
   },
+  {
+    path: `${settingsPrefix}/period-configs`,
+    name: "PeriodConfigs",
+    component: () => import("@/views/settings/PeriodConfigs.vue"),
+    meta: { title: "t-period-configs", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.PERIOD_CONFIG.LIST },
+  },
+  {
+    path: `${settingsPrefix}/integrations`,
+    name: "IntegrationDefinitions",
+    component: () => import("@/views/settings/Integrations.vue"),
+    meta: { title: "t-integrations", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.LIST },
+  },
 ].map((data) => {
   return {
     ...data,
@@ -741,6 +754,63 @@ const invoicesRoutes = [
     name: "ViewInvoice",
     component: () => import("@/views/invoices/View.vue"),
     meta: { title: "View Invoice", authRequired: true, anyPermissions: PERMISSIONS.INVOICES.VIEW },
+  },
+].map((data) => {
+  return {
+    ...data,
+    meta: { ...data.meta, layout: DefaultLayout },
+  };
+});
+const paymentOrderPeriodRoutes = [
+  {
+    path: `${paymentOrderPeriodPrefix}/refunds`,
+    redirect: `${paymentOrderPeriodPrefix}/list`,
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/deductions`,
+    redirect: `${paymentOrderPeriodPrefix}/list`,
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/list`,
+    name: "PaymentOrderPeriodRefunds",
+    component: () => import("@/views/paymentOrderPeriods/RefundsAndDeductions.vue"),
+    meta: { title: "t-refunds-and-deductions", authRequired: true, anyPermissions: PERMISSIONS.REFUND_DEDUCTION_PERIODS.LIST, section: "refunds-and-deductions" },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/erp-integration`,
+    name: "PaymentOrderPeriodErpIntegration",
+    component: () => import("@/views/paymentOrderPeriods/List.vue"),
+    meta: { title: "t-erp-integration", authRequired: true, anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.LIST, section: "erp-integration" },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/view/:id`,
+    name: "PaymentOrderPeriodView",
+    component: () => import("@/views/paymentOrderPeriods/View.vue"),
+    meta: {
+      title: "t-view-payment-order-batch",
+      authRequired: true,
+      anyPermissions: [
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.VIEW,
+      ],
+    },
+  },
+  {
+    path: `${paymentOrderPeriodPrefix}/settle/:id`,
+    name: "PaymentOrderPeriodSettle",
+    component: () => import("@/views/paymentOrderPeriods/Settle.vue"),
+    meta: {
+      title: "t-settle-payment-order-batch",
+      authRequired: true,
+      anyPermissions: [
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.SETTLE,
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.PROCESS,
+        PERMISSIONS.PAYMENT_ORDER_PERIODS.VIEW,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.SETTLE,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.PROCESS,
+        PERMISSIONS.REFUND_DEDUCTION_PERIODS.VIEW,
+      ],
+    },
   },
 ].map((data) => {
   return {
@@ -1484,6 +1554,7 @@ export const routes = [
   },
   ...learningRoutes,
   ...invoicesRoutes,
+  ...paymentOrderPeriodRoutes,
   ...ticketsRoutes,
   ...realEstateRoutes,
   ...authRoutes,

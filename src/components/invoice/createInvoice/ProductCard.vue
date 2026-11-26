@@ -23,6 +23,7 @@ import { invoiceService } from "@/app/http/httpServiceProvider";
 
 // Types e Utils
 import { InvoiceItemInsertType, InvoiceAdviceResponseType } from "@/components/invoice/types";
+import { isGeneratedProcedureDescription } from "@/components/invoice/procedureLabel";
 import { invoiceItemFlagCatalogue } from "@/components/invoice/invoiceItemFlagCatalogue";
 import { productHeader } from "@/components/invoice/createInvoice/utils";
 
@@ -345,6 +346,17 @@ const removeItem = (id: string) => {
   }
 };
 
+const procedureOptionOf = (procedureId?: string) =>
+  companyAllowedHospitalProcedures.value.find(option => String(option.value) === String(procedureId));
+
+const descriptionToSave = (item: InvoiceItem) => {
+  const description = item.description || "";
+  if (isGeneratedProcedureDescription(description, procedureOptionOf(item.companyAllowedHospitalProcedure))) {
+    return "";
+  }
+  return description;
+};
+
 const prepareItemsForSubmission = (): InvoiceItemInsertType[] => {
   return invoiceItems.value.map(item => {
     const payload = { ...item };
@@ -357,7 +369,7 @@ const prepareItemsForSubmission = (): InvoiceItemInsertType[] => {
       id: props.isEditMode ? (item.originalId || item.id) : undefined,
       taxRate: item.taxRate || '',
       companyAllowedHospitalProcedure: item.companyAllowedHospitalProcedure || '',
-      description: item.description || '',
+      description: descriptionToSave(item),
       unitPrice: item.unitPrice || 0,
       quantity: item.quantity || 0,
       invoice: item.invoice || '',
@@ -428,8 +440,29 @@ watch(() => props.initialItems, (newItems) => {
 watch(invoiceItems, (newItems) => {
   newItems.forEach(item => {
     item.totalAmount = calculateLineTotal(item).total;
+    if (isGeneratedProcedureDescription(item.description, procedureOptionOf(item.companyAllowedHospitalProcedure))) {
+      item.description = "";
+    }
   });
 }, { deep: true });
+
+watch(
+  () => invoiceItems.value.map(item => item.companyAllowedHospitalProcedure || ""),
+  (next, previous) => {
+    if (!previous) return;
+
+    next.forEach((procedureId, index) => {
+      if (procedureId === previous[index]) return;
+
+      const item = invoiceItems.value[index];
+      const label = String(procedureOptionOf(procedureId)?.label || "").trim();
+      if (!item || !label || label === "-") return;
+      if (String(item.description || "").trim() === label) {
+        item.description = "";
+      }
+    });
+  }
+);
 
 // =============================================
 // LIFECYCLE HOOKS
@@ -492,7 +525,9 @@ onMounted(() => {
 
           <!-- Procedimento -->
           <td style="width: 30%" class="pt-4">
-            <ProcedureCategorySelect v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
+            <ProcedureCategorySelect
+              :key="`${item.id}-${companyAllowedHospitalProcedures.length}`"
+              v-model="item.companyAllowedHospitalProcedure" :items="companyAllowedHospitalProcedures"
               :rules="requiredRules.companyAllowedHospitalProcedure" :placeholder="$t('t-select-procedure')"
               :procedure-title="$t('t-hospital-procedure')" :category-title="$t('t-hospital-procedure-category')"
               :disabled="!canEditItem(item)" class="w-100" />

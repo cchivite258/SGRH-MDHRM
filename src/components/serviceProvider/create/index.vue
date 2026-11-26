@@ -6,6 +6,8 @@ import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
+import { ERP_CODE_MAX_LENGTH, normalizePaymentOrderCode, paymentOrderCodeRules, shouldSavePaymentOrderCode } from "@/app/common/paymentOrderData";
+import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 
 // Components
 import FormCard from "@/app/common/components/FormCard.vue";
@@ -20,6 +22,7 @@ import { serviceProviderService } from "@/app/http/httpServiceProvider";
 
 import { useServiceProviderStore } from "@/store/serviceProvider/serviceProviderStore"
 import { ServiceProviderInsertType } from "@/components/serviceProvider/types";
+import { PERMISSIONS } from "@/app/permissions/constants";
 import { SERVICE_PROVIDER_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
 import { usePermissions } from "@/composables/usePermissions";
 
@@ -37,7 +40,13 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const serviceProviderStore = useServiceProviderStore();
-const { canAny } = usePermissions();
+const { can, canAny } = usePermissions();
+const canEditPaymentOrderData = computed(() => can(PERMISSIONS.SERVICE_PROVIDERS.UPDATE_PAYMENT_ORDER_DATA));
+const erpCodeRules = computed(() => paymentOrderCodeRules(
+  ERP_CODE_MAX_LENGTH,
+  t("t-erp-code-invalid"),
+  t("t-erp-code-maximum")
+));
 
 // Refs
 const step = ref(1);
@@ -128,6 +137,7 @@ let serviceProviderData = reactive<ServiceProviderInsertType>({
   countryId: undefined,
   provinceId: undefined
 });
+const persistedErpCode = ref("");
 
 /**
  * Trata erros da API de forma consistente
@@ -178,6 +188,7 @@ onMounted(async () => {
 
       // Atribui os dados básicos
       Object.assign(serviceProviderData, data);
+      persistedErpCode.value = normalizePaymentOrderCode(serviceProviderData.erpCode);
 
 
     } catch (error) {
@@ -308,9 +319,7 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
         serviceProviderStore.setCurrentServiceProviderId(createdServiceProviderId);
         const createdServiceProvider = await serviceProviderService.getServiceProviderById(createdServiceProviderId);
         serviceProviderData.code = createdServiceProvider.data.code || null;
-        serviceProviderData.erpCode = createdServiceProvider.data.erpCode || serviceProviderData.erpCode || null;
         normalizedPayload.code = serviceProviderData.code;
-        normalizedPayload.erpCode = serviceProviderData.erpCode;
         basicDataValidated.value = true;
         contractDataValidated.value = true;
       } else {
@@ -323,6 +332,27 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
       handleApiError(response.error);
       return;
     }
+
+    if (
+      serviceProviderId.value &&
+      can(PERMISSIONS.SERVICE_PROVIDERS.UPDATE_PAYMENT_ORDER_DATA) &&
+      shouldSavePaymentOrderCode(normalizedPayload.erpCode, persistedErpCode.value, !wasEditing)
+    ) {
+      const paymentResponse = await serviceProviderService.updatePaymentOrderData(
+        serviceProviderId.value,
+        normalizePaymentOrderCode(normalizedPayload.erpCode)
+      );
+
+      if (paymentResponse.status === "error") {
+        handleApiError(paymentResponse.error);
+        return;
+      }
+
+      persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? normalizedPayload.erpCode);
+      serviceProviderData.erpCode = persistedErpCode.value || null;
+      normalizedPayload.erpCode = serviceProviderData.erpCode;
+    }
+
     // Salvar draft na store
     Object.assign(serviceProviderData, normalizedPayload);
     serviceProviderStore.setDraftServiceProvider(serviceProviderData);
@@ -350,6 +380,39 @@ const saveServiceProvider = async (isFinalStep: boolean = false) => {
   }
 };
 
+const saveServiceProviderPaymentOrder = async () => {
+  if (!serviceProviderId.value || !canEditPaymentOrderData.value) return;
+
+  if (!shouldSavePaymentOrderCode(serviceProviderData.erpCode, persistedErpCode.value, false)) {
+    toast.success(t("t-service-provider-updated-success"));
+    return;
+  }
+
+  loading.value = true;
+  errorMsg.value = "";
+  try {
+    const paymentResponse = await serviceProviderService.updatePaymentOrderData(
+      serviceProviderId.value,
+      normalizePaymentOrderCode(serviceProviderData.erpCode)
+    );
+
+    if (paymentResponse.status === "error") {
+      handleApiError(paymentResponse.error);
+      return;
+    }
+
+    persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? serviceProviderData.erpCode);
+    serviceProviderData.erpCode = persistedErpCode.value || null;
+    toast.success(t("t-service-provider-updated-success"));
+  } catch (error) {
+    handleApiError(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+watch(() => serviceProviderData.erpCode, () => clearApiFieldError("erpCode"));
+
 // Limpeza ao desmontar o componente
 onBeforeUnmount(() => {
   if (alertTimeout) {
@@ -373,7 +436,7 @@ onBeforeUnmount(() => {
         <i class="ph-arrow-left me-2" />
         {{ $t('t-back-to-list') }}
       </v-btn>
-      <v-btn color="secondary" variant="elevated" :loading="loading" @click="onHeaderSave">
+      <v-btn v-if="step !== 4" color="secondary" variant="elevated" :loading="loading" @click="onHeaderSave">
         <i class="ph-floppy-disk me-2" />
         {{ headerSaveLabel }}
       </v-btn>
@@ -416,6 +479,20 @@ onBeforeUnmount(() => {
         :show-actions="false" @clear-server-error="clearApiFieldError" />
   </FormCard>
 
+  <FormCard v-show="step === 4 && isServiceProviderStepAllowed(4)" class="service-provider-form-section">
+    <IntegrationDataCard
+      v-model="serviceProviderData.erpCode"
+      :label="t('t-erp-code')"
+      :placeholder="t('t-enter-erp-code')"
+      :rules="erpCodeRules"
+      :disabled="!canEditPaymentOrderData"
+      :error-messages="apiFieldErrors.erpCode || []"
+      :loading="loading"
+      :show-save="canEditPaymentOrderData && !!serviceProviderId"
+      @save="saveServiceProviderPaymentOrder"
+    />
+  </FormCard>
+
   <div class="service-provider-form-footer-actions">
     <v-btn class="service-provider-form-footer-actions__back" color="secondary" variant="outlined" :disabled="loading"
       @click="previousServiceProviderStep ? onStepChange(previousServiceProviderStep) : goBackToList()">
@@ -428,7 +505,7 @@ onBeforeUnmount(() => {
       {{ $t('t-proceed') }} <i class="ph-arrow-right ms-2" />
     </v-btn>
 
-    <v-btn v-else class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
+    <v-btn v-else-if="step !== 4" class="service-provider-form-footer-actions__save" color="secondary" variant="elevated" :loading="loading"
       @click="onHeaderSave">
       <i class="ph-floppy-disk me-2" />
       {{ headerSaveLabel }}

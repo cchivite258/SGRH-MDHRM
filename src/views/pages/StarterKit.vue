@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n";
 import { dashboardService } from "@/app/http/httpServiceProvider";
 import { useCoveragePeriodStore } from "@/store/institution/coveragePeriodStore";
 import { useInstitutionStore } from "@/store/institution/institutionStore";
-import type { CoveragePeriodListingType, InstitutionListingType } from "@/components/institution/types";
+import type { CoveragePeriodListingType, InstitutionReferenceType } from "@/components/institution/types";
 
 //----------------------------------------
 type SelectOption = {
@@ -148,7 +148,7 @@ const distributionCharts = ref<DistributionChart[]>([
 ]);
 
 const contractOptions = computed<SelectOption[]>(() =>
-  (institutionStore.enabledInstitutions as InstitutionListingType[]).map((item) => ({
+  (institutionStore.enabledInstitutions as InstitutionReferenceType[]).map((item) => ({
     label: item.name,
     value: item.id
   }))

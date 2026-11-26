@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { breadcrumb as defaultBreadcrumb } from "@/components/invoice/view/utils";
 import { BreadcrumbType } from "@/app/common/types/breadcrumb.type";
+import { processSectionRoute, resolveProcessSection, sectionTitleKey } from "@/components/paymentOrderPeriod/listView/utils";
 import View from "@/components/invoice/view/index.vue";
 import { useI18n } from "vue-i18n";
 
@@ -162,6 +163,35 @@ const buildReturnBreadcrumb = (target: string, targetTitle: string): BreadcrumbT
       },
       {
         title: "dependent-health-plan",
+        disabled: false,
+        to: target
+      }
+    ];
+  }
+
+  const paymentOrderPeriodMatch = parsedReturnTo.pathname.match(/^\/payment-order-periods\/(view|settle)\/([^/]+)$/);
+
+  if (paymentOrderPeriodMatch) {
+    const [, mode] = paymentOrderPeriodMatch;
+
+    const section = resolveProcessSection(parsedReturnTo.searchParams.get("section"));
+
+    return [
+      {
+        title: "healthcare-management",
+        disabled: false
+      },
+      {
+        title: "process",
+        disabled: true
+      },
+      {
+        title: sectionTitleKey(section),
+        disabled: false,
+        to: processSectionRoute(section)
+      },
+      {
+        title: mode === "settle" ? "settle-payment-order-batch" : "view-payment-order-batch",
         disabled: false,
         to: target
       }

@@ -28,6 +28,7 @@ import TableAction from "@/app/common/components/TableAction.vue";
 import { useDepartmentStore } from "@/store/institution/departmentStore";
 import { departmentService } from "@/app/http/httpServiceProvider";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
+import { normalizePaymentOrderCode, shouldSavePaymentOrderCode } from "@/app/common/paymentOrderData";
 
 // Types
 import type {
@@ -80,7 +81,7 @@ const departmentDataView = ref<DepartmentListingType | null>(null);
 const deleteId = ref<string | null>(null);
 const errorMsg = ref("");
 const searchQuery = ref("");
-const searchProps = "name,description"; 
+const searchProps = "name,description,costCenterAccount"; 
 const itemsPerPage = ref(10);
 const selectedDepartments = ref<DepartmentListingForListType[]>([]);
 
@@ -90,6 +91,7 @@ let alertTimeout: ReturnType<typeof setTimeout> | null = null;
 const loadingList = computed(() => departmentStore.loading);
 const totalItems = computed(() => departmentStore.pagination.totalElements);
 const canCreateDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.CREATE));
+const canEditDepartmentPaymentOrder = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.UPDATE_PAYMENT_ORDER_DATA));
 const canUpdateDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.UPDATE));
 const canDeleteDepartment = computed(() => can(PERMISSIONS.CONTRACT_DEPARTMENTS.DELETE));
 const canViewDepartment = computed(() => canAny([
@@ -156,6 +158,7 @@ const onCreateClick = (data: DepartmentInsertType | null) => {
       id: undefined,
       name: "",
       description: "",
+      costCenterAccount: "",
       company: company,
       enabled: true
     };
@@ -176,6 +179,10 @@ const onSubmit = async (
   }
 ) => {
   try {
+    const previousAccount = departmentData.value?.costCenterAccount ?? "";
+    const isNewDepartment = !data.id;
+    let savedDepartmentId = data.id;
+
     if (!data.id) {
       const response = await departmentService.createDepartment(data);
 
@@ -185,11 +192,35 @@ const onSubmit = async (
         return;
       }
 
-      toast.success(t('t-toast-message-created'));
+      savedDepartmentId = response.data?.id;
     } else {
       await departmentService.updateDepartment(data.id, data);
-      toast.success(t('t-toast-message-update'));
     }
+
+    if (
+      savedDepartmentId &&
+      canEditDepartmentPaymentOrder.value &&
+      shouldSavePaymentOrderCode(data.costCenterAccount, previousAccount, isNewDepartment)
+    ) {
+      const paymentResponse = await departmentService.updatePaymentOrderData(
+        String(savedDepartmentId),
+        normalizePaymentOrderCode(data.costCenterAccount)
+      );
+
+      if (paymentResponse.status === "error") {
+        getApiErrorMessages(paymentResponse.error, t('t-message-save-error')).forEach((message) => toast.error(message));
+        callbacks?.onError?.(paymentResponse.error);
+        await departmentStore.fetchDepartmentsForList(
+          institutionId.value,
+          0,
+          itemsPerPage.value
+        );
+        if (isNewDepartment) callbacks?.onSuccess?.();
+        return;
+      }
+    }
+
+    toast.success(isNewDepartment ? t('t-toast-message-created') : t('t-toast-message-update'));
 
     await departmentStore.fetchDepartmentsForList(
       institutionId.value,
@@ -302,6 +333,7 @@ onBeforeUnmount(() => {
             </td>
             <td style="padding-right: 200px;">{{ item.name }}</td>
             <td style="padding-right: 200px;">{{ item.description }}</td>
+            <td>{{ item.costCenterAccount || "-" }}</td>
             <td>
               <Status :status="item.enabled ? 'enabled' : 'disabled'" />
             </td>

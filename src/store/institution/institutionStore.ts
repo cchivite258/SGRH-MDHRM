@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia';
 import { MAX_PAGE_SIZE } from "@/app/const";
 import { institutionService } from "@/app/http/httpServiceProvider";
-import type { InstitutionListingType, InstitutionInsertType } from '@/components/institution/types';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { useAuthStore } from "@/store/authStore";
+import type { InstitutionListingType, InstitutionReferenceType, InstitutionInsertType } from '@/components/institution/types';
 
 export const useInstitutionStore = defineStore('institutions', {
   state: () => ({
     institutions: [] as InstitutionListingType[],
-    institutions_for_dropdown: [] as InstitutionListingType[],
+    institutions_for_dropdown: [] as InstitutionReferenceType[],
     pagination: {
       totalElements: 0,
       currentPage: 0,
@@ -107,8 +109,15 @@ export const useInstitutionStore = defineStore('institutions', {
       const actualPage = page ?? this.pagination.currentPage;
       const actualSize = size ?? MAX_PAGE_SIZE;
 
+      const authStore = useAuthStore();
+      if (!PERMISSIONS.CONTRACTS.REFERENCE.some((permission) => authStore.hasPermission(permission))) {
+        this.institutions_for_dropdown = [];
+        this.loading = false;
+        return;
+      }
+
       try {
-        const { content, meta } = await institutionService.getInstitutionsForListing( 
+        const { content, meta } = await institutionService.getInstitutionsForDropdown(
           actualPage,
           actualSize,
           sortColumn,

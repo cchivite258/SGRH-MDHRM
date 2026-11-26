@@ -55,9 +55,26 @@ const normalizedItems = computed(() =>
     ...item,
     label: item.label || "-",
     categoryName: item.categoryName || "-",
-    searchText: [item.label, item.categoryName].filter(Boolean).join(" "),
   }))
 );
+
+const filterProcedure = (value: unknown, query: string, item?: { raw?: ProcedureCategorySelectItem }) => {
+  const raw = item?.raw;
+  const haystack = [raw?.label, raw?.categoryName, value]
+    .filter(part => part !== null && part !== undefined && String(part).trim() !== "")
+    .join(" ");
+
+  return haystack.toLocaleLowerCase().indexOf(String(query ?? "").toLocaleLowerCase());
+};
+
+const selectionLabel = (item: { raw?: ProcedureCategorySelectItem | string; title?: string }) => {
+  const raw = item?.raw;
+  if (raw && typeof raw === "object" && raw.label) return raw.label;
+
+  const title = String(item?.title || "").trim();
+  const looksLikeId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(title);
+  return title && !looksLikeId ? title : "";
+};
 
 const selected = computed({
   get() {
@@ -111,8 +128,9 @@ const onClear = () => {
     hide-selected
     :error-messages="computedErrorMessages"
     :rules="rules"
-    item-title="searchText"
+    item-title="label"
     item-value="value"
+    :custom-filter="filterProcedure"
     single-line
     :placeholder="placeholder"
     :disabled="disabled"
@@ -141,7 +159,7 @@ const onClear = () => {
     </template>
 
     <template #selection="{ item }">
-      <span class="procedure-category-select__selection">{{ item.raw.label }}</span>
+      <span class="procedure-category-select__selection">{{ selectionLabel(item) }}</span>
     </template>
   </v-autocomplete>
 </template>

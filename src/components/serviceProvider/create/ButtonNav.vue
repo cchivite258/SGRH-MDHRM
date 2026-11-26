@@ -38,7 +38,7 @@ const step = computed({
 
 const isTabDisabled = (tabNumber: number) => {
   if (props.serviceProviderId) return false;
-  if (tabNumber === 2) return !props.basicDataValidated;
+  if (tabNumber === 2 || tabNumber === 4) return !props.basicDataValidated;
   if (tabNumber === 3) return !props.basicDataValidated || !props.contractDataValidated;
   return false;
 };

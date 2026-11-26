@@ -167,6 +167,30 @@ export const menuItems: MenuItemType[] = [
     anyPermissions: PERMISSIONS.INVOICES.ACCESS
   },
   {
+    label: "process",
+    icon: "ph ph-arrows-clockwise",
+    id: "sidebarProcess",
+    prefix: "/payment-order-periods",
+    anyPermissions: [
+      ...PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS,
+      ...PERMISSIONS.REFUND_DEDUCTION_PERIODS.ACCESS,
+    ],
+    subMenu: [
+      {
+        label: "refunds-and-deductions",
+        id: "refunds-and-deductions",
+        link: "/payment-order-periods/list",
+        anyPermissions: PERMISSIONS.REFUND_DEDUCTION_PERIODS.ACCESS,
+      },
+      {
+        label: "erp-integration",
+        id: "erp-integration",
+        link: "/payment-order-periods/erp-integration",
+        anyPermissions: PERMISSIONS.PAYMENT_ORDER_PERIODS.ACCESS,
+      },
+    ],
+  },
+  {
     label: "reports",
     icon: "ph ph-presentation-chart",
     id: "sidebarReports",
@@ -219,7 +243,8 @@ export const menuItems: MenuItemType[] = [
     subMenu: [
       { label: "alerts", link: "/settings/alerts", anyPermissions: PERMISSIONS.SETTINGS.ALERTS.ACCESS },
       { label: "contract-code-configs", link: "/settings/code-configs", anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.ACCESS },
-      //{ label: "period", link: "/users/users/list" },
+      { label: "period-configs", link: "/settings/period-configs", anyPermissions: PERMISSIONS.SETTINGS.PERIOD_CONFIG.ACCESS },
+      { label: "integrations", link: "/settings/integrations", anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.ACCESS },
      // { label: "functions", link: "/auth/signup" },
     ],
   },

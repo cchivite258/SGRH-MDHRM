@@ -11,7 +11,7 @@ const props = defineProps({
   isRequired: { type: Boolean, default: false },
   isEmail: { type: Boolean, default: false },
   placeholder: { type: String, default: "" },
-  hideDetails: { type: Boolean, default: false },
+  hideDetails: { type: [Boolean, String] as PropType<boolean | "auto">, default: false },
   showError: { type: Boolean, default: false },
   type: { type: String, default: "text" },
   isSubmitted: { type: Boolean, default: false },

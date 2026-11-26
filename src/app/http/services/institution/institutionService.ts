@@ -1,5 +1,5 @@
 ﻿import HttpService from "@/app/http/httpService";
-import type { InstitutionListingType, InstitutionInsertType, InstitutionResponseType } from "@/components/institution/types";
+import type { InstitutionListingType, InstitutionReferenceType, InstitutionInsertType, InstitutionResponseType } from "@/components/institution/types";
 import type { ApiErrorResponse } from "@/app/common/types/errorType";
 
 interface ApiResponse<T> {
@@ -16,6 +16,7 @@ interface ServiceResponse<T> {
 }
 
 const CONTRACTS_ENDPOINT = "/administration/contracts";
+const CONTRACTS_REFERENCE_ENDPOINT = `${CONTRACTS_ENDPOINT}/reference`;
 const CONTRACTS_INCLUDES = "organization,departments,personsOfContacts,contractHealthPlans,coveragePeriods";
 const CONTRACTS_INCLUDE_QUERY = `includes=${CONTRACTS_INCLUDES}`;
 
@@ -137,14 +138,14 @@ export default class InstitutionService extends HttpService {
     }
   }
 
-  async getInstitutionsForListing(
+  async getInstitutionsForDropdown(
     page: number = 0,
     size: number = 10,
     sortColumn: string = "createdAt",
     direction: string = "asc",
     query_value?: string,
     query_props?: string
-  ): Promise<{ content: InstitutionListingType[]; meta: any }> {
+  ): Promise<{ content: InstitutionReferenceType[]; meta: any }> {
     try {
       const queryParams = [
         `page=${page}`,
@@ -158,10 +159,8 @@ export default class InstitutionService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      queryParams.push(`includes=${CONTRACTS_INCLUDES}`);
-
-      const response = await this.get<ApiResponse<InstitutionListingType[]>>(
-        `${CONTRACTS_ENDPOINT}?${queryParams.join("&")}`
+      const response = await this.get<ApiResponse<InstitutionReferenceType[]>>(
+        `${CONTRACTS_REFERENCE_ENDPOINT}?${queryParams.join("&")}`
       );
 
       return this.normalizeListResponse(response);
@@ -174,7 +173,6 @@ export default class InstitutionService extends HttpService {
     try {
       const payload = {
         name: institutionData.name,
-        erpCode: institutionData.erpCode || null,
         description: institutionData.description,
         organizationId: institutionData.companyDetailsId,
         enabled: institutionData.enabled
@@ -256,7 +254,6 @@ export default class InstitutionService extends HttpService {
   async updateInstitution(id: string, institutionData: InstitutionInsertType): Promise<InstitutionResponseType> {
     const payload = {
       name: institutionData.name,
-      erpCode: institutionData.erpCode || null,
       description: institutionData.description,
       organizationId: institutionData.companyDetailsId,
       enabled: institutionData.enabled
@@ -269,5 +266,34 @@ export default class InstitutionService extends HttpService {
       payload
     );
     return this.normalizeInstitution(response as any) as InstitutionResponseType;
+  }
+
+  async updatePaymentOrderData(id: string, erpCode: string): Promise<ServiceResponse<InstitutionResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<InstitutionResponseType> | InstitutionResponseType>(
+        `${CONTRACTS_ENDPOINT}/${id}/payment-order-data`,
+        { erpCode }
+      );
+      const payload = (response as ApiResponse<InstitutionResponseType>).data
+        ?? (response as ApiResponse<InstitutionResponseType>).content
+        ?? (response as InstitutionResponseType);
+
+      return {
+        status: "success",
+        data: this.normalizeInstitution(payload as any) as InstitutionResponseType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
+        error: this.createNetworkErrorResponse()
+      };
+    }
   }
 }
