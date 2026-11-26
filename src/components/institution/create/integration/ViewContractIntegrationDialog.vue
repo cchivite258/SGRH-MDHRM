@@ -2,6 +2,7 @@
 import { PropType, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import Status from "@/app/common/components/Status.vue";
+import type { MenuSelectItemType } from "@/app/common/components/filters/types";
 import { integrationUsageOptions } from "@/components/settings/integration/listView/utils";
 import type { ContractIntegration } from "@/components/institution/create/integration/types";
 import {
@@ -41,7 +42,7 @@ const display = (value?: string | number | null) => {
 };
 
 const optionLabel = (
-  options: { label: string; value: string | number }[],
+  options: MenuSelectItemType[],
   value?: string | null
 ) => {
   if (!value) return "-";

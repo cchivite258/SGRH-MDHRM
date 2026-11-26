@@ -24,7 +24,7 @@ export const genderOptions: MenuSelectItemType[] = [
 ];
 
 export const maritalStatusOptions: MenuSelectItemType[] = [
-  { value: undefined, label: "Selecione o Estado Cívil" },
+  { label: "Selecione o Estado Cívil" },
   {
     label: "Solteiro",
     value: "SINGLE"

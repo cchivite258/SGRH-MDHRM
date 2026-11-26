@@ -1,4 +1,4 @@
 export type MenuSelectItemType = {
-  label: string ;
-  value: string | number | undefined;
+  label: string;
+  value?: string | number;
 };
