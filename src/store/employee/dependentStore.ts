@@ -2,12 +2,14 @@
 import { defineStore } from 'pinia';
 import { MAX_PAGE_SIZE } from "@/app/const";
 import { dependentEmployeeService } from "@/app/http/httpServiceProvider";
-import type { DependentListingType } from '@/components/employee/types';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { useAuthStore } from "@/store/authStore";
+import type { DependentListingType, DependentReferenceType } from '@/components/employee/types';
 
 export const useDependentEmployeeStore = defineStore('dependents', { 
   state: () => ({
     dependents: [] as DependentListingType[],
-    dependentsForDropdown: [] as DependentListingType[],
+    dependentsForDropdown: [] as DependentReferenceType[],
     pagination: { 
       totalElements: 0,
       currentPage: 0,
@@ -77,6 +79,13 @@ export const useDependentEmployeeStore = defineStore('dependents', {
     
       const actualPage = page ?? this.pagination.currentPage;
       const actualSize = size ?? MAX_PAGE_SIZE;
+
+      const authStore = useAuthStore();
+      if (!PERMISSIONS.EMPLOYEE.DEPENDENTS_REFERENCE.some((permission) => authStore.hasPermission(permission))) {
+        this.dependentsForDropdown = [];
+        this.loading = false;
+        return;
+      }
 
       try {
         const { content, meta } = await dependentEmployeeService.getDependentbyEmployeeForDropdown(

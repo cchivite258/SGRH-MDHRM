@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia';
 import { MAX_PAGE_SIZE } from "@/app/const";
 import { employeeService } from "@/app/http/httpServiceProvider";
-import type { EmployeeListingType, EmployeeInsertType } from '@/components/employee/types';
+import type { EmployeeListingType, EmployeeReferenceType, EmployeeInsertType } from '@/components/employee/types';
 import EmployeeService from '@/app/http/services/employee/employeeService';
+import { PERMISSIONS } from "@/app/permissions/constants";
+import { useAuthStore } from "@/store/authStore";
 import { clear } from 'console';
 
 interface EmployeeStats {
@@ -20,7 +22,7 @@ export const useEmployeeStore = defineStore('employees', {
   state: () => ({
     employees: [] as EmployeeListingType[],
     company_employees: [] as EmployeeListingType[],
-    employeesForDropdown: [] as EmployeeListingType[],
+    employeesForDropdown: [] as EmployeeReferenceType[],
     pagination: {
       totalElements: 0,
       currentPage: 0,
@@ -220,6 +222,14 @@ export const useEmployeeStore = defineStore('employees', {
 
       const actualPage = page ?? this.employeesForDropdownPagination.currentPage;
       const actualSize = size ?? MAX_PAGE_SIZE;
+
+      const authStore = useAuthStore();
+      if (!PERMISSIONS.EMPLOYEE.REFERENCE.some((permission) => authStore.hasPermission(permission))) {
+        this.employeesForDropdown = [];
+        this.employeesForDropdownPagination.totalElements = 0;
+        this.loading = false;
+        return;
+      }
 
       try {
         const { content, meta } = await employeeService.getEmployeesForDropdown(

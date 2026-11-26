@@ -13,6 +13,8 @@ import { useToast } from 'vue-toastification';
 import { useI18n } from 'vue-i18n';
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
 import { normalizeObjectStringFieldsInPlace } from "@/app/common/normalizers";
+import { ERP_CODE_MAX_LENGTH, normalizePaymentOrderCode, paymentOrderCodeRules, shouldSavePaymentOrderCode } from "@/app/common/paymentOrderData";
+import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 
 // Components
 import ButtonNav from "@/components/employee/create/ButtonNav.vue";
@@ -128,6 +130,12 @@ const canSaveEmployee = computed(() => (
     ? can(PERMISSIONS.EMPLOYEE.CREATE)
     : can(PERMISSIONS.EMPLOYEE.UPDATE)
 ));
+const canEditPaymentOrderData = computed(() => can(PERMISSIONS.EMPLOYEE.UPDATE_PAYMENT_ORDER_DATA));
+const erpCodeRules = computed(() => paymentOrderCodeRules(
+  ERP_CODE_MAX_LENGTH,
+  t("t-erp-code-invalid"),
+  t("t-erp-code-maximum")
+));
 const isFormReadonly = computed(() => !canSaveEmployee.value);
 const headerSaveLabel = computed(() => step.value === 1 ? t('t-proceed') : t('t-save-and-proceed'));
 const accessibleEmployeeFormTabs = computed(() => getAllowedFormTabs(EMPLOYEE_FORM_TABS, canAny));
@@ -201,6 +209,9 @@ const getDefaultEmployeeData = (): EmployeeInsertType => ({
 
   // Dados da segunda tab
   baseSalary: null,
+  grossSalary: null,
+  netSalary: null,
+  erpCode: null,
   company: undefined,
   department: undefined,
   position: undefined,
@@ -212,9 +223,11 @@ const getDefaultEmployeeData = (): EmployeeInsertType => ({
 
 // Dados reativos do formulário
 let employeeData = reactive<EmployeeInsertType>(getDefaultEmployeeData());
+const persistedErpCode = ref("");
 
 const resetEmployeeData = () => {
   Object.assign(employeeData, getDefaultEmployeeData());
+  persistedErpCode.value = "";
 };
 
 const loadEmployeeData = async (id: string) => {
@@ -228,6 +241,7 @@ const loadEmployeeData = async (id: string) => {
 
     const data = response.data;
     Object.assign(employeeData, data);
+    persistedErpCode.value = normalizePaymentOrderCode(data.erpCode);
 
     employeeData.country = resolveRelationId(data.country) as string | undefined;
     employeeData.province = resolveRelationId(data.province) as string | undefined;
@@ -524,7 +538,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 6 ? 5 : tabNumber);
+      onStepChange(tabNumber);
     }
   }
 }, { immediate: true });
@@ -595,6 +609,26 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
       }
     }
 
+    const savedEmployeeId = employeeId.value;
+    if (
+      savedEmployeeId &&
+      can(PERMISSIONS.EMPLOYEE.UPDATE_PAYMENT_ORDER_DATA) &&
+      shouldSavePaymentOrderCode(normalizedPayload.erpCode, persistedErpCode.value, !isEdit)
+    ) {
+      const paymentResponse = await employeeService.updatePaymentOrderData(
+        savedEmployeeId,
+        normalizePaymentOrderCode(normalizedPayload.erpCode)
+      );
+
+      if (paymentResponse.status === "error") {
+        handleApiError(paymentResponse.error);
+        return;
+      }
+
+      persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? normalizedPayload.erpCode);
+      employeeData.erpCode = persistedErpCode.value || null;
+    }
+
     // Salvar/limpar draft na store
     if (isFinalStep) {
       employeeStore.clearDraft();
@@ -622,6 +656,40 @@ const saveEmployee = async (payload: EmployeeInsertType, isFinalStep: boolean = 
     loading.value = false;
   }
 };
+
+const saveEmployeePaymentOrder = async () => {
+  const savedEmployeeId = employeeId.value;
+  if (!savedEmployeeId || !canEditPaymentOrderData.value) return;
+
+  if (!shouldSavePaymentOrderCode(employeeData.erpCode, persistedErpCode.value, false)) {
+    toast.success(t("t-employee-updated-success"));
+    return;
+  }
+
+  loading.value = true;
+  errorMsg.value = "";
+  try {
+    const paymentResponse = await employeeService.updatePaymentOrderData(
+      savedEmployeeId,
+      normalizePaymentOrderCode(employeeData.erpCode)
+    );
+
+    if (paymentResponse.status === "error") {
+      handleApiError(paymentResponse.error);
+      return;
+    }
+
+    persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? employeeData.erpCode);
+    employeeData.erpCode = persistedErpCode.value || null;
+    toast.success(t("t-employee-updated-success"));
+  } catch (error) {
+    handleApiError(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+watch(() => employeeData.erpCode, () => clearApiFieldError("erpCode"));
 
 // Limpeza ao desmontar o componente
 onBeforeUnmount(() => {
@@ -700,6 +768,20 @@ onBeforeUnmount(() => {
       :employee-id="employeeId"
       :previous-step="previousEmployeeStep"
       :next-step="nextEmployeeStep"
+    />
+  </FormCard>
+
+  <FormCard v-if="step === 6 && isEmployeeStepAllowed(6)" class="employee-form-section">
+    <IntegrationDataCard
+      v-model="employeeData.erpCode"
+      :label="t('t-erp-code')"
+      :placeholder="t('t-enter-erp-code')"
+      :rules="erpCodeRules"
+      :disabled="!canEditPaymentOrderData"
+      :error-messages="apiFieldErrors.erpCode || []"
+      :loading="loading"
+      :show-save="canEditPaymentOrderData && !!employeeId"
+      @save="saveEmployeePaymentOrder"
     />
   </FormCard>
 

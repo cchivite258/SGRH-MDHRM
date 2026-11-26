@@ -10,7 +10,6 @@ import { useToast } from 'vue-toastification';
 
 // Components
 import MenuSelect from "@/app/common/components/filters/MenuSelect.vue";
-import ProcedureCategorySelect from "@/components/invoice/ProcedureCategorySelect.vue";
 import Table from "@/app/common/components/Table.vue";
 
 // Stores
@@ -20,6 +19,7 @@ import { useHealthPlanStore } from "@/store/institution/healthPlanStore";
 
 // Types e Utils
 import { InvoiceItemInsertType } from "@/components/invoice/types";
+import { readProcedureLabel } from "@/components/invoice/procedureLabel";
 import { invoiceItemFlagCatalogue } from "@/components/invoice/invoiceItemFlagCatalogue";
 import { productHeaderView } from "@/components/invoice/createInvoice/utils";
 import type { HospitalProcedureListingType } from "@/components/institution/types";
@@ -130,6 +130,19 @@ const companyAllowedHospitalProcedures = computed(() => {
 
   return [...options, ...fallbackOptions];
 });
+
+const procedureLabel = (item: InvoiceItem) => {
+  const saved = String(item.companyAllowedHospitalProcedureLabel || "").trim();
+  if (saved) return saved;
+
+  const option = companyAllowedHospitalProcedures.value.find(
+    option => String(option.value) === String(item.companyAllowedHospitalProcedure)
+  );
+  const label = String(option?.label || "").trim();
+  if (label && label !== "-") return label;
+
+  return readProcedureLabel(item.companyAllowedHospitalProcedure);
+};
 
 const taxRates = computed(() => 
   taxRateStore.tax_rates_for_dropdown.map(item => ({
@@ -371,8 +384,8 @@ watch(invoiceItems, (newItems) => {
 }, { deep: true });
 
 
-watch([() => props.institutionId, () => props.healthplanId], ([newInstitutionId]) => {
-  if (newInstitutionId) {
+watch([() => props.institutionId, () => props.healthplanId], ([institutionId, healthplanId]) => {
+  if (institutionId || healthplanId) {
     loadProcedures();
   }
 }, { immediate: true });
@@ -427,14 +440,10 @@ onMounted(() => {
 
           <!-- Procedimento -->
           <td style="width: 30%" class="pt-4">
-            <ProcedureCategorySelect
-              v-model="item.companyAllowedHospitalProcedure" 
-              :items="companyAllowedHospitalProcedures"
-              :rules="requiredRules.companyAllowedHospitalProcedure" 
-              :placeholder="$t('t-select-procedure')"
-              :procedure-title="$t('t-hospital-procedure')"
-              :category-title="$t('t-hospital-procedure-category')"
-              class="w-100" 
+            <TextField
+              :model-value="procedureLabel(item)"
+              :placeholder="$t('t-hospital-procedure')"
+              class="w-100"
               disabled
             />
           </td>

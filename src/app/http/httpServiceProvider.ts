@@ -15,6 +15,7 @@ import ServiceProviderInstitutionService from "@/app/http/services/institution/s
 import ServiceProviderContractExtensionService from "@/app/http/services/institution/serviceProviderContractExtensionService";
 import ContractAttachmentService from "@/app/http/services/institution/contractAttachmentService";
 import ContractParticipantService from "@/app/http/services/institution/contractParticipantService";
+import ContractIntegrationService from "@/app/http/services/institution/contractIntegrationService";
 import CoveragePeriodExtensionService from "@/app/http/services/institution/coveragePeriodExtensionService";
 import ServiceProviderService from "@/app/http/services/serviceProvider/serviceProviderService";
 import ServiceProviderAttachmentService from "@/app/http/services/serviceProvider/serviceProviderAttachmentService";
@@ -45,6 +46,12 @@ import BudgetService from "@/app/http/services/institution/budgetService";
 import AlertConfigurationService from "@/app/http/services/settings/alertConfigurationService";
 import ScheduledParameterService from "@/app/http/services/settings/scheduledParameterService";
 import CodeConfigService from "@/app/http/services/settings/codeConfigService";
+import PeriodConfigService from "@/app/http/services/settings/periodConfigService";
+import IntegrationDefinitionService from "@/app/http/services/settings/integrationDefinitionService";
+import PaymentOrderPeriodService from "@/app/http/services/amm/paymentOrderPeriodService";
+import PaymentOrderService from "@/app/http/services/amm/paymentOrderService";
+import RefundDeductionPeriodService from "@/app/http/services/amm/refundDeductionPeriodService";
+import RefundDeductionOrderService from "@/app/http/services/amm/refundDeductionOrderService";
 
 //Reports
 import CompanyHospitalProceduresBalancesService from "@/app/http/services/ammReports/companyHospitalProceduresBalancesService";
@@ -84,6 +91,7 @@ const serviceProviderAttachmentService = new ServiceProviderAttachmentService();
 const serviceProviderContractExtensionService = new ServiceProviderContractExtensionService();
 const contractAttachmentService = new ContractAttachmentService();
 const contractParticipantService = new ContractParticipantService();
+const contractIntegrationService = new ContractIntegrationService();
 const coveragePeriodExtensionService = new CoveragePeriodExtensionService();
 const contactPersonService = new ContactPersonService();
 const hospitalProcedureService = new HospitalProcedureService();
@@ -127,6 +135,12 @@ const reasonService = new ReasonService();
 const alertConfigurationService = new AlertConfigurationService();
 const scheduledParameterService = new ScheduledParameterService();
 const codeConfigService = new CodeConfigService();
+const periodConfigService = new PeriodConfigService();
+const integrationDefinitionService = new IntegrationDefinitionService();
+const paymentOrderPeriodService = new PaymentOrderPeriodService();
+const paymentOrderService = new PaymentOrderService();
+const refundDeductionPeriodService = new RefundDeductionPeriodService();
+const refundDeductionOrderService = new RefundDeductionOrderService();
 
 // FakeBackendService is used for mocking API responses
 const fakeBackendService = new FakeBackendService();
@@ -160,6 +174,7 @@ export {
     serviceProviderContractExtensionService,
     contractAttachmentService,
     contractParticipantService,
+    contractIntegrationService,
     coveragePeriodExtensionService,
     contactPersonService,
     serviceProviderInstitutionService,
@@ -176,6 +191,12 @@ export {
     alertConfigurationService,
     scheduledParameterService,
     codeConfigService,
+    periodConfigService,
+    integrationDefinitionService,
+    paymentOrderPeriodService,
+    paymentOrderService,
+    refundDeductionPeriodService,
+    refundDeductionOrderService,
     budgetService,
     companyHospitalProceduresBalancesService,
     costPerEmployeeService,

@@ -215,4 +215,30 @@ export default class DepartmentService extends HttpService {
       throw error;
     }
   }
+
+  async updatePaymentOrderData(id: string, costCenterAccount: string): Promise<ServiceResponse<DepartmentListingForListType>> {
+    try {
+      const response = await this.put<ApiResponse<DepartmentListingForListType>>(
+        `${DEPARTMENTS_ENDPOINT}/${id}/payment-order-data`,
+        { costCenterAccount }
+      );
+
+      return {
+        status: "success",
+        data: normalizeDepartment((response.data ?? response.content ?? response) as any) as DepartmentListingForListType
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
+        error: this.NetworkErrorResponse()
+      };
+    }
+  }
 }

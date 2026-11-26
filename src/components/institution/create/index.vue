@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useToast } from "vue-toastification";
 import { useI18n } from "vue-i18n";
 import { getApiErrorMessages, getApiValidationErrors } from "@/app/common/apiErrors";
+import { normalizePaymentOrderCode, shouldSavePaymentOrderCode } from "@/app/common/paymentOrderData";
 
 import ButtonNav from "@/components/institution/create/ButtonNav.vue";
 import FormCard from "@/app/common/components/FormCard.vue";
@@ -16,9 +17,11 @@ import Step4 from "@/components/institution/create/TabOrganizationalStructure.vu
 import Step5 from "@/components/institution/create/TabContacts.vue";
 import Step6 from "@/components/institution/create/TabServiceProvider.vue";
 import Step7 from "@/components/institution/create/TabEmployees.vue";
+import Step8 from "@/components/institution/create/integration/TabIntegrations.vue";
 
 import { InstitutionInsertType } from "../types";
 import { institutionService } from "@/app/http/httpServiceProvider";
+import { PERMISSIONS } from "@/app/permissions/constants";
 import { CONTRACT_FORM_TABS, getAllowedFormTabs } from "@/app/permissions/formTabs";
 import { usePermissions } from "@/composables/usePermissions";
 
@@ -26,7 +29,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const { canAny } = usePermissions();
+const { can, canAny } = usePermissions();
 
 const props = defineProps({
   cardTitle: {
@@ -67,6 +70,7 @@ const onHeaderSave = async () => {
   await step1Ref.value?.submitGeneralInfo();
 };
 
+const persistedErpCode = ref("");
 const institutionData = reactive<InstitutionInsertType>({
   code: null,
   erpCode: null,
@@ -114,6 +118,7 @@ const loadInstitutionData = async (id: string) => {
     institutionData.name = data.name || data.companyDetails?.name || "";
     institutionData.code = data.code || null;
     institutionData.erpCode = data.erpCode || null;
+    persistedErpCode.value = normalizePaymentOrderCode(data.erpCode);
     institutionData.description = data.description || data.companyDetails?.description || null;
     institutionData.companyDetailsId = data.companyDetailsId || data.companyDetails?.id;
     institutionData.address = data.address || data.companyDetails?.address || null;
@@ -158,9 +163,9 @@ const saveInstitution = async () => {
 
   try {
     let response: any;
+    const erpCodeToSave = normalizePaymentOrderCode(institutionData.erpCode);
     if (institutionId.value) {
       await institutionService.updateInstitution(institutionId.value, institutionData);
-      toast.success(t("t-institution-updated-success"));
     } else {
       response = await institutionService.createInstitution(institutionData);
       if (response?.status === "error") {
@@ -177,12 +182,30 @@ const saveInstitution = async () => {
       if (institutionId.value) {
         const createdContract = await institutionService.getInstitutionById(institutionId.value);
         institutionData.code = createdContract.data.code || null;
-        institutionData.erpCode = createdContract.data.erpCode || institutionData.erpCode || null;
       }
 
       basicDataValidated.value = true;
-      toast.success(t("t-institution-created-success"));
     }
+
+    if (
+      institutionId.value &&
+      can(PERMISSIONS.CONTRACTS.UPDATE_PAYMENT_ORDER_DATA) &&
+      shouldSavePaymentOrderCode(erpCodeToSave, persistedErpCode.value, isNewInstitution)
+    ) {
+      const paymentResponse = await institutionService.updatePaymentOrderData(institutionId.value, erpCodeToSave);
+      if (paymentResponse.status === "error") {
+        const messages = getApiErrorMessages(paymentResponse.error, t("t-message-save-error"));
+        apiFieldErrors.value = getApiValidationErrors(paymentResponse.error);
+        messages.forEach((m) => toast.error(m));
+        errorMsg.value = Object.keys(apiFieldErrors.value).length ? "" : messages.join("\n");
+        return;
+      }
+
+      persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? erpCodeToSave);
+      institutionData.erpCode = persistedErpCode.value || null;
+    }
+
+    toast.success(isNewInstitution ? t("t-institution-created-success") : t("t-institution-updated-success"));
 
     if (step.value === 1 && !isNewInstitution) {
       goToNextAvailableStep();
@@ -197,12 +220,48 @@ const saveInstitution = async () => {
   }
 };
 
+const saveContractPaymentOrder = async () => {
+  if (!institutionId.value || !can(PERMISSIONS.CONTRACTS.UPDATE_PAYMENT_ORDER_DATA)) return;
+
+  const erpCodeToSave = normalizePaymentOrderCode(institutionData.erpCode);
+  if (!shouldSavePaymentOrderCode(erpCodeToSave, persistedErpCode.value, false)) {
+    toast.success(t("t-institution-updated-success"));
+    return;
+  }
+
+  loading.value = true;
+  errorMsg.value = "";
+  apiFieldErrors.value = {};
+  try {
+    const paymentResponse = await institutionService.updatePaymentOrderData(institutionId.value, erpCodeToSave);
+    if (paymentResponse.status === "error") {
+      const messages = getApiErrorMessages(paymentResponse.error, t("t-message-save-error"));
+      apiFieldErrors.value = getApiValidationErrors(paymentResponse.error);
+      messages.forEach((message) => toast.error(message));
+      errorMsg.value = Object.keys(apiFieldErrors.value).length ? "" : messages.join("\n");
+      return;
+    }
+
+    persistedErpCode.value = normalizePaymentOrderCode(paymentResponse.data?.erpCode ?? erpCodeToSave);
+    institutionData.erpCode = persistedErpCode.value || null;
+    toast.success(t("t-institution-updated-success"));
+  } catch (error) {
+    const messages = getApiErrorMessages(error, t("t-message-save-error"));
+    apiFieldErrors.value = getApiValidationErrors(error);
+    messages.forEach((message) => toast.error(message));
+    errorMsg.value = Object.keys(apiFieldErrors.value).length ? "" : messages.join("\n");
+  } finally {
+    loading.value = false;
+  }
+};
+
 const applyRouteTab = () => {
   const routeTab = toSingleString(route.query.tab);
   if (!routeTab) return;
 
   const tabNumber = Number(routeTab);
-  if (isNaN(tabNumber) || tabNumber < 1 || tabNumber > 7) return;
+  const maxContractFormTab = Math.max(...CONTRACT_FORM_TABS.map((tab) => tab.value));
+  if (isNaN(tabNumber) || tabNumber < 1 || tabNumber > maxContractFormTab) return;
 
   onStepChange(tabNumber);
 };
@@ -275,7 +334,7 @@ onMounted(async () => {
     />
   </FormCard>
 
-  <FormCard v-if="step === 1 && isContractStepAllowed(1) && institutionId" class="institution-form-section institution-form-section--responsibles">
+  <FormCard v-if="step === 1 && isContractStepAllowed(1) && institutionId" class="institution-form-section">
     <ContractResponsibles :contract-id="institutionId" />
   </FormCard>
 
@@ -333,6 +392,21 @@ onMounted(async () => {
     />
   </FormCard>
 
+  <FormCard v-if="step === 8 && isContractStepAllowed(8)" class="institution-form-section">
+    <Step8
+      @onStepChange="onStepChange"
+      :institution-id="institutionId"
+      :previous-step="previousContractStep"
+      :next-step="nextContractStep"
+      :erp-code="institutionData.erpCode || ''"
+      :can-edit-payment-order="can(PERMISSIONS.CONTRACTS.UPDATE_PAYMENT_ORDER_DATA)"
+      :payment-order-errors="apiFieldErrors.erpCode || []"
+      :payment-order-loading="loading"
+      @update:erp-code="institutionData.erpCode = $event || null"
+      @save-payment-order="saveContractPaymentOrder"
+    />
+  </FormCard>
+
   <div v-if="step === 1" class="institution-form-footer-actions">
     <v-btn
       class="institution-form-footer-actions__save"
@@ -365,10 +439,6 @@ onMounted(async () => {
 
 .institution-form-section + .institution-form-section {
   margin-top: 24px;
-}
-
-.institution-form-section--responsibles :deep(.form-card__body) {
-  padding-top: 0 !important;
 }
 
 .institution-form-footer-actions {

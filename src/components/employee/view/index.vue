@@ -24,6 +24,7 @@ import Step2 from "@/components/employee/view/TabInstitution&Classification.vue"
 import Step3 from "@/components/employee/view/TabSalaryReview.vue";
 import Step4 from "@/components/employee/view/TabDependents.vue";
 import Step5 from "@/components/employee/view/TabHealthPlan.vue";
+import IntegrationDataCard from "@/components/shared/IntegrationDataCard.vue";
 
 // Stores
 import { useEmployeeStore } from '@/store/employee/employeeStore';
@@ -153,6 +154,9 @@ let employeeData = reactive<EmployeeInsertType>({
 
   // Dados da segunda tab
   baseSalary: null,
+  grossSalary: null,
+  netSalary: null,
+  erpCode: null,
   company: undefined,
   department: undefined,
   position: undefined
@@ -396,7 +400,7 @@ watch(() => route.query.tab, (newTab) => {
   if (newTab) {
     const tabNumber = Number(newTab);
     if (!isNaN(tabNumber)) {  // Corrigido: parêntese fechando
-      onStepChange(tabNumber === 6 ? 5 : tabNumber);
+      onStepChange(tabNumber);
     }
   }
 }, { immediate: true });
@@ -518,6 +522,14 @@ onBeforeUnmount(() => {
         :next-step="nextEmployeeStep"
       />
 
+  </FormCard>
+
+  <FormCard v-if="step === 6 && isEmployeeStepAllowed(6)" class="employee-form-section">
+    <IntegrationDataCard
+      :model-value="employeeData.erpCode"
+      :label="t('t-erp-code')"
+      readonly
+    />
   </FormCard>
 
   <TerminateEmployeeContractDialog

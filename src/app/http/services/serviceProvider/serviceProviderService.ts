@@ -22,7 +22,6 @@ const toNullableNumber = (value: number | string | null | undefined): number | n
 
 const toServiceProviderPayload = (serviceProviderData: ServiceProviderInsertType): ServiceProviderInsertType => ({
   name: serviceProviderData.name,
-  erpCode: serviceProviderData.erpCode || null,
   description: serviceProviderData.description,
   address: serviceProviderData.address,
   phone: serviceProviderData.phone,
@@ -204,6 +203,33 @@ export default class ServiceProviderService extends HttpService {
       }
       return {
         status: 'error',
+        error: this.createNetworkErrorResponse()
+      };
+    }
+  }
+
+  async updatePaymentOrderData(id: string, erpCode: string): Promise<ServiceResponse<ServiceProviderResponseType>> {
+    try {
+      const response = await this.put<ApiResponse<ServiceProviderResponseType> | ServiceProviderResponseType>(
+        `/administration/service-provider/${id}/payment-order-data`,
+        { erpCode }
+      );
+      const data = (response as ApiResponse<ServiceProviderResponseType>).data ?? (response as ServiceProviderResponseType);
+
+      return {
+        status: "success",
+        data
+      };
+    } catch (error: any) {
+      if (error.response) {
+        return {
+          status: "error",
+          error: error.response.data as ApiErrorResponse
+        };
+      }
+
+      return {
+        status: "error",
         error: this.createNetworkErrorResponse()
       };
     }

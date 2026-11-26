@@ -63,7 +63,7 @@ export default class InvoiceItemService extends HttpService {
         queryParams.push(`query_value=${encodeURIComponent(query_value)}`);
       }
 
-      const includesToUse = 'taxRate,contractAllowedHospitalProcedure';
+      const includesToUse = 'taxRate,contractAllowedHospitalProcedure,contractAllowedHospitalProcedure.hospitalProcedureType';
       queryParams.push(`includes=${includesToUse}`);
 
       const queryString = queryParams.join('&');
@@ -124,7 +124,7 @@ export default class InvoiceItemService extends HttpService {
   async getInvoiceItemById(id: string): Promise<{ data: InvoiceItemListingType }> {
     try {
       const response = await this.get<{ data: InvoiceItemListingType; meta: any }>(
-        `${INVOICE_ITEMS_ENDPOINT}/${id}?includes=invoice,contractAllowedHospitalProcedure`
+        `${INVOICE_ITEMS_ENDPOINT}/${id}?includes=invoice,contractAllowedHospitalProcedure,contractAllowedHospitalProcedure.hospitalProcedureType`
       );
       console.log('Resposta da requisição getInvoiceItemById:------------------------', response);
 

@@ -15,7 +15,7 @@ import { usePermissions } from "@/composables/usePermissions";
 
 const { t } = useI18n();
 const userStore = useUserStore();
-const { can, canAny } = usePermissions();
+const { canAny } = usePermissions();
 
 const emit = defineEmits<{
   (e: "onStepChange", step: number): void;
@@ -136,7 +136,6 @@ watch(
 watch(() => serviceProviderData.value.contractStartDate, () => emit("clear-server-error", "contractStartDate"));
 watch(() => serviceProviderData.value.contractEndDate, () => emit("clear-server-error", "contractEndDate"));
 watch(() => serviceProviderData.value.responsibleId, () => emit("clear-server-error", "responsibleId"));
-watch(() => serviceProviderData.value.erpCode, () => emit("clear-server-error", "erpCode"));
 watch(() => serviceProviderData.value.isBusinessDays, () => emit("clear-server-error", "isBusinessDays"));
 watch(() => serviceProviderData.value.maxDaysAfterService, () => emit("clear-server-error", "maxDaysAfterService"));
 
@@ -232,16 +231,6 @@ defineExpose({ submitForm, validateForm });
               {{ $t('t-contract-code') }}
             </div>
             <TextField :model-value="serviceProviderData.code || ''" :disabled="true" />
-          </v-col>
-
-          <v-col cols="12" lg="6">
-            <div class="font-weight-bold mb-2">
-              {{ $t('t-erp-code') }}
-            </div>
-            <TextField
-              v-model="serviceProviderData.erpCode"
-              :error-messages="getServerErrors('erpCode')"
-            />
           </v-col>
         </v-row>
 

@@ -113,7 +113,7 @@ import { useToast } from 'vue-toastification';
 import MenuSelect from '@/app/common/components/filters/MenuSelect.vue';
 import QuerySearch from "@/app/common/components/filters/QuerySearch.vue";
 import { format } from 'date-fns';
-import type { InstitutionListingType, CoveragePeriodListingType } from '@/components/institution/types';
+import type { InstitutionReferenceType, CoveragePeriodListingType } from '@/components/institution/types';
 import type { ServiceProviderListingType } from '@/components/serviceProvider/types';
 import type { CurrencyListingType } from '@/components/baseTables/currency/types';
 
@@ -236,7 +236,7 @@ const enumOptions = {
 const advancedFilters = ref<AdvancedFilter[]>([]);
 
 const companyOptions = computed<SelectOption[]>(() =>
-    (institutionStore.enabledInstitutions as InstitutionListingType[]).map((item) => ({
+    (institutionStore.enabledInstitutions as InstitutionReferenceType[]).map((item) => ({
         text: item.name,
         value: item.name
     }))
@@ -281,7 +281,7 @@ const getFilterValue = (field: string) =>
     advancedFilters.value.find((filter) => filter.prop === field)?.value;
 
 const findCompanyIdByName = (name: string) =>
-    (institutionStore.enabledInstitutions as InstitutionListingType[]).find((item) => item.name === name)?.id;
+    (institutionStore.enabledInstitutions as InstitutionReferenceType[]).find((item) => item.name === name)?.id;
 
 const getEnumOptions = (field: string) => {
     const enumType = getFieldDefinition(field)?.enumType;

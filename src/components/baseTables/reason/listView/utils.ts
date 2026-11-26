@@ -29,4 +29,6 @@ export const reasonTypeOptions: { label: string; value: ReasonType }[] = [
   { label: "t-reason-type-employee-termination", value: "EMPLOYEE_TERMINATION" },
   { label: "t-reason-type-coverage-period-extension", value: "COVERAGE_PERIOD_EXTENSION" },
   { label: "t-reason-type-service-provider-contract-extension", value: "SERVICE_PROVIDER_CONTRACT_EXTENSION" },
+  { label: "t-reason-type-refund-deduction-unprocess", value: "REFUND_DEDUCTION_UNPROCESS" },
+  { label: "t-reason-type-refund-deduction-reopen", value: "REFUND_DEDUCTION_REOPEN" },
 ];
