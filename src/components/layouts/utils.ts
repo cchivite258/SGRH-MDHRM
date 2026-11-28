@@ -245,6 +245,7 @@ export const menuItems: MenuItemType[] = [
       { label: "contract-code-configs", link: "/settings/code-configs", anyPermissions: PERMISSIONS.SETTINGS.CODE_CONFIG.ACCESS },
       { label: "period-configs", link: "/settings/period-configs", anyPermissions: PERMISSIONS.SETTINGS.PERIOD_CONFIG.ACCESS },
       { label: "integrations", link: "/settings/integrations", anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.ACCESS },
+      { label: "integration-source-codes", link: "/settings/integration-source-codes", anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_SOURCE_CODE.ACCESS },
      // { label: "functions", link: "/auth/signup" },
     ],
   },

@@ -12,6 +12,7 @@ import { integrationDefinitionService } from "@/app/http/httpServiceProvider";
 import { getApiErrorMessages } from "@/app/common/apiErrors";
 import CreateUpdateIntegrationModal from "@/components/settings/integration/CreateUpdateIntegrationModal.vue";
 import IntegrationConnectionTestDialog from "@/components/settings/integration/IntegrationConnectionTestDialog.vue";
+import ManageIntegrationUsagesModal from "@/components/settings/integration/ManageIntegrationUsagesModal.vue";
 import ViewIntegrationModal from "@/components/settings/integration/ViewIntegrationModal.vue";
 import { listViewHeader } from "@/components/settings/integration/listView/utils";
 import type {
@@ -20,6 +21,7 @@ import type {
   IntegrationDefinitionId,
   IntegrationDefinitionListing,
   IntegrationDefinitionOption,
+  IntegrationDefinitionUsage,
 } from "@/components/settings/integration/types";
 import type { OptionType } from "@/app/common/types/option.type";
 import { PERMISSIONS } from "@/app/permissions/constants";
@@ -32,10 +34,12 @@ const { can, canAny } = usePermissions();
 
 const dialog = ref(false);
 const viewDialog = ref(false);
+const usagesDialog = ref(false);
 const deleteDialog = ref(false);
 const connectionTestDialog = ref(false);
 const connectionTestResult = ref<IntegrationConnectionTestResult | null>(null);
 const integrationData = ref<IntegrationDefinitionListing | IntegrationDefinitionForm | null>(null);
+const usageDefinition = ref<IntegrationDefinitionListing | null>(null);
 const deleteId = ref<IntegrationDefinitionId | null>(null);
 const deleteLoading = ref(false);
 const statusLoadingId = ref<IntegrationDefinitionId | null>(null);
@@ -71,6 +75,7 @@ const canTestConnection = computed(() => can(PERMISSIONS.SETTINGS.INTEGRATION_DE
 const actionOptions = computed<OptionType[]>(() => [
   { title: "Consultar", value: "view", icon: "ph-eye" },
   { title: "Editar", value: "edit", icon: "ph-pencil-simple" },
+  { title: "Utilizações", value: "usages", icon: "ph-list-bullets" },
   { title: t("t-test-integration-connection"), value: "test-connection", icon: "ph-plugs-connected" },
   { title: "Activar", value: "activate", icon: "ph-check-circle" },
   { title: "Desactivar", value: "deactivate", icon: "ph-x-circle" },
@@ -80,6 +85,12 @@ const actionOptions = computed<OptionType[]>(() => [
 const actionPermissionByValue: Record<string, PermissionRequirement> = {
   view: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.VIEW,
   edit: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.UPDATE,
+  usages: [
+    PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.VIEW,
+    PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.CREATE,
+    PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.UPDATE,
+    PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.DELETE,
+  ],
   "test-connection": PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.TEST_CONNECTION,
   activate: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.ACTIVATE,
   deactivate: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.DEACTIVATE,
@@ -163,6 +174,12 @@ watch(viewDialog, (newVal: boolean) => {
   }
 });
 
+watch(usagesDialog, (newVal: boolean) => {
+  if (!newVal) {
+    usageDefinition.value = null;
+  }
+});
+
 watch(deleteDialog, (newVal: boolean) => {
   if (!newVal) {
     deleteId.value = null;
@@ -188,6 +205,22 @@ const onViewClick = (data: IntegrationDefinitionListing) => {
 
   integrationData.value = data;
   viewDialog.value = true;
+};
+
+const onManageUsages = (data: IntegrationDefinitionListing) => {
+  if (!canAny(actionPermissionByValue.usages)) return;
+
+  usageDefinition.value = data;
+  usagesDialog.value = true;
+};
+
+const onUsagesUpdated = (usages: IntegrationDefinitionUsage[]) => {
+  const definitionId = usageDefinition.value?.id;
+  if (definitionId === undefined || definitionId === null) return;
+
+  integrations.value = integrations.value.map(item =>
+    item.id === definitionId ? { ...item, usages } : item
+  );
 };
 
 const onSubmit = async (data: IntegrationDefinitionForm, callbacks?: {
@@ -293,6 +326,7 @@ const onToggleActive = async (item: IntegrationDefinitionListing, activate: bool
 const onActionSelect = (option: string, item: IntegrationDefinitionListing) => {
   if (option === "view") onViewClick(item);
   if (option === "edit") onCreateEditClick(item);
+  if (option === "usages") onManageUsages(item);
   if (option === "test-connection") onTestConnection(item);
   if (option === "activate") onToggleActive(item, true);
   if (option === "deactivate") onToggleActive(item, false);
@@ -404,6 +438,13 @@ const display = (value?: string | null) => value?.trim() || "-";
     :data="integrationData as IntegrationDefinitionForm"
     :error="errorMsg"
     @onSubmit="onSubmit"
+  />
+
+  <ManageIntegrationUsagesModal
+    v-if="usagesDialog && usageDefinition"
+    v-model="usagesDialog"
+    :definition="usageDefinition"
+    @updated="onUsagesUpdated"
   />
 
   <ViewIntegrationModal

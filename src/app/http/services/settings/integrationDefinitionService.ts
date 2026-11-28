@@ -6,6 +6,8 @@ import type {
   IntegrationDefinitionId,
   IntegrationDefinitionListing,
   IntegrationDefinitionSummary,
+  IntegrationDefinitionUsage,
+  IntegrationDefinitionUsageForm,
   IntegrationUsageType,
 } from "@/components/settings/integration/types";
 
@@ -269,6 +271,80 @@ export default class IntegrationDefinitionService extends HttpService {
       }
 
       return toServiceError(error, endpoint);
+    }
+  }
+
+  async getIntegrationDefinitionUsages(
+    definitionId: IntegrationDefinitionId
+  ): Promise<IntegrationDefinitionUsage[]> {
+    try {
+      const response = await this.get<
+        ApiResponse<IntegrationDefinitionUsage[]> | IntegrationDefinitionUsage[]
+      >(`${INTEGRATION_DEFINITION_ENDPOINT}/${definitionId}/usages`);
+      const content = getContent(response);
+
+      return Array.isArray(content) ? content : [];
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async createIntegrationDefinitionUsage(
+    definitionId: IntegrationDefinitionId,
+    data: IntegrationDefinitionUsageForm
+  ): Promise<ServiceResponse<IntegrationDefinitionUsage>> {
+    const endpoint = `${INTEGRATION_DEFINITION_ENDPOINT}/${definitionId}/usages`;
+
+    try {
+      const response = await this.post<ApiResponse<IntegrationDefinitionUsage> | IntegrationDefinitionUsage>(
+        endpoint,
+        {
+          usage: data.usage,
+          integrationSourceCodeId: Number(data.integrationSourceCodeId),
+        }
+      );
+
+      return {
+        status: "success",
+        data: resolveItem(response),
+      };
+    } catch (error: any) {
+      return toServiceError(error, endpoint);
+    }
+  }
+
+  async updateIntegrationDefinitionUsage(
+    definitionId: IntegrationDefinitionId,
+    id: IntegrationDefinitionId,
+    data: Pick<IntegrationDefinitionUsageForm, "integrationSourceCodeId">
+  ): Promise<ServiceResponse<IntegrationDefinitionUsage>> {
+    const endpoint = `${INTEGRATION_DEFINITION_ENDPOINT}/${definitionId}/usages/${id}`;
+
+    try {
+      const response = await this.put<ApiResponse<IntegrationDefinitionUsage> | IntegrationDefinitionUsage>(
+        endpoint,
+        {
+          integrationSourceCodeId: Number(data.integrationSourceCodeId),
+        }
+      );
+
+      return {
+        status: "success",
+        data: resolveItem(response),
+      };
+    } catch (error: any) {
+      return toServiceError(error, endpoint);
+    }
+  }
+
+  async deleteIntegrationDefinitionUsage(
+    definitionId: IntegrationDefinitionId,
+    id: IntegrationDefinitionId
+  ): Promise<void> {
+    try {
+      await this.delete(`${INTEGRATION_DEFINITION_ENDPOINT}/${definitionId}/usages/${id}`);
+    } catch (error) {
+      throw this.handleError(error);
     }
   }
 

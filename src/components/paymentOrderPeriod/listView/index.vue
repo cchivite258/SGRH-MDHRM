@@ -90,11 +90,20 @@ const tableHeaders = computed(() => {
   const headers = [...listViewHeader];
   if (!isErpSection.value) return headers;
 
-  headers.splice(headers.length - 1, 0, {
-    title: "payment-order-external-batch-number",
-    key: "externalBatchNumber",
-    sortable: false,
-  });
+  headers.splice(
+    headers.length - 1,
+    0,
+    {
+      title: "payment-order-external-batch-number",
+      key: "externalBatchNumber",
+      sortable: false,
+    },
+    {
+      title: "payment-order-external-payables-batch-number",
+      key: "externalPayablesBatchNumber",
+      sortable: false,
+    }
+  );
   return headers;
 });
 
@@ -465,8 +474,11 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
               :label="statusLabel(item.status)"
             />
           </td>
-          <td v-if="isErpSection" data-label="Lote externo">
+          <td v-if="isErpSection" data-label="Lote GL">
             {{ item.externalBatchNumber || "-" }}
+          </td>
+          <td v-if="isErpSection" data-label="Lote AP">
+            {{ item.externalPayablesBatchNumber || "-" }}
           </td>
           <td data-label="Acção" class="payment-order-period-listing-table__actions-cell">
             <TableActionMenu
@@ -597,14 +609,45 @@ const onActionSelect = (option: string, item: PaymentOrderPeriodListing) => {
   width: 72px;
 }
 
-.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(6)),
-.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(6)) {
-  width: 18%;
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper) {
+  overflow-x: hidden;
 }
 
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td) {
+  width: auto;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(1)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(1)) {
+  width: 16%;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(2)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(2)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(3)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(3)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(4)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(4)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(5)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(5)) {
+  width: 11%;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(6)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(6)),
 .payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(7)),
 .payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(7)) {
-  width: 72px;
+  width: 14%;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > thead > tr > th:nth-child(8)),
+.payment-order-period-listing-page--erp :deep(.v-table__wrapper > table > tbody > tr > td:nth-child(8)) {
+  width: 10%;
+}
+
+.payment-order-period-listing-page--erp :deep(.v-data-table-header__content) {
+  white-space: normal;
 }
 
 .payment-order-period-listing-table__text {

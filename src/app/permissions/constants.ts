@@ -207,6 +207,12 @@ export const CLAIMS = {
     UPDATE: "update.integration.definition",
     DELETE: "delete.integration.definition",
   },
+  INTEGRATION_SOURCE_CODE: {
+    READ: "read.integration.source.code",
+    CREATE: "create.integration.source.code",
+    UPDATE: "update.integration.source.code",
+    DELETE: "delete.integration.source.code",
+  },
   PAYMENT_ORDER_PERIODS: {
     CREATE: "create.payment.order.periods",
     DELETE: "delete.payment.order.periods",
@@ -451,6 +457,10 @@ export const ALL_CLAIMS = [
   "create.integration.definition",
   "update.integration.definition",
   "delete.integration.definition",
+  "read.integration.source.code",
+  "create.integration.source.code",
+  "update.integration.source.code",
+  "delete.integration.source.code",
   "create.payment.order.periods",
   "delete.payment.order.periods",
   "submit.payment.order.periods",
@@ -745,6 +755,7 @@ export const SETTINGS_READ_CLAIMS = [
   ...crudReadClaims(CLAIMS.SCHEDULED_PARAMETERS),
   ...crudReadClaims(CLAIMS.PERIOD_CONFIG),
   ...crudReadClaims(CLAIMS.INTEGRATION_DEFINITION),
+  ...crudReadClaims(CLAIMS.INTEGRATION_SOURCE_CODE),
 ] as const;
 
 export const ACCESS_MANAGEMENT_READ_CLAIMS = [
@@ -975,6 +986,7 @@ export const PERMISSIONS = {
       DEACTIVATE: CLAIMS.INTEGRATION_DEFINITION.UPDATE,
       TEST_CONNECTION: CLAIMS.INTEGRATION_DEFINITION.UPDATE,
     },
+    INTEGRATION_SOURCE_CODE: crudPermissions(CLAIMS.INTEGRATION_SOURCE_CODE),
   },
   ACCESS_MANAGEMENT: {
     ACCESS: ACCESS_MANAGEMENT_READ_CLAIMS,

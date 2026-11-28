@@ -48,6 +48,7 @@ import ScheduledParameterService from "@/app/http/services/settings/scheduledPar
 import CodeConfigService from "@/app/http/services/settings/codeConfigService";
 import PeriodConfigService from "@/app/http/services/settings/periodConfigService";
 import IntegrationDefinitionService from "@/app/http/services/settings/integrationDefinitionService";
+import IntegrationSourceCodeService from "@/app/http/services/settings/integrationSourceCodeService";
 import PaymentOrderPeriodService from "@/app/http/services/amm/paymentOrderPeriodService";
 import PaymentOrderService from "@/app/http/services/amm/paymentOrderService";
 import RefundDeductionPeriodService from "@/app/http/services/amm/refundDeductionPeriodService";
@@ -137,6 +138,7 @@ const scheduledParameterService = new ScheduledParameterService();
 const codeConfigService = new CodeConfigService();
 const periodConfigService = new PeriodConfigService();
 const integrationDefinitionService = new IntegrationDefinitionService();
+const integrationSourceCodeService = new IntegrationSourceCodeService();
 const paymentOrderPeriodService = new PaymentOrderPeriodService();
 const paymentOrderService = new PaymentOrderService();
 const refundDeductionPeriodService = new RefundDeductionPeriodService();
@@ -193,6 +195,7 @@ export {
     codeConfigService,
     periodConfigService,
     integrationDefinitionService,
+    integrationSourceCodeService,
     paymentOrderPeriodService,
     paymentOrderService,
     refundDeductionPeriodService,

@@ -1,9 +1,12 @@
 <script lang="ts" setup>
-import { PropType, computed } from "vue";
+import { onMounted, PropType, computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import Status from "@/app/common/components/Status.vue";
+import { integrationSourceCodeService } from "@/app/http/httpServiceProvider";
 import type { IntegrationDefinitionListing } from "@/components/settings/integration/types";
 import { integrationUsageOptions } from "@/components/settings/integration/listView/utils";
+import { integrationSourceCodeLabel } from "@/components/settings/integrationSourceCode/listView/utils";
+import type { IntegrationSourceCodeId, IntegrationSourceCodeListing } from "@/components/settings/integrationSourceCode/types";
 
 const emit = defineEmits(["update:modelValue", "onTestConnection"]);
 const { t } = useI18n();
@@ -41,10 +44,26 @@ const display = (value?: string | number | null) => {
   return String(value);
 };
 
+const sourceCodes = ref<IntegrationSourceCodeListing[]>([]);
+
 const usageLabel = (usage: string) => {
   const option = integrationUsageOptions.find(item => item.value === usage);
   return option ? t(option.label) : usage;
 };
+
+const sourceCodeLabelFor = (id?: IntegrationSourceCodeId | null) => {
+  if (id === null || id === undefined || id === "") return "";
+  const code = sourceCodes.value.find(item => String(item.id) === String(id));
+  return code ? integrationSourceCodeLabel(code) : String(id);
+};
+
+onMounted(async () => {
+  try {
+    sourceCodes.value = await integrationSourceCodeService.getAvailableIntegrationSourceCodes();
+  } catch {
+    sourceCodes.value = [];
+  }
+});
 </script>
 
 <template>
@@ -121,8 +140,8 @@ const usageLabel = (usage: string) => {
             <div class="font-weight-bold text-caption mb-2">{{ $t("t-integration-usages") }}</div>
             <div v-for="usage in data.usages" :key="usage.id" class="integration-usage">
               <span>{{ usageLabel(usage.usage) }}</span>
-              <span v-if="usage.sourceLedger || usage.sourceType" class="integration-usage__meta">
-                {{ display(usage.sourceLedger) }} / {{ display(usage.sourceType) }}
+              <span v-if="sourceCodeLabelFor(usage.integrationSourceCodeId)" class="integration-usage__meta">
+                {{ sourceCodeLabelFor(usage.integrationSourceCodeId) }}
               </span>
             </div>
           </v-col>

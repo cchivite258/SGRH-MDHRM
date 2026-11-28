@@ -501,6 +501,12 @@ const settingsRoutes = [
     component: () => import("@/views/settings/Integrations.vue"),
     meta: { title: "t-integrations", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_DEFINITION.LIST },
   },
+  {
+    path: `${settingsPrefix}/integration-source-codes`,
+    name: "IntegrationSourceCodes",
+    component: () => import("@/views/settings/IntegrationSourceCodes.vue"),
+    meta: { title: "t-integration-source-codes", authRequired: true, anyPermissions: PERMISSIONS.SETTINGS.INTEGRATION_SOURCE_CODE.LIST },
+  },
 ].map((data) => {
   return {
     ...data,

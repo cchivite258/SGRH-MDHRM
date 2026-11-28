@@ -24,9 +24,14 @@ export type IntegrationDefinitionUsage = {
   id: IntegrationDefinitionId;
   integrationDefinitionId?: IntegrationDefinitionId;
   usage: IntegrationUsageType;
-  sourceLedger?: string | null;
-  sourceType?: string | null;
+  integrationSourceCodeId?: IntegrationDefinitionId | null;
   removable?: boolean;
+  enabled?: boolean;
+};
+
+export type IntegrationDefinitionUsageForm = {
+  usage: IntegrationUsageType;
+  integrationSourceCodeId: IntegrationDefinitionId;
 };
 
 export type IntegrationDefinitionListing = Omit<IntegrationDefinitionForm, "password"> & {
